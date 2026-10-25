@@ -1,0 +1,12 @@
+CREATE SCHEMA IF NOT EXISTS host;
+CREATE TABLE host.settings (key text PRIMARY KEY, value jsonb NOT NULL);
+CREATE TABLE host.owner (id text PRIMARY KEY CHECK (id='owner'), password_hash text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE host.sessions (token_hash text PRIMARY KEY, expires_at timestamptz NOT NULL);
+CREATE TABLE host.login_attempts (key text PRIMARY KEY, count integer NOT NULL, reset_at timestamptz NOT NULL);
+CREATE TABLE host.changes (id uuid PRIMARY KEY, summary text NOT NULL, changes jsonb NOT NULL, actor text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), undone_at timestamptz, undo_id uuid);
+CREATE TABLE host.idempotency (key text PRIMARY KEY, fingerprint text NOT NULL, result jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE host.jobs (id uuid PRIMARY KEY, plugin_id text NOT NULL, kind text NOT NULL, status text NOT NULL, payload jsonb NOT NULL, progress jsonb NOT NULL DEFAULT '{}', attempts integer NOT NULL DEFAULT 0, next_run_at timestamptz NOT NULL DEFAULT now(), lease_owner text, lease_until timestamptz, error text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX jobs_ready ON host.jobs(status,next_run_at);
+CREATE UNIQUE INDEX one_live_job ON host.jobs(plugin_id,kind) WHERE status IN ('queued','running','paused');
+CREATE TABLE host.grants (id uuid PRIMARY KEY, token_hash text UNIQUE NOT NULL, label text NOT NULL, scope jsonb NOT NULL, expires_at timestamptz NOT NULL, revoked boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE host.proposals (id uuid PRIMARY KEY, grant_id uuid NOT NULL REFERENCES host.grants(id), status text NOT NULL, summary text NOT NULL, commands jsonb NOT NULL, changes jsonb NOT NULL, context jsonb NOT NULL, digest text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), result jsonb);

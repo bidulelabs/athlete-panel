@@ -1,0 +1,12 @@
+{$ATHLETE_PANEL_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy web:3000 {
+        # Overwrite, never append: clients cannot choose their rate-limit identity.
+        header_up X-Athlete-Panel-Client-IP {remote_host}
+    }
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy same-origin
+        X-Frame-Options DENY
+    }
+}

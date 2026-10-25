@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T21:24:19.878673+00:00",
+  "title": "Design System: Athlete Panel",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "overlay-dark",
+        "value": "0 24px 90px #0008",
+        "purpose": "Dialogs and overlay inspector."
+      },
+      {
+        "name": "overlay-light",
+        "value": "0 24px 90px #18202822",
+        "purpose": "Light-theme overlays."
+      }
+    ],
+    "motion": [
+      {
+        "name": "weekly-reveal",
+        "value": "180ms ease",
+        "purpose": "Summary expansion; disabled under reduced motion."
+      },
+      {
+        "name": "control-state",
+        "value": "150ms",
+        "purpose": "Short interactive feedback."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone-sheet",
+        "value": "600px"
+      },
+      {
+        "name": "phone-shell",
+        "value": "760px"
+      },
+      {
+        "name": "overlay-inspector",
+        "value": "1050px"
+      },
+      {
+        "name": "compact-sidebar",
+        "value": "1250px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "description": "Shared action treatment; theme variables inherit from the application.",
+      "html": "<button class=\"ds-button\">Add workout</button>",
+      "css": ".ds-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--line); border-radius:7px; padding:10px 14px; font:500 12px/18px Inter,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; background:var(--surface); color:var(--text); cursor:pointer; transition:background .15s; } .ds-button:hover { background:var(--hover); } .ds-button:focus-visible { outline:2px solid var(--accent); outline-offset:4px; } .ds-button:active { transform:translateY(1px); }.ds-button { background:var(--accent); border-color:var(--accent); color:#141515; font-weight:650; } .ds-button:hover { background:var(--accent-hover); }",
+      "refersTo": "button-primary-dark"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "description": "Shared action treatment; theme variables inherit from the application.",
+      "html": "<button class=\"ds-button\">Close</button>",
+      "css": ".ds-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--line); border-radius:7px; padding:10px 14px; font:500 12px/18px Inter,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; background:var(--surface); color:var(--text); cursor:pointer; transition:background .15s; } .ds-button:hover { background:var(--hover); } .ds-button:focus-visible { outline:2px solid var(--accent); outline-offset:4px; } .ds-button:active { transform:translateY(1px); }"
+    },
+    {
+      "name": "Destructive button",
+      "kind": "button",
+      "description": "Shared action treatment; theme variables inherit from the application.",
+      "html": "<button class=\"ds-button\">Delete</button>",
+      "css": ".ds-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--line); border-radius:7px; padding:10px 14px; font:500 12px/18px Inter,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; background:var(--surface); color:var(--text); cursor:pointer; transition:background .15s; } .ds-button:hover { background:var(--hover); } .ds-button:focus-visible { outline:2px solid var(--accent); outline-offset:4px; } .ds-button:active { transform:translateY(1px); }.ds-button { background:var(--danger); border-color:var(--danger); color:var(--on-danger); } .ds-button:hover { background:var(--danger); filter:brightness(.95); }"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Labeled input with theme-aware focus.",
+      "html": "<label class=\"ds-field\">Workout title<input class=\"ds-input\" value=\"Easy run\" /></label>",
+      "css": ".ds-field { display:grid; gap:8px; font:13px Inter,sans-serif; color:var(--text); } .ds-input { padding:10px 12px; border:1px solid var(--line); border-radius:7px; background:var(--bg); color:var(--text); font:14px Inter,sans-serif; } .ds-input:hover { border-color:var(--faint); } .ds-input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }"
+    },
+    {
+      "name": "Workout card",
+      "kind": "card",
+      "description": "Sport, title and prescription remain grouped.",
+      "html": "<button class=\"ds-workout\"><span class=\"ds-sport\">Running</span><strong>Easy run</strong><span>40m</span></button>",
+      "css": ".ds-workout { display:grid; gap:4px; width:100%; padding:10px 8px; text-align:left; border:1px solid var(--line); border-radius:5px; background:var(--surface); color:var(--text); font:12px Inter,sans-serif; cursor:pointer; } .ds-sport { color:var(--accent-ink); } .ds-workout > span:last-child { color:var(--muted); font-size:12px; } .ds-workout:hover { border-color:var(--accent-line); background:var(--surface-raised); } .ds-workout:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }"
+    },
+    {
+      "name": "Active navigation",
+      "kind": "nav",
+      "description": "Text identifies the destination; orange marks the current page.",
+      "html": "<a class=\"ds-nav\" href=\"#calendar\" aria-current=\"page\">Training calendar</a>",
+      "css": ".ds-nav { display:block; padding:11px 12px; border-radius:6px; background:var(--accent-soft); color:var(--accent-ink); font:13px Inter,sans-serif; text-decoration:none; } .ds-nav:hover { background:var(--hover); } .ds-nav:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Precise training notebook",
+    "overview": "The owner confirmed this direction on 2026-10-25: compact, restrained, orange accents and flat graphite/light surfaces. The interface serves repeated planning and review. Dates, session titles, measured values and actions establish hierarchy; decorative treatments should not compete with them.\n\nThis record captures the existing visual system and is maintained with refinements. [PRODUCT.md](PRODUCT.md) owns audience and product principles; [feature specifications](README.md#documentation) own behavior. The [original mockups](docs/design/mockups/) remain preserved references. The [execution record](docs/plans/mvp-execution.md) owns individual results and verification.",
+    "keyCharacteristics": [
+      "Compact weekly structure with a clear date rhythm.",
+      "Orange reserved for primary actions, current selection and the current day.",
+      "Flat surfaces distinguished by restrained borders and tonal changes.",
+      "Equivalent light and dark themes with consistent semantic meaning.",
+      "Familiar controls, explicit labels, and factual measurements."
+    ],
+    "rules": [],
+    "dos": [
+      "Do preserve the paired themes and semantic color roles.",
+      "Do prioritize legible dates, session names, recorded values and actions.",
+      "Do verify desktop planning and phone review/logging with realistic synthetic data.",
+      "Do use shared primitives for shared interaction patterns and plugin-local styles for feature-specific composition.",
+      "Do distinguish missing measurements from zero and planned training from recorded facts."
+    ],
+    "donts": [
+      "Don't replace the compact calendar with decorative dashboard tiles.",
+      "Don't use color alone to communicate completion, injury or missing data.",
+      "Don't hide essential phone actions behind hover.",
+      "Don't add arbitrary scores, unsupported capabilities or factual claims as decoration.",
+      "Don't let a CSS override make a destructive action or focus indicator unreadable."
+    ]
+  }
+}

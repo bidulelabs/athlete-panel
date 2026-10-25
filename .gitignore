@@ -1,0 +1,35 @@
+node_modules/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+.runtime/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+*.tsbuildinfo
+.secrets/
+backups/
+*.fgr
+*.partial
+.playwright-mcp/
+
+# Default private agent workflow exports
+context.json
+proposal.json
+
+# Private exports, keys and local database snapshots (never source inputs).
+private-exports/
+**/context.json
+**/proposal.json
+*.dump
+*.fgr
+*.pem
+*.key
+
+**/__pycache__/
+*.pyc
+.athlete-panel-release.json

@@ -1,0 +1,23 @@
+{
+  "id": "cycling-sleep",
+  "name": "Cycling & sleep",
+  "description": "Compare cycling volume with recorded nightly sleep",
+  "version": "1.0.0",
+  "hostApi": "^1.0.0",
+  "dependencies": {
+    "activity-records": "^1.0.0"
+  },
+  "required": false,
+  "routes": [
+    {
+      "path": "/cycling-sleep",
+      "title": "Cycling & sleep",
+      "icon": "ChartNoAxesCombined"
+    }
+  ],
+  "migrations": [],
+  "services": [],
+  "jobs": [],
+  "capabilities": [],
+  "client": "client.tsx"
+}

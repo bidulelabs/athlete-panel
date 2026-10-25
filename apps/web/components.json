@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "radix-nova",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "../../packages/ui/src/styles/shadcn.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@athlete-panel/ui/components",
+    "utils": "@athlete-panel/ui/lib/utils",
+    "ui": "@athlete-panel/ui/components",
+    "lib": "@athlete-panel/ui/lib",
+    "hooks": "@athlete-panel/ui/hooks"
+  }
+}

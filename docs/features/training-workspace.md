@@ -1,0 +1,125 @@
+# Feature: training workspace
+
+## Purpose and scope
+
+Give one athlete a complete manual planning and recording loop, with cycling/running workouts, simple plans, calendar context, imported activity linking and factual summaries. Outside scope: arbitrary interval nesting, workout library, drag-dependent editing, automatic matching, imported numeric overrides, advanced training-load scores, FIT/GPS samples, offline editing and legacy migration.
+
+## Intended behavior
+
+Specification status: approved. Requirement source: the owner's private MVP implementation request, 2026-10-24, P1–P3/P5 and T1–T4; recorded in the [execution handoff](../plans/mvp-execution.md). No durable chat link is available.
+
+The owner signs in after console bootstrap. Recovery revokes sessions and agent grants. Profile settings include display name, timezone, units, week-start preference, goals, daily available seconds, manual HR-zone boundaries and cycling FTP. There is no public registration or email dependency.
+
+An independent workout has a strict date. A plan workout has a plan identity and positive one-based day; its date derives from the plan start. Unscheduled plans remain editable but do not appear in the dated calendar. Ordered intervals support one repeat-group level, positive time or distance lengths, and coherent HR/power/pace/RPE ranges. Unknown planned totals are never inferred from incomplete steps.
+
+Create, edit, duplicate, delete, move and reorder operations share domain validation and expected revisions. Duplicate copies prescriptions, never completion or imported associations. Day ordering spans independent and plan-relative workouts and changes atomically. Plan start changes include derived child dates in the review and audit. Child changes advance the plan aggregate revision.
+
+Completed, partial and skipped are explicit states. Partial requires a reason. RPE is 1–10 when supplied. Skipped has no numerical actuals. Performed date is independent of planned date. Clearing completion returns to planned. A recorded workout must first be cleared or unlinked before structural movement/deletion; plan shift/unschedule/delete is blocked by any active completion, including skipped.
+
+An imported activity links to at most one same-sport workout. The owner sees manual actuals being replaced. Imported numbers become authoritative, and annotations remain editable without numerical overrides. Linking defaults to completed. Unlink returns to planned, preserves the activity and does not resurrect prior manual values. Previous values remain in audit; conflict-safe undo may restore them.
+
+Actual totals count every imported activity once and every unlinked manual completion once. Linked pairs contribute the imported session only. Duration is combined; distance remains separated by sport. Missing metrics carry explicit missing counts. Possible unlinked overlap is a reconciliation hint, never an automatic match. Generic activities remain distinguishable.
+
+The responsive calendar uses a bounded multiweek desktop grid, mobile day cards, an editor/inspector, Today and date navigation, and explicit move/up/down actions. Both themes provide focus visibility and reduced-motion styling. Errors retain drafts; stale saves request refresh/review. Notes, race/goal events and dated injury constraints give planning context.
+
+### Calendar and workout design refinements
+
+Requirement source: the owner requested the Impeccable workflow on 2026-10-25 and selected desktop week planning with phone review/logging, retaining the compact orange-accented training notebook. [Product context](../../PRODUCT.md) and [design system](../../DESIGN.md) record the direction.
+
+The calendar always uses the compact seven-column desktop planner, as requested by the owner on 2026-10-26. There is no layout selector or session-row desktop alternative. The unified toolbar keeps the title, add action and date navigation together; the date range appears once. Phones use a day list with 44px add controls in the date rail and full remaining width for cards. Weekly context, missing-data explanations and existing editing/logging behavior remain available.
+
+Workout details show the complete prescription without entering Edit: ordered phases, repeat counts, time or distance lengths, HR/power/pace/RPE targets and step notes. Distance and pace follow profile units; repeated intervals stay grouped and unknown workout totals are not inferred. Log workout/Edit completion appears near the title.
+
+Wide-screen details remain a complementary panel beside the calendar. At 1050px and below, details become a shared Radix modal Sheet with focus entry, containment, Escape/backdrop dismissal, background scroll lock and focus return. Closing a nested editor leaves the inspector open. Resizing preserves an unsaved editor; the inspector changes presentation after that editor closes. Phone calendar navigation, day creation and inspector controls have at least 44px hit areas. Both themes retain legible semantic colors, explicit button states and visible focus.
+
+Weekly values retain Recorded / planned ordering; the legend is visible in the expanded metric band. Metric tooltips explain the same order while collapsed. Missing-data indicators and coverage details remain distinct from Partial completion status. The shorter two-level summary below supersedes the previous header labels and Week in review heading. These refinements change presentation and navigation only; contracts, persistence, training rules and permissions remain unchanged.
+
+### Week-start preference
+
+Requirement source: the owner requested the legacy app's configurable week start, including Sunday for the USA, on 2026-10-25 in this chat. The implementation carries over its Automatic, Sunday and Monday choices. The legacy checkout remains unchanged.
+
+In **Settings → Profile & zones → Week starts on**, the owner selects Automatic, Sunday or Monday and saves the profile. Automatic uses the browser's regional locale, so US English starts Sunday and French/UK English starts Monday; the interface remains English. Explicit choices take priority and are stored on the instance, applying across devices. Automatic may resolve differently on browsers with different regional settings. If the browser cannot resolve a supported day, US region falls back to Sunday and other regions to Monday, matching the legacy fallback. Other first-day choices remain outside this feature's scope.
+
+Calendar columns, mobile day lists, Today, date jumps, previous/next navigation, each week's totals, cycling/sleep weekly groups and availability-field order share the selected boundary. Changing it keeps the selected date in view and never reschedules workouts, plans, actuals or provider dates. Today uses the athlete timezone. A failed profile save retains the selection for retry and does not apply it to the calendar.
+
+Existing profiles without the optional `weekStartsOnPreference` field behave as Automatic without rewriting stored records or audit snapshots. No SQL migration is required. The UI shows Automatic's currently resolved day beside its label.
+
+### Calendar cards and detail views
+
+Requirement source: the owner approved the short specification for legacy-inspired calendar cards with “implement this” on 2026-10-25 in this chat. Sleep, notes, events, injury constraints and imported activities use compact tinted cards with icons and text labels. Workouts retain their existing editor/inspector. No drag interaction is required.
+
+Selecting a card opens details without changing data or navigating away from the calendar. Desktop uses a dialog; phones use a scrollable bottom sheet with an accessible title, visible close control, keyboard navigation and Escape dismissal. Notes preserve full multiline plain text and show their effective date and associated plan/day. Events show type/date/notes. Injury cards appear on every affected date, including both endpoints and ongoing ranges; details show severity, description and additional notes. Explicit Edit actions open the existing revision-checked editors. Delete asks for confirmation, including deletion across all dates for an injury. Failed operations stay visible for retry; stale edits retain the draft and cannot overwrite newer records.
+
+Sleep cards show total sleep, score and same-account/date overnight HRV when known. Details show Deep, Light, REM and Awake durations, reported total sleep, score and HRV. Values are joined by provider, account identity and recorded local date; records without account provenance stay separate from known accounts. A night appears when at least one sleep measurement is known, including zero; HRV alone or entirely missing sleep values do not invent a sleep card. Score-only nights remain useful and explicitly mark missing duration/stages.
+
+A proportional stage bar and percentages appear only when all four stages are known and their sum is positive. The denominator is recorded stage time including awake time, labelled as such. Partial/all-zero stage data has no percentages. Unknown measurements never become zero; the reported sleep duration remains independent of stage sums, and awake time is not added to it. The breakdown is not a chronological sleep-stage timeline. Bedtime/wake-time inference, new recovery scores and sample-level sleep imports are outside this change.
+
+Imported activity cards open duration, distance, elevation gain, average heart rate, recorded date, explicit UTC start time and linked-workout information. Unknown and known-zero measurements remain distinct; distance/elevation follow the profile units. Provider dates do not shift with the viewing timezone. Measurements stay read-only. An activity already represented by a linked workout on the same calendar date has no duplicate standalone card; **View imported activity** in the workout inspector opens its details. The linked-workout action returns to that inspector without leaving the calendar. Summary counting and completion/link rules remain unchanged.
+
+### Richer weekly summaries
+
+Requirement source: the owner requested “implement this specification for richer weekly summaries” on 2026-10-25, approving the preceding specification in this chat. No durable conversation link is available. This supersedes the first-visible-week statistics strip with a summary attached to each visible calendar week; date navigation remains available.
+
+The owner approved the shorter summary and shared component migration on 2026-10-26. Each week and its nested details start collapsed independently. Closing a week resets its details. The header keeps dates/year and This week on the left, with a separate 44px expand/collapse button. Five icon/value groups show recorded/planned duration, running distance, cycling distance, recorded run/ride elevation, and average recorded sleep. It targets a 44–48px row where width permits; complete groups wrap without hiding metrics, truncation or horizontal scrolling. Missing-data indicators stay beside affected values. Hover/focus tooltips and click/tap popovers explain metric names, units, comparison order and coverage. They do not expand the week or write data.
+
+Opening a week reveals a flat responsive band: duration, running distance, cycling distance, recorded elevation, planned sessions, recorded sessions, average sleep and raw recorded HRV. Supporting labels show planned totals and nightly coverage. Session counts and the recorded/planned legend live here. **Show details** reveals the comparison table, completion-status breakdown, missing-data coverage, notes and recorded-session links. A neutral percentage of planned volume appears only when both totals are complete, planned volume is positive, and at least one actual measurement is known. A recorded zero can produce 0%; empty records do not claim observed zero training. Above-plan values receive no automatic success styling. Running and cycling elevation remain separate recorded-only metrics. There are no planned elevation/sleep targets, ISO week numbers, interpreted HRV status or new training-load calculations.
+
+Planned totals use the scheduled prescription, including completed/skipped workouts; unscheduled plans contribute no dated volume. Actuals use provider-local/performed dates, including partial and unplanned sessions. Linked pairs count once. Generic sports contribute to total duration but not running/cycling metrics. Potential overlap warnings belong to the affected week and remain visible while collapsed. The existing linking and completion semantics above stay authoritative.
+
+Known-zero values remain visible. Partial totals display the known sum and the metric's missing-session count; wholly missing values say unavailable. No planned volume and no recorded sessions are explicit states. Comparisons are suppressed when either metric has missing values. Elevation uses imported values and treats manual completion elevation as unknown because that field is not collected. Units follow the profile (km/mi, m/ft). Record-level coverage never certifies that Garmin supplied every session.
+
+Sleep displays the mean of known nightly total durations and recorded-night coverage, using recorded local dates. Corrections and duplicates within a provider/account/date resolve through the same projection as sleep cards. A known zero participates in the average; score-only/missing totals do not. One date counts at most once. If multiple source accounts supply known totals for the same date, that date is excluded as ambiguous and disclosed rather than choosing or combining accounts. Past weeks use seven expected nights. The current week includes dates through today in the athlete timezone, reports missing totals separately from upcoming dates, and excludes future measurements. Entirely future weeks say Upcoming. No duration is inferred from stage sums and no recovery score is computed.
+
+Expansion also shows completed, partial, skipped and pending counts for the week’s scheduled workouts. These counts use planned dates even if completion happened in another week; unscheduled plans are excluded. Recorded HRV is a mean in milliseconds with its own nightly coverage, independent of sleep availability. It follows the same correction, account ambiguity, zero and elapsed-date rules as sleep, including HRV-only nights; no baseline, status or readiness interpretation is inferred.
+
+A chronological preview shows up to six recorded sessions and indicates any additional count. It shares the actual-volume cohort: imported activities and unlinked non-skipped manual completions, including generic sports and counting linked pairs once. Provider corrections resolve by account/identity and latest revision before date filtering. Ordering uses recorded date, then known start time, with date-only manual entries after timed sessions and stable identity tie-breaking. Preview buttons open the existing activity detail or workout inspector.
+
+The expanded summary stays inside the calendar and supports native keyboard activation and screen-reader state/labels. The header adapts to its own available width, including when the inspector is open: one band on wide desktops, two rows at narrower widths, and a date/count row plus a 2×2 duration/running/cycling/sleep grid on phones. Elevation remains in the expanded phone view. Numbers use tabular digits, boundaries are restrained, and a short 180ms reveal/chevron transition honors reduced motion. Collapsed details are inert and hidden from assistive technology. Both themes are supported. Viewing and expanding are read-only; recalculation follows workspace refresh. A failed refresh keeps the last loaded data with the existing visible error/retry control, not an invented empty result.
+
+## Acceptance scenarios
+
+| Situation | Expected result | Verification |
+| --- | --- | --- |
+| Read a prescription and use phone details | Full grouped steps, unit-aware targets, focus containment/return, nested dismissal and draft-safe resizing | [Inspector browser tests](../../tests/e2e/workout-inspector.spec.ts) |
+| Create/complete then restart | Same saved prescription and actuals return | [Database tests](../../tests/integration/domain.test.ts), browser suite |
+| Invalid date, interval or partial reason | Whole request rejected, draft retained | [Domain tests](../../tests/unit/domain.test.ts), [contracts](../../tests/unit/contracts.test.ts) |
+| Two stale simultaneous moves | One commits; other conflicts without lost siblings | Database/domain tests |
+| Shift a plan with completion | Explicit history conflict; duplication remains available | Domain tests |
+| Link/unlink/manual/imported mixed data | Single linked count, no resurrected manual values | [Summary tests](../../tests/unit/summary.test.ts) |
+| Undo after a later affected edit | Whole undo rejected; later edit preserved | Database tests |
+| Sunday/Monday choice and reload | Saved choice aligns headings, date jumps and weekly totals; original workout dates persist | [Browser scenarios](../../tests/e2e/week-start.spec.ts), [database tests](../../tests/integration/domain.test.ts) |
+| Automatic and boundary dates | US/French locales, year/leap/DST boundaries and athlete-timezone Today resolve correctly | [Calendar tests](../../tests/unit/calendar-dates.test.ts), browser scenarios |
+| Preference save fails or is stale | Draft retained; persisted preference unchanged until a successful retry | Browser/database scenarios |
+| Sleep cards with complete/partial/zero/missing measurements | Correct account/date grouping; unknown stays unavailable; percentages only for a complete positive stage total | [Projection tests](../../tests/unit/calendar-cards.test.ts), [browser tests](../../tests/e2e/calendar-cards.spec.ts) |
+| Note/event/injury details and actions | Full content, correct date range and plan context; explicit edit/delete; failed or stale saves preserve data | Browser tests and existing domain transaction checks |
+| Imported and linked activity details | Local record date, profile units, no duplicate same-day card, no writes from viewing | Browser tests |
+| Weekly volume, elevation and comparisons | Linked pairs count once; generic/partial volume included; skipped actuals excluded; elevation and missingness by sport; ratios only from complete positive plans | [Weekly calculation tests](../../tests/unit/weekly-summary.test.ts), existing summary tests |
+| Recorded sleep coverage | Known nightly totals averaged once; corrected/null/zero values respected; ambiguous accounts excluded; elapsed/missing/upcoming dates separated across week/year boundaries | Weekly calculation tests |
+| Expand each week, change units/boundary, refresh failure | Independent accessible toggles, no mutations, correct units and week context; incomplete/empty states visible; refresh failure retains last loaded values | [Weekly browser scenarios](../../tests/e2e/weekly-summary.spec.ts), week-start scenarios |
+| Redesigned header, status and previews | Compact responsive metrics; scheduled-status counts separate from actual chronology; bounded, deduplicated previews open existing details without writes; independent HRV coverage; reduced motion and collapsed focus exclusion | Weekly calculation/browser scenarios |
+| Keyboard/mobile/light/dark use | Core editing does not depend on drag | Browser suite and visual inspection record |
+| Compact desktop and narrow phone cards | Seven desktop columns across 21 dates, one inspector and no layout switch; phone cards and 44px controls remain usable | [Calendar layout scenario](../../tests/e2e/workout-inspector.spec.ts) |
+
+## Observed implementation
+
+The [contracts](../../packages/contracts/src/index.ts), [pure engine](../../plugins/training/engine.ts), [transaction service](../../plugins/training/service.ts), [summary projection](../../plugins/training/summary.ts), and plugin clients implement these flows. Date-only calculations use UTC calendar arithmetic without converting floating dates through a viewer timezone. The [shared UI date helpers](../../packages/ui/src/calendar-dates.ts) resolve browser locale through `Intl.Locale.getWeekInfo()` or the older `weekInfo` property and align the workspace date range. [API compatibility reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale/getWeekInfo). Weekly projections consume that same range. Storage tombstones prevent deleted UUID reuse and revision ABA conflicts.
+
+The UI uses shared Radix-backed shadcn dialogs, responsive lists and explicit controls; see the [shared interface specification](shared-ui.md). Calendar-local [card/detail components](../../plugins/calendar/cards.tsx) and [projections](../../plugins/calendar/projection.ts) consume public workspace DTOs. The shared modal supports an optional presentation class and restores keyboard focus to its trigger when dismissed. Imported records are normalized by the records/Garmin plugins. Static source inspection is not runtime evidence: individual executions, screenshots and remaining release gates belong to the [execution record](../plans/mvp-execution.md).
+
+The [weekly summary component](../../plugins/calendar/weekly-summary.tsx) renders the training projection’s known/missing totals, actual elevation, scheduled-status counts and recorded-session previews. The calendar’s [nightly projections](../../plugins/calendar/weekly-sleep.ts) add independent sleep and HRV averages/coverage using shared corrected daily metrics, also consumed by sleep cards. These are derived views of existing records, with no stored summary or provider call.
+
+## Contracts and constraints
+
+The [runtime contracts](../../packages/contracts/src/index.ts) are authoritative. UI operations and the external agent call the same engine. See [architecture](../architecture.md) and [agent training](agent-training.md) for transaction and permission boundaries. Restore and upgrade procedures are centralized in [development](../development.md).
+
+Week-start activation requires rebuilding and restarting both local application processes using the [upgrade procedure](../development.md#coordinated-upgrades-and-plugin-activation). The composition and SQL schema stay unchanged, but an older binary with strict profile validation cannot read the added field after it has been saved. Rollback to that version requires its matched pre-change snapshot; do not assume code-only rollback from unchanged SQL migrations.
+
+Calendar-card activation requires a normal build/restart and no new composition entry, public data field or migration. Its immediate predecessor (the week-start release) supports the same persisted schema, so rolling back this presentation change can retain the database. Earlier compatibility limits above still apply.
+
+Richer weekly summaries and the redesigned header require only the normal build/restart. No composition, persisted contract, migration or additional Garmin import is required. The immediate prior calendar-card release supports the same database, permitting compatible code rollback. Operational procedures remain in the development guide.
+
+## Draft revision and refresh recovery
+
+Owner-approved audit follow-up, 2026-10-25: a profile draft retains the record revision from when editing began. A workspace refresh cannot silently attach a newer revision to older inputs. When a newer saved profile is observed, the draft remains visible and an explicit Load saved profile action replaces it after the owner has had the opportunity to copy unsaved text. The domain revision check continues to reject stale submission. Workout editor prescriptions and display units are similarly captured for the lifetime of their draft.
+
+A successful mutation and its follow-up read are separate outcomes. If saving succeeds but refresh fails, the UI says that the change was saved and offers a reload; it does not encourage duplicate submission. Date navigation keeps the last successfully loaded range until the next range arrives, and a failed request labels that older range. Requests are time-bounded. Browser regressions exercise concurrent profile edits, failed range loads and committed saves followed by a read outage.

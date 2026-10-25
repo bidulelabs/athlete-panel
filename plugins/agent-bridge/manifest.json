@@ -1,0 +1,27 @@
+{
+  "id": "agent-bridge",
+  "name": "Agent workspace",
+  "description": "Review training changes from your external agent",
+  "version": "1.0.0",
+  "hostApi": "^1.0.0",
+  "dependencies": {
+    "training": "^1.0.0",
+    "athlete": "^1.0.0",
+    "activity-records": "^1.0.0"
+  },
+  "required": false,
+  "routes": [
+    {
+      "path": "/agent",
+      "title": "Agent workspace",
+      "icon": "Sparkles"
+    }
+  ],
+  "schema": "agent_bridge",
+  "migrations": ["migrations/001-connections.sql"],
+  "services": [],
+  "jobs": [],
+  "capabilities": [],
+  "client": "client.tsx",
+  "server": "server.ts"
+}

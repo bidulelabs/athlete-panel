@@ -1,0 +1,25 @@
+{
+  "id": "calendar",
+  "name": "Training calendar",
+  "description": "Plan and review your week",
+  "version": "1.0.0",
+  "hostApi": "^1.0.0",
+  "dependencies": {
+    "athlete": "^1.0.0",
+    "training": "^1.0.0",
+    "activity-records": "^1.0.0"
+  },
+  "required": true,
+  "routes": [
+    {
+      "path": "/calendar",
+      "title": "Calendar",
+      "icon": "CalendarDays"
+    }
+  ],
+  "migrations": [],
+  "services": [],
+  "jobs": [],
+  "capabilities": [],
+  "client": "client.tsx"
+}

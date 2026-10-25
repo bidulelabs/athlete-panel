@@ -1,0 +1,26 @@
+{
+  "id": "activity-records",
+  "name": "Activity history",
+  "description": "Normalized activities and health history",
+  "version": "1.0.0",
+  "hostApi": "^1.0.0",
+  "dependencies": {},
+  "required": true,
+  "routes": [
+    {
+      "path": "/activities",
+      "title": "Activities",
+      "icon": "Activity"
+    }
+  ],
+  "migrations": [
+    "migrations/001-initial.sql",
+    "migrations/002-identity-index.sql"
+  ],
+  "services": [],
+  "jobs": [],
+  "capabilities": [],
+  "client": "client.tsx",
+  "server": "server.ts",
+  "schema": "activity_records"
+}

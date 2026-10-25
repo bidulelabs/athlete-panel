@@ -1,0 +1,123 @@
+name: athlete-panel
+x-application: &application
+  image: athlete-panel:${ATHLETE_PANEL_RELEASE:-local}
+  build: .
+  environment: &environment
+    DATABASE_URL: postgresql://${APP_DATABASE_ROLE:-athlete_panel_app}:${APP_DATABASE_PASSWORD:?Set APP_DATABASE_PASSWORD}@db:5432/${POSTGRES_DB:-athlete_panel}
+    ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set the independent application ENCRYPTION_KEY}
+    APP_ORIGIN: https://${ATHLETE_PANEL_DOMAIN:?Set ATHLETE_PANEL_DOMAIN}
+    COOKIE_SECURE: "true"
+    TRUST_PROXY_CLIENT_IP: "true"
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-athlete_panel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-athlete_panel}
+    volumes:
+      - database:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+  admin:
+    <<: *application
+    profiles: [tools]
+    restart: "no"
+    environment:
+      <<: *environment
+      DATABASE_URL: postgresql://${POSTGRES_USER:-athlete_panel}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-athlete_panel}
+      APP_DATABASE_PASSWORD: ${APP_DATABASE_PASSWORD:?Set APP_DATABASE_PASSWORD}
+      APP_DATABASE_ROLE: ${APP_DATABASE_ROLE:-athlete_panel_app}
+    command: [pnpm, db:migrate]
+  web:
+    <<: *application
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+  worker:
+    <<: *application
+    command: [node, dist/worker/index.js]
+    stop_grace_period: 40s
+    healthcheck:
+      test: [CMD, pnpm, exec, tsx, scripts/operations.ts, worker-health]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      ATHLETE_PANEL_DOMAIN: ${ATHLETE_PANEL_DOMAIN:?Set ATHLETE_PANEL_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+  backup:
+    <<: *application
+    profiles: [backup]
+    # Read the separately mounted owner-only secret and write the off-host mount.
+    user: "0:0"
+    cap_add: [DAC_OVERRIDE]
+    environment:
+      <<: *environment
+      BACKUP_KEY_FILE: /run/secrets/backup_key
+      BACKUP_DESTINATION: /backups
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-3}
+    secrets:
+      - backup_key
+    volumes:
+      - ${BACKUP_DESTINATION:-./backups}:/backups
+    command: [pnpm, exec, tsx, scripts/operations.ts, backup-loop]
+  recovery:
+    <<: *application
+    profiles: [tools]
+    restart: "no"
+    user: "0:0"
+    cap_add: [DAC_OVERRIDE]
+    environment:
+      <<: *environment
+      DATABASE_URL: postgresql://${POSTGRES_USER:-athlete_panel}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-athlete_panel}
+      BACKUP_KEY_FILE: /run/secrets/backup_key
+    secrets: [backup_key]
+    volumes:
+      - ${BACKUP_DESTINATION:-./backups}:/backups:ro
+    command: [pnpm, restore]
+
+secrets:
+  backup_key:
+    file: ${BACKUP_KEY_FILE:-./.secrets/backup-key}
+volumes:
+  database:
+  caddy_data:
+  caddy_config:

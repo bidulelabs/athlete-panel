@@ -1,0 +1,16 @@
+.review-fields caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.review-fields { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: .875rem; }
+.review-fields th, .review-fields td { text-align: left; vertical-align: top; padding: 12px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; white-space: pre-wrap; }
+.review-fields thead th { font-size: .75rem; text-transform: uppercase; }
+.review-fields tbody th { font-weight: 500; }
+.review-technical { margin: 12px; }
+.review-technical summary { cursor: pointer; font-size: .8rem; }
+.review-mobile-label { display: none; }
+@media(max-width: 600px) {
+  .review-fields, .review-fields tbody, .review-fields tr, .review-fields th, .review-fields td { display: block; width: auto; }
+  .review-fields thead { display: none; }
+  .review-fields tbody th { padding-bottom: 4px; border-bottom: 0; }
+  .review-fields td { border-bottom: 0; padding-top: 4px; padding-bottom: 6px; }
+  .review-fields tr { border-bottom: 1px solid var(--line); padding: 4px 0; }
+  .review-mobile-label { display: inline; font-weight: 500; }
+}

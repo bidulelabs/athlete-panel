@@ -1,0 +1,28 @@
+{
+  "id": "training",
+  "name": "Training",
+  "description": "Plans, workouts and recorded completion",
+  "version": "1.0.0",
+  "hostApi": "^1.0.0",
+  "dependencies": {
+    "athlete": "^1.0.0"
+  },
+  "required": true,
+  "routes": [
+    {
+      "path": "/plans",
+      "title": "Training plans",
+      "icon": "Layers"
+    }
+  ],
+  "migrations": [
+    "migrations/001-initial.sql",
+    "migrations/002-identity-index.sql"
+  ],
+  "services": [],
+  "jobs": [],
+  "capabilities": [],
+  "client": "client.tsx",
+  "server": "server.ts",
+  "schema": "training"
+}

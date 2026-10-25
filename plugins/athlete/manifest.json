@@ -1,0 +1,37 @@
+{
+  "id": "athlete",
+  "name": "Athlete",
+  "description": "Profile, preferences and training constraints",
+  "version": "1.0.0",
+  "hostApi": "^1.0.0",
+  "dependencies": {},
+  "required": true,
+  "routes": [
+    {
+      "path": "/settings",
+      "title": "Settings",
+      "icon": "Settings"
+    }
+  ],
+  "migrations": [
+    "migrations/001-initial.sql",
+    "migrations/002-identity-index.sql",
+    "migrations/003-onboarding.sql"
+  ],
+  "services": [],
+  "jobs": [],
+  "capabilities": [],
+  "client": "client.tsx",
+  "server": "server.ts",
+  "schema": "athlete",
+  "slots": [
+    {
+      "id": "welcome",
+      "kind": "workspace",
+      "title": "Welcome setup"
+    }
+  ],
+  "optionalDependencies": {
+    "garmin": "^1.0.0"
+  }
+}

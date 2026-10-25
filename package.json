@@ -1,0 +1,80 @@
+{
+  "name": "athlete-panel",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@11.28.8",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "setup": "tsx scripts/setup.ts",
+    "local": "tsx scripts/local.ts",
+    "dev": "pnpm registry:generate && pnpm --filter @athlete-panel/web dev",
+    "build": "pnpm registry:generate && pnpm --filter @athlete-panel/web build && tsup apps/worker/index.ts --format esm --platform node --out-dir dist/worker --no-splitting",
+    "start": "pnpm --filter @athlete-panel/web start",
+    "worker": "tsx apps/worker/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "db:start": "tsx scripts/local-db.ts start",
+    "db:stop": "tsx scripts/local-db.ts stop",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "owner": "tsx scripts/owner.ts",
+    "registry:generate": "tsx scripts/registry.ts",
+    "plugins": "tsx scripts/plugins.ts",
+    "agent": "tsx scripts/agent.ts",
+    "check": "pnpm registry:generate --check && pnpm contracts:generate --check && pnpm skills:sync --check && pnpm boundaries:check && pnpm typecheck && pnpm test:unit && pnpm docs:check",
+    "docs:check": "tsx scripts/check-docs.ts",
+    "skills:sync": "tsx scripts/sync-skills.ts",
+    "demo:seed": "tsx scripts/seed-demo.ts",
+    "test:db:start": "docker compose -f compose.test.yml up -d --wait",
+    "test:db:stop": "docker compose -f compose.test.yml down -v",
+    "contracts:generate": "tsx scripts/contracts.ts",
+    "boundaries:check": "tsx scripts/check-boundaries.ts",
+    "backup": "tsx scripts/backup.ts",
+    "restore": "tsx scripts/restore.ts",
+    "ops": "tsx scripts/operations.ts",
+    "plugin:scaffold": "tsx scripts/scaffold-plugin.ts",
+    "local:ops": "tsx scripts/local-ops.ts",
+    "configure:hosted": "tsx scripts/configure-hosted.ts",
+    "backup:verify": "tsx scripts/verify-backup.ts"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "drizzle-orm": "0.45.4",
+    "json-bigint": "1.0.0",
+    "lucide-react": "1.61.0",
+    "next": "16.4.3",
+    "postgres": "3.4.9",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "semver": "7.7.3",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/json-bigint": "1.0.4",
+    "@types/node": "22.19.15",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.2.3",
+    "@types/semver": "7.7.1",
+    "esbuild": "0.28.2",
+    "tsup": "8.5.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bidulelabs/athlete-panel.git"
+  },
+  "homepage": "https://github.com/bidulelabs/athlete-panel#readme",
+  "bugs": {
+    "url": "https://github.com/bidulelabs/athlete-panel/issues"
+  }
+}

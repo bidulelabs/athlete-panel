@@ -1,0 +1,14 @@
+name: Feature request
+description: Describe a training or self-hosting problem and a focused improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would this help you do?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested behavior and alternatives
+      description: Use synthetic examples; exclude private training or health records.

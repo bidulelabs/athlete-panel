@@ -1,0 +1,34 @@
+{
+  "id": "garmin",
+  "name": "Garmin import",
+  "description": "Personal API activities and health imports",
+  "version": "1.0.0",
+  "hostApi": "^1.0.0",
+  "dependencies": {
+    "activity-records": "^1.0.0"
+  },
+  "required": false,
+  "routes": [
+    {
+      "path": "/garmin",
+      "title": "Garmin import",
+      "icon": "Plug"
+    }
+  ],
+  "migrations": [
+    "migrations/001-initial.sql",
+    "migrations/002-coverage-quality.sql"
+  ],
+  "services": [],
+  "jobs": [
+    "garmin-history",
+    "garmin-recent"
+  ],
+  "capabilities": [
+    "network:personal.connectapi.garmin.com",
+    "secret:garmin-key"
+  ],
+  "server": "server.ts",
+  "schema": "garmin",
+  "client": "client.tsx"
+}

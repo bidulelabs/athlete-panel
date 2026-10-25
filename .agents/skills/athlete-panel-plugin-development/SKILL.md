@@ -1,0 +1,18 @@
+---
+name: athlete-panel-plugin-development
+description: Create or improve a trusted source plugin for this private Athlete Panel application, including pages and read-only dashboards. Use for application-code changes, not athlete training-data edits.
+---
+
+Read the repository [working instructions](../../../AGENTS.md), [plugin contract and lifecycle](../../../docs/features/plugins.md), and the relevant feature specification. The host is infrastructure; a normal feature belongs in a plugin.
+
+For a new personal plugin, use the repository scaffolder documented in [development](../../../docs/development.md). It creates a local plugin directory and manifest without changing the instance composition. Choose a useful narrow capability, such as comparing cycling duration and recorded sleep, and declare its actual feature dependencies.
+
+Use [the SDK](../../../packages/plugin-sdk/src/index.ts), [shared contracts](../../../packages/contracts/src/index.ts) and [public UI exports](../../../packages/ui/src/index.ts). A page receives typed workspace data and an authenticated operation requester. Missing measurements stay unknown, and time/distance contracts use seconds/meters. Add routes through the manifest. Read another plugin's data through public contracts/services; do not import its private implementation, host database/secret modules or query another plugin's tables. If a necessary public extension point is absent, identify the gap as a separate coordinated SDK change rather than hiding a core patch inside an ordinary plugin.
+
+Keep server and client entry points separate. Code included in the instance is trusted server code: capabilities are review metadata, not a sandbox. Do not add arbitrary URL/package installation, a model SDK, provider credentials or a second sports integration for a feature that does not need them. Personal source stays in `personal-plugins/` and its exact version is pinned in the instance composition.
+
+Use synthetic fixtures in an isolated local preview. Check manifest/dependency compatibility, type safety, relevant domain behavior and responsive light/dark rendering; verify empty, unknown and failed-request states. Add meaningful tests for calculations or persisted behavior. Follow the feature template for a new lasting capability. The [cycling/sleep example](../../../personal-plugins/cycling-sleep/manifest.json) shows registration without host changes.
+
+After the local feature is concrete and reviewable, report its files, checks and preview, plus the composition change required to activate it. Activation requires the documented build/restart procedure and whatever deployment authorization the owner has already supplied. Explain whether rollback can use the previous code alone or needs its matching database backup. The feature must continue working after this harness exits; no active agent or author-operated service is a runtime dependency.
+
+Canonical source: this file. Claude discovery copies are generated; update this skill and synchronize adapters rather than editing competing instructions.

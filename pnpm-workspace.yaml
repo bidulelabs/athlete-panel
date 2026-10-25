@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@next/swc-linux-x64-musl@16.4.3'
+  - next@16.4.3
+
+overrides:
+  esbuild: 0.28.2

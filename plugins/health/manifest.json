@@ -1,0 +1,23 @@
+{
+  "id": "health",
+  "name": "Health trends",
+  "description": "Sleep, heart rate, HRV, steps, stress and Body Battery",
+  "version": "1.0.0",
+  "hostApi": "^1.0.0",
+  "dependencies": {
+    "activity-records": "^1.0.0"
+  },
+  "required": false,
+  "routes": [
+    {
+      "path": "/health",
+      "title": "Health",
+      "icon": "HeartPulse"
+    }
+  ],
+  "migrations": [],
+  "services": [],
+  "jobs": [],
+  "capabilities": [],
+  "client": "client.tsx"
+}

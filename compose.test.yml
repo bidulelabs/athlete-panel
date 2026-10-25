@@ -1,0 +1,17 @@
+name: athlete-panel-test
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: athlete_panel_test
+      POSTGRES_PASSWORD: synthetic-test-only
+      POSTGRES_DB: athlete_panel_test
+    ports:
+      - 127.0.0.1:55439:5432
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U athlete_panel_test -d athlete_panel_test]
+      interval: 1s
+      timeout: 5s
+      retries: 30

@@ -1,0 +1,15 @@
+node_modules/
+**/.next/
+dist/
+coverage/
+.runtime/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+instance/registry.*.ts
+apps/web/next-env.d.ts
+docs/
+**/*.md
+**/migrations/
+.claude/
+.impeccable/

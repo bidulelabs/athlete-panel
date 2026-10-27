@@ -27,7 +27,7 @@
     "registry:generate": "tsx scripts/registry.ts",
     "plugins": "tsx scripts/plugins.ts",
     "agent": "tsx scripts/agent.ts",
-    "check": "pnpm registry:generate --check && pnpm contracts:generate --check && pnpm skills:sync --check && pnpm boundaries:check && pnpm typecheck && pnpm test:unit && pnpm docs:check",
+    "check": "pnpm format:check && pnpm lint && pnpm registry:generate --check && pnpm contracts:generate --check && pnpm skills:sync --check && pnpm boundaries:check && pnpm typecheck && pnpm test:unit && pnpm docs:check",
     "docs:check": "tsx scripts/check-docs.ts",
     "skills:sync": "tsx scripts/sync-skills.ts",
     "demo:seed": "tsx scripts/seed-demo.ts",
@@ -41,7 +41,10 @@
     "plugin:scaffold": "tsx scripts/scaffold-plugin.ts",
     "local:ops": "tsx scripts/local-ops.ts",
     "configure:hosted": "tsx scripts/configure-hosted.ts",
-    "backup:verify": "tsx scripts/verify-backup.ts"
+    "backup:verify": "tsx scripts/verify-backup.ts",
+    "format": "prettier --write \"{apps,packages,plugins,personal-plugins,instance,scripts,tests}/**/*.{ts,tsx,js,mjs,cjs,json,css,yml,yaml}\" \"*.{ts,mjs,json,yml,yaml}\" \".github/**/*.{yml,yaml}\" \".prettierrc.json\"",
+    "format:check": "prettier --check \"{apps,packages,plugins,personal-plugins,instance,scripts,tests}/**/*.{ts,tsx,js,mjs,cjs,json,css,yml,yaml}\" \"*.{ts,mjs,json,yml,yaml}\" \".github/**/*.{yml,yaml}\" \".prettierrc.json\"",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@tailwindcss/postcss": "4.3.3",
@@ -58,6 +61,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.1",
     "@types/json-bigint": "1.0.4",
     "@types/node": "22.19.15",
@@ -65,8 +69,12 @@
     "@types/react-dom": "19.2.3",
     "@types/semver": "7.7.1",
     "esbuild": "0.28.2",
+    "eslint": "10.13.0",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.9.10",
     "tsup": "8.5.0",
     "typescript": "5.9.3",
+    "typescript-eslint": "8.72.1",
     "vitest": "5.0.5"
   },
   "repository": {

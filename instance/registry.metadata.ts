@@ -3,20 +3,25 @@ export const registry = [
   {
     "path": "plugins/athlete",
     "enabled": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "manifest": {
       "id": "athlete",
       "name": "Athlete",
       "description": "Profile, preferences and training constraints",
-      "version": "1.0.0",
-      "hostApi": "^1.0.0",
-      "dependencies": {},
+      "version": "1.1.0",
+      "hostApi": "^1.1.0",
+      "dependencies": {
+        "training": "^1.1.0"
+      },
       "optionalDependencies": {
         "garmin": "^1.0.0"
       },
       "required": true,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {
+        "client": "public/client.ts"
+      },
       "routes": [
         {
           "path": "/settings",
@@ -46,20 +51,23 @@ export const registry = [
   {
     "path": "plugins/training",
     "enabled": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "manifest": {
       "id": "training",
       "name": "Training",
       "description": "Plans, workouts and recorded completion",
-      "version": "1.0.0",
-      "hostApi": "^1.0.0",
-      "dependencies": {
-        "athlete": "^1.0.0"
-      },
+      "version": "1.1.0",
+      "hostApi": "^1.1.0",
+      "dependencies": {},
       "optionalDependencies": {},
       "required": true,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {
+        "shared": "public/shared.ts",
+        "client": "public/client.ts",
+        "server": "public/server.ts"
+      },
       "routes": [
         {
           "path": "/plans",
@@ -82,18 +90,21 @@ export const registry = [
   {
     "path": "plugins/activity-records",
     "enabled": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "manifest": {
       "id": "activity-records",
       "name": "Activity history",
       "description": "Normalized activities and health history",
-      "version": "1.0.0",
-      "hostApi": "^1.0.0",
-      "dependencies": {},
+      "version": "1.1.0",
+      "hostApi": "^1.1.0",
+      "dependencies": {
+        "training": "^1.1.0"
+      },
       "optionalDependencies": {},
       "required": true,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {},
       "routes": [
         {
           "path": "/activities",
@@ -116,21 +127,22 @@ export const registry = [
   {
     "path": "plugins/calendar",
     "enabled": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "manifest": {
       "id": "calendar",
       "name": "Training calendar",
       "description": "Plan and review your week",
-      "version": "1.0.0",
-      "hostApi": "^1.0.0",
+      "version": "1.1.0",
+      "hostApi": "^1.1.0",
       "dependencies": {
-        "athlete": "^1.0.0",
-        "training": "^1.0.0",
+        "athlete": "^1.1.0",
+        "training": "^1.1.0",
         "activity-records": "^1.0.0"
       },
       "optionalDependencies": {},
       "required": true,
       "client": "client.tsx",
+      "public": {},
       "routes": [
         {
           "path": "/calendar",
@@ -149,13 +161,13 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "1.0.0",
-      "hostApi": "^1.0.0",
+      "version": "1.1.0",
+      "hostApi": "^1.1.0",
       "dependencies": {
         "activity-records": "^1.0.0"
       },
@@ -163,6 +175,9 @@ export const registry = [
       "required": false,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {
+        "server": "public/server.ts"
+      },
       "routes": [
         {
           "path": "/garmin",
@@ -170,7 +185,13 @@ export const registry = [
           "icon": "Plug"
         }
       ],
-      "slots": [],
+      "slots": [
+        {
+          "id": "connection",
+          "kind": "onboarding",
+          "title": "Garmin connection"
+        }
+      ],
       "schema": "garmin",
       "migrations": [
         "migrations/001-initial.sql",
@@ -204,6 +225,7 @@ export const registry = [
       "optionalDependencies": {},
       "required": false,
       "client": "client.tsx",
+      "public": {},
       "routes": [
         {
           "path": "/health",
@@ -222,22 +244,23 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "1.0.0",
-      "hostApi": "^1.0.0",
+      "version": "1.1.0",
+      "hostApi": "^1.1.0",
       "dependencies": {
-        "training": "^1.0.0",
-        "athlete": "^1.0.0",
+        "training": "^1.1.0",
+        "athlete": "^1.1.0",
         "activity-records": "^1.0.0"
       },
       "optionalDependencies": {},
       "required": false,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {},
       "routes": [
         {
           "path": "/agent",
@@ -272,6 +295,7 @@ export const registry = [
       "optionalDependencies": {},
       "required": false,
       "client": "client.tsx",
+      "public": {},
       "routes": [
         {
           "path": "/cycling-sleep",
@@ -288,4 +312,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="51b38a8b05ebe05f346c54453800d666a1855d1d65f01229ee4e8bfe70d9dd43";
+export const schemaSignature="5f9f458b9db3ddfdab460ca64560b8e2313312db06f1f27609c8aa148011a630";

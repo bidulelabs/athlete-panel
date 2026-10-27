@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noUncheckedIndexedAccess": true },
+  "include": [
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "plugins/**/*.ts",
+    "plugins/**/*.tsx",
+    "personal-plugins/**/*.ts",
+    "personal-plugins/**/*.tsx",
+    "instance/**/*.ts",
+    "instance/**/*.tsx"
+  ]
+}

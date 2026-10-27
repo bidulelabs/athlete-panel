@@ -2,11 +2,9 @@
   "id": "training",
   "name": "Training",
   "description": "Plans, workouts and recorded completion",
-  "version": "1.0.0",
-  "hostApi": "^1.0.0",
-  "dependencies": {
-    "athlete": "^1.0.0"
-  },
+  "version": "1.1.0",
+  "hostApi": "^1.1.0",
+  "dependencies": {},
   "required": true,
   "routes": [
     {
@@ -15,14 +13,16 @@
       "icon": "Layers"
     }
   ],
-  "migrations": [
-    "migrations/001-initial.sql",
-    "migrations/002-identity-index.sql"
-  ],
+  "migrations": ["migrations/001-initial.sql", "migrations/002-identity-index.sql"],
   "services": [],
   "jobs": [],
   "capabilities": [],
   "client": "client.tsx",
   "server": "server.ts",
-  "schema": "training"
+  "schema": "training",
+  "public": {
+    "client": "public/client.ts",
+    "shared": "public/shared.ts",
+    "server": "public/server.ts"
+  }
 }

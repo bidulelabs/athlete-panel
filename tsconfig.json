@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "ES2022"
-    ],
+    "lib": ["dom", "dom.iterable", "ES2022"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
@@ -17,24 +13,12 @@
     "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
-      "@athlete-panel/contracts": [
-        "packages/contracts/src/index.ts"
-      ],
-      "@athlete-panel/host/*": [
-        "packages/host/src/*"
-      ],
-      "@athlete-panel/plugin-sdk": [
-        "packages/plugin-sdk/src/index.ts"
-      ],
-      "@athlete-panel/ui": [
-        "packages/ui/src/index.ts"
-      ],
-      "@/*": [
-        "./*"
-      ],
-      "@athlete-panel/ui/*": [
-        "packages/ui/src/*"
-      ]
+      "@athlete-panel/contracts": ["packages/contracts/src/index.ts"],
+      "@athlete-panel/host/*": ["packages/host/src/*"],
+      "@athlete-panel/plugin-sdk": ["packages/plugin-sdk/src/index.ts"],
+      "@athlete-panel/ui": ["packages/ui/src/index.ts"],
+      "@/*": ["./*"],
+      "@athlete-panel/ui/*": ["packages/ui/src/*"]
     }
   },
   "include": [
@@ -51,9 +35,5 @@
     "tests/**/*.ts",
     "*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "**/.next",
-    "dist"
-  ]
+  "exclude": ["node_modules", "**/.next", "dist"]
 }

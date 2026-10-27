@@ -2,9 +2,11 @@
   "id": "activity-records",
   "name": "Activity history",
   "description": "Normalized activities and health history",
-  "version": "1.0.0",
-  "hostApi": "^1.0.0",
-  "dependencies": {},
+  "version": "1.1.0",
+  "hostApi": "^1.1.0",
+  "dependencies": {
+    "training": "^1.1.0"
+  },
   "required": true,
   "routes": [
     {
@@ -13,10 +15,7 @@
       "icon": "Activity"
     }
   ],
-  "migrations": [
-    "migrations/001-initial.sql",
-    "migrations/002-identity-index.sql"
-  ],
+  "migrations": ["migrations/001-initial.sql", "migrations/002-identity-index.sql"],
   "services": [],
   "jobs": [],
   "capabilities": [],

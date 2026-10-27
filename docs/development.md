@@ -47,6 +47,12 @@ node -e 'require("node:fs").writeFileSync(".secrets/backup-key",require("node:cr
 
 Store another recovery copy of this key and of `ENCRYPTION_KEY` in your password manager or other separate protected location. Neither key belongs in Git, the backup destination, an agent grant, logs, or a support attachment. The backup key and application encryption key must be different. A backup cannot recover a lost application key.
 
+### Source quality checks
+
+Production source also passes `pnpm typecheck:strict` (`noUncheckedIndexedAccess`); scripts/tests retain the existing strict configuration. Run `pnpm format` after source edits; `pnpm format:check` and `pnpm lint` run in `pnpm check`. Complexity, function length and existing explicit `any` usage initially warn. Generated files, applied migrations and documentation history are excluded from formatting. For readable blame, run `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
+
+`pnpm boundaries:check` resolves imports through TypeScript, including browser roots, re-exports and aliases. Cross-plugin imports use declared public shared/client/server entries and required manifest dependencies; optional UI integrations use enabled contributions.
+
 ## Local development
 
 Start Docker Desktop/Engine. From the repository root, run:

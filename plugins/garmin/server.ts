@@ -1,3 +1,15 @@
-import { configure,sync,pause,disconnect,coveragePage,runGarminJob,scheduleRecent } from './service';
+import {
+  configure,
+  sync,
+  pause,
+  disconnect,
+  coveragePage,
+  runGarminJob,
+  scheduleRecent,
+} from './service';
 import type { ServerPlugin } from '../../packages/plugin-sdk/src';
-export default {operations:{configure,sync,pause,disconnect,coverage:coveragePage},jobs:{'garmin-recent':runGarminJob,'garmin-history':runGarminJob},schedule:scheduleRecent} satisfies ServerPlugin;
+export default {
+  operations: { configure, sync, pause, disconnect, coverage: coveragePage },
+  jobs: { 'garmin-recent': runGarminJob, 'garmin-history': runGarminJob },
+  schedule: scheduleRecent,
+} satisfies ServerPlugin;

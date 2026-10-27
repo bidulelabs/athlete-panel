@@ -6,8 +6,8 @@ x-application: &application
     DATABASE_URL: postgresql://${APP_DATABASE_ROLE:-athlete_panel_app}:${APP_DATABASE_PASSWORD:?Set APP_DATABASE_PASSWORD}@db:5432/${POSTGRES_DB:-athlete_panel}
     ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set the independent application ENCRYPTION_KEY}
     APP_ORIGIN: https://${ATHLETE_PANEL_DOMAIN:?Set ATHLETE_PANEL_DOMAIN}
-    COOKIE_SECURE: "true"
-    TRUST_PROXY_CLIENT_IP: "true"
+    COOKIE_SECURE: 'true'
+    TRUST_PROXY_CLIENT_IP: 'true'
   security_opt: [no-new-privileges:true]
   cap_drop: [ALL]
   restart: unless-stopped
@@ -18,7 +18,7 @@ x-application: &application
     driver: json-file
     options:
       max-size: 10m
-      max-file: "3"
+      max-file: '3'
 
 services:
   db:
@@ -39,11 +39,11 @@ services:
       driver: json-file
       options:
         max-size: 10m
-        max-file: "3"
+        max-file: '3'
   admin:
     <<: *application
     profiles: [tools]
-    restart: "no"
+    restart: 'no'
     environment:
       <<: *environment
       DATABASE_URL: postgresql://${POSTGRES_USER:-athlete_panel}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-athlete_panel}
@@ -53,7 +53,13 @@ services:
   web:
     <<: *application
     healthcheck:
-      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -73,9 +79,9 @@ services:
     environment:
       ATHLETE_PANEL_DOMAIN: ${ATHLETE_PANEL_DOMAIN:?Set ATHLETE_PANEL_DOMAIN}
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -87,7 +93,7 @@ services:
     <<: *application
     profiles: [backup]
     # Read the separately mounted owner-only secret and write the off-host mount.
-    user: "0:0"
+    user: '0:0'
     cap_add: [DAC_OVERRIDE]
     environment:
       <<: *environment
@@ -102,8 +108,8 @@ services:
   recovery:
     <<: *application
     profiles: [tools]
-    restart: "no"
-    user: "0:0"
+    restart: 'no'
+    user: '0:0'
     cap_add: [DAC_OVERRIDE]
     environment:
       <<: *environment

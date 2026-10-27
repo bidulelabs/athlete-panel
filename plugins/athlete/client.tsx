@@ -1,55 +1,222 @@
-"use client";
+'use client';
 
-import { Alert } from '@athlete-panel/ui';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@athlete-panel/ui';
-import { useConfirm } from '@athlete-panel/ui';
-import { Input, Textarea, NativeSelect, Button } from '@athlete-panel/ui';
+import type { CommandInput, EntityChange } from '@athlete-panel/contracts';
+import {
+  AddButton,
+  Alert,
+  Button,
+  dateLabel,
+  EmptyState,
+  ErrorMessage,
+  Field,
+  Input,
+  OperationalStatus,
+  orderedWeekdays,
+  PageHeader,
+  resolveWeekStartsOn,
+  SubmitButton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Textarea,
+  useAction,
+  useConfirm,
+  useWorkspace,
+  type PluginPageProps,
+} from '@athlete-panel/ui';
+import {
+  Check,
+  Edit3,
+  Flag,
+  HeartPulse,
+  NotebookPen,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  UserRound,
+} from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import type { CommandInput, Schedule, EntityChange } from '@athlete-panel/contracts';
-import { Check, Edit3, Flag, HeartPulse, NotebookPen, Plus, ShieldCheck, Trash2, UserRound } from 'lucide-react';
-import { OperationalStatus, AddButton, dateLabel, EmptyState, ErrorMessage, Field, localDate, orderedWeekdays, resolveWeekStartsOn, Modal, PageHeader, requestId, SubmitButton, useAction, useWorkspace, type PluginPageProps } from '@athlete-panel/ui';
-import { PreferenceFields, suggestedPreferences } from './preferences';
+import { mutate } from '../training/public/client';
+import { effectiveDate } from '../training/public/shared';
 import { OnboardingDialog, OnboardingResume } from './onboarding-client';
+import { PreferenceFields, suggestedPreferences } from './preferences';
 export const contributions = { welcome: OnboardingDialog };
-import { effectiveDate } from '../training/dates';
-import { mutate, ScheduleFields } from '../training/client';
 
-type ContextKind = 'note' | 'event' | 'injury';
-export function ContextEditor({ kind, record, defaultDate, onClose }: { kind: ContextKind; record?: any; defaultDate?: string; onClose: () => void }) {
-  const { data, request } = useWorkspace();
-  const [schedule, setSchedule] = useState<Schedule>(record?.schedule ?? { kind: 'independent', date: defaultDate ?? localDate() });
-  const action = useAction(); const [key] = useState(requestId);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget);
-    const value = (name: string) => String(form.get(name) ?? '');
-    const values = kind === 'note' ? { title: value('title'), body: value('body'), schedule } : kind === 'event' ? { title: value('title'), date: value('date'), kind: value('kind'), notes: value('notes') } : { bodyPart: value('bodyPart'), description: value('description'), startDate: value('startDate'), endDate: value('endDate') || null, severity: value('severity'), notes: value('notes') };
-    const command = record ? { action: `${kind}.update`, id: record.id, expectedRevision: record.revision, values } : { action: `${kind}.create`, values };
-    await action.run(() => mutate(request, [command as CommandInput], key), onClose);
-  }
-  return <Modal open onClose={onClose} title={`${record ? 'Edit' : 'Add'} ${kind === 'injury' ? 'injury constraint' : kind}`} description={kind === 'injury' ? 'Keep your training constraints visible when planning.' : kind === 'event' ? 'Put a race, goal, or important date on your calendar.' : 'A little context for your training week.'}><form className="dialog-body" onSubmit={submit}>{kind !== 'injury' && <Field label="Title"><Input autoFocus required name="title" maxLength={255} defaultValue={record?.title ?? ''} placeholder={kind === 'note' ? 'e.g. Travel day' : 'e.g. Autumn half marathon'} /></Field>}{kind === 'note' && <><Field label="Note"><Textarea required name="body" maxLength={4000} rows={4} defaultValue={record?.body ?? ''} /></Field><ScheduleFields schedule={schedule} onChange={setSchedule} plans={data.plans} /></>}{kind === 'event' && <><div className="form-grid"><Field label="Date"><Input required type="date" name="date" defaultValue={record?.date ?? defaultDate ?? localDate()} /></Field><Field label="Event type"><NativeSelect name="kind" defaultValue={record?.kind ?? 'goal'}><option value="goal">Goal</option><option value="race">Race</option><option value="other">Other</option></NativeSelect></Field></div><Field label="Notes"><Textarea name="notes" rows={3} maxLength={4000} defaultValue={record?.notes ?? ''} /></Field></>}{kind === 'injury' && <><Field label="Body area"><Input autoFocus required name="bodyPart" maxLength={255} placeholder="e.g. Left knee" defaultValue={record?.bodyPart ?? ''} /></Field><Field label="Constraint or description"><Textarea name="description" maxLength={4000} rows={3} placeholder="What should you take into account?" defaultValue={record?.description ?? ''} /></Field><div className="form-grid"><Field label="Start date"><Input required type="date" name="startDate" defaultValue={record?.startDate ?? defaultDate ?? localDate()} /></Field><Field label="End date" hint="Leave blank while ongoing."><Input type="date" name="endDate" defaultValue={record?.endDate ?? ''} /></Field></div><Field label="Severity"><NativeSelect name="severity" defaultValue={record?.severity ?? 'mild'}><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></NativeSelect></Field><Field label="Additional notes"><Textarea name="notes" maxLength={4000} rows={2} defaultValue={record?.notes ?? ''} /></Field></>}<ErrorMessage error={action.error} /><div className="dialog-actions"><Button variant="outline" type="button" className="button" onClick={onClose}>Cancel</Button><SubmitButton busy={action.busy}>{record ? 'Save changes' : `Add ${kind}`}</SubmitButton></div></form></Modal>;
-}
-
+import { ContextEditor, type ContextKind } from './context-editor';
 function ProfileForm({ data, request }: PluginPageProps) {
   // A refresh must never advance the revision attached to an unsaved draft.
   const [profile, setProfile] = useState(data.profile);
   const stale = (data.profile?.revision ?? 0) > (profile?.revision ?? 0);
-  const action = useAction(); const [saved, setSaved] = useState(false);
+  const action = useAction();
+  const [saved, setSaved] = useState(false);
   const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const [preferences, setPreferences] = useState(() => suggestedPreferences(profile, detected));
   const weekPreference = preferences.weekStartsOnPreference;
   const days = orderedWeekdays(resolveWeekStartsOn(weekPreference, navigator.language));
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setSaved(false); const form = new FormData(event.currentTarget);
-    const zones = (name: string) => String(form.get(name) ?? '').split(',').map(value => value.trim()).filter(Boolean).map(Number);
-    const values = { displayName: String(form.get('displayName')), timezone: String(form.get('timezone')), units: String(form.get('units')) as 'metric' | 'imperial', language: 'en' as const, weekStartsOnPreference: weekPreference, goals: String(form.get('goals')), ftpWatts: form.get('ftpWatts') ? Number(form.get('ftpWatts')) : null, heartRateZones: { cycling: zones('cyclingZones'), running: zones('runningZones') }, weeklyAvailability: Object.fromEntries(days.map(day => [day, Math.round(Number(form.get(day) ?? 0) * 3600)])) as any };
+    event.preventDefault();
+    setSaved(false);
+    const form = new FormData(event.currentTarget);
+    const zones = (name: string) =>
+      String(form.get(name) ?? '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .map(Number);
+    const values = {
+      displayName: String(form.get('displayName')),
+      timezone: String(form.get('timezone')),
+      units: String(form.get('units')) as 'metric' | 'imperial',
+      language: 'en' as const,
+      weekStartsOnPreference: weekPreference,
+      goals: String(form.get('goals')),
+      ftpWatts: form.get('ftpWatts') ? Number(form.get('ftpWatts')) : null,
+      heartRateZones: { cycling: zones('cyclingZones'), running: zones('runningZones') },
+      weeklyAvailability: Object.fromEntries(
+        days.map((day) => [day, Math.round(Number(form.get(day) ?? 0) * 3600)]),
+      ) as any,
+    };
     await action.run(async () => {
-      const result = await mutate(request, [{ action: 'profile.set', expectedRevision: profile?.revision ?? null, values }]);
-      const next = (result.changes as EntityChange[]).find(change => change.entity === 'profile')?.after;
+      const result = await mutate(request, [
+        { action: 'profile.set', expectedRevision: profile?.revision ?? null, values },
+      ]);
+      const next = (result.changes as EntityChange[]).find(
+        (change) => change.entity === 'profile',
+      )?.after;
       if (next && 'timezone' in next) setProfile(next);
       setSaved(true);
     });
   }
-  return <div className="profile-layout"><form key={profile?.revision ?? "new"} onSubmit={submit}><section className="profile-form-section"><h2>Athlete profile</h2><p>These preferences apply throughout your workspace.</p>{stale && <Alert className="callout" role="status"><p>This profile changed elsewhere. Your draft is preserved. Copy anything you want to keep before loading the saved version.</p><Button variant="outline" type="button" className="button" disabled={action.busy} onClick={() => { setProfile(data.profile); setPreferences(suggestedPreferences(data.profile, detected)); setSaved(false); action.setError(null); }}>Load saved profile</Button></Alert>}<div className="form-grid"><Field label="Display name"><Input required name="displayName" defaultValue={profile?.displayName ?? ''} placeholder="Your name" maxLength={255} /></Field></div><PreferenceFields value={preferences} onChange={setPreferences} detected={detected} /><Field label="Training goals"><Textarea name="goals" rows={3} maxLength={4000} defaultValue={profile?.goals ?? ''} placeholder="What are you working toward?" /></Field></section><section className="profile-form-section"><h2>Weekly availability</h2><p>Available training hours for a typical week.</p><div className="availability-grid">{days.map(day => <Field label={day.slice(0, 3).replace(/^./, s => s.toUpperCase())} key={day}><Input type="number" step="0.25" min="0" max="24" name={day} aria-label={`${day} available hours`} defaultValue={(profile?.weeklyAvailability[day] ?? 0) / 3600} /></Field>)}</div></section><section className="profile-form-section"><h2>Training zones</h2><p>Use your own measured zones. Leave unknown values blank.</p><div className="form-grid"><Field label="Cycling heart-rate zones" hint="Ascending upper bounds in bpm, separated by commas."><Input name="cyclingZones" placeholder="e.g. 120, 140, 155, 170, 185" defaultValue={profile?.heartRateZones.cycling.join(', ') ?? ''} /></Field><Field label="Running heart-rate zones" hint="Ascending upper bounds in bpm, separated by commas."><Input name="runningZones" placeholder="e.g. 125, 145, 160, 175, 190" defaultValue={profile?.heartRateZones.running.join(', ') ?? ''} /></Field></div><Field label="Cycling FTP · watts"><Input type="number" min="1" max="3000" step="1" name="ftpWatts" placeholder="Unknown" defaultValue={profile?.ftpWatts ?? ''} /></Field></section><ErrorMessage error={action.error} />{saved && <div className="success-message" role="status"><Check size={15} />Profile saved.</div>}<SubmitButton busy={action.busy}>Save profile</SubmitButton></form><aside className="context-panel"><UserRound size={24} /><h3>Your training context</h3><p>Your goals, availability, and zones help you plan consistently. External agents receive only the context you choose to share through an access grant.</p><div className="info-line"><ShieldCheck size={15} /><span>Stored on your private instance.</span></div></aside></div>;
+  return (
+    <div className="profile-layout">
+      <form key={profile?.revision ?? 'new'} onSubmit={submit}>
+        <section className="profile-form-section">
+          <h2>Athlete profile</h2>
+          <p>These preferences apply throughout your workspace.</p>
+          {stale && (
+            <Alert className="callout" role="status">
+              <p>
+                This profile changed elsewhere. Your draft is preserved. Copy anything you want to
+                keep before loading the saved version.
+              </p>
+              <Button
+                variant="outline"
+                type="button"
+                className="button"
+                disabled={action.busy}
+                onClick={() => {
+                  setProfile(data.profile);
+                  setPreferences(suggestedPreferences(data.profile, detected));
+                  setSaved(false);
+                  action.setError(null);
+                }}
+              >
+                Load saved profile
+              </Button>
+            </Alert>
+          )}
+          <div className="form-grid">
+            <Field label="Display name">
+              <Input
+                required
+                name="displayName"
+                defaultValue={profile?.displayName ?? ''}
+                placeholder="Your name"
+                maxLength={255}
+              />
+            </Field>
+          </div>
+          <PreferenceFields value={preferences} onChange={setPreferences} detected={detected} />
+          <Field label="Training goals">
+            <Textarea
+              name="goals"
+              rows={3}
+              maxLength={4000}
+              defaultValue={profile?.goals ?? ''}
+              placeholder="What are you working toward?"
+            />
+          </Field>
+        </section>
+        <section className="profile-form-section">
+          <h2>Weekly availability</h2>
+          <p>Available training hours for a typical week.</p>
+          <div className="availability-grid">
+            {days.map((day) => (
+              <Field label={day.slice(0, 3).replace(/^./, (s) => s.toUpperCase())} key={day}>
+                <Input
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  max="24"
+                  name={day}
+                  aria-label={`${day} available hours`}
+                  defaultValue={(profile?.weeklyAvailability[day] ?? 0) / 3600}
+                />
+              </Field>
+            ))}
+          </div>
+        </section>
+        <section className="profile-form-section">
+          <h2>Training zones</h2>
+          <p>Use your own measured zones. Leave unknown values blank.</p>
+          <div className="form-grid">
+            <Field
+              label="Cycling heart-rate zones"
+              hint="Ascending upper bounds in bpm, separated by commas."
+            >
+              <Input
+                name="cyclingZones"
+                placeholder="e.g. 120, 140, 155, 170, 185"
+                defaultValue={profile?.heartRateZones.cycling.join(', ') ?? ''}
+              />
+            </Field>
+            <Field
+              label="Running heart-rate zones"
+              hint="Ascending upper bounds in bpm, separated by commas."
+            >
+              <Input
+                name="runningZones"
+                placeholder="e.g. 125, 145, 160, 175, 190"
+                defaultValue={profile?.heartRateZones.running.join(', ') ?? ''}
+              />
+            </Field>
+          </div>
+          <Field label="Cycling FTP · watts">
+            <Input
+              type="number"
+              min="1"
+              max="3000"
+              step="1"
+              name="ftpWatts"
+              placeholder="Unknown"
+              defaultValue={profile?.ftpWatts ?? ''}
+            />
+          </Field>
+        </section>
+        <ErrorMessage error={action.error} />
+        {saved && (
+          <div className="success-message" role="status">
+            <Check size={15} />
+            Profile saved.
+          </div>
+        )}
+        <SubmitButton busy={action.busy}>Save profile</SubmitButton>
+      </form>
+      <aside className="context-panel">
+        <UserRound size={24} />
+        <h3>Your training context</h3>
+        <p>
+          Your goals, availability, and zones help you plan consistently. External agents receive
+          only the context you choose to share through an access grant.
+        </p>
+        <div className="info-line">
+          <ShieldCheck size={15} />
+          <span>Stored on your private instance.</span>
+        </div>
+      </aside>
+    </div>
+  );
 }
 
 export default function AthletePage(props: PluginPageProps) {
@@ -61,5 +228,150 @@ export default function AthletePage(props: PluginPageProps) {
   const action = useAction();
   const kind: ContextKind = tab === 'notes' ? 'note' : tab === 'events' ? 'event' : 'injury';
   const records = tab === 'notes' ? data.notes : tab === 'events' ? data.events : data.injuries;
-  return <><PageHeader eyebrow="THE ATHLETE BEHIND THE TRAINING" title="Athlete & context" description="Your preferences, goals, and the details that shape your plan." actions={tab !== 'profile' && <AddButton onClick={() => setEditing({ kind })}>Add {kind}</AddButton>} /><Tabs value={tab} onValueChange={value => setTab(value as typeof tab)}><TabsList className="workspace-tabs" aria-label="Athlete settings">{(['profile', 'notes', 'events', 'injuries'] as const).map(value => <TabsTrigger key={value} value={value}>{value === 'profile' ? 'Profile & zones' : value === 'injuries' ? 'Injury constraints' : value.replace(/^./, s => s.toUpperCase())}</TabsTrigger>)}</TabsList><TabsContent value={tab}>{tab === 'profile' ? <><OnboardingResume /><details><summary>Instance status and recovery</summary><OperationalStatus /></details><ProfileForm key={`setup-${envelope.onboarding?.revision ?? 0}`} {...props} /></> : <><ErrorMessage error={action.error} />{!records.length ? <EmptyState icon={kind === 'note' ? <NotebookPen size={25} /> : kind === 'event' ? <Flag size={25} /> : <HeartPulse size={25} />} title={kind === 'note' ? 'A place for the little details' : kind === 'event' ? 'Give yourself a date to aim for' : 'No injury constraints recorded'} action={<Button variant="outline" className="button" onClick={() => setEditing({ kind })}><Plus size={15} />Add {kind}</Button>}>{kind === 'note' ? 'Travel, fatigue, or a good day. Keep useful context alongside your training.' : kind === 'event' ? 'Add a race, a goal, or another date that matters.' : 'Record a constraint when it needs to inform your training.'}</EmptyState> : records.map((record: any) => { const date = kind === 'note' ? effectiveDate(record, data.plans) : kind === 'event' ? record.date : record.startDate; return <div className="context-record" key={record.id}><div className="context-record-icon">{kind === 'note' ? <NotebookPen size={18} /> : kind === 'event' ? <Flag size={18} /> : <HeartPulse size={18} />}</div><div className="context-record-copy"><strong>{record.title ?? record.bodyPart}</strong><small>{date ? dateLabel(date, { day: 'numeric', month: 'long', year: 'numeric' }) : 'Undated plan'}{kind === 'injury' && ` · ${record.endDate ? `until ${dateLabel(record.endDate)}` : 'ongoing'} · ${record.severity}`}{kind === 'event' && ` · ${record.kind}`}</small><p>{record.body ?? record.description ?? record.notes}</p></div><div className="row-action-group"><Button variant="ghost" size="icon" className="icon-button" aria-label={`Edit ${kind}`} onClick={() => setEditing({ kind, record })}><Edit3 size={15} /></Button><Button variant="ghost" size="icon" className="icon-button" aria-label={`Delete ${kind}`} disabled={action.busy} onClick={async () => { if (await confirm(`Delete this ${kind}?`)) void action.run(() => mutate(request, [{ action: `${kind}.delete`, id: record.id, expectedRevision: record.revision } as CommandInput])); }}><Trash2 size={15} /></Button></div></div>; })}</>}</TabsContent></Tabs>{editing && <ContextEditor {...editing} onClose={() => setEditing(null)} />}</>;
+  return (
+    <>
+      <PageHeader
+        eyebrow="THE ATHLETE BEHIND THE TRAINING"
+        title="Athlete & context"
+        description="Your preferences, goals, and the details that shape your plan."
+        actions={
+          tab !== 'profile' && (
+            <AddButton onClick={() => setEditing({ kind })}>Add {kind}</AddButton>
+          )
+        }
+      />
+      <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
+        <TabsList className="workspace-tabs" aria-label="Athlete settings">
+          {(['profile', 'notes', 'events', 'injuries'] as const).map((value) => (
+            <TabsTrigger key={value} value={value}>
+              {value === 'profile'
+                ? 'Profile & zones'
+                : value === 'injuries'
+                  ? 'Injury constraints'
+                  : value.replace(/^./, (s) => s.toUpperCase())}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent value={tab}>
+          {tab === 'profile' ? (
+            <>
+              <OnboardingResume />
+              <details>
+                <summary>Instance status and recovery</summary>
+                <OperationalStatus />
+              </details>
+              <ProfileForm key={`setup-${envelope.onboarding?.revision ?? 0}`} {...props} />
+            </>
+          ) : (
+            <>
+              <ErrorMessage error={action.error} />
+              {!records.length ? (
+                <EmptyState
+                  icon={
+                    kind === 'note' ? (
+                      <NotebookPen size={25} />
+                    ) : kind === 'event' ? (
+                      <Flag size={25} />
+                    ) : (
+                      <HeartPulse size={25} />
+                    )
+                  }
+                  title={
+                    kind === 'note'
+                      ? 'A place for the little details'
+                      : kind === 'event'
+                        ? 'Give yourself a date to aim for'
+                        : 'No injury constraints recorded'
+                  }
+                  action={
+                    <Button
+                      variant="outline"
+                      className="button"
+                      onClick={() => setEditing({ kind })}
+                    >
+                      <Plus size={15} />
+                      Add {kind}
+                    </Button>
+                  }
+                >
+                  {kind === 'note'
+                    ? 'Travel, fatigue, or a good day. Keep useful context alongside your training.'
+                    : kind === 'event'
+                      ? 'Add a race, a goal, or another date that matters.'
+                      : 'Record a constraint when it needs to inform your training.'}
+                </EmptyState>
+              ) : (
+                records.map((record: any) => {
+                  const date =
+                    kind === 'note'
+                      ? effectiveDate(record, data.plans)
+                      : kind === 'event'
+                        ? record.date
+                        : record.startDate;
+                  return (
+                    <div className="context-record" key={record.id}>
+                      <div className="context-record-icon">
+                        {kind === 'note' ? (
+                          <NotebookPen size={18} />
+                        ) : kind === 'event' ? (
+                          <Flag size={18} />
+                        ) : (
+                          <HeartPulse size={18} />
+                        )}
+                      </div>
+                      <div className="context-record-copy">
+                        <strong>{record.title ?? record.bodyPart}</strong>
+                        <small>
+                          {date
+                            ? dateLabel(date, { day: 'numeric', month: 'long', year: 'numeric' })
+                            : 'Undated plan'}
+                          {kind === 'injury' &&
+                            ` · ${record.endDate ? `until ${dateLabel(record.endDate)}` : 'ongoing'} · ${record.severity}`}
+                          {kind === 'event' && ` · ${record.kind}`}
+                        </small>
+                        <p>{record.body ?? record.description ?? record.notes}</p>
+                      </div>
+                      <div className="row-action-group">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="icon-button"
+                          aria-label={`Edit ${kind}`}
+                          onClick={() => setEditing({ kind, record })}
+                        >
+                          <Edit3 size={15} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="icon-button"
+                          aria-label={`Delete ${kind}`}
+                          disabled={action.busy}
+                          onClick={async () => {
+                            if (await confirm(`Delete this ${kind}?`))
+                              void action.run(() =>
+                                mutate(request, [
+                                  {
+                                    action: `${kind}.delete`,
+                                    id: record.id,
+                                    expectedRevision: record.revision,
+                                  } as CommandInput,
+                                ]),
+                              );
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
+      {editing && <ContextEditor {...editing} onClose={() => setEditing(null)} />}
+    </>
+  );
 }

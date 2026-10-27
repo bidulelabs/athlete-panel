@@ -3,7 +3,7 @@ description: Report a reproducible problem using synthetic data.
 body:
   - type: markdown
     attributes:
-      value: "Do not include keys, passwords, personal health data or private URLs. Report security vulnerabilities using SECURITY.md."
+      value: 'Do not include keys, passwords, personal health data or private URLs. Report security vulnerabilities using SECURITY.md.'
   - type: input
     id: version
     attributes:

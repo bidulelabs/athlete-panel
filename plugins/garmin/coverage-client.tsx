@@ -1,4 +1,5 @@
 'use client';
+import './coverage.css';
 import {
   coveragePageSchema,
   importStreamSchema,
@@ -96,6 +97,7 @@ export function CoverageHistory({
           }}
         >
           <option value="all">All windows</option>
+          <option value="unscanned">Unscanned windows</option>
           <option value="failed">Failed windows</option>
           <option value="unavailable">Unavailable windows</option>
           <option value="rejected">Rejected records</option>
@@ -139,18 +141,22 @@ export function CoverageHistory({
                 <TableBody>
                   {result.rows.map((row) => (
                     <TableRow key={`${row.stream}:${row.from}:${row.to}`}>
-                      <TableCell>{row.stream}</TableCell>
-                      <TableCell>
+                      <TableCell data-label="Stream">{row.stream}</TableCell>
+                      <TableCell data-label="From">
                         {row.from === '0001-01-01' ? 'Available history' : row.from}
                       </TableCell>
-                      <TableCell>{row.to}</TableCell>
-                      <TableCell>
+                      <TableCell data-label="Through">{row.to}</TableCell>
+                      <TableCell data-label="Scan / data">
                         {row.scanState ?? 'unscanned'} · {row.status}
                       </TableCell>
-                      <TableCell>{row.records}</TableCell>
-                      <TableCell>
-                        {row.error ||
-                          `${row.missingDays} missing days · ${row.unknownMetrics} unknown measurements`}
+                      <TableCell data-label="Records">
+                        {row.scanState === 'unscanned' ? '—' : row.records}
+                      </TableCell>
+                      <TableCell data-label="Details">
+                        {row.scanState === 'unscanned'
+                          ? 'No completed scan covers this period.'
+                          : row.error ||
+                            `${row.missingDays} missing days · ${row.unknownMetrics} unknown measurements`}
                         {row.rejectedRecords > 0 && (
                           <details>
                             <summary>
@@ -176,8 +182,8 @@ export function CoverageHistory({
                           </details>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {(['failed', 'unavailable'].includes(row.status) ||
+                      <TableCell data-label="Action">
+                        {(['failed', 'unavailable', 'unscanned'].includes(row.status) ||
                           row.rejectedRecords > 0) && (
                           <Button
                             variant="outline"

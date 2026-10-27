@@ -1,6 +1,8 @@
 import { z } from 'zod';
+import { recoveryStatusSchema } from './import-recovery';
 export const garminConnectionSchema = z.object({
   connected: z.boolean(),
+  recovery: recoveryStatusSchema.optional(),
   verified: z.boolean().optional(),
   paused: z.boolean(),
   lastError: z.string().nullable(),

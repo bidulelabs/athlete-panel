@@ -103,16 +103,18 @@ export function rowsForStream(stream: HealthStream, payload: unknown): Row[] {
 export function accountIds(payload: unknown, stream: HealthStream | 'activities'): string[] {
   const rows = rawRows(stream, payload);
   const ids: string[] = [];
-  if (stream === 'hrv') {
-    const rootId = providerId(object(payload).userProfilePk);
-    if (rootId !== null) ids.push(rootId);
-  }
-  for (const raw of rows) {
-    const row = object(raw);
-    const value = stream === 'activities' ? row.ownerId : (row.userProfilePk ?? row.userProfilePK);
-    const id = providerId(value);
-    if (id !== null) ids.push(id);
-  }
+  const inspect = (row: Row, keys: string[]) => {
+    for (const key of keys) {
+      const id = providerId(row[key]);
+      if (id !== null) ids.push(id);
+    }
+  };
+  if (stream === 'hrv') inspect(object(payload), ['userProfilePk', 'userProfilePK']);
+  for (const raw of rows)
+    inspect(
+      object(raw),
+      stream === 'activities' ? ['ownerId'] : ['userProfilePk', 'userProfilePK'],
+    );
   return [...new Set(ids)];
 }
 export function assertAccountBinding(expected: string | null, ids: string[]): string | null {

@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
+import { z } from 'zod';
 import {
   activityScanSchema,
+  dateSchema,
   importStreamSchema,
   type ActivityScan,
   type ImportStream,
@@ -62,6 +64,41 @@ export type SyncCoverage = {
   diagnostics: RejectionDiagnostic[];
   scanState: 'in-progress' | 'scanned' | 'unavailable';
 };
+export function parseSyncCursor(input: unknown): GarminSyncCursor {
+  const parsed = z
+    .object({
+      version: z.literal(1),
+      mode: z.enum(['initial', 'recent']),
+      phase: z.enum([
+        'identity',
+        'recent-activities',
+        'recent-health',
+        'history-activities',
+        'history-health',
+        'done',
+      ]),
+      today: dateSchema,
+      earliestHealthDate: dateSchema,
+      activityFrom: dateSchema.optional(),
+      timeZone: z.string(),
+      accountId: z.string().regex(/^\d+$/).nullable(),
+      activityOffset: z.number().int().nonnegative(),
+      previousPageFingerprint: z.string().nullable(),
+      healthStreamIndex: z.number().int().nonnegative(),
+      windowEnd: dateSchema,
+      unavailableStreams: z.array(importStreamSchema),
+      targetStream: importStreamSchema.optional(),
+      activityScan: activityScanSchema.optional(),
+    })
+    .safeParse(input);
+  if (!parsed.success)
+    throw new GarminError(
+      'invalid_configuration',
+      'The saved Garmin sync checkpoint is invalid or incompatible.',
+    );
+  validateCursor(parsed.data);
+  return parsed.data;
+}
 export type GarminSyncStep = {
   activities: ImportedActivity[];
   healthRecords: ImportedHealthRecord[];

@@ -46,3 +46,18 @@ export const activityScanSchema = z.object({
   oldestReturnedDate: dateSchema.nullable(),
 });
 export type ActivityScan = z.infer<typeof activityScanSchema>;
+export const recoveryJobSchema = z.object({
+  status: z.string(),
+  stream: importStreamSchema.nullable(),
+  from: dateSchema.nullable(),
+  to: dateSchema.nullable(),
+  nextRunAt: z.iso.datetime().nullable(),
+});
+export const recoveryStatusSchema = z.object({
+  catchup: recoveryJobSchema.nullable(),
+  reconciliation: recoveryJobSchema.nullable(),
+  nextReconcileAt: z.iso.datetime().nullable(),
+  unscannedWindows: z.number().int().nonnegative(),
+  retryStreams: z.array(importStreamSchema),
+});
+export type RecoveryStatus = z.infer<typeof recoveryStatusSchema>;

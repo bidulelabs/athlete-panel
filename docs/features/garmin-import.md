@@ -22,6 +22,10 @@ Automatic history imports ignore a former user-selected cutoff. An existing auto
 
 ## Acceptance scenarios
 
+Automatic recovery uses completed per-stream scan intervals, including successful empty responses. Activity windows are confirmed only after an empty terminal page. Unscanned intervals remain visible separately from unavailable, failed and rejected data. Initial traversal checkpoints are preserved; pending traversal ranges are not duplicated by catch-up work. Missing periods older than the recent seven-day window receive bounded, resumable catch-up jobs.
+
+After initial and catch-up work, historical reconciliation rotates across streams at most once every five minutes, with persisted timing and cursors. Health revisits stable 28-day buckets to the existing internal boundary; activity pagination has no lower date cutoff and freezes its upper bound until completion. Completed background slots are reused, while failed checkpoints remain inspectable until explicit retry. Forbidden historical streams wait for a successful recent probe. Provider backoff applies across Garmin job kinds; pause, disconnect, account binding and generation/lease fencing remain authoritative. Priority is recent imports, repairs/catch-up, initial history, then reconciliation. Scanned coverage describes requests performed, not Garmin retention or guaranteed completeness.
+
 | Situation or input | Expected observable result | Verification |
 | --- | --- | --- |
 | Connect with only a key or request automatic history after a legacy cutoff | Queue full history with the internal boundary; preserve credentials, prior data and active progress | Automatic-history integration tests |
@@ -85,7 +89,7 @@ The calendar presents existing normalized sleep values through [sleep cards and 
 
 ### Verification and progress feedback
 
-Saving a key means credentials are stored, not that Garmin accepted them. Successful account-bound import records the verified credential generation; rotation returns the connection to waiting for verification. The owner sees paused/error states, retry timing, worker availability, current request windows and aggregate coverage counts. The table explicitly shows its latest-300-window limit and missing measurements. Existing credentials lacking verification metadata need a subsequent successful import; no live-provider claim is inferred from old UI status.
+Saving a key means credentials are stored, not that Garmin accepted them. Successful account-bound import records the verified credential generation; rotation returns the connection to waiting for verification. The owner sees paused/error states, retry timing, worker availability, current request windows and aggregate coverage counts. The paginated coverage view distinguishes missing measurements from unscanned periods. Existing credentials lacking verification metadata need a subsequent successful import; no live-provider claim is inferred from old UI status.
 
 ### Shared onboarding connection controls
 
@@ -95,6 +99,8 @@ The [authenticated welcome flow](first-time-onboarding.md) reuses key entry and 
 
 Owner-approved audit follow-up, 2026-10-25: verification and history coverage are separate facts. Onboarding and Garmin use the same status message. Persistent failed or unavailable windows continue to indicate that history needs attention even after a later successful request. Unavailable counts use the stored `unavailable` state. Empty coverage never implies zero measurements or complete provider retention.
 
-The owner-only coverage operation validates a filter and offset, returns at most 50 windows, and supports all/failed/unavailable views. Older failures remain discoverable beyond the workspace snapshot limit. Retrying a specific period reuses the existing duplicate-safe full-range import, with its existing active-job and pause guards; unavailable periods first explain permissions/device availability. Coverage read failures retain a labelled last-loaded result or show a reload action. Active import status is independent of the truncated recent-jobs list.
+The owner-only coverage operation validates a filter and offset, returns at most 50 windows, and supports all/unscanned/failed/unavailable/rejected-record views. Older failures remain discoverable beyond the workspace snapshot limit. Retrying a specific period uses duplicate-safe stream/window repair with active-job and pause guards; unavailable periods first explain permissions/device availability. Coverage read failures retain a labelled last-loaded result or show a reload action. Active import status is independent of the truncated recent-jobs list.
 
 Acceptance: a failure older than 300 newer windows is still filterable and retryable; unavailable totals match persisted windows; stale connection verification cannot hide incomplete history. Synthetic integration/browser tests cover these states without real Garmin credentials.
+
+Activate the additive coverage/scheduling migrations using the [coordinated upgrade procedure](../development.md#coordinated-upgrades-and-plugin-activation); rollback requires the matched pre-upgrade backup. Applied migrations and retained cursors remain immutable.

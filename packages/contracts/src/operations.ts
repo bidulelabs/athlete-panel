@@ -59,7 +59,7 @@ export const operationContracts = {
     coverage: operation(
       z
         .object({
-          filter: z.enum(['all', 'failed', 'unavailable', 'rejected']).default('all'),
+          filter: z.enum(['all', 'failed', 'unavailable', 'rejected', 'unscanned']).default('all'),
           offset: z.number().int().min(0).max(1000000).default(0),
         })
         .strict(),

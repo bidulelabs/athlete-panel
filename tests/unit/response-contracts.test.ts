@@ -90,7 +90,9 @@ describe('public response boundaries', () => {
         ],
       },
     };
-    expect(workspaceEnvelopeSchema.parse(value)).toEqual(value);
+    const parsed = workspaceEnvelopeSchema.parse(value);
+    expect(parsed).toMatchObject(value);
+    expect(parsed.garmin.coverage[0]).toMatchObject({ rejectedRecords: 0, diagnostics: [] });
   });
   it('validates known requests/results and leaves extension responses unknown', async () => {
     const request = createPluginRequester(async () => ({ id, changes: [] }));

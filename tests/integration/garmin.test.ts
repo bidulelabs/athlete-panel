@@ -86,7 +86,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     await migrate();
   });
   beforeEach(async () => {
-    await connection()`truncate host.jobs, host.proposals, host.grants, host.changes, host.idempotency, athlete.records, training.records, activity_records.records, garmin.coverage`;
+    await connection()`truncate host.jobs, host.proposals, host.grants, host.changes, host.idempotency, athlete.records, training.records, activity_records.records, garmin.coverage, garmin.scan_state, garmin.scheduler`;
     await connection()`delete from host.settings where key in ('garmin','garminToken','maintenance')`;
     activities = [activityRow()];
     sleepRows = [];

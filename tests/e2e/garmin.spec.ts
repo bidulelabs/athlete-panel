@@ -131,10 +131,130 @@ test('old failed periods remain filterable and open a targeted retry', async ({ 
     page.getByText('Garmin connected. Some history needs attention.', { exact: true }),
   ).toBeVisible();
   await page.getByLabel('Show history windows').selectOption('failed');
-  await expect(page.getByRole('cell', { name: '2001-01-01', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: /^(From )?2001-01-01$/ })).toBeVisible();
   await page.getByRole('button', { name: 'Retry this period' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('From date')).toHaveValue('2001-01-01');
   await expect(dialog.getByLabel('Through date')).toHaveValue('2001-01-28');
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+});
+
+test('coverage distinguishes unscanned and rejected windows and retries only their stream', async ({
+  page,
+}, info) => {
+  await page.goto('/login');
+  await page.getByLabel('Password', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  await page.route('**/api/workspace?**', async (route) => {
+    const response = await route.fetch(),
+      body = await response.json();
+    body.garmin = {
+      ...body.garmin,
+      connected: true,
+      verified: true,
+      paused: false,
+      currentJob: null,
+      coverageSummary: {
+        windows: 1,
+        failed: 0,
+        unavailable: 0,
+        empty: 0,
+        complete: 0,
+        rejected: 1,
+      },
+      recovery: {
+        catchup: {
+          status: 'queued',
+          stream: 'steps',
+          from: '2025-01-01',
+          to: '2025-01-28',
+          nextRunAt: null,
+        },
+        reconciliation: null,
+        unscannedWindows: 40,
+        retryStreams: [],
+        nextReconcileAt: '2026-10-27T12:05:00Z',
+      },
+    };
+    body.jobs = [];
+    await route.fulfill({ response, json: body });
+  });
+  await page.route('**/api/plugins/garmin/coverage', async (route) => {
+    const { filter } = route.request().postDataJSON();
+    const rejected = filter !== 'unscanned';
+    await route.fulfill({
+      json: {
+        total: 1,
+        offset: 0,
+        limit: 50,
+        rows: [
+          {
+            stream: 'steps',
+            from: '2025-01-01',
+            to: '2025-01-28',
+            records: 0,
+            missingDays: 0,
+            unknownMetrics: 0,
+            error: null,
+            status: rejected ? 'partial' : 'unscanned',
+            scanState: rejected ? 'scanned' : 'unscanned',
+            rejectedRecords: rejected ? 2 : 0,
+            diagnostics: rejected
+              ? [
+                  {
+                    stream: 'steps',
+                    from: '2025-01-01',
+                    to: '2025-01-28',
+                    pageOffset: 0,
+                    index: 0,
+                    date: '2025-01-01',
+                    fields: ['totalSteps'],
+                    code: 'schema_validation',
+                  },
+                ]
+              : [],
+          },
+        ],
+      },
+    });
+  });
+  await page.goto('/garmin');
+  await expect(page.getByRole('region', { name: 'Automatic recovery' })).toContainText(
+    '40 unscanned windows',
+  );
+  await page.getByLabel('Show history windows').selectOption('unscanned');
+  await expect(page.getByRole('cell', { name: /^(Records )?—$/ })).toBeVisible();
+  await page.getByLabel('Show history windows').selectOption('rejected');
+  await expect(page.getByRole('cell', { name: /scanned · partial/ })).toBeVisible();
+  await page.locator('summary').filter({ hasText: 'rejected' }).click();
+  await expect(page.getByText(/totalSteps/)).toBeVisible();
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate((value) => {
+      document.documentElement.dataset.theme = value;
+    }, theme);
+    await page.screenshot({
+      path: `.runtime/browser/recovery-${info.project.name}-${theme}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  }
+  await page.route('**/api/plugins/garmin/sync', (route) =>
+    route.fulfill({ json: { id: '00000000-0000-4000-8000-000000000099', status: 'queued' } }),
+  );
+  await page.getByRole('button', { name: 'Retry this period' }).click();
+  const submitted = page.waitForRequest((request) => request.url().endsWith('/garmin/sync'));
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /Queue|Retry|Import/i })
+    .click();
+  expect((await submitted).postDataJSON()).toMatchObject({
+    mode: 'full',
+    stream: 'steps',
+    from: '2025-01-01',
+    to: '2025-01-28',
+  });
 });

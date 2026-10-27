@@ -77,6 +77,16 @@ it('keeps malformed envelopes and every account-identity violation fatal', async
   await expect(
     runSyncStep(cursor('activities'), reader([activity('10'), { ownerId: 'unsafe-identity' }])),
   ).rejects.toMatchObject({ code: 'invalid_payload' });
+  for (const alias of ['999', 'malformed-identity']) {
+    await expect(
+      runSyncStep(
+        cursor('sleep'),
+        reader([
+          { calendarDate: day, userProfilePk: '555', userProfilePK: alias, sleepTimeSeconds: 3600 },
+        ]),
+      ),
+    ).rejects.toMatchObject({ code: alias === '999' ? 'account_mismatch' : 'invalid_payload' });
+  }
 });
 it('rejects invalid/out-of-window health rows individually and preserves null/zero and duplicate identity semantics', async () => {
   const result = await runSyncStep(

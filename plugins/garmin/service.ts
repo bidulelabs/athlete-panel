@@ -29,9 +29,21 @@ import {
   getAccountIdentity,
   requestCoverageIdentity,
   type GarminSyncCursor,
+  parseSyncCursor,
 } from './sync';
 import { assertAccountBinding, streamMetrics, type HealthStream } from './normalize';
 import { automaticHealthHistoryStart } from './history-policy';
+import {
+  scheduleRecovery,
+  recoveryStatus,
+  beginStep,
+  recordRecoveryStep,
+  recordRecoveryFailure,
+  clearRecoveryFailures,
+  unscannedCoverage,
+  recoveryTaskSchema,
+  type RecoveryTask,
+} from './recovery';
 
 const configurationSchema = z.object({
   lastErrorCode: z.string().nullable().optional(),
@@ -92,6 +104,7 @@ export async function configure(body: unknown) {
           lastErrorCode: null,
         };
         await saveConfig(tx, config);
+        await clearRecoveryFailures(tx);
         await tx`delete from host.settings where key='garminToken'`;
         // Preserve existing checkpoints, but re-verify account binding before resuming imports.
         await tx`update host.jobs set status='queued',lease_owner=null,lease_until=null,next_run_at=now(),error=null where plugin_id='garmin' and status in ('paused','running')`;
@@ -141,6 +154,7 @@ export async function sync(body: unknown) {
     const config = await getConfiguration(tx);
     assert(config?.encryptedKey, 'disconnected', 'Configure a Garmin key first.');
     assert(!config.paused, 'paused', 'Resume Garmin import first.');
+    if (input.mode === 'full') await clearRecoveryFailures(tx, input.stream);
     const profile = await loadProfile(tx),
       end = input.to ?? today(profile?.timezone);
     assert(!input.to || input.from, 'invalid_range', 'A targeted reimport requires both dates.');
@@ -269,8 +283,8 @@ export async function status(includeCoverage = true) {
       next_run_at: Date;
       updated_at: Date;
     }[]
-  >`select id,kind,status,progress,error,next_run_at,updated_at from host.jobs where plugin_id='garmin' and kind in ('garmin-history','garmin-recent')
-    order by case when status in ('queued','running','paused') then 0 else 1 end,updated_at desc limit 1`;
+  >`select id,kind,status,progress,error,next_run_at,updated_at from host.jobs where plugin_id='garmin' and kind in ('garmin-history','garmin-recent','garmin-catchup','garmin-reconcile')
+    order by case when status in ('queued','running','paused') then 0 else 1 end,priority desc,updated_at desc limit 1`;
   const [history] = await sql<
     { status: string }[]
   >`select status from host.jobs where plugin_id='garmin' and kind='garmin-history' order by created_at desc limit 1`;
@@ -287,7 +301,13 @@ export async function status(includeCoverage = true) {
     : null;
   const connected = !!config?.encryptedKey,
     verified = connected && config?.verifiedGeneration === config?.generation;
+  const profile = await loadProfile(sql as unknown as Transaction);
+  const recovery = await recoveryStatus(sql as unknown as Transaction, {
+    today: today(profile?.timezone),
+    earliestDate: automaticHealthHistoryStart(config?.earliestDate),
+  });
   const result = {
+    recovery,
     connected,
     verified,
     lastErrorCode: config?.lastErrorCode ?? null,
@@ -323,12 +343,28 @@ export async function status(includeCoverage = true) {
 export async function coveragePage(body: unknown) {
   const input = z
     .object({
-      filter: z.enum(['all', 'failed', 'unavailable', 'rejected']).default('all'),
+      filter: z.enum(['all', 'failed', 'unavailable', 'rejected', 'unscanned']).default('all'),
       offset: z.number().int().min(0).max(1000000).default(0),
     })
     .strict()
     .parse(body);
   const sql = connection();
+  if (input.filter === 'unscanned') {
+    const config = await getConfiguration(),
+      profile = await loadProfile(sql as unknown as Transaction);
+    const rows = config
+      ? await unscannedCoverage(sql as unknown as Transaction, {
+          today: today(profile?.timezone),
+          earliestDate: automaticHealthHistoryStart(config.earliestDate),
+        })
+      : [];
+    return {
+      rows: rows.slice(input.offset, input.offset + 50),
+      total: rows.length,
+      offset: input.offset,
+      limit: 50,
+    };
+  }
   const count = requiredRow(
     await sql<
       { total: number }[]
@@ -346,25 +382,35 @@ export async function scheduleRecent() {
     await tx`update host.jobs set priority=case when kind='garmin-recent' then 30 when payload#>>'{cursor,activityFrom}' is not null then 20 else 10 end where plugin_id='garmin' and kind in ('garmin-recent','garmin-history') and status in ('queued','running','paused','disabled')`;
     const [last] =
       await tx`select created_at,status from host.jobs where plugin_id='garmin' and kind='garmin-recent' order by created_at desc limit 1`;
-    if (last?.status === 'failed') return;
-    if (last && Date.now() - new Date(last.created_at).getTime() < 60 * 60 * 1000) return;
     const profile = await loadProfile(tx);
-    await enqueue(
-      tx,
-      'garmin',
-      'garmin-recent',
-      {
-        cursor: createSyncCursor({
-          today: today(profile?.timezone),
-          earliestHealthDate: automaticHealthHistoryStart(config.earliestDate),
-          mode: 'recent',
-          accountId: config.accountId,
-          timeZone: profile?.timezone,
-        }),
+    if (
+      last?.status !== 'failed' &&
+      (!last || Date.now() - new Date(last.created_at).getTime() >= 60 * 60 * 1000)
+    )
+      await enqueue(
+        tx,
+        'garmin',
+        'garmin-recent',
+        {
+          cursor: createSyncCursor({
+            today: today(profile?.timezone),
+            earliestHealthDate: automaticHealthHistoryStart(config.earliestDate),
+            mode: 'recent',
+            accountId: config.accountId,
+            timeZone: profile?.timezone,
+          }),
+          generation: config.generation,
+        },
+        30,
+      );
+    if (config.accountId && config.verifiedGeneration === config.generation)
+      await scheduleRecovery(tx, {
+        today: today(profile?.timezone),
+        earliestDate: automaticHealthHistoryStart(config.earliestDate),
+        accountId: config.accountId,
         generation: config.generation,
-      },
-      30,
-    );
+        timeZone: profile?.timezone ?? 'UTC',
+      });
   });
 }
 
@@ -410,7 +456,14 @@ export async function runGarminJob(job: Job) {
   let cursor = job.payload.cursor as GarminSyncCursor;
   let coverageCursor = cursor;
   let reverifiedIdentity = false;
+  let recovery: RecoveryTask | undefined;
   try {
+    cursor = parseSyncCursor(job.payload.cursor);
+    recovery =
+      job.payload.recovery === undefined
+        ? undefined
+        : recoveryTaskSchema.parse(job.payload.recovery);
+    if (!(await transaction((tx) => beginStep(tx, job, recovery)))) return;
     cursor = await resumeActivityScan(connection() as unknown as Transaction, cursor);
     if (job.payload.generation !== config.generation && cursor.phase !== 'identity') {
       coverageCursor = { ...cursor, phase: 'identity' };
@@ -441,6 +494,12 @@ export async function runGarminJob(job: Job) {
         !current.accountId || current.accountId === step.accountId,
         'account_mismatch',
         'This key belongs to a different Garmin account.',
+        409,
+      );
+      assert(
+        step.accountId,
+        'account_identity_unavailable',
+        'Garmin sync requires a verified account binding.',
         409,
       );
       const selection: WorkspaceLoadOptions = {
@@ -511,7 +570,15 @@ export async function runGarminJob(job: Job) {
       if (coverage.stream === 'identity')
         await tx`delete from garmin.coverage where status='failed' and stream='identity' and start_date=${coverage.from ?? '0001-01-01'} and end_date=${coverage.to}`;
       await persistCoverage(tx, coverage);
-      const done = step.nextCursor.phase === 'done';
+      const context = {
+        today: today(cursor.timeZone),
+        earliestDate: automaticHealthHistoryStart(current.earliestDate),
+        accountId: step.accountId,
+        generation: config.generation,
+        timeZone: cursor.timeZone,
+      };
+      await recordRecoveryStep(tx, cursor, step.nextCursor, coverage, context, recovery);
+      const done = recovery?.mode === 'reconcile' || step.nextCursor.phase === 'done';
       const label = done
         ? 'Import complete'
         : coverage.stream === 'identity'
@@ -523,9 +590,9 @@ export async function runGarminJob(job: Job) {
         verifiedGeneration: config.generation,
         lastError: null,
         lastErrorCode: null,
-        lastSync: done ? new Date().toISOString() : current.lastSync,
+        lastSync: done && !recovery ? new Date().toISOString() : current.lastSync,
       });
-      await tx`update host.jobs set payload=${tx.json({ cursor: step.nextCursor, generation: config.generation })},progress=${tx.json({ phase: step.nextCursor.phase, stream: coverage.stream, to: coverage.to, label })},status=${done ? 'completed' : 'queued'},attempts=0,error=null,lease_owner=null,lease_until=null,next_run_at=now()+interval '1.1 seconds',updated_at=now() where id=${job.id}`;
+      await tx`update host.jobs set payload=${tx.json({ cursor: step.nextCursor, generation: config.generation, ...(recovery ? { recovery } : {}) })},progress=${tx.json({ phase: step.nextCursor.phase, stream: coverage.stream, to: coverage.to, label, rejectedRecords: coverage.rejectedRecords })},status=${done ? 'completed' : 'queued'},attempts=0,error=null,lease_owner=null,lease_until=null,next_run_at=now()+interval '1.1 seconds',updated_at=now() where id=${job.id}`;
     });
   } catch (error) {
     const known = error instanceof GarminError ? error : null;
@@ -552,6 +619,12 @@ export async function runGarminJob(job: Job) {
         return;
       }
       await tx`update host.jobs set status=${retry ? 'queued' : 'failed'},attempts=${attempts},error=${message},next_run_at=${new Date(Date.now() + delay)},lease_owner=null,lease_until=null,updated_at=now() where id=${job.id} and lease_owner=${job.lease_owner}`;
+      await recordRecoveryFailure(
+        tx,
+        recovery,
+        !!retry,
+        known?.retryAfterMs ?? (known?.code === 'rate_limited' ? delay : null),
+      );
       await saveConfig(tx, {
         ...current,
         lastError: message,
@@ -570,6 +643,8 @@ export async function runGarminJob(job: Job) {
         /* An invalid checkpoint has no trustworthy request window. The job retains its error. */
       }
       if (coverage) {
+        if (!retry && importStreamSchema.safeParse(coverage.stream).success)
+          await tx`update garmin.scan_state set needs_retry=true,updated_at=now() where stream=${coverage.stream}`;
         const metrics = streamMetrics[coverage.stream as HealthStream];
         const missingDays =
           metrics && coverage.from !== null

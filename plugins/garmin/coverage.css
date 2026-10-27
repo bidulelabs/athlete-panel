@@ -1,0 +1,35 @@
+@media (max-width: 760px) {
+  .coverage-scroll .coverage-table {
+    display: block;
+    min-width: 0;
+  }
+  .coverage-scroll .coverage-table thead {
+    display: none;
+  }
+  .coverage-scroll .coverage-table tbody,
+  .coverage-scroll .coverage-table tr {
+    display: block;
+    width: 100%;
+  }
+  .coverage-scroll .coverage-table tr {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .coverage-scroll .coverage-table td {
+    display: block;
+    padding: 6px 0;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .coverage-scroll .coverage-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .coverage-scroll .coverage-table td:last-child::before {
+    display: none;
+  }
+}

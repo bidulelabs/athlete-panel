@@ -196,12 +196,15 @@ export const registry = [
       "migrations": [
         "migrations/001-initial.sql",
         "migrations/002-coverage-quality.sql",
-        "migrations/003-scan-diagnostics.sql"
+        "migrations/003-scan-diagnostics.sql",
+        "migrations/004-recovery-scheduling.sql"
       ],
       "services": [],
       "jobs": [
         "garmin-history",
-        "garmin-recent"
+        "garmin-recent",
+        "garmin-catchup",
+        "garmin-reconcile"
       ],
       "capabilities": [
         "network:personal.connectapi.garmin.com",
@@ -313,4 +316,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="d339b5f0ee8549cb888b1f4f0bc5f5d206a89fcd68036feea91d768cfab6b39d";
+export const schemaSignature="3c0c6753a465298af93036dbf49f70a20d847692ed16763b10b24eacf1613a30";

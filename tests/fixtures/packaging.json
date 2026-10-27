@@ -1,0 +1,38 @@
+{
+  "excluded": [
+    ".env",
+    ".env.production",
+    "context.json",
+    "private-exports/context.json",
+    "plugins/packaging-fixture/.env",
+    "plugins/packaging-fixture/deep/.env.production",
+    "plugins/packaging-fixture/deep/.envrc",
+    "plugins/packaging-fixture/deep/private.pem",
+    "plugins/packaging-fixture/deep/private.key",
+    "plugins/packaging-fixture/deep/local.db",
+    "plugins/packaging-fixture/deep/local.sqlite",
+    "plugins/packaging-fixture/deep/run.log",
+    "plugins/packaging-fixture/deep/database.dump",
+    "plugins/packaging-fixture/deep/backups/state.fgr",
+    "plugins/packaging-fixture/deep/.secrets/token.txt",
+    "personal-plugins/packaging-fixture/deep/.env.local",
+    "personal-plugins/packaging-fixture/deep/private-exports/data.json",
+    "personal-plugins/packaging-fixture/deep/proposal.json",
+    "docs/packaging-fixture/.cache/private.txt",
+    "docs/packaging-fixture/session.partial",
+    "plugins/packaging-fixture/deep/.secrets/.env.example",
+    "personal-plugins/packaging-fixture/backups/.env.example"
+  ],
+  "included": [
+    "plugins/packaging-fixture/deep/.env.example",
+    "personal-plugins/packaging-fixture/deep/source.txt"
+  ],
+  "required": [
+    ".env.example",
+    "package.json",
+    "Dockerfile",
+    "packages/host/migrations/001-host.sql",
+    "docs/Framework-Guide.md",
+    ".agents/skills/athlete-panel-plugin-development/SKILL.md"
+  ]
+}

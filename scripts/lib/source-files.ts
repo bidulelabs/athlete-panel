@@ -1,3 +1,4 @@
+import privateFiles from './private-files.json';
 /** Shared allowlist for release fingerprints and matched-source archives. */
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
@@ -42,25 +43,7 @@ const sourceRoots = [
   'SECURITY.md',
   'CONTRIBUTING.md',
 ];
-const excluded = new Set([
-  'node_modules',
-  '.next',
-  '.git',
-  'dist',
-  '.cache',
-  '.runtime',
-  '.playwright-mcp',
-  'coverage',
-  'test-results',
-  'playwright-report',
-  '.DS_Store',
-  '.env',
-  '.secrets',
-  'private-exports',
-  'context.json',
-  'proposal.json',
-  '__pycache__',
-]);
+const excluded = new Set(privateFiles.names);
 export async function sha256(file: string): Promise<string> {
   const hash = createHash('sha256');
   for await (const chunk of createReadStream(file)) hash.update(chunk);
@@ -71,8 +54,8 @@ export async function sourceFiles(root: string): Promise<Array<{ path: string; f
   const walk = async (relative: string) => {
     if (
       excluded.has(basename(relative)) ||
-      /\.(fgr|partial|dump|pem|key|pyc|tsbuildinfo)$/.test(relative) ||
-      (basename(relative).startsWith('.env.') && basename(relative) !== '.env.example')
+      privateFiles.suffixes.some((suffix) => relative.endsWith(suffix)) ||
+      (basename(relative).startsWith('.env') && basename(relative) !== '.env.example')
     )
       return;
     const absolute = join(root, relative);

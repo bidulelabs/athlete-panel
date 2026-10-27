@@ -103,21 +103,15 @@ jobs:
         with:
           persist-credentials: false
       - name: Add synthetic private files to test image exclusions
+        run: python3 scripts/packaging-fixtures.py create
+      - name: Build and inspect build-stage candidate
         run: |
-          python3 - <<'PYTHON'
-          from pathlib import Path
-          for name in ['context.json', 'proposal.json', '.env.production', 'private-exports/context.json', 'docs/context.json', 'arbitrary-private-export.json']:
-              path = Path(name)
-              if path.exists(): raise RuntimeError('Unexpected fixture collision')
-              path.parent.mkdir(parents=True, exist_ok=True)
-              path.write_text('synthetic-private-export-marker')
-          PYTHON
-      - name: Build immutable candidate
-        run: docker build -t athlete-panel:release-check .
-      - name: Verify private files did not enter the image
-        run: >-
-          docker run --rm athlete-panel:release-check node -e
-          "for(const p of ['context.json','proposal.json','.env.production','private-exports/context.json','docs/context.json','arbitrary-private-export.json']){if(require('fs').existsSync('/app/'+p))throw Error('Private file included: '+p)}"
+          docker build --target build -t athlete-panel:build-check .
+          python3 scripts/packaging-fixtures.py verify --image athlete-panel:build-check
+      - name: Build and inspect runtime candidate
+        run: |
+          docker build -t athlete-panel:release-check .
+          python3 scripts/packaging-fixtures.py verify --image athlete-panel:release-check
       - name: Rehearse clean installation, HTTPS, restart and recovery
         run: python3 scripts/rehearse-release.py --image athlete-panel:release-check
       - name: Rehearse guided VPS install, schema upgrade, resume and full recovery

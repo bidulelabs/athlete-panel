@@ -43,6 +43,8 @@ Image installation resolves a version/digest once and records the local ID and p
 
 ## Constraints and verification limits
 
+New image builds and matching source archives exclude private environment/key files, exports, backups and generated state recursively, including inside plugins. Exact `.env.example` files and required source remain included. Publication, archive and build-stage/runtime image tests share synthetic path fixtures; archive formats and existing artifacts are unchanged.
+
 Hosted images must declare application `athlete-panel` and hosted protocol 1 in `.athlete-panel-release.json`. Missing or unrelated metadata is rejected before activation. Backup storage uses `.athlete-panel-storage-id`; archives use the `ATHLETE-PANEL-BACKUP-1` envelope, and unsupported envelopes fail verification before any database restore. Daily retention only prunes recognized `athlete-panel-daily-` archives.
 
 The primary hosted environment is Linux with Docker Compose and Python 3.10+. Remote filesystem verification supports NFS/NFS4, CIFS/SMB3 and SSHFS. An explicit synthetic policy is available to the imported rehearsal only and is additionally restricted by a loopback origin and `_test` database in the container guard. There is no public CLI bypass for hosted remote-storage verification.

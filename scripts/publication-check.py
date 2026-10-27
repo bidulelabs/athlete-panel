@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 
 
+PRIVATE_FILES = json.loads((Path(__file__).resolve().parent / 'lib/private-files.json').read_text())
+
 def git(*args):
     return subprocess.check_output(['git', *args], stderr=subprocess.DEVNULL)
 
@@ -16,10 +18,10 @@ def git(*args):
 def findings(path, body):
     parts = Path(path).parts
     name = Path(path).name
-    if (any(p in {'.secrets', 'private-exports', '.runtime', 'backups', 'node_modules', '.next'} for p in parts)
-            or name in {'context.json', 'proposal.json'}
+    policy = PRIVATE_FILES
+    if (any(p in policy['names'] for p in parts)
             or (name.startswith('.env') and name != '.env.example')
-            or Path(path).suffix in {'.dump', '.fgr', '.pem', '.key', '.sqlite', '.db'}):
+            or any(name.endswith(suffix) for suffix in policy['suffixes'])):
         yield 0, 'private-or-generated-file'
     text = body.decode('utf-8', errors='replace')
     rules = {

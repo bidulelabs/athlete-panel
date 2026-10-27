@@ -13,8 +13,8 @@ import { transaction, type Transaction } from '../../packages/host/src/db';
 import { canonical, digest, randomToken } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
 import { loadWorkspace, persistChanges } from '../../instance/services';
-import { applyCommands, effectiveDate } from '../training/engine';
-import { idempotent, audit, undoChange } from '../training/service';
+import { applyCommands, effectiveDate } from '../training/public/server';
+import { idempotent, audit, undoChange } from '../training/public/server';
 
 const scopeSchema = agentScopeSchema;
 type Scope = z.infer<typeof scopeSchema>;

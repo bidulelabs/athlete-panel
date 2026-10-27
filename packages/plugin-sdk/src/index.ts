@@ -21,6 +21,14 @@ export const manifestSchema = z
     required: z.boolean().default(false),
     client: localPath.optional(),
     server: localPath.optional(),
+    public: z
+      .object({
+        shared: localPath.optional(),
+        client: localPath.optional(),
+        server: localPath.optional(),
+      })
+      .strict()
+      .default({}),
     routes: z
       .array(
         z.object({
@@ -34,7 +42,7 @@ export const manifestSchema = z
       .array(
         z.object({
           id: z.string().regex(/^[a-z][a-z0-9-]*$/),
-          kind: z.enum(['calendar', 'inspector', 'dashboard', 'workspace']),
+          kind: z.enum(['calendar', 'inspector', 'dashboard', 'workspace', 'onboarding']),
           title: z.string().min(1),
         }),
       )

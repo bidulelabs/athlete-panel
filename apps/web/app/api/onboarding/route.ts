@@ -4,7 +4,7 @@ import { connection } from '../../../../../packages/host/src/db';
 import { readOnboarding } from '../../../../../packages/host/src/onboarding';
 import { failure, json } from '../../../../../packages/host/src/http';
 import { pluginEnabled } from '../../../../../packages/host/src/plugins';
-import { status } from '../../../../../plugins/garmin/service';
+import { status } from '../../../../../plugins/garmin/public/server';
 
 export async function GET() {
   try {

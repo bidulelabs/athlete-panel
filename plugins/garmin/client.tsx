@@ -1,4 +1,6 @@
 'use client';
+import { OnboardingConnection } from './onboarding-contribution';
+export const contributions = { connection: OnboardingConnection };
 import { Alert } from '@athlete-panel/ui';
 import { useConfirm } from '@athlete-panel/ui';
 import { Button, Badge, Input } from '@athlete-panel/ui';

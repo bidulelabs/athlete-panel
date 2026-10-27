@@ -4,7 +4,9 @@
   "description": "Normalized activities and health history",
   "version": "1.0.0",
   "hostApi": "^1.0.0",
-  "dependencies": {},
+  "dependencies": {
+    "training": "^1.0.0"
+  },
   "required": true,
   "routes": [
     {

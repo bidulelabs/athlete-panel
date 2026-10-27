@@ -29,8 +29,8 @@ import {
   useAction,
   useWorkspace,
 } from '@athlete-panel/ui';
-import { effectiveDate } from '../training/dates';
-import { mutate } from '../training/client';
+import { effectiveDate } from '../training/public/shared';
+import { mutate } from '../training/public/client';
 import type { SleepNight } from './projection';
 import './cards.css';
 

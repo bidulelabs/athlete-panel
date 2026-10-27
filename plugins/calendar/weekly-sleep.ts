@@ -1,5 +1,5 @@
 import { dateSchema, type HealthRecord } from '@athlete-panel/contracts';
-import { addDays } from '../training/dates';
+import { addDays } from '../training/public/shared';
 import { latestDailyHealth } from './projection';
 
 export type WeeklySleep = {

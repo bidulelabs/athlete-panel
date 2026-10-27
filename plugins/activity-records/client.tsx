@@ -22,8 +22,8 @@ import {
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import { mutate } from '../training/client';
-import { effectiveDate } from '../training/dates';
+import { mutate } from '../training/public/client';
+import { effectiveDate } from '../training/public/shared';
 
 export default function ActivitiesPage({ data }: PluginPageProps) {
   const { from, to, navigate } = useWorkspace();

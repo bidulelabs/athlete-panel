@@ -7,7 +7,7 @@ import { failure, json } from '../../../../../packages/host/src/http';
 import { pluginStatus, pluginEnabled } from '../../../../../packages/host/src/plugins';
 import { assert } from '../../../../../packages/host/src/errors';
 import { readOnboarding } from '../../../../../packages/host/src/onboarding';
-import { status } from '../../../../../plugins/garmin/service';
+import { status } from '../../../../../plugins/garmin/public/server';
 export async function GET(request: Request) {
   try {
     await requireSession((await cookies()).get(SESSION_COOKIE)?.value);

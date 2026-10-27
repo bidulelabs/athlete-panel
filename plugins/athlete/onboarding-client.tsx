@@ -1,21 +1,20 @@
 'use client';
-import { Button } from '@athlete-panel/ui';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Onboarding, Preferences } from '../../packages/contracts/src/onboarding';
-import type { GarminConnection } from '../../packages/contracts/src/garmin-connection';
 import {
+  Button,
   ErrorMessage,
   Modal,
+  OnboardingConnectionSlot,
   operationalHealth,
   requestId,
   resolveWeekStartsOn,
   useAction,
   useWorkspace,
 } from '@athlete-panel/ui';
-import { GarminKeyForm, GarminConnectionStatus } from '../garmin/client';
-import { connectionMessage } from '../garmin/connection-status';
-import { PreferenceFields, suggestedPreferences } from './preferences';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { GarminConnection } from '../../packages/contracts/src/garmin-connection';
+import type { Onboarding, Preferences } from '../../packages/contracts/src/onboarding';
 import './onboarding.css';
+import { PreferenceFields, suggestedPreferences } from './preferences';
 
 export function OnboardingResume() {
   const { envelope, request } = useWorkspace();
@@ -238,6 +237,16 @@ export function OnboardingDialog() {
   }
   const workerAvailable = !operationalHealth({ worker }).workerWarning;
   const locked = busy || keyBusy;
+  const connectionProps = {
+    connection,
+    workerAvailable,
+    busy: locked,
+    editingKey,
+    onEditingChange: setEditingKey,
+    onBusy: setKeyBusy,
+    onRefresh: refreshStatus,
+    onError: setError,
+  };
   const step = state?.step ?? 1;
   const week =
     resolveWeekStartsOn(data.profile?.weekStartsOnPreference, navigator.language) === 0
@@ -322,59 +331,7 @@ export function OnboardingDialog() {
                 <p>Garmin is disabled. You can enable it later in Plugins.</p>
               ) : (
                 <>
-                  {!connection.connected || editingKey ? (
-                    <>
-                      <p>
-                        <a
-                          href="https://developer.garmin.com/gc-developer-program/personal/personal-api/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Get a Garmin Personal API key
-                          <span className="sr-only"> (opens in a new tab)</span>
-                        </a>
-                      </p>
-                      <p className="muted-text">
-                        Sign in to Garmin Connect, open Personal API Key, create a key, accept
-                        Garmin's terms and choose its expiry. Copy the key when Garmin displays it;
-                        you cannot view it again later.
-                      </p>
-                      <GarminKeyForm
-                        request={request}
-                        onBusy={setKeyBusy}
-                        onSaved={() => {
-                          setEditingKey(false);
-                          void refreshStatus();
-                        }}
-                        onCancel={editingKey ? () => setEditingKey(false) : undefined}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <GarminConnectionStatus
-                        value={connection}
-                        workerAvailable={workerAvailable}
-                        busy={locked}
-                        retry={() => {
-                          void request('garmin', 'sync', {
-                            mode:
-                              connection.currentJob?.kind === 'garmin-recent' ? 'recent' : 'full',
-                          })
-                            .then(refreshStatus)
-                            .catch((err) => setError(err.message));
-                        }}
-                      />
-                      <Button
-                        variant="link"
-                        type="button"
-                        className="text-button"
-                        disabled={locked}
-                        onClick={() => setEditingKey(true)}
-                      >
-                        Replace API key
-                      </Button>
-                    </>
-                  )}
+                  <OnboardingConnectionSlot {...connectionProps} variant="setup" />
                 </>
               )}
               <div className="dialog-actions">
@@ -430,9 +387,11 @@ export function OnboardingDialog() {
                 <div>
                   <dt>Garmin</dt>
                   <dd role="status">
-                    {enabled
-                      ? connectionMessage(connection, workerAvailable)
-                      : 'Garmin is disabled.'}
+                    {enabled ? (
+                      <OnboardingConnectionSlot {...connectionProps} variant="summary" />
+                    ) : (
+                      'Garmin is disabled.'
+                    )}
                   </dd>
                 </div>
               </dl>

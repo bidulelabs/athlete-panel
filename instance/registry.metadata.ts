@@ -10,13 +10,18 @@ export const registry = [
       "description": "Profile, preferences and training constraints",
       "version": "1.0.0",
       "hostApi": "^1.0.0",
-      "dependencies": {},
+      "dependencies": {
+        "training": "^1.0.0"
+      },
       "optionalDependencies": {
         "garmin": "^1.0.0"
       },
       "required": true,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {
+        "client": "public/client.ts"
+      },
       "routes": [
         {
           "path": "/settings",
@@ -53,13 +58,16 @@ export const registry = [
       "description": "Plans, workouts and recorded completion",
       "version": "1.0.0",
       "hostApi": "^1.0.0",
-      "dependencies": {
-        "athlete": "^1.0.0"
-      },
+      "dependencies": {},
       "optionalDependencies": {},
       "required": true,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {
+        "shared": "public/shared.ts",
+        "client": "public/client.ts",
+        "server": "public/server.ts"
+      },
       "routes": [
         {
           "path": "/plans",
@@ -89,11 +97,14 @@ export const registry = [
       "description": "Normalized activities and health history",
       "version": "1.0.0",
       "hostApi": "^1.0.0",
-      "dependencies": {},
+      "dependencies": {
+        "training": "^1.0.0"
+      },
       "optionalDependencies": {},
       "required": true,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {},
       "routes": [
         {
           "path": "/activities",
@@ -131,6 +142,7 @@ export const registry = [
       "optionalDependencies": {},
       "required": true,
       "client": "client.tsx",
+      "public": {},
       "routes": [
         {
           "path": "/calendar",
@@ -163,6 +175,9 @@ export const registry = [
       "required": false,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {
+        "server": "public/server.ts"
+      },
       "routes": [
         {
           "path": "/garmin",
@@ -170,7 +185,13 @@ export const registry = [
           "icon": "Plug"
         }
       ],
-      "slots": [],
+      "slots": [
+        {
+          "id": "connection",
+          "kind": "onboarding",
+          "title": "Garmin connection"
+        }
+      ],
       "schema": "garmin",
       "migrations": [
         "migrations/001-initial.sql",
@@ -204,6 +225,7 @@ export const registry = [
       "optionalDependencies": {},
       "required": false,
       "client": "client.tsx",
+      "public": {},
       "routes": [
         {
           "path": "/health",
@@ -238,6 +260,7 @@ export const registry = [
       "required": false,
       "client": "client.tsx",
       "server": "server.ts",
+      "public": {},
       "routes": [
         {
           "path": "/agent",
@@ -272,6 +295,7 @@ export const registry = [
       "optionalDependencies": {},
       "required": false,
       "client": "client.tsx",
+      "public": {},
       "routes": [
         {
           "path": "/cycling-sleep",
@@ -288,4 +312,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="51b38a8b05ebe05f346c54453800d666a1855d1d65f01229ee4e8bfe70d9dd43";
+export const schemaSignature="5f9f458b9db3ddfdab460ca64560b8e2313312db06f1f27609c8aa148011a630";

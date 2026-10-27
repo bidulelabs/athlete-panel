@@ -3239,6 +3239,25 @@
         "type": "string",
         "pattern": "^(?:[a-zA-Z0-9_-]+\\/)*[a-zA-Z0-9_.-]+$"
       },
+      "public": {
+        "default": {},
+        "type": "object",
+        "properties": {
+          "shared": {
+            "type": "string",
+            "pattern": "^(?:[a-zA-Z0-9_-]+\\/)*[a-zA-Z0-9_.-]+$"
+          },
+          "client": {
+            "type": "string",
+            "pattern": "^(?:[a-zA-Z0-9_-]+\\/)*[a-zA-Z0-9_.-]+$"
+          },
+          "server": {
+            "type": "string",
+            "pattern": "^(?:[a-zA-Z0-9_-]+\\/)*[a-zA-Z0-9_.-]+$"
+          }
+        },
+        "additionalProperties": false
+      },
       "routes": {
         "default": [],
         "type": "array",
@@ -3279,7 +3298,8 @@
                 "calendar",
                 "inspector",
                 "dashboard",
-                "workspace"
+                "workspace",
+                "onboarding"
               ]
             },
             "title": {
@@ -3346,6 +3366,7 @@
       "dependencies",
       "optionalDependencies",
       "required",
+      "public",
       "routes",
       "slots",
       "migrations",

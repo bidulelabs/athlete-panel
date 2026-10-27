@@ -4,7 +4,9 @@
   "description": "Profile, preferences and training constraints",
   "version": "1.0.0",
   "hostApi": "^1.0.0",
-  "dependencies": {},
+  "dependencies": {
+    "training": "^1.0.0"
+  },
   "required": true,
   "routes": [
     {
@@ -33,5 +35,8 @@
   ],
   "optionalDependencies": {
     "garmin": "^1.0.0"
+  },
+  "public": {
+    "client": "public/client.ts"
   }
 }

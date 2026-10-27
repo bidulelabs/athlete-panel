@@ -35,7 +35,7 @@ import {
   type MetricTotal,
   type TrainingSummary,
   type RecordedSession,
-} from '../training/summary';
+} from '../training/public/shared';
 import type { WeeklySleep, WeeklyHrv } from './weekly-sleep';
 import './weekly-summary.css';
 

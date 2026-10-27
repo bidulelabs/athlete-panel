@@ -21,5 +21,15 @@
   "capabilities": ["network:personal.connectapi.garmin.com", "secret:garmin-key"],
   "server": "server.ts",
   "schema": "garmin",
-  "client": "client.tsx"
+  "client": "client.tsx",
+  "public": {
+    "server": "public/server.ts"
+  },
+  "slots": [
+    {
+      "id": "connection",
+      "kind": "onboarding",
+      "title": "Garmin connection"
+    }
+  ]
 }

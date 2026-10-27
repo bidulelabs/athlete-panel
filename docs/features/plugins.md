@@ -50,7 +50,7 @@ Uninstall removes executable/client source and composition entries while retaini
 - Composition authority: `instance/composition.json` plus each plugin's `manifest.json`. Generated registry files are derived and must not be edited directly.
 - Skill authority: `.agents/skills/`; generated Claude copies are checked for drift.
 
-The integration owner coordinates SDK changes, shared DTO exports, migration ordering, registry generation and schema ownership. Individual plugin owners own their feature semantics, isolated source/tests, manifest and migration declarations. An ordinary read-only dashboard needs no migration and should not gain a backend capability merely because the template supports server entry points. Server/client boundaries must keep secrets out of browser imports.
+The integration owner coordinates SDK changes, shared DTO exports, migration ordering, registry generation and schema ownership. Individual plugin owners own their feature semantics, isolated source/tests, manifest and migration declarations. An ordinary read-only dashboard needs no migration and should not gain a backend capability merely because the template supports server entry points. Server/client boundaries must keep secrets out of browser imports. Manifest `public` entries name shared, client and server APIs; direct cross-plugin imports require a compatible mandatory dependency, including type-only imports. Shared/client graphs must remain browser-safe. Optional Garmin onboarding uses a typed `onboarding` contribution, omitted from disabled compositions; its busy callbacks preserve the setup flow. See [boundary decision](../decisions/008-public-plugin-boundaries.md).
 
 ## Development flow and release details
 

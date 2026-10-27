@@ -77,12 +77,25 @@ export interface ExtensionSelection {
   kind: string;
   id: string;
 }
+export interface OnboardingConnectionProps {
+  variant: 'setup' | 'summary';
+  connection: GarminConnection;
+  workerAvailable: boolean;
+  busy: boolean;
+  editingKey: boolean;
+  onEditingChange: (editing: boolean) => void;
+  onBusy: (busy: boolean) => void;
+  onRefresh: () => Promise<void>;
+  onError: (message: string) => void;
+}
 export interface WorkspaceSlot {
   id: string;
   pluginId: string;
-  kind: 'calendar' | 'inspector' | 'dashboard' | 'workspace';
+  kind: 'calendar' | 'inspector' | 'dashboard' | 'workspace' | 'onboarding';
   title: string;
-  component: ComponentType<PluginPageProps & { selection?: ExtensionSelection }>;
+  component: ComponentType<
+    PluginPageProps & { selection?: ExtensionSelection; onboarding?: OnboardingConnectionProps }
+  >;
 }
 export interface WorkspacePage {
   path: string;
@@ -726,6 +739,25 @@ export function Section({
       </div>
       {children}
     </section>
+  );
+}
+
+export function OnboardingConnectionSlot(props: OnboardingConnectionProps) {
+  const { slots, data, refresh, request } = useWorkspace();
+  return (
+    <>
+      {slots
+        .filter((slot) => slot.kind === 'onboarding')
+        .map((slot) => (
+          <slot.component
+            key={`${slot.pluginId}:${slot.id}`}
+            data={data}
+            refresh={refresh}
+            request={request}
+            onboarding={props}
+          />
+        ))}
+    </>
   );
 }
 

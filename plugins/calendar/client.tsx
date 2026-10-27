@@ -25,12 +25,12 @@ import {
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import { effectiveDate } from '../training/dates';
-import { weeklySummary } from '../training/summary';
+import { effectiveDate } from '../training/public/shared';
+import { weeklySummary } from '../training/public/shared';
 import { WeeklySummary } from './weekly-summary';
 import { weeklySleep, weeklyHrv } from './weekly-sleep';
-import { WorkoutEditor, WorkoutInspector } from '../training/client';
-import { ContextEditor } from '../athlete/client';
+import { WorkoutEditor, WorkoutInspector } from '../training/public/client';
+import { ContextEditor } from '../athlete/public/client';
 import {
   ActivityCard,
   ActivityDetails,

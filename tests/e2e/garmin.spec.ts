@@ -4,6 +4,11 @@ const password = process.env.E2E_PASSWORD;
 if (!password)
   throw new Error('Set E2E_PASSWORD for the isolated synthetic browser-test instance.');
 
+test.afterEach(async ({ page }) => {
+  // Finish mocked requests before Playwright disposes their API responses.
+  await page.unrouteAll({ behavior: 'wait' });
+});
+
 test('Garmin connects with a key alone and queues automatic history', async ({ page }, info) => {
   await page.goto('/login');
   await page.getByLabel('Password', { exact: true }).fill(password!);
@@ -146,9 +151,19 @@ test('coverage distinguishes unscanned and rejected windows and retries only the
   await page.getByLabel('Password', { exact: true }).fill(password!);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  let reimportQueued = false;
+  let refreshPending = false;
+  let releaseRefresh: () => void = () => undefined;
+  const heldRefresh = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
   await page.route('**/api/workspace?**', async (route) => {
-    const response = await route.fetch(),
-      body = await response.json();
+    const response = await route.fetch();
+    if (reimportQueued) {
+      refreshPending = true;
+      await heldRefresh;
+    }
+    const body = await response.json();
     body.garmin = {
       ...body.garmin,
       connected: true,
@@ -242,19 +257,28 @@ test('coverage distinguishes unscanned and rejected windows and retries only the
       true,
     );
   }
-  await page.route('**/api/plugins/garmin/sync', (route) =>
-    route.fulfill({ json: { id: '00000000-0000-4000-8000-000000000099', status: 'queued' } }),
-  );
-  await page.getByRole('button', { name: 'Retry this period' }).click();
-  const submitted = page.waitForRequest((request) => request.url().endsWith('/garmin/sync'));
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: /Queue|Retry|Import/i })
-    .click();
-  expect((await submitted).postDataJSON()).toMatchObject({
-    mode: 'full',
-    stream: 'steps',
-    from: '2025-01-01',
-    to: '2025-01-28',
+  await page.route('**/api/plugins/garmin/sync', async (route) => {
+    reimportQueued = true;
+    await route.fulfill({ json: { id: '00000000-0000-4000-8000-000000000099', status: 'queued' } });
   });
+  await page.getByRole('button', { name: 'Retry this period' }).click();
+  const dialog = page.getByRole('dialog');
+  const submit = dialog.getByRole('button', { name: /Queue|Retry|Import/i });
+  const submitted = page.waitForRequest((request) => request.url().endsWith('/garmin/sync'));
+  try {
+    await submit.click();
+    expect((await submitted).postDataJSON()).toMatchObject({
+      mode: 'full',
+      stream: 'steps',
+      from: '2025-01-01',
+      to: '2025-01-28',
+    });
+    // Receiving the request is not completion: exercise a deliberately held workspace refresh.
+    await expect.poll(() => refreshPending).toBe(true);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+  } finally {
+    releaseRefresh();
+  }
+  await expect(dialog).not.toBeVisible();
 });

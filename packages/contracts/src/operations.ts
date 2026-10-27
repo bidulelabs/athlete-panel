@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { importStreamSchema } from './import-recovery';
 import {
   commandsSchema,
   dateSchema,
@@ -48,6 +49,7 @@ export const operationContracts = {
           mode: z.enum(['recent', 'full']).default('recent'),
           from: dateSchema.nullable().optional(),
           to: dateSchema.optional(),
+          stream: importStreamSchema.optional(),
         })
         .strict(),
       z.object({ id: z.uuid(), status: z.string() }),
@@ -57,7 +59,7 @@ export const operationContracts = {
     coverage: operation(
       z
         .object({
-          filter: z.enum(['all', 'failed', 'unavailable']).default('all'),
+          filter: z.enum(['all', 'failed', 'unavailable', 'rejected']).default('all'),
           offset: z.number().int().min(0).max(1000000).default(0),
         })
         .strict(),

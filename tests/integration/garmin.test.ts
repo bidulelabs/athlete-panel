@@ -457,18 +457,41 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     expect((await status()).lastError).toMatch(/link|validation/i);
   });
 
-  it('leaves the current cursor and prior history intact when a later row is malformed', async () => {
+  it('commits valid neighbours with rejection diagnostics and clears them after a repaired scan', async () => {
     await bootstrap();
     activities = [
       activityRow(),
       activityRow({ activityId: '9007199254740993124', startTimeGMT: 'invalid' }),
     ];
-    const { job, saved } = await takeStep();
-    expect(saved.status).toBe('failed');
-    expect(saved.payload.cursor).toEqual(job.payload.cursor);
-    expect((await loadWorkspace()).activities).toHaveLength(0);
-    expect(saved.error).not.toContain('invalid');
-    expect(await connection()`select * from garmin.coverage where status='failed'`).toHaveLength(1);
+    const { saved } = await takeStep();
+    expect(saved.status).toBe('queued');
+    expect(saved.payload.cursor.activityOffset).toBe(2);
+    expect((await loadWorkspace()).activities).toHaveLength(1);
+    const rejected = await coveragePage({ filter: 'rejected' });
+    expect(rejected.rows[0]).toMatchObject({
+      status: 'partial',
+      scanState: 'in-progress',
+      rejectedRecords: 1,
+    });
+    expect(rejected.rows[0].diagnostics[0].fields).toEqual(['startTimeGMT']);
+    expect(JSON.stringify(rejected.rows[0].diagnostics)).not.toContain('Synthetic ride');
+    await takeStep();
+    expect((await coveragePage({ filter: 'rejected' })).rows[0].scanState).toBe('scanned');
+    await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null where plugin_id='garmin'`;
+    activities[1] = activityRow({ activityId: '9007199254740993124' });
+    await sync({
+      mode: 'full',
+      from: rejected.rows[0].from,
+      to: rejected.rows[0].to,
+      stream: 'activities',
+    });
+    await takeStep();
+    await takeStep();
+    // A partial replacement does not erase the prior completed scan's diagnostics.
+    expect((await coveragePage({ filter: 'rejected' })).rows[0].rejectedRecords).toBe(1);
+    await takeStep();
+    expect((await coveragePage({ filter: 'rejected' })).total).toBe(0);
+    expect((await loadWorkspace()).activities).toHaveLength(2);
   });
 
   it('persists throttled retry timing without advancing the checkpoint or exposing responses', async () => {

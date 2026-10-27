@@ -16,7 +16,10 @@ export function connectionMessage(value: GarminConnection, workerAvailable = tru
     return "We couldn't verify which Garmin account this key belongs to. No data has been imported from this attempt.";
   if (
     value.verified &&
-    (value.lastError || value.coverageSummary?.failed || value.coverageSummary?.unavailable)
+    (value.lastError ||
+      value.coverageSummary?.failed ||
+      value.coverageSummary?.unavailable ||
+      value.coverageSummary?.rejected)
   )
     return 'Garmin connected. Some history needs attention.';
   if (value.lastError) return value.lastError;

@@ -1,5 +1,10 @@
 'use client';
-import { coveragePageSchema, type CoveragePage } from '@athlete-panel/contracts';
+import {
+  coveragePageSchema,
+  importStreamSchema,
+  type ImportStream,
+  type CoveragePage,
+} from '@athlete-panel/contracts';
 import { Alert } from '@athlete-panel/ui';
 import {
   Button,
@@ -21,7 +26,7 @@ export function CoverageHistory({
 }: {
   checkedAt?: string;
   disabled: boolean;
-  onRetry: (from?: string, to?: string) => void;
+  onRetry: (from?: string, to?: string, stream?: ImportStream) => void;
 }) {
   const [filter, setFilter] = useState('all'),
     [offset, setOffset] = useState(0);
@@ -73,8 +78,8 @@ export function CoverageHistory({
         <div>
           <h2>History coverage</h2>
           <p className="muted-text">
-            A verified connection does not mean history is complete. Empty and unavailable periods
-            are not zero measurements.
+            Scanned means Garmin answered the request, not that it retained every measurement.
+            Empty, unavailable and unscanned periods are not zero measurements.
           </p>
         </div>
         <Button variant="outline" className="button" disabled={disabled} onClick={() => onRetry()}>
@@ -93,6 +98,7 @@ export function CoverageHistory({
           <option value="all">All windows</option>
           <option value="failed">Failed windows</option>
           <option value="unavailable">Unavailable windows</option>
+          <option value="rejected">Rejected records</option>
         </NativeSelect>
       </label>
       <ErrorMessage error={error} />
@@ -124,7 +130,7 @@ export function CoverageHistory({
                     <TableHead>Stream</TableHead>
                     <TableHead>From</TableHead>
                     <TableHead>Through</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Scan / data</TableHead>
                     <TableHead>Records</TableHead>
                     <TableHead>Details</TableHead>
                     <TableHead>Action</TableHead>
@@ -138,25 +144,54 @@ export function CoverageHistory({
                         {row.from === '0001-01-01' ? 'Available history' : row.from}
                       </TableCell>
                       <TableCell>{row.to}</TableCell>
-                      <TableCell>{row.status}</TableCell>
+                      <TableCell>
+                        {row.scanState ?? 'unscanned'} · {row.status}
+                      </TableCell>
                       <TableCell>{row.records}</TableCell>
                       <TableCell>
                         {row.error ||
                           `${row.missingDays} missing days · ${row.unknownMetrics} unknown measurements`}
+                        {row.rejectedRecords > 0 && (
+                          <details>
+                            <summary>
+                              {row.rejectedRecords} rejected record
+                              {row.rejectedRecords === 1 ? '' : 's'}
+                            </summary>
+                            <p>
+                              Showing {row.diagnostics.length} diagnostic samples. Retry this period
+                              after correcting the source or importer.
+                            </p>
+                            <ul>
+                              {row.diagnostics.map((item, index) => (
+                                <li key={index}>
+                                  {item.date ?? 'Date unavailable'} ·{' '}
+                                  {item.identifier
+                                    ? `Record ${item.identifier}`
+                                    : `Row ${item.index + 1}`}{' '}
+                                  · {item.code.replaceAll('_', ' ')}
+                                  {item.fields.length ? ` (${item.fields.join(', ')})` : ''}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
                       </TableCell>
                       <TableCell>
-                        {['failed', 'unavailable'].includes(row.status) &&
-                          row.from !== '0001-01-01' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="button small"
-                              disabled={disabled}
-                              onClick={() => onRetry(row.from, row.to)}
-                            >
-                              Retry this period
-                            </Button>
-                          )}
+                        {(['failed', 'unavailable'].includes(row.status) ||
+                          row.rejectedRecords > 0) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="button small"
+                            disabled={disabled}
+                            onClick={() => {
+                              const stream = importStreamSchema.safeParse(row.stream);
+                              onRetry(row.from, row.to, stream.success ? stream.data : undefined);
+                            }}
+                          >
+                            Retry this period
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

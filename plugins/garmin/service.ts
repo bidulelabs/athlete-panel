@@ -1,4 +1,6 @@
-import { garminStatusSchema, type CoverageRow } from '@athlete-panel/contracts';
+import { garminStatusSchema } from '@athlete-panel/contracts';
+import { importStreamSchema } from '@athlete-panel/contracts';
+import { coverageDto, persistCoverage, resumeActivityScan, type StoredCoverage } from './coverage';
 import { requiredRow } from '../../packages/host/src/rows';
 import { connectionMessage } from './connection-status';
 import { randomUUID } from 'node:crypto';
@@ -131,6 +133,7 @@ export async function sync(body: unknown) {
       mode: z.enum(['recent', 'full']).default('recent'),
       from: dateSchema.nullable().optional(),
       to: dateSchema.optional(),
+      stream: importStreamSchema.optional(),
     })
     .strict()
     .parse(body);
@@ -143,6 +146,18 @@ export async function sync(body: unknown) {
     assert(!input.to || input.from, 'invalid_range', 'A targeted reimport requires both dates.');
     const targeted = !!(input.from && input.to),
       automaticStart = automaticHealthHistoryStart(config.earliestDate);
+    assert(
+      !input.stream || (targeted && input.mode === 'full'),
+      'invalid_range',
+      'A stream retry requires a full import with both dates.',
+    );
+    assert(
+      !input.stream ||
+        input.stream === 'activities' ||
+        (Date.parse(end) - Date.parse(input.from!)) / 86400000 < 28,
+      'invalid_range',
+      'A health stream retry supports at most 28 days.',
+    );
     if (config.earliestDate !== automaticStart)
       await saveConfig(tx, { ...config, earliestDate: automaticStart });
     const cursor = createSyncCursor({
@@ -151,7 +166,8 @@ export async function sync(body: unknown) {
       mode: input.mode === 'full' ? 'initial' : 'recent',
       accountId: config.accountId,
       timeZone: profile?.timezone,
-      ...(targeted ? { activityFrom: input.from! } : {}),
+      ...(targeted && input.from !== '0001-01-01' ? { activityFrom: input.from! } : {}),
+      ...(input.stream ? { targetStream: input.stream } : {}),
     });
     const kind = input.mode === 'full' ? 'garmin-history' : 'garmin-recent';
     // Expand an old automatic backfill in place. Explicit range repairs keep their own bounds.
@@ -164,6 +180,7 @@ export async function sync(body: unknown) {
       saved?.mode === cursor.mode &&
       saved.earliestHealthDate === cursor.earliestHealthDate &&
       (saved.activityFrom ?? null) === (cursor.activityFrom ?? null) &&
+      saved.targetStream === cursor.targetStream &&
       (!exactEnd || saved.today === cursor.today);
     const active =
       await tx`select id,status,payload from host.jobs where plugin_id='garmin' and kind=${kind} and status in ('queued','running','paused') order by created_at desc`;
@@ -181,6 +198,7 @@ export async function sync(body: unknown) {
       await tx`select id from host.jobs where plugin_id='garmin' and kind=${kind} and status='failed'
       and payload#>>'{cursor,mode}'=${cursor.mode} and payload#>>'{cursor,earliestHealthDate}'=${cursor.earliestHealthDate}
       and coalesce(payload#>>'{cursor,activityFrom}','')=${cursor.activityFrom ?? ''}
+      and coalesce(payload#>>'{cursor,targetStream}','')=${cursor.targetStream ?? ''}
       and (${!exactEnd} or payload#>>'{cursor,today}'=${cursor.today}) order by updated_at desc,created_at desc limit 1`;
     if (failed) {
       await tx`update host.jobs set status='queued',attempts=0,error=null,lease_owner=null,lease_until=null,next_run_at=now(),updated_at=now() where id=${failed.id}`;
@@ -226,13 +244,20 @@ export async function status(includeCoverage = true) {
     sql = connection();
   const coverage = includeCoverage
     ? await sql<
-        CoverageRow[]
-      >`select stream,start_date::text as "from",end_date::text as "to",status,records,missing_days as "missingDays",unknown_metrics as "unknownMetrics",error from garmin.coverage order by end_date desc,stream,start_date desc limit 300`
+        StoredCoverage[]
+      >`select stream,start_date::text as "from",end_date::text as "to",status,records,missing_days as "missingDays",unknown_metrics as "unknownMetrics",error,scan_state as "scanState",scanned_at as "lastScannedAt",rejected_records as "rejectedRecords",diagnostics from garmin.coverage order by end_date desc,stream,start_date desc limit 300`
     : [];
   const counts = requiredRow(
     await sql<
-      { windows: number; failed: number; complete: number; empty: number; unavailable: number }[]
-    >`select count(*)::int as windows, count(*) filter(where status='failed')::int as failed, count(*) filter(where status='complete')::int as complete, count(*) filter(where status='no-data')::int as empty, count(*) filter(where status='unavailable')::int as unavailable from garmin.coverage`,
+      {
+        windows: number;
+        failed: number;
+        complete: number;
+        empty: number;
+        unavailable: number;
+        rejected: number;
+      }[]
+    >`select count(*)::int as windows, count(*) filter(where status='failed')::int as failed, count(*) filter(where status='complete')::int as complete, count(*) filter(where status='no-data')::int as empty, count(*) filter(where status='unavailable')::int as unavailable, count(*) filter(where rejected_records>0)::int as rejected from garmin.coverage`,
   );
   const jobs = await sql<
     {
@@ -282,13 +307,14 @@ export async function status(includeCoverage = true) {
           : verified
             ? 'Account verified'
             : 'Key saved — waiting for verification',
-    coverage,
+    coverage: coverage.map(coverageDto),
     coverageSummary: {
       windows: counts.windows,
       failed: counts.failed,
       complete: counts.complete,
       empty: counts.empty,
       unavailable: counts.unavailable,
+      rejected: counts.rejected,
     },
   };
   return garminStatusSchema.parse({ ...result, status: connectionMessage(result) });
@@ -297,7 +323,7 @@ export async function status(includeCoverage = true) {
 export async function coveragePage(body: unknown) {
   const input = z
     .object({
-      filter: z.enum(['all', 'failed', 'unavailable']).default('all'),
+      filter: z.enum(['all', 'failed', 'unavailable', 'rejected']).default('all'),
       offset: z.number().int().min(0).max(1000000).default(0),
     })
     .strict()
@@ -306,12 +332,12 @@ export async function coveragePage(body: unknown) {
   const count = requiredRow(
     await sql<
       { total: number }[]
-    >`select count(*)::int as total from garmin.coverage where (${input.filter}='all' or status=${input.filter})`,
+    >`select count(*)::int as total from garmin.coverage where (${input.filter}='all' or status=${input.filter} or (${input.filter}='rejected' and rejected_records>0))`,
   );
   const rows = await sql<
-    CoverageRow[]
-  >`select stream,start_date::text as "from",end_date::text as "to",status,records,missing_days as "missingDays",unknown_metrics as "unknownMetrics",error from garmin.coverage where (${input.filter}='all' or status=${input.filter}) order by end_date desc,stream,start_date desc limit 50 offset ${input.offset}`;
-  return { rows, total: count.total, offset: input.offset, limit: 50 };
+    StoredCoverage[]
+  >`select stream,start_date::text as "from",end_date::text as "to",status,records,missing_days as "missingDays",unknown_metrics as "unknownMetrics",error,scan_state as "scanState",scanned_at as "lastScannedAt",rejected_records as "rejectedRecords",diagnostics from garmin.coverage where (${input.filter}='all' or status=${input.filter} or (${input.filter}='rejected' and rejected_records>0)) order by end_date desc,stream,start_date desc limit 50 offset ${input.offset}`;
+  return { rows: rows.map(coverageDto), total: count.total, offset: input.offset, limit: 50 };
 }
 export async function scheduleRecent() {
   await transaction(async (tx) => {
@@ -385,6 +411,7 @@ export async function runGarminJob(job: Job) {
   let coverageCursor = cursor;
   let reverifiedIdentity = false;
   try {
+    cursor = await resumeActivityScan(connection() as unknown as Transaction, cursor);
     if (job.payload.generation !== config.generation && cursor.phase !== 'identity') {
       coverageCursor = { ...cursor, phase: 'identity' };
       const identity = await getAccountIdentity(clientFor(config), cursor.today);
@@ -483,16 +510,7 @@ export async function runGarminJob(job: Job) {
       await tx`delete from garmin.coverage where status='failed' and stream=${cursor.phase} and start_date<=${coverage.from ?? cursor.earliestHealthDate} and end_date=${cursor.windowEnd}`;
       if (coverage.stream === 'identity')
         await tx`delete from garmin.coverage where status='failed' and stream='identity' and start_date=${coverage.from ?? '0001-01-01'} and end_date=${coverage.to}`;
-      if (coverage.stream !== 'identity') {
-        const scanStatus =
-          coverage.stream === 'activities' &&
-          coverage.status === 'no-data' &&
-          cursor.activityOffset > 0
-            ? 'complete'
-            : coverage.status;
-        const accumulate = coverage.stream === 'activities' && cursor.activityOffset > 0;
-        await tx`insert into garmin.coverage(stream,start_date,end_date,status,records,error,missing_days,unknown_metrics) values(${coverage.stream},${coverage.from ?? '0001-01-01'},${coverage.to},${scanStatus},${coverage.returnedRecords},${coverage.errorCode ?? null},${coverage.missingDays},${coverage.unknownMetrics}) on conflict(stream,start_date,end_date) do update set status=excluded.status,records=case when ${accumulate} then garmin.coverage.records+excluded.records else excluded.records end,error=excluded.error,missing_days=excluded.missing_days,unknown_metrics=excluded.unknown_metrics,updated_at=now()`;
-      }
+      await persistCoverage(tx, coverage);
       const done = step.nextCursor.phase === 'done';
       const label = done
         ? 'Import complete'
@@ -560,7 +578,7 @@ export async function runGarminJob(job: Job) {
                 Math.floor((Date.parse(coverage.to) - Date.parse(coverage.from)) / 86400000) + 1,
               )
             : 0;
-        await tx`insert into garmin.coverage(stream,start_date,end_date,status,records,error,missing_days,unknown_metrics) values(${coverage.stream},${coverage.from ?? '0001-01-01'},${coverage.to},'failed',0,${message},${missingDays},${missingDays * (metrics?.length ?? 0)}) on conflict(stream,start_date,end_date) do update set status='failed',error=excluded.error,missing_days=excluded.missing_days,unknown_metrics=excluded.unknown_metrics,updated_at=now()`;
+        await tx`insert into garmin.coverage(stream,start_date,end_date,status,records,error,missing_days,unknown_metrics,scan_state) values(${coverage.stream},${coverage.from ?? '0001-01-01'},${coverage.to},'failed',0,${message},${missingDays},${missingDays * (metrics?.length ?? 0)},'failed') on conflict(stream,start_date,end_date) do update set status='failed',scan_state='failed',error=excluded.error,missing_days=excluded.missing_days,unknown_metrics=excluded.unknown_metrics,updated_at=now()`;
       }
     });
   }

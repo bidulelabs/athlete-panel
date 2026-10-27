@@ -1,4 +1,5 @@
 'use client';
+import type { ImportStream } from '@athlete-panel/contracts';
 import { OnboardingConnection } from './onboarding-contribution';
 export const contributions = { connection: OnboardingConnection };
 import { Alert } from '@athlete-panel/ui';
@@ -35,6 +36,7 @@ export default function GarminPage() {
   const [editing, setEditing] = useState(false);
 
   const [retrying, setRetrying] = useState(false);
+  const [retryStream, setRetryStream] = useState<ImportStream>();
   const [rangeFrom, setRangeFrom] = useState(addDays(localDate(), -7));
   const [rangeTo, setRangeTo] = useState(localDate());
   const running = !!garmin.currentJob && ['running', 'queued'].includes(garmin.currentJob.status);
@@ -190,7 +192,8 @@ export default function GarminPage() {
       <CoverageHistory
         checkedAt={garmin.checkedAt}
         disabled={!garmin.connected || garmin.paused || running || action.busy}
-        onRetry={(from, to) => {
+        onRetry={(from, to, stream) => {
+          setRetryStream(stream);
           if (from) setRangeFrom(from);
           if (to) setRangeTo(to);
           setRetrying(true);
@@ -244,14 +247,24 @@ export default function GarminPage() {
         open={retrying}
         onClose={() => setRetrying(false)}
         title="Retry a date range"
-        description="Request activities and health history again. Existing records are updated without creating duplicates."
+        description={
+          retryStream
+            ? `Request ${retryStream} records for this period again. Resolved rejection diagnostics are replaced after the scan completes.`
+            : 'Request activities and health history again. Existing records are updated without creating duplicates.'
+        }
       >
         <form
           className="dialog-body"
           onSubmit={(event) => {
             event.preventDefault();
             void action.run(
-              () => request('garmin', 'sync', { mode: 'full', from: rangeFrom, to: rangeTo }),
+              () =>
+                request('garmin', 'sync', {
+                  mode: 'full',
+                  from: rangeFrom,
+                  to: rangeTo,
+                  ...(retryStream ? { stream: retryStream } : {}),
+                }),
               () => setRetrying(false),
             );
           }}

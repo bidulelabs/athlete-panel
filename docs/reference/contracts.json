@@ -1353,6 +1353,11 @@
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 9007199254740991
+                },
+                "rejected": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -1431,6 +1436,117 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "scanState": {
+                    "type": "string",
+                    "enum": [
+                      "unscanned",
+                      "in-progress",
+                      "scanned",
+                      "failed",
+                      "unavailable"
+                    ]
+                  },
+                  "lastScannedAt": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "rejectedRecords": {
+                    "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "diagnostics": {
+                    "default": [],
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "stream": {
+                          "type": "string",
+                          "enum": [
+                            "activities",
+                            "sleep",
+                            "daily",
+                            "hrv",
+                            "steps",
+                            "stress",
+                            "bodyBattery"
+                          ]
+                        },
+                        "from": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "to": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "pageOffset": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "index": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "identifier": {
+                          "type": "string",
+                          "pattern": "^\\d{1,128}$"
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "fields": {
+                          "maxItems": 8,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 160
+                          }
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_record",
+                            "invalid_identifier",
+                            "invalid_date",
+                            "outside_window",
+                            "schema_validation"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "stream",
+                        "from",
+                        "to",
+                        "pageOffset",
+                        "index",
+                        "fields",
+                        "code"
+                      ],
+                      "additionalProperties": false
+                    }
                   }
                 },
                 "required": [
@@ -1441,7 +1557,9 @@
                   "records",
                   "missingDays",
                   "unknownMetrics",
-                  "error"
+                  "error",
+                  "rejectedRecords",
+                  "diagnostics"
                 ],
                 "additionalProperties": false
               }
@@ -7119,6 +7237,11 @@
                   "maximum": 9007199254740991
                 },
                 "unavailable": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "rejected": {
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 9007199254740991
@@ -14599,6 +14722,18 @@
             "to": {
               "type": "string",
               "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "stream": {
+              "type": "string",
+              "enum": [
+                "activities",
+                "sleep",
+                "daily",
+                "hrv",
+                "steps",
+                "stress",
+                "bodyBattery"
+              ]
             }
           },
           "required": [
@@ -14686,7 +14821,8 @@
               "enum": [
                 "all",
                 "failed",
-                "unavailable"
+                "unavailable",
+                "rejected"
               ]
             },
             "offset": {
@@ -14745,6 +14881,117 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "scanState": {
+                    "type": "string",
+                    "enum": [
+                      "unscanned",
+                      "in-progress",
+                      "scanned",
+                      "failed",
+                      "unavailable"
+                    ]
+                  },
+                  "lastScannedAt": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "rejectedRecords": {
+                    "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "diagnostics": {
+                    "default": [],
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "stream": {
+                          "type": "string",
+                          "enum": [
+                            "activities",
+                            "sleep",
+                            "daily",
+                            "hrv",
+                            "steps",
+                            "stress",
+                            "bodyBattery"
+                          ]
+                        },
+                        "from": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "to": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "pageOffset": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "index": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "identifier": {
+                          "type": "string",
+                          "pattern": "^\\d{1,128}$"
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "fields": {
+                          "maxItems": 8,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 160
+                          }
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_record",
+                            "invalid_identifier",
+                            "invalid_date",
+                            "outside_window",
+                            "schema_validation"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "stream",
+                        "from",
+                        "to",
+                        "pageOffset",
+                        "index",
+                        "fields",
+                        "code"
+                      ],
+                      "additionalProperties": false
+                    }
                   }
                 },
                 "required": [
@@ -14755,7 +15002,9 @@
                   "records",
                   "missingDays",
                   "unknownMetrics",
-                  "error"
+                  "error",
+                  "rejectedRecords",
+                  "diagnostics"
                 ],
                 "additionalProperties": false
               }

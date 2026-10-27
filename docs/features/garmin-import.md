@@ -36,7 +36,7 @@ Automatic history imports ignore a former user-selected cutoff. An existing auto
 | Activity UTC date differs from provider local day | Calendar uses provider local date; UTC instant remains intact | Midnight/DST fixtures |
 | Missing or negative sentinel metric; actual zero | Missing becomes null; zero stays known | Health normalization tests |
 | Undated sleep DTO with no overnight identity, timestamps or measurements | Ignore only the explicit empty overnight shape; nap/sleep-need metadata does not provide a date; coverage remains missing | Sleep placeholder regression tests |
-| Undated sleep DTO contains a measurement, identity, timestamp or unknown non-null field | Reject the window without advancing its checkpoint | Sleep validation regression tests |
+| Undated sleep DTO contains a measurement, identity, timestamp or unknown non-null field | Reject that record with sanitized diagnostics; import valid neighbours and advance the checkpoint | Record-validation regression tests |
 | Empty old health window | Record no-data coverage and continue to the internal boundary (or explicit repair bound) | Historical traversal test |
 | One health stream returns 403 | Mark unavailable, continue others, retry eligibility on a later run | Partial-stream test |
 | Interrupted or replayed step | Same external identities and checkpoint; caller commits atomically | Step replay tests and host integration |
@@ -73,7 +73,9 @@ The HTTP client permits only these read endpoints and the token exchange on a fi
 
 Use synthetic fixtures and isolated storage for routine checks. The [development guide](../development.md) owns commands and operating procedures. A credentialed smoke check must separately confirm key onboarding, stable identity, available metric mappings, history traversal and revocation handling without recording secrets or raw health payloads in logs.
 
-The host must upsert records and advance the checkpoint atomically, respect lease ownership and credential generation, persist sanitized coverage/errors, and preserve history on disconnect. Retry-After is a duration returned to scheduling; the request path does not sleep through long rate-limit windows. Provider offset pagination is not a snapshot API: a repeated page stops visibly, and rerunning historical traversal reconciles changed older activity lists without deleting stored records.
+The host must upsert records, rejection diagnostics and the checkpoint atomically, respect lease ownership and credential generation, and preserve history on disconnect. Collection envelopes and all account identities are checked before accepting records; malformed envelopes or account violations remain fatal. Invalid individual records are rejected while valid neighbours import. Activity offsets use raw page length, including rejected rows; only an empty raw page ends pagination and repeated pages stop visibly. Retry-After is a duration returned to scheduling, not a long request-path sleep.
+
+Coverage separates scan state from measurement quality. Rejected records make a window partial, never empty or complete, and expose a count plus at most 50 sanitized samples (range, position, safe identity/date, field paths and reason codes). Raw payloads are not stored. The rejected-record filter supports explicit stream/window repair; a completed replacement scan replaces prior diagnostics. Legacy activity pages without proof of exhaustion remain unconfirmed. The optional `stream` parameter on bounded full imports narrows repairs; omitted parameters retain existing behaviour.
 
 Policy evidence: [Garmin's company history](https://www.garmin.com/en-US/company/history/) dates its entry into running/fitness to 2003. The earlier 2000 health scan boundary is a conservative implementation choice; the published Personal API provides no account-created date or authoritative health-history exhaustion marker. No such marker is inferred from an empty window.
 

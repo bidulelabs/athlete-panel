@@ -195,7 +195,8 @@ export const registry = [
       "schema": "garmin",
       "migrations": [
         "migrations/001-initial.sql",
-        "migrations/002-coverage-quality.sql"
+        "migrations/002-coverage-quality.sql",
+        "migrations/003-scan-diagnostics.sql"
       ],
       "services": [],
       "jobs": [
@@ -312,4 +313,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="e3c78b04f91d4a88308ef7e6450a0e15f56a09194b21966f68d68f0395117006";
+export const schemaSignature="d339b5f0ee8549cb888b1f4f0bc5f5d206a89fcd68036feea91d768cfab6b39d";

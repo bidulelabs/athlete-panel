@@ -47,7 +47,11 @@ def copy_candidate(destination):
              'package.json','pnpm-lock.yaml','pnpm-workspace.yaml','tsconfig.json', 'tsconfig.strict.json', 'eslint.config.mjs', '.prettierrc.json', '.prettierignore','vitest.config.ts','playwright.config.ts',
              'Dockerfile','compose.yml','compose.local.yml','compose.test.yml','Caddyfile','.dockerignore','.gitignore','.env.example',
              'AGENTS.md','README.md','PRODUCT.md','DESIGN.md','.impeccable/design.json','LICENSE','SECURITY.md','CONTRIBUTING.md']
-    excluded = shutil.ignore_patterns('node_modules','.next','dist','.runtime','.env','.env.*','.secrets','private-exports','context.json','proposal.json','__pycache__','*.pyc','*.fgr','*.dump','*.key','*.pem')
+    policy = json.loads((Path(__file__).resolve().parent / 'lib/private-files.json').read_text())
+    def excluded(directory, names):
+        return [name for name in names if name in policy['names']
+                or (name.startswith('.env') and name != '.env.example')
+                or any(name.endswith(suffix) for suffix in policy['suffixes'])]
     destination.mkdir(mode=0o700)
     for name in roots:
         source = ROOT / name

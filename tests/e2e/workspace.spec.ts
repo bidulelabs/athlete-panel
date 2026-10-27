@@ -162,6 +162,14 @@ test('agent grants cannot apply changes and owner mutations reject foreign origi
   await login(page);
   const origin = new URL(page.url()).origin;
   const date = await today(page);
+  for (const operation of ['constructor', 'toString', '__proto__', 'unknown-operation']) {
+    const response = await page.request.post(`/api/plugins/training/${operation}`, {
+      headers: { Origin: origin },
+      data: {},
+    });
+    expect(response.status()).toBe(404);
+    expect(await response.json()).toMatchObject({ error: { code: 'not_found' } });
+  }
   const grantResponse = await page.request.post('/api/plugins/agent-bridge/grant', {
     headers: { Origin: origin },
     data: {

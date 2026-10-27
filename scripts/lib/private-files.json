@@ -1,0 +1,34 @@
+{
+  "names": [
+    ".git",
+    ".secrets",
+    ".runtime",
+    ".playwright-mcp",
+    "private-exports",
+    "backups",
+    "node_modules",
+    ".next",
+    "dist",
+    ".cache",
+    "coverage",
+    "test-results",
+    "playwright-report",
+    "__pycache__",
+    ".DS_Store",
+    "context.json",
+    "proposal.json",
+    ".athlete-panel-release.json"
+  ],
+  "suffixes": [
+    ".fgr",
+    ".partial",
+    ".dump",
+    ".pem",
+    ".key",
+    ".sqlite",
+    ".db",
+    ".log",
+    ".pyc",
+    ".tsbuildinfo"
+  ]
+}

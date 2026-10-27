@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import postgres from 'postgres';
 import { expect, it } from 'vitest';
 import { provisionApplicationRole } from '../../packages/host/src/database-access';
@@ -21,9 +22,10 @@ it('keeps runtime data access while denying role, schema, owner and migration ad
     target.pathname = `/${name}`;
     db = postgres(target.href, { max: 1, onnotice: () => {} });
     await db`create schema host`;
-    await db`create table host.owner(id text primary key)`;
+    await db`create table host.owner(id text primary key,password_hash text)`;
     await db`create table host.migrations(id text primary key)`;
     await db`create table host.records(id text primary key)`;
+    await db.unsafe(await readFile('packages/host/migrations/004-password-upgrade.sql', 'utf8'));
     await provisionApplicationRole(db, password, role);
     target.username = role;
     target.password = password;
@@ -40,7 +42,8 @@ it('keeps runtime data access while denying role, schema, owner and migration ad
       'create role forbidden',
       'create temp table forbidden(id int)',
       'truncate host.records',
-      "insert into host.owner values ('changed')",
+      "insert into host.owner(id) values ('changed')",
+      "update host.owner set password_hash='changed'",
       'delete from host.migrations',
     ]) {
       await expect(app.unsafe(query)).rejects.toMatchObject({ code: '42501' });

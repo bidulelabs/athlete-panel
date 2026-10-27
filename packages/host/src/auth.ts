@@ -1,7 +1,14 @@
 import { requiredRow } from './rows';
 import { connection } from './db';
 import { initialOnboarding, writeOnboarding } from './onboarding';
-import { digest, passwordHash, randomToken, verifyPasswordAsync } from './crypto';
+import {
+  digest,
+  passwordHashAsync,
+  passwordNeedsRehash,
+  DUMMY_PASSWORD_HASH,
+  randomToken,
+  verifyPasswordAsync,
+} from './crypto';
 import { isIP } from 'node:net';
 import { AppError, assert } from './errors';
 import { checkSchema } from './schema';
@@ -16,6 +23,7 @@ export async function bootstrapOwner(password: string, recover = false) {
     'invalid_password',
     'Use a password between 12 and 256 characters.',
   );
+  const encoded = await passwordHashAsync(password);
   await connection().begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(736147001)`;
     const owner = await tx`select id from host.owner`;
@@ -25,7 +33,7 @@ export async function bootstrapOwner(password: string, recover = false) {
         'Owner already exists. Use the console recovery operation.',
       );
     if (!owner.length && recover) throw new AppError('owner_missing', 'Bootstrap the owner first.');
-    await tx`insert into host.owner (id,password_hash) values ('owner',${passwordHash(password)}) on conflict(id) do update set password_hash=excluded.password_hash`;
+    await tx`insert into host.owner (id,password_hash) values ('owner',${encoded}) on conflict(id) do update set password_hash=excluded.password_hash`;
     if (!owner.length) await writeOnboarding(tx, initialOnboarding());
     await tx`delete from host.sessions`;
     await tx`delete from host.login_attempts`;
@@ -72,7 +80,6 @@ export function loginClient(request: Request): string {
   return normalized;
 }
 let passwordChecks = 0;
-const dummyPassword = passwordHash('unconfigured-owner');
 export async function login(password: string, client = 'local') {
   await checkSchema();
   const sql = connection();
@@ -90,28 +97,57 @@ export async function login(password: string, client = 'local') {
     'Too many login attempts. Try again in 15 minutes.',
     429,
   );
-  assert(passwordChecks < 4, 'login_busy', 'Sign-in is busy. Try again shortly.', 429);
-  let valid: boolean, configured: boolean;
+  assert(passwordChecks < 2, 'login_busy', 'Sign-in is busy. Try again shortly.', 429);
   passwordChecks++;
   try {
-    const owner = await sql`select password_hash from host.owner where id='owner'`;
-    configured = !!owner[0];
-    valid = await verifyPasswordAsync(password, owner[0]?.password_hash ?? dummyPassword);
+    return await createVerifiedSession(password, key);
   } finally {
     passwordChecks--;
   }
-  assert(
-    configured && valid,
-    'invalid_credentials',
-    'Incorrect password or owner not configured.',
-    401,
-  );
-  await sql`delete from host.login_attempts where key=${key}`;
-  const token = randomToken();
-  await sql`delete from host.sessions where expires_at<now()`;
-  await sql`insert into host.sessions (token_hash,expires_at) values (${digest(token)},now()+interval '7 days')`;
-  return token;
 }
+
+async function createVerifiedSession(password: string, attemptKey: string): Promise<string> {
+  const sql = connection();
+  // A concurrent login upgrade or console recovery may replace the verified hash.
+  // Retry outside the lock once; never grant a session from an obsolete snapshot.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const [owner] = await sql<
+      { password_hash: string }[]
+    >`select password_hash from host.owner where id='owner'`;
+    const encoded = owner?.password_hash ?? DUMMY_PASSWORD_HASH;
+    const valid = await verifyPasswordAsync(password, encoded);
+    assert(
+      owner && valid,
+      'invalid_credentials',
+      'Incorrect password or owner not configured.',
+      401,
+    );
+    const replacement = passwordNeedsRehash(encoded) ? await passwordHashAsync(password) : null;
+    const token = await sql.begin(async (tx) => {
+      await tx`select pg_advisory_xact_lock(736147001)`;
+      const [current] = await tx<
+        { password_hash: string }[]
+      >`select password_hash from host.owner where id='owner'`;
+      if (current?.password_hash !== encoded) return null;
+      if (replacement) {
+        const changed = requiredRow(
+          await tx<
+            { upgraded: boolean }[]
+          >`select host.upgrade_password_hash(${encoded},${replacement}) as upgraded`,
+        );
+        if (!changed.upgraded) return null;
+      }
+      const token = randomToken();
+      await tx`delete from host.login_attempts where key=${attemptKey}`;
+      await tx`delete from host.sessions where expires_at<now()`;
+      await tx`insert into host.sessions (token_hash,expires_at) values (${digest(token)},now()+interval '7 days')`;
+      return token;
+    });
+    if (token) return token;
+  }
+  throw new AppError('invalid_credentials', 'Credentials changed during sign-in. Try again.', 401);
+}
+
 export async function requireSession(token?: string | null) {
   assert(token, 'unauthorized', 'Sign in to continue.', 401);
   await checkSchema();

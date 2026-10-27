@@ -25,7 +25,7 @@ describe('browser-approved agent connections', () => {
     await migrate();
   });
   beforeEach(async () => {
-    await connection()`truncate agent_bridge.connections, host.proposals, host.grants`;
+    await connection()`truncate agent_bridge.connections, host.proposals, host.grants, host.request_budgets`;
     await connection()`delete from host.settings where key='maintenance'`;
   });
   afterAll(closeDatabase);
@@ -132,7 +132,7 @@ describe('browser-approved agent connections', () => {
     const request = await start();
     expect(await pollConnection(request.token)).toMatchObject({ status: 'pending' });
     expect(await pollConnection(request.token)).toEqual({ status: 'slow_down' });
-    for (let i = 1; i < 30; i++) await start();
+    for (let i = 1; i < 5; i++) await start();
     await expect(start()).rejects.toMatchObject({ code: 'rate_limited', status: 429 });
   });
 });

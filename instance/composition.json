@@ -34,7 +34,7 @@
     {
       "path": "plugins/agent-bridge",
       "enabled": true,
-      "version": "1.2.0"
+      "version": "1.2.1"
     },
     {
       "path": "personal-plugins/cycling-sleep",

@@ -8,6 +8,18 @@ export class AppError extends Error {
     super(message);
   }
 }
+export class RateLimitError extends AppError {
+  constructor(public readonly retryAfterSeconds: number) {
+    super(
+      'rate_limited',
+      `Too many connection requests. Try again in ${retryAfterSeconds} seconds.`,
+      429,
+      {
+        retryAfterSeconds,
+      },
+    );
+  }
+}
 export function assert(
   condition: unknown,
   code: string,

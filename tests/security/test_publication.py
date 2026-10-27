@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import subprocess
 import tempfile
 import unittest
@@ -11,6 +12,22 @@ spec.loader.exec_module(scanner)
 
 
 class PublicationChecks(unittest.TestCase):
+    def test_shared_recursive_packaging_policy(self):
+        root = SCANNER.parent.parent
+        fixtures = json.loads((root / 'tests/fixtures/packaging.json').read_text())
+        for name in fixtures['excluded']:
+            self.assertIn((0, 'private-or-generated-file'), list(scanner.findings(name, b'synthetic fixture')), name)
+        for name in fixtures['included'] + fixtures['required']:
+            self.assertEqual(list(scanner.findings(name, b'synthetic source')), [], name)
+        patterns = (root / '.dockerignore').read_text().splitlines()
+        for name in scanner.PRIVATE_FILES['names']:
+            self.assertIn('**/' + name, patterns)
+        for suffix in scanner.PRIVATE_FILES['suffixes']:
+            self.assertIn('**/*' + suffix, patterns)
+        self.assertIn('**/.env*', patterns)
+        self.assertIn('!**/.env.example', patterns)
+        self.assertLess(patterns.index('!**/.env.example'), patterns.index('**/.secrets'))
+
     def test_private_files_and_sensitive_patterns_without_values(self):
         self.assertIn((0, 'private-or-generated-file'), list(scanner.findings('private-exports/context.json', b'{}')))
         self.assertEqual(list(scanner.findings('.env.example', b'ENCRYPTION_KEY=')), [])

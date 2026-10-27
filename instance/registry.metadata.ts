@@ -248,12 +248,12 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "1.2.0",
+    "version": "1.2.1",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "hostApi": "^1.2.0",
       "dependencies": {
         "training": "^1.1.0",
@@ -316,4 +316,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="3c0c6753a465298af93036dbf49f70a20d847692ed16763b10b24eacf1613a30";
+export const schemaSignature="998d6d44d89e7e0fcd437ac601ef17a62bb38ec292fb845920c435fbf3c1b539";

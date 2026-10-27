@@ -3,6 +3,7 @@ import { pluginEnabled } from '../../../../../../packages/host/src/plugins';
 import { failure, json, readJson } from '../../../../../../packages/host/src/http';
 import { assert } from '../../../../../../packages/host/src/errors';
 import { checkSchema } from '../../../../../../packages/host/src/schema';
+import { loginClient } from '../../../../../../packages/host/src/auth';
 import {
   startConnection,
   pollConnection,
@@ -20,7 +21,7 @@ async function dispatch(request: Request, operation: string) {
         'Start the connection from the local CLI.',
         403,
       );
-      return json(await startConnection(await readJson(request)));
+      return json(await startConnection(await readJson(request), loginClient(request)));
     }
     const auth = request.headers.get('authorization');
     assert(

@@ -43,6 +43,10 @@ Image installation resolves a version/digest once and records the local ID and p
 
 ## Constraints and verification limits
 
+New image builds and matching source archives exclude private environment/key files, exports, backups and generated state recursively, including inside plugins. Exact `.env.example` files and required source remain included. Publication, archive and build-stage/runtime image tests share synthetic path fixtures; archive formats and existing artifacts are unchanged.
+
+Owner passwords use versioned scrypt parameters (N=65536, r=8, p=2; 16-byte salt, 64-byte derived key). Legacy hashes upgrade only after successful login, atomically with session creation. Two concurrent web checks bound memory; console recovery takes precedence over stale login verification. Runtime cannot directly edit the owner table; its one-time upgrade permission is defined in [ADR 010](../decisions/010-runtime-password-upgrade.md). Credential encryption accepts only canonical three-part base64 envelopes with 12-byte IVs and 16-byte GCM tags; existing valid ciphertext remains readable. Upgrade refreshes runtime permissions, and rollback requires the matched pre-upgrade backup.
+
 Hosted images must declare application `athlete-panel` and hosted protocol 1 in `.athlete-panel-release.json`. Missing or unrelated metadata is rejected before activation. Backup storage uses `.athlete-panel-storage-id`; archives use the `ATHLETE-PANEL-BACKUP-1` envelope, and unsupported envelopes fail verification before any database restore. Daily retention only prunes recognized `athlete-panel-daily-` archives.
 
 The primary hosted environment is Linux with Docker Compose and Python 3.10+. Remote filesystem verification supports NFS/NFS4, CIFS/SMB3 and SSHFS. An explicit synthetic policy is available to the imported rehearsal only and is additionally restricted by a loopback origin and `_test` database in the container guard. There is no public CLI bypass for hosted remote-storage verification.

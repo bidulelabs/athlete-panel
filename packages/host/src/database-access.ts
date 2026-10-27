@@ -53,6 +53,7 @@ export async function provisionApplicationRole(
       await tx`grant usage, select on all sequences in schema ${tx(nspname)} to ${tx(role)}`;
     }
     await tx`revoke insert, update, delete on host.owner, host.migrations from ${tx(role)}`;
+    await tx`grant execute on function host.upgrade_password_hash(text,text) to ${tx(role)}`;
   });
 }
 

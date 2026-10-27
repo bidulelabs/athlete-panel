@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AppError } from './errors';
+import { AppError, RateLimitError } from './errors';
 export async function readJson(request: Request): Promise<unknown> {
   const limit = 256 * 1024;
   if (Number(request.headers.get('content-length')) > limit)
@@ -61,10 +61,13 @@ export function failure(error: unknown) {
     (error instanceof Error && error.name === 'DomainError' && 'status' in error && 'code' in error)
   ) {
     const known = error as AppError;
-    return json(
+    const response = json(
       { error: { code: known.code, message: known.message, details: known.details } },
       known.status,
     );
+    if (error instanceof RateLimitError)
+      response.headers.set('Retry-After', String(error.retryAfterSeconds));
+    return response;
   }
   console.error(
     JSON.stringify({

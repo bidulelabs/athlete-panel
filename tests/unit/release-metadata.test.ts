@@ -4,8 +4,32 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { sourceDigest, sourceFiles } from '../../scripts/lib/source-files';
 import { readImageMetadata, releasedImageSchema } from '../../scripts/lib/release-data';
+import packagingFixtures from '../fixtures/packaging.json';
+import { dirname } from 'node:path';
 
 describe('recovery source identity', () => {
+  it('excludes the shared private-file matrix at every depth without changing source identity', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'athlete-panel-packaging-test-'));
+    try {
+      for (const path of packagingFixtures.included) {
+        await mkdir(dirname(join(root, path)), { recursive: true });
+        await writeFile(join(root, path), 'synthetic source');
+      }
+      const before = await sourceDigest(root);
+      for (const path of packagingFixtures.excluded) {
+        await mkdir(dirname(join(root, path)), { recursive: true });
+        await writeFile(join(root, path), 'synthetic private fixture');
+      }
+      expect((await sourceFiles(root)).map((entry) => entry.path).sort()).toEqual(
+        packagingFixtures.included.map((path) => `source/${path}`).sort(),
+      );
+      expect(await sourceDigest(root)).toBe(before);
+      await writeFile(join(root, packagingFixtures.included[0]!), 'changed source');
+      expect(await sourceDigest(root)).not.toBe(before);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it('requires metadata for this application at the documented image path', async () => {
     const root = await mkdtemp(join(tmpdir(), 'athlete-panel-image-test-'));
     const metadata = {

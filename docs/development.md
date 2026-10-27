@@ -190,6 +190,8 @@ Advanced compatibility: an owner-created manual grant can still be configured us
 
 ## Verification
 
+After password-policy changes, run `pnpm exec tsx scripts/benchmark-passwords.ts` to record synthetic single/concurrent-check latency and peak process memory; it reads no owner data and is not a timing-sensitive CI gate. Scrypt uses N=65536, r=8, p=2 and a 96 MiB allocation limit, with two concurrent login checks per web process. Legacy hashes upgrade on successful login. The coordinated migration/permission-refresh procedure installs the restricted upgrade function; previous artifacts require matched-backup rollback after a hash upgrade.
+
 The guided local workflow has its own isolated rehearsal:
 
 ```sh

@@ -4,11 +4,9 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Bike, Moon } from 'lucide-react';
 import { summarizeCyclingSleep } from './projection';
 import {
-  addDays,
   dateLabel,
   DateNavigation,
   duration,
-  EmptyState,
   ExtensionSlot,
   MiniBars,
   PageHeader,

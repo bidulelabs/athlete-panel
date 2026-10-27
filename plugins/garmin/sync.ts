@@ -211,14 +211,13 @@ export function healthRequest(
 export async function getAccountIdentity(client: GarminReader, today: string): Promise<string> {
   if (!dayKey(today))
     throw new GarminError('invalid_configuration', 'The current Garmin calendar date is invalid.');
-  let id: string | null = null;
   try {
     const activity = await client.get('/activitylist-service/activities/search/activities', {
       start: 0,
       limit: 1,
       excludeChildren: true,
     });
-    id = assertAccountBinding(null, accountIds(activity, 'activities'));
+    const id = assertAccountBinding(null, accountIds(activity, 'activities'));
     if (id !== null) return id;
   } catch (error) {
     if (!(error instanceof GarminError) || error.code !== 'forbidden') throw error;
@@ -227,7 +226,7 @@ export async function getAccountIdentity(client: GarminReader, today: string): P
     const request = healthRequest(stream, addDays(today, -27), today);
     try {
       const payload = await client.get(request.path, request.query);
-      id = assertAccountBinding(null, accountIds(payload, stream));
+      const id = assertAccountBinding(null, accountIds(payload, stream));
       if (id !== null) return id;
     } catch (error) {
       if (!(error instanceof GarminError) || error.code !== 'forbidden') throw error;

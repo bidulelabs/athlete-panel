@@ -3,7 +3,7 @@
 import { Button, NativeSelect, Input, Badge } from '@athlete-panel/ui';
 import { useMemo, useState } from 'react';
 import type { Activity as ActivityRecord } from '@athlete-panel/contracts';
-import { Activity, ArrowUpRight, Link2, Search, Unlink } from 'lucide-react';
+import { Activity, ArrowUpRight, Link2, Unlink } from 'lucide-react';
 import {
   dateLabel,
   DateNavigation,
@@ -25,7 +25,7 @@ import {
 import { mutate } from '../training/client';
 import { effectiveDate } from '../training/dates';
 
-export default function ActivitiesPage({ data, request }: PluginPageProps) {
+export default function ActivitiesPage({ data }: PluginPageProps) {
   const { from, to, navigate } = useWorkspace();
   const [sport, setSport] = useState('all');
   const [search, setSearch] = useState('');

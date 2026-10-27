@@ -9,7 +9,7 @@ import {
   type WorkspaceState,
   type WorkoutStep,
 } from '../../packages/contracts/src';
-import { connection, transaction, type Transaction } from '../../packages/host/src/db';
+import { transaction, type Transaction } from '../../packages/host/src/db';
 import { canonical, digest, randomToken } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
 import { loadWorkspace, persistChanges } from '../../instance/services';

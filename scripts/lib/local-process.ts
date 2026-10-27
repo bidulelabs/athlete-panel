@@ -197,7 +197,7 @@ export async function supervise(
   });
   const onAbort = () => resolveStop(null);
   signal.addEventListener('abort', onAbort, { once: true });
-  let failure: string | null = null;
+  let failure: string | null;
   try {
     for (const service of services) {
       const child = spawn(service.command, service.args, {

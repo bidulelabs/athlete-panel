@@ -28,8 +28,6 @@ import {
 } from './sync';
 import { assertAccountBinding, streamMetrics, type HealthStream } from './normalize';
 import { automaticHealthHistoryStart } from './history-policy';
-import { recordsRepository } from '../activity-records/repository';
-import { trainingRepository } from '../training/repository';
 
 type Configuration = {
   lastErrorCode?: string | null;
@@ -199,7 +197,7 @@ export async function disconnect() {
   await transaction(async (tx) => {
     const config = await getConfiguration(tx);
     if (config) {
-      const { encryptedKey, ...rest } = config;
+      const { encryptedKey: _encryptedKey, ...rest } = config;
       await saveConfig(tx, { ...rest, paused: true, generation: randomUUID() });
     }
     await tx`delete from host.settings where key='garminToken'`;

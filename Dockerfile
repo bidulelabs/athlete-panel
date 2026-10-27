@@ -25,7 +25,7 @@ COPY .agents ./.agents
 COPY .claude ./.claude
 COPY .github ./.github
 COPY .impeccable/design.json ./.impeccable/design.json
-COPY tsconfig.json vitest.config.ts playwright.config.ts Dockerfile compose.yml compose.local.yml compose.test.yml Caddyfile .dockerignore .gitignore .env.example AGENTS.md README.md PRODUCT.md DESIGN.md LICENSE SECURITY.md CONTRIBUTING.md ./
+COPY tsconfig.json eslint.config.mjs .prettierrc.json .prettierignore .git-blame-ignore-revs vitest.config.ts playwright.config.ts Dockerfile compose.yml compose.local.yml compose.test.yml Caddyfile .dockerignore .gitignore .env.example AGENTS.md README.md PRODUCT.md DESIGN.md LICENSE SECURITY.md CONTRIBUTING.md ./
 RUN pnpm build && node --import tsx scripts/release-metadata.ts
 
 # Operational commands use tsx at runtime; compilers/test runners stay in the build stage.

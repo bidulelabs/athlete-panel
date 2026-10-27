@@ -59,6 +59,7 @@ async function readConfig(file: string): Promise<AgentConfig | null> {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     if (error instanceof z.ZodError || error instanceof SyntaxError)
+      // eslint-disable-next-line preserve-caught-error -- Parser errors may contain stored credentials.
       throw new Error(
         'The saved agent configuration is invalid. Remove it and run pnpm agent connect again.',
       );
@@ -212,8 +213,10 @@ async function connect(origin: string, configPath: string, label: string, noOpen
     }
     throw new Error('Approval timed out. Run pnpm agent connect again.');
   } catch (error) {
+    // eslint-disable-next-line preserve-caught-error -- Transport errors may contain connection credentials.
     if (controller.signal.aborted) throw new Error('Connection cancelled.');
     if (error instanceof z.ZodError)
+      // eslint-disable-next-line preserve-caught-error -- Validation details may contain connection credentials.
       throw new Error(
         'Athlete Panel returned an incompatible connection response. Update the app and checkout together.',
       );

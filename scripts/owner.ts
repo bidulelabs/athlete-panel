@@ -13,6 +13,7 @@ try {
   await bootstrapOwner(password.trimEnd(), action === 'recover');
   console.log(`Owner ${action} completed; existing sessions and grants revoked.`);
 } finally {
+  // eslint-disable-next-line no-useless-assignment -- Drop the local credential reference on exit/retry.
   password = '';
   await closeDatabase();
 }

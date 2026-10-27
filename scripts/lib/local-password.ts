@@ -4,6 +4,7 @@ import { LocalError } from './local-config';
 export function validateLoginPassword(password: string) {
   if (password.length < 12 || password.length > 256)
     throw new LocalError('Use a login password between 12 and 256 characters.');
+  // eslint-disable-next-line no-control-regex -- Password validation deliberately rejects control characters.
   if (password.trimEnd() !== password || /[\x00-\x1f\x7f]/.test(password))
     throw new LocalError(
       'Do not use control characters or trailing whitespace in your login password.',
@@ -100,6 +101,7 @@ export async function choosePassword(fromStdin: boolean, signal: AbortSignal): P
     try {
       validateLoginPassword(password);
     } catch (error) {
+      // eslint-disable-next-line no-useless-assignment -- Drop the local credential reference on exit/retry.
       password = '';
       console.log((error as LocalError).message);
       continue;
@@ -109,6 +111,7 @@ export async function choosePassword(fromStdin: boolean, signal: AbortSignal): P
       signal,
     );
     if (password === confirmation) return password;
+    // eslint-disable-next-line no-useless-assignment -- Drop the local credential reference on exit/retry.
     password = '';
     console.log('Passwords did not match. Please try again.');
   }

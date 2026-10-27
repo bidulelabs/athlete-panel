@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { resolve, relative } from 'node:path';
+import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { manifestSchema, validateComposition, type Composition } from '../packages/plugin-sdk/src';
 

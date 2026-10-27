@@ -89,8 +89,7 @@ export async function login(password: string, client = 'local') {
     429,
   );
   assert(passwordChecks < 4, 'login_busy', 'Sign-in is busy. Try again shortly.', 429);
-  let valid = false,
-    configured = false;
+  let valid: boolean, configured: boolean;
   passwordChecks++;
   try {
     const owner = await sql`select password_hash from host.owner where id='owner'`;

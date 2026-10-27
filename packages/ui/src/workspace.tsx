@@ -34,7 +34,6 @@ import type { GarminConnection } from '../../contracts/src/garmin-connection';
 import type { WorkspaceState } from '@athlete-panel/contracts';
 import {
   Activity,
-  ArrowUpRight,
   CalendarDays,
   ChartNoAxesColumnIncreasing,
   Check,
@@ -44,19 +43,15 @@ import {
   Code2,
   HeartPulse,
   Layers,
-  LoaderCircle,
   LogOut,
   Menu,
   Moon,
-  Pause,
-  Play,
   Plug,
   RefreshCw,
   Settings2,
   ShieldCheck,
   Sun,
   Terminal,
-  Unplug,
   X,
 } from 'lucide-react';
 import {
@@ -68,7 +63,6 @@ import {
   localDate,
   Modal,
   PageHeader,
-  SubmitButton,
   useAction,
 } from './primitives';
 import { operationalHealth } from './operational-status';

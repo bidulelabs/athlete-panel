@@ -21,7 +21,7 @@ test('refresh preserves an old draft revision and offers explicit recovery', asy
   const state = await page.request
     .get('/api/workspace?from=2026-10-19&to=2026-11-08')
     .then((r) => r.json());
-  const { id, revision, ...values } = state.state.profile;
+  const { id: _id, revision, ...values } = state.state.profile;
   const result = await page.request.post('/api/plugins/training/mutate', {
     headers: { Origin: origin },
     data: {

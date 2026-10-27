@@ -80,6 +80,7 @@ export const garminStatusSchema = garminConnectionSchema.extend({
   coverage: z.array(coverageRowSchema),
 });
 export const proposalSummarySchema = z.object({
+  expiresAt: z.iso.datetime().optional(),
   id: z.uuid(),
   status: z.enum(['pending', 'applied', 'rejected']),
   digest: z.string(),

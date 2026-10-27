@@ -248,13 +248,13 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "1.2.0",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "1.1.0",
-      "hostApi": "^1.1.0",
+      "version": "1.2.0",
+      "hostApi": "^1.2.0",
       "dependencies": {
         "training": "^1.1.0",
         "athlete": "^1.1.0",

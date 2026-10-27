@@ -1,4 +1,8 @@
-import { workspaceEnvelopeSchema, type WorkspaceEnvelope } from '../packages/contracts/src';
+import {
+  proposalExpiresAt,
+  workspaceEnvelopeSchema,
+  type WorkspaceEnvelope,
+} from '../packages/contracts/src';
 import { connection, transaction } from '../packages/host/src/db';
 import { contractValue } from '../packages/host/src/http';
 import { pluginStatus, pluginEnabled } from '../packages/host/src/plugins';
@@ -92,6 +96,7 @@ export async function readWorkspaceResponse(range: {
     proposals: proposals.map((row) => ({
       ...row,
       createdAt: row.createdAt.toISOString(),
+      expiresAt: proposalExpiresAt(row.createdAt),
       warnings: [],
     })),
     grants: grants.map((row) => ({ ...row, expiresAt: row.expiresAt.toISOString() })),

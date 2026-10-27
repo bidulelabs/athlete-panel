@@ -1,3 +1,8 @@
+import {
+  proposalApplyInputSchema,
+  proposalReviewInputSchema,
+  proposalReviewSchema,
+} from './proposal-review';
 import { z } from 'zod';
 import { importStreamSchema } from './import-recovery';
 import {
@@ -74,8 +79,9 @@ export const operationContracts = {
     revoke: operation(id, ok),
     reject: operation(id, ok),
     undo: operation(undo, mutationResponseSchema),
+    review: operation(proposalReviewInputSchema, proposalReviewSchema),
     apply: operation(
-      undo.extend({ digest: z.string().length(64) }).strict(),
+      proposalApplyInputSchema,
       mutationResponseSchema.extend({ proposalId: z.uuid() }),
     ),
     connection: operation(agentConnectionIdSchema, agentConnectionStatusSchema),

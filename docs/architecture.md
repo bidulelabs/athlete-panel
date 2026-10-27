@@ -61,8 +61,10 @@ flowchart LR
 - Generated client imports never include server transports, database credentials or provider keys. A resolved TypeScript dependency graph enforces this transitively. Public plugin entries separate shared, client and server APIs; Training consumes contracts and instance services, while Athlete and Activity Records declare their Training interface dependency. AES-GCM secrets require a separately recoverable encryption key.
 - PostgreSQL-backed repositories use Drizzle for ordinary reads and a separate raw PostgreSQL client for explicit transaction writes, preventing driver serializer interference.
 - Read APIs bound activity/health dates; linked activity identities may additionally be loaded to validate relationships. Manual plan tables remain small-instance collections. Large training histories would justify additional pagination/indexed projections.
-- Migrations are immutable/checksummed and applied under an exclusive lock, host first then dependency order. Web readiness and worker startup reject a different installed composition. Failed migration transactions do not activate a candidate.
+- Migrations are immutable/checksummed and applied under an exclusive lock, host first then dependency order; registry generation and execution share the ordered host migration list. Web readiness and worker startup reject a different installed composition. Failed migration transactions do not activate a candidate.
 - Source composition requires build, migration coordination, deployment and restart. Desired UI state remains pending until the compiled composition is activated. Disabled code retains its data.
+
+Garmin owns per-stream scan coverage, sanitized rejection diagnostics and resumable recovery cursors. The host supplies generic job priorities, bounded retries and isolated plugin scheduling. Proposal context snapshots remain in the existing host proposal envelope; the bridge owns seven-day expiry, on-demand review and transactional digest revalidation ([ADR 009](decisions/009-durable-proposal-review.md)).
 
 ## Behavior and decisions
 

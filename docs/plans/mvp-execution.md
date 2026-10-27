@@ -567,3 +567,16 @@ Implemented the approved sequence while preserving response shapes, stored data 
 | A3 | Pure handlers, one finalizer and transaction-scoped persistence/audit helper. | 42 differential batches matched; revision, proposal, undo and rollback regressions passed. |
 
 Local verification: `pnpm check` (155 unit tests), 84 integration tests, 84 browser tests (two platform skips), 23 publication/controller tests, and web/worker/container builds passed. Synthetic desktop/phone checks covered both themes and enabled/disabled Garmin onboarding. Framework validation covered affected specifications, ownership, links and ADR 008. Limits: scripts/tests indexed-access enforcement remains follow-up; no deployment performed.
+
+## R1–R4 reliability and recovery — 2026-10-27
+
+Implemented the approved sequence on `codex/reliability-recovery` using synthetic data.
+
+| Task | Outcome | Verification |
+| --- | --- | --- |
+| R1 | Retained checkpoints, bounded retries, priorities and isolated schedulers. | Collision, exhaustion and fencing regressions passed. |
+| R3 | Valid neighbours import; rejections remain visible and repairable. | Pagination, diagnostics, account failures and rollback passed. |
+| R2 | Per-stream recovery and paced historical reconciliation. | Gaps, late records, fairness, restart budgets and forbidden streams passed. |
+| R4 | Seven-day proposals and renewed owner review. | Expiry, revocation, conflicts, legacy context, exclusions and idempotency passed. |
+
+Verification: `pnpm check` (165 unit tests), 104 integration tests, 86 browser checks (two skips), 23 security/controller tests, and web/worker/container builds passed. Desktop/phone checks covered both themes and enabled/disabled Garmin onboarding. Fresh installation and upgrade from `1caddcd` preserved data, offsets and 11 prior migration checksums/timestamps. Affected specifications and [ADR 009](../decisions/009-durable-proposal-review.md) passed framework validation. Limits: live-provider, physical-device and deployment verification remain separate; activation requires the existing matched-backup procedure.

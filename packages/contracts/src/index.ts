@@ -4,3 +4,4 @@ export * from './garmin-connection';
 export * from './responses';
 export * from './operations';
 export * from './import-recovery';
+export * from './proposal-review';

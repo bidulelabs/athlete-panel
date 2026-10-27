@@ -62,6 +62,33 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
     });
     expect(proposed.ok()).toBe(true);
     const stored = await proposed.json();
+    expect(
+      (
+        await request.post('/api/plugins/agent-bridge/review', {
+          headers: { Origin: origin },
+          data: { id: stored.id, digest: stored.digest },
+        })
+      ).status(),
+    ).toBe(401);
+    expect(
+      (
+        await request.post('/api/plugins/agent-bridge/review', {
+          headers: { ...headers, Origin: origin },
+          data: { id: stored.id, digest: stored.digest },
+        })
+      ).status(),
+    ).toBe(401);
+    const addContext = (bodyPart: string) =>
+      owner('training/mutate', {
+        idempotencyKey: randomUUID(),
+        commands: [
+          {
+            action: 'injury.create',
+            values: { id: randomUUID(), bodyPart, startDate: '2026-10-27', endDate: '2026-10-27' },
+          },
+        ],
+      });
+    expect((await addContext('Synthetic review context')).ok()).toBe(true);
     await page.goto('/agent');
     await page
       .locator('.proposal-row')
@@ -69,13 +96,32 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
       .getByRole('button', { name: 'Review', exact: true })
       .click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('row').filter({ hasText: 'Duration' })).toContainText('30 min');
-    await expect(dialog.getByRole('row').filter({ hasText: 'Duration' })).toContainText('45 min');
-    await expect(dialog.getByRole('row').filter({ hasText: 'Notes' })).toContainText(
-      'Keep an easy conversational effort.',
-    );
+    await expect(
+      dialog
+        .getByRole('region', { name: 'Proposed edits' })
+        .getByRole('row')
+        .filter({ hasText: 'Duration' }),
+    ).toContainText('30 min');
+    await expect(
+      dialog
+        .getByRole('region', { name: 'Proposed edits' })
+        .getByRole('row')
+        .filter({ hasText: 'Duration' }),
+    ).toContainText('45 min');
+    await expect(
+      dialog
+        .getByRole('region', { name: 'Proposed edits' })
+        .getByRole('row')
+        .filter({ hasText: 'Notes' }),
+    ).toContainText('Keep an easy conversational effort.');
     await expect(dialog.locator('.review-technical pre').first()).not.toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Apply reviewed changes' })).toBeDisabled();
+    await expect(
+      dialog.getByRole('heading', { name: 'Context changed since submission' }),
+    ).toBeVisible();
+    await expect(dialog.getByRole('region', { name: 'Changed context' })).toContainText(
+      'Synthetic review context',
+    );
     for (const theme of ['dark', 'light']) {
       await page.evaluate((value) => {
         document.documentElement.dataset.theme = value;
@@ -89,6 +135,16 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
         true,
       );
     }
+    await dialog.getByRole('checkbox').check();
+    expect((await addContext('Synthetic context changed again')).ok()).toBe(true);
+    const conflict = page.waitForResponse((value) => value.url().endsWith('/agent-bridge/apply'));
+    await dialog.getByRole('button', { name: 'Apply reviewed changes' }).click();
+    expect((await conflict).status()).toBe(409);
+    await expect(dialog.getByRole('region', { name: 'Changed context' })).toContainText(
+      'Synthetic context changed again',
+    );
+    await expect(dialog.getByRole('checkbox')).not.toBeChecked();
+    await expect(dialog.getByRole('button', { name: 'Apply reviewed changes' })).toBeDisabled();
     await dialog.getByRole('checkbox').check();
     const applied = page.waitForRequest((value) => value.url().endsWith('/agent-bridge/apply'));
     await dialog.getByRole('button', { name: 'Apply reviewed changes' }).click();

@@ -1,3 +1,6 @@
+import { persistAndAudit } from '../../instance/commit';
+import { applyCommands } from '../../plugins/training/engine';
+import { emptyWorkspace } from '@athlete-panel/contracts';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { closeDatabase, connection, transaction } from '../../packages/host/src/db';
@@ -61,5 +64,20 @@ describe('typed database responses', () => {
       transaction((tx) => trainingRepository.save('plan', { id: randomUUID(), revision: 1 }, tx)),
     ).rejects.toThrow();
     expect(await trainingRepository.list('plan')).toEqual([]);
+  });
+  it('keeps persistence and audit inside the caller transaction on a later failure', async () => {
+    const result = applyCommands(
+      emptyWorkspace(),
+      [{ action: 'plan.create', values: { title: 'Rolled back' } }],
+      { actor: 'owner' },
+    );
+    await expect(
+      transaction(async (tx) => {
+        await persistAndAudit(tx, result.changes, 'Synthetic rollback');
+        throw new Error('Failure after audit');
+      }),
+    ).rejects.toThrow('Failure after audit');
+    expect(await trainingRepository.list('plan')).toEqual([]);
+    expect(await connection()`select id from host.changes`).toEqual([]);
   });
 });

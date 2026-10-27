@@ -1,3 +1,4 @@
+import { persistAndAudit } from '../../instance/commit';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
@@ -12,9 +13,9 @@ import {
 import { transaction, type Transaction } from '../../packages/host/src/db';
 import { canonical, digest, randomToken } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
-import { loadWorkspace, persistChanges } from '../../instance/services';
+import { loadWorkspace } from '../../instance/services';
 import { applyCommands, effectiveDate } from '../training/public/server';
-import { idempotent, audit, undoChange } from '../training/public/server';
+import { idempotent, undoChange } from '../training/public/server';
 
 const scopeSchema = agentScopeSchema;
 type Scope = z.infer<typeof scopeSchema>;
@@ -374,8 +375,7 @@ export async function applyProposal(body: unknown) {
         'The expanded changes differ from the reviewed proposal.',
         409,
       );
-      await persistChanges(result.changes, tx);
-      const id = await audit(tx, result.changes, proposal.summary, 'agent');
+      const id = await persistAndAudit(tx, result.changes, proposal.summary, 'agent');
       const output = { id, proposalId: proposal.id, changes: result.changes };
       await tx`update host.proposals set status='applied',result=${tx.json(output as never)} where id=${proposal.id}`;
       return output;

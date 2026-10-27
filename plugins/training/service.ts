@@ -1,7 +1,6 @@
-import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { commandsSchema, type EntityChange } from '../../packages/contracts/src';
-import { transaction, type Transaction } from '../../packages/host/src/db';
+import { transaction } from '../../packages/host/src/db';
 import { canonical } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
 import { loadWorkspace, persistChanges, repositories, findEntity } from '../../instance/services';
@@ -10,16 +9,9 @@ import { applyCommands, validateWorkspace } from './engine';
 export { idempotent } from '../../packages/host/src/idempotency';
 import { idempotent } from '../../packages/host/src/idempotency';
 
-export async function audit(
-  tx: Transaction,
-  changes: EntityChange[],
-  summary: string,
-  actor = 'owner',
-) {
-  const id = randomUUID();
-  await tx`insert into host.changes(id,summary,changes,actor) values(${id},${summary},${tx.json(changes as never)},${actor})`;
-  return id;
-}
+export { audit } from '../../packages/host/src/audit';
+import { audit } from '../../packages/host/src/audit';
+import { persistAndAudit } from '../../instance/commit';
 export async function mutate(body: unknown) {
   const input = z
     .object({ commands: commandsSchema, idempotencyKey: z.uuid() })
@@ -39,8 +31,11 @@ export async function mutate(body: unknown) {
           input.commands,
           { actor: 'owner' },
         );
-        await persistChanges(result.changes, tx);
-        const id = await audit(tx, result.changes, input.commands.map((c) => c.action).join(', '));
+        const id = await persistAndAudit(
+          tx,
+          result.changes,
+          input.commands.map((c) => c.action).join(', '),
+        );
         return { id, changes: result.changes };
       },
     ),

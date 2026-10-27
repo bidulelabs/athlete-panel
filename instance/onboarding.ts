@@ -1,10 +1,11 @@
+import { persistAndAudit } from './commit';
 import { onboardingActionSchema, type Onboarding } from '../packages/contracts/src/onboarding';
 import { transaction } from '../packages/host/src/db';
 import { assert } from '../packages/host/src/errors';
 import { readOnboarding, writeOnboarding } from '../packages/host/src/onboarding';
-import { audit, idempotent } from '../plugins/training/service';
+import { idempotent } from '../plugins/training/service';
 import { applyCommands } from '../plugins/training/engine';
-import { loadWorkspace, persistChanges } from './services';
+import { loadWorkspace } from './services';
 
 /** Product coordination: preferences and progress share one domain transaction. */
 export async function updateOnboarding(body: unknown) {
@@ -65,8 +66,7 @@ export async function updateOnboarding(body: unknown) {
             ],
             { actor: 'owner' },
           );
-          await persistChanges(result.changes, tx);
-          await audit(tx, result.changes, 'Update workspace preferences');
+          await persistAndAudit(tx, result.changes, 'Update workspace preferences');
           next.step = 2;
         } else if (input.action === 'back') {
           assert(current.step > 1, 'onboarding_step', 'You are already at the first step.', 409);

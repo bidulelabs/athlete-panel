@@ -11,6 +11,7 @@ import {
 import { connection, transaction, type Transaction } from '../../packages/host/src/db';
 import { canonical, digest, randomToken } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
+import { consumeRequestBudget } from '../../packages/host/src/request-budget';
 
 type ConnectionRow = {
   id: string;
@@ -24,21 +25,14 @@ type ConnectionRow = {
 };
 
 // No grant exists until the signed-in owner approves. The browser never receives the token.
-export async function startConnection(body: unknown) {
+export async function startConnection(body: unknown, client = 'local') {
+  await consumeRequestBudget(
+    { namespace: 'agent-enrollment', windowSeconds: 600, clientLimit: 5, totalLimit: 30 },
+    client,
+  );
   const { label } = agentConnectionStartSchema.parse(body);
   return transaction(async (tx) => {
     await tx`delete from agent_bridge.connections where created_at < now() - interval '1 day'`;
-    const recent = requiredRow(
-      await tx<
-        { count: number }[]
-      >`select count(*)::int as count from agent_bridge.connections where created_at > now() - interval '10 minutes'`,
-    );
-    assert(
-      recent.count < 30,
-      'rate_limited',
-      'Too many connection requests. Try again in ten minutes.',
-      429,
-    );
     const token = randomToken(),
       id = randomUUID();
     const value = randomBytes(4).toString('hex').toUpperCase();
@@ -176,11 +170,14 @@ export async function pollConnection(token: string) {
 }
 
 export async function cancelConnection(token: string) {
+  const [candidate] =
+    await connection()`select id from agent_bridge.connections where token_hash=${digest(token)}`;
+  if (!candidate) return { ok: true };
   return transaction(async (tx) => {
     const [row] = await tx<
       ConnectionRow[]
     >`select * from agent_bridge.connections where token_hash=${digest(token)} for update`;
-    if (row && (row.status === 'pending' || row.status === 'approved')) {
+    if (row && row.id === candidate.id && (row.status === 'pending' || row.status === 'approved')) {
       if (row.grant_id) await tx`update host.grants set revoked=true where id=${row.grant_id}`;
       await tx`update agent_bridge.connections set status='cancelled' where id=${row.id}`;
     }

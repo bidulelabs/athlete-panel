@@ -8,7 +8,7 @@ import {
   type Command,
   proposalApplyInputSchema,
 } from '../../packages/contracts/src';
-import { transaction, type Transaction } from '../../packages/host/src/db';
+import { connection, transaction, type Transaction } from '../../packages/host/src/db';
 import { canonical, digest, randomToken } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
 import { loadWorkspace } from '../../instance/services';
@@ -42,16 +42,23 @@ export async function revokeGrant(body: unknown) {
   });
   return { ok: true };
 }
-async function grantForToken(token: string, tx: Transaction) {
+async function grantForToken(token: string, tx: Transaction | ReturnType<typeof connection>) {
   const [grant] =
     await tx`select * from host.grants where token_hash=${digest(token)} and revoked=false and expires_at>now()`;
   assert(grant, 'invalid_grant', 'This agent grant is expired or revoked.', 401);
   return grant;
 }
 export async function contextForToken(token: string) {
+  const candidate = await grantForToken(token, connection());
   return transaction(async (tx) => {
     const grant = await grantForToken(token, tx),
       scope = scopeSchema.parse(grant.scope);
+    assert(
+      grant.id === candidate.id,
+      'invalid_grant',
+      'This agent grant is expired or revoked.',
+      401,
+    );
     const context = boundedContext(await loadWorkspace(tx, scope), scope);
     return {
       version: 1,
@@ -76,6 +83,7 @@ function assignIds(commands: Command[]): Command[] {
   );
 }
 export async function submitProposal(token: string, body: unknown) {
+  const candidate = await grantForToken(token, connection());
   const input = z
     .object({
       commands: commandsSchema,
@@ -88,6 +96,12 @@ export async function submitProposal(token: string, body: unknown) {
   return transaction(async (tx) => {
     const grant = await grantForToken(token, tx),
       scope = scopeSchema.parse(grant.scope);
+    assert(
+      grant.id === candidate.id,
+      'invalid_grant',
+      'This agent grant is expired or revoked.',
+      401,
+    );
     return idempotent(
       tx,
       input.idempotencyKey,

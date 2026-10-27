@@ -1,4 +1,4 @@
-FROM node:22-alpine3.23@sha256:6abbcf5dd6b231da109bcde1181db1d92bf78015ae1a9514d9807c1f857869db AS base
+FROM node:26-alpine3.23@sha256:bc2b334006f15c7167bbeb2f08f28c2df883f7594a0470e04454ebe7560cfe68 AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm install --global pnpm@11.28.8
 

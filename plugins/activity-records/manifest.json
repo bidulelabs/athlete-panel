@@ -13,10 +13,7 @@
       "icon": "Activity"
     }
   ],
-  "migrations": [
-    "migrations/001-initial.sql",
-    "migrations/002-identity-index.sql"
-  ],
+  "migrations": ["migrations/001-initial.sql", "migrations/002-identity-index.sql"],
   "services": [],
   "jobs": [],
   "capabilities": [],

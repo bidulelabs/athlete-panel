@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-athlete_panel}
     ports:
-      - "127.0.0.1:${ATHLETE_PANEL_LOCAL_DB_PORT:-55440}:5432"
+      - '127.0.0.1:${ATHLETE_PANEL_LOCAL_DB_PORT:-55440}:5432'
     volumes:
       - database:/var/lib/postgresql/data
     restart: unless-stopped
@@ -21,9 +21,9 @@ services:
       driver: json-file
       options:
         max-size: 10m
-        max-file: "3"
+        max-file: '3'
 
 volumes:
   database:
     labels:
-      com.athlete-panel.local: "true"
+      com.athlete-panel.local: 'true'

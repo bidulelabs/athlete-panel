@@ -15,19 +15,10 @@
       "icon": "Plug"
     }
   ],
-  "migrations": [
-    "migrations/001-initial.sql",
-    "migrations/002-coverage-quality.sql"
-  ],
+  "migrations": ["migrations/001-initial.sql", "migrations/002-coverage-quality.sql"],
   "services": [],
-  "jobs": [
-    "garmin-history",
-    "garmin-recent"
-  ],
-  "capabilities": [
-    "network:personal.connectapi.garmin.com",
-    "secret:garmin-key"
-  ],
+  "jobs": ["garmin-history", "garmin-recent"],
+  "capabilities": ["network:personal.connectapi.garmin.com", "secret:garmin-key"],
   "server": "server.ts",
   "schema": "garmin",
   "client": "client.tsx"

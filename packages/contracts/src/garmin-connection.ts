@@ -6,6 +6,19 @@ export interface GarminConnection {
   lastErrorCode?: string | null;
   checkedAt?: string;
   historyStatus?: string | null;
-  currentJob?: { id: string; kind: string; status: string; progress: string; nextRunAt: string | null; retrying: boolean } | null;
-  coverageSummary?: { windows: number; failed: number; complete: number; empty: number; unavailable?: number };
+  currentJob?: {
+    id: string;
+    kind: string;
+    status: string;
+    progress: string;
+    nextRunAt: string | null;
+    retrying: boolean;
+  } | null;
+  coverageSummary?: {
+    windows: number;
+    failed: number;
+    complete: number;
+    empty: number;
+    unavailable?: number;
+  };
 }

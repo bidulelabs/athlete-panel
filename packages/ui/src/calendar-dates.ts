@@ -1,10 +1,21 @@
 import { dateSchema, type WeekStartsOnPreference } from '@athlete-panel/contracts';
 
 export type WeekStartsOn = 0 | 1;
-const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+const weekdays = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+] as const;
 
 /** Match the legacy Sunday/Monday choices, with both Intl week-info API shapes. */
-export function resolveWeekStartsOn(preference: WeekStartsOnPreference = 'auto', locale?: string): WeekStartsOn {
+export function resolveWeekStartsOn(
+  preference: WeekStartsOnPreference = 'auto',
+  locale?: string,
+): WeekStartsOn {
   if (preference === 'sunday') return 0;
   if (preference === 'monday' || !locale) return 1;
   try {
@@ -42,8 +53,14 @@ export function startOfWeek(date: string, weekStartsOn: WeekStartsOn): string {
 }
 
 export function localDate(date = new Date(), timezone?: string): string {
-  if (!timezone) return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
-  const part = (type: string) => parts.find(value => value.type === type)!.value;
+  if (!timezone)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((value) => value.type === type)!.value;
   return `${part('year')}-${part('month')}-${part('day')}`;
 }

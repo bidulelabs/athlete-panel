@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { profileSchema, profileValuesSchema } from '@athlete-panel/contracts';
-import { addDays, localDate, orderedWeekdays, resolveWeekStartsOn, startOfWeek } from '../../packages/ui/src/calendar-dates';
+import {
+  addDays,
+  localDate,
+  orderedWeekdays,
+  resolveWeekStartsOn,
+  startOfWeek,
+} from '../../packages/ui/src/calendar-dates';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -9,8 +15,14 @@ describe('calendar week preferences', () => {
     const older = profileSchema.parse({ id: 'owner', revision: 1 });
     expect(older).not.toHaveProperty('weekStartsOnPreference');
     expect(resolveWeekStartsOn(older.weekStartsOnPreference, 'en-US')).toBe(0);
-    for (const preference of ['auto', 'sunday', 'monday']) expect(profileValuesSchema.parse({ weekStartsOnPreference: preference }).weekStartsOnPreference).toBe(preference);
-    for (const preference of ['saturday', 0, null]) expect(profileValuesSchema.safeParse({ weekStartsOnPreference: preference }).success).toBe(false);
+    for (const preference of ['auto', 'sunday', 'monday'])
+      expect(
+        profileValuesSchema.parse({ weekStartsOnPreference: preference }).weekStartsOnPreference,
+      ).toBe(preference);
+    for (const preference of ['saturday', 0, null])
+      expect(profileValuesSchema.safeParse({ weekStartsOnPreference: preference }).success).toBe(
+        false,
+      );
   });
 
   it('resolves browser regions and gives explicit choices priority', () => {
@@ -28,18 +40,40 @@ describe('calendar week preferences', () => {
       return { getWeekInfo: () => ({ firstDay: 7 }), region: 'CA' } as unknown as Intl.Locale;
     } as never);
     expect(resolveWeekStartsOn('auto', 'en-CA')).toBe(0);
-    vi.mocked(Intl.Locale).mockImplementation(function () { return { weekInfo: { firstDay: 7 } } as unknown as Intl.Locale; } as never);
+    vi.mocked(Intl.Locale).mockImplementation(function () {
+      return { weekInfo: { firstDay: 7 } } as unknown as Intl.Locale;
+    } as never);
     expect(resolveWeekStartsOn('auto', 'en-CA')).toBe(0);
-    vi.mocked(Intl.Locale).mockImplementation(function () { return { region: 'US' } as Intl.Locale; } as never);
+    vi.mocked(Intl.Locale).mockImplementation(function () {
+      return { region: 'US' } as Intl.Locale;
+    } as never);
     expect(resolveWeekStartsOn('auto', 'en-US')).toBe(0);
-    vi.mocked(Intl.Locale).mockImplementation(function () { throw new Error('Unavailable'); } as never);
+    vi.mocked(Intl.Locale).mockImplementation(function () {
+      throw new Error('Unavailable');
+    } as never);
     expect(resolveWeekStartsOn('auto', 'en_US')).toBe(0);
     expect(resolveWeekStartsOn('auto', 'fr-FR')).toBe(1);
   });
 
   it('orders complete weeks and handles Sunday, leap day and year boundaries', () => {
-    expect(orderedWeekdays(0)).toEqual(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']);
-    expect(orderedWeekdays(1)).toEqual(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
+    expect(orderedWeekdays(0)).toEqual([
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ]);
+    expect(orderedWeekdays(1)).toEqual([
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ]);
     expect(startOfWeek('2030-01-06', 0)).toBe('2030-01-06');
     expect(startOfWeek('2030-01-06', 1)).toBe('2029-12-31');
     expect(startOfWeek('2028-02-29', 0)).toBe('2028-02-27');

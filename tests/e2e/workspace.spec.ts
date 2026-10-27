@@ -1,7 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const password = process.env.E2E_PASSWORD;
-if (!password) throw new Error('Set E2E_PASSWORD for the isolated synthetic browser-test instance.');
+if (!password)
+  throw new Error('Set E2E_PASSWORD for the isolated synthetic browser-test instance.');
 
 async function login(page: Page) {
   await page.goto('/login');
@@ -13,14 +14,23 @@ async function login(page: Page) {
 async function navigate(page: Page, title: string) {
   const opener = page.getByRole('button', { name: 'Open navigation' });
   if (await opener.isVisible()) await opener.click();
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: title, exact: true }).click();
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('link', { name: title, exact: true })
+    .click();
 }
 
 async function today(page: Page) {
-  return page.evaluate(() => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; });
+  return page.evaluate(() => {
+    const date = new Date();
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  });
 }
 
-test('private pages and workspace data reject unauthenticated access', async ({ page, request }) => {
+test('private pages and workspace data reject unauthenticated access', async ({
+  page,
+  request,
+}) => {
   const response = await request.get('/api/workspace?from=2026-10-19&to=2026-11-08');
   expect(response.status()).toBe(401);
   expect(await response.text()).not.toContain('workouts');
@@ -84,22 +94,33 @@ test('plan-relative sessions persist with an explicit plan start', async ({ page
   await dialog.getByLabel('Description').fill('Synthetic browser test plan.');
   await dialog.getByRole('button', { name: 'Create plan', exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  const row = page.locator('.plan-row').filter({ has: page.getByRole('heading', { name: planTitle, exact: true }) });
+  const row = page
+    .locator('.plan-row')
+    .filter({ has: page.getByRole('heading', { name: planTitle, exact: true }) });
   await row.getByRole('button', { name: 'Workout', exact: true }).click();
   await dialog.getByLabel('Workout title').fill(`${planTitle} session`);
   await dialog.getByLabel('Duration · minutes', { exact: true }).fill('60');
   await dialog.getByLabel('Day in plan').fill('2');
   await dialog.getByRole('button', { name: 'Add workout', exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole('button', { name: new RegExp(`${planTitle} session`) })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: new RegExp(`${planTitle} session`) }),
+  ).toBeVisible();
   await page.reload();
   await expect(page.getByRole('heading', { name: planTitle, exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: new RegExp(`${planTitle} session`) })).toContainText('Day 2');
+  await expect(
+    page.getByRole('button', { name: new RegExp(`${planTitle} session`) }),
+  ).toContainText('Day 2');
 });
 
-test('keyboard dialog controls, theme persistence and failed-save recovery', async ({ page }, info) => {
+test('keyboard dialog controls, theme persistence and failed-save recovery', async ({
+  page,
+}, info) => {
   await login(page);
-  const theme = page.getByRole('button', { name: info.project.name === 'mobile' ? 'Change color theme' : 'Switch to light mode', exact: true });
+  const theme = page.getByRole('button', {
+    name: info.project.name === 'mobile' ? 'Change color theme' : 'Switch to light mode',
+    exact: true,
+  });
   await theme.click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.reload();
@@ -115,9 +136,15 @@ test('keyboard dialog controls, theme persistence and failed-save recovery', asy
   const title = `E2E retry ${info.project.name} ${Date.now()}`;
   await dialog.getByLabel('Workout title').fill(title);
   let failed = false;
-  await page.route('**/api/plugins/training/mutate', async route => {
-    if (!failed) { failed = true; await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Synthetic outage. Please retry.' } }) }); }
-    else await route.continue();
+  await page.route('**/api/plugins/training/mutate', async (route) => {
+    if (!failed) {
+      failed = true;
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: { message: 'Synthetic outage. Please retry.' } }),
+      });
+    } else await route.continue();
   });
   await dialog.getByRole('button', { name: 'Add workout', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('Synthetic outage');
@@ -128,27 +155,52 @@ test('keyboard dialog controls, theme persistence and failed-save recovery', asy
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('agent grants cannot apply changes and owner mutations reject foreign origins', async ({ page, request }) => {
+test('agent grants cannot apply changes and owner mutations reject foreign origins', async ({
+  page,
+  request,
+}) => {
   await login(page);
   const origin = new URL(page.url()).origin;
   const date = await today(page);
   const grantResponse = await page.request.post('/api/plugins/agent-bridge/grant', {
     headers: { Origin: origin },
-    data: { label: 'Synthetic browser permission check', from: date, to: date, includeNotes: false, expiresInHours: 1 },
+    data: {
+      label: 'Synthetic browser permission check',
+      from: date,
+      to: date,
+      includeNotes: false,
+      expiresInHours: 1,
+    },
   });
   expect(grantResponse.status()).toBe(200);
   const { token, grant } = await grantResponse.json();
   expect(typeof token).toBe('string');
-  const context = await request.get('/api/agent/context', { headers: { Authorization: `Bearer ${token}` } });
+  const context = await request.get('/api/agent/context', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   expect(context.status()).toBe(200);
-  const apply = await request.post('/api/agent/apply', { headers: { Authorization: `Bearer ${token}` }, data: {} });
+  const apply = await request.post('/api/agent/apply', {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {},
+  });
   expect(apply.status()).toBe(403);
-  const ownerMutation = await request.post('/api/plugins/training/mutate', { headers: { Origin: origin, Authorization: `Bearer ${token}` }, data: {} });
+  const ownerMutation = await request.post('/api/plugins/training/mutate', {
+    headers: { Origin: origin, Authorization: `Bearer ${token}` },
+    data: {},
+  });
   expect(ownerMutation.status()).toBe(401);
-  const foreignOrigin = await page.request.post('/api/plugins/training/mutate', { headers: { Origin: 'https://untrusted.invalid' }, data: {} });
+  const foreignOrigin = await page.request.post('/api/plugins/training/mutate', {
+    headers: { Origin: 'https://untrusted.invalid' },
+    data: {},
+  });
   expect(foreignOrigin.status()).toBe(403);
-  const revoke = await page.request.post('/api/plugins/agent-bridge/revoke', { headers: { Origin: origin }, data: { id: grant.id } });
+  const revoke = await page.request.post('/api/plugins/agent-bridge/revoke', {
+    headers: { Origin: origin },
+    data: { id: grant.id },
+  });
   expect(revoke.status()).toBe(200);
-  const revokedContext = await request.get('/api/agent/context', { headers: { Authorization: `Bearer ${token}` } });
+  const revokedContext = await request.get('/api/agent/context', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   expect(revokedContext.status()).toBe(401);
 });

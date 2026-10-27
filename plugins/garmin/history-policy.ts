@@ -5,5 +5,7 @@ export const GARMIN_HEALTH_HISTORY_START = '2000-01-01';
 
 export function automaticHealthHistoryStart(previous?: string): string {
   // Preserve an explicitly older legacy bound rather than narrowing its history.
-  return previous && previous < GARMIN_HEALTH_HISTORY_START ? previous : GARMIN_HEALTH_HISTORY_START;
+  return previous && previous < GARMIN_HEALTH_HISTORY_START
+    ? previous
+    : GARMIN_HEALTH_HISTORY_START;
 }

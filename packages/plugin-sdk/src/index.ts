@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import semver from 'semver';
 
-export const HOST_API_VERSION = '1.1.0';
+export const HOST_API_VERSION = '1.2.0';
 const localPath = z
   .string()
   .regex(/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+$/)

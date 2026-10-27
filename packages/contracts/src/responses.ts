@@ -122,7 +122,8 @@ export const workerStatusSchema = z
     lastSeen: z.iso.datetime().optional(),
     lastSuccess: z.iso.datetime().optional(),
     lastFailure: z.iso.datetime().optional(),
-    state: z.enum(['healthy', 'maintenance', 'failed']).optional(),
+    state: z.enum(['healthy', 'maintenance', 'failed', 'degraded']).optional(),
+    schedulerFailures: z.array(z.string()).optional(),
     consecutiveFailures: z.number().int().nonnegative().optional(),
   })
   .passthrough();

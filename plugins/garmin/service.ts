@@ -13,7 +13,7 @@ import { connection, transaction, type Transaction } from '../../packages/host/s
 import { encrypt, decrypt, canonical, digest } from '../../packages/host/src/crypto';
 import { idempotent } from '../../packages/host/src/idempotency';
 import { assert } from '../../packages/host/src/errors';
-import { enqueue, type Job } from '../../packages/host/src/jobs';
+import { enqueue, MAX_JOB_ATTEMPTS, retryDelay, type Job } from '../../packages/host/src/jobs';
 import {
   loadWorkspace,
   loadProfile,
@@ -105,15 +105,21 @@ export async function configure(body: unknown) {
         }
         await tx`update host.jobs set payload=jsonb_set(payload,'{cursor,earliestHealthDate}',to_jsonb(${config.earliestDate}::text))
       where plugin_id='garmin' and kind='garmin-history' and status='queued' and payload#>>'{cursor,activityFrom}' is null and payload#>>'{cursor,earliestHealthDate}'>${config.earliestDate}`;
-        await enqueue(tx, 'garmin', 'garmin-history', {
-          cursor: createSyncCursor({
-            today: today(profile?.timezone),
-            earliestHealthDate: config.earliestDate,
-            accountId: config.accountId,
-            timeZone: profile?.timezone,
-          }),
-          generation: config.generation,
-        });
+        await enqueue(
+          tx,
+          'garmin',
+          'garmin-history',
+          {
+            cursor: createSyncCursor({
+              today: today(profile?.timezone),
+              earliestHealthDate: config.earliestDate,
+              accountId: config.accountId,
+              timeZone: profile?.timezone,
+            }),
+            generation: config.generation,
+          },
+          10,
+        );
         return { connected: true };
       },
     ),
@@ -180,7 +186,13 @@ export async function sync(body: unknown) {
       await tx`update host.jobs set status='queued',attempts=0,error=null,lease_owner=null,lease_until=null,next_run_at=now(),updated_at=now() where id=${failed.id}`;
       return { id: failed.id, status: 'queued' };
     }
-    const id = await enqueue(tx, 'garmin', kind, { cursor, generation: config.generation });
+    const id = await enqueue(
+      tx,
+      'garmin',
+      kind,
+      { cursor, generation: config.generation },
+      input.mode === 'recent' ? 30 : targeted ? 20 : 10,
+    );
     return { id, status: 'queued' };
   });
 }
@@ -305,20 +317,28 @@ export async function scheduleRecent() {
   await transaction(async (tx) => {
     const config = await getConfiguration(tx);
     if (!config?.encryptedKey || config.paused) return;
+    await tx`update host.jobs set priority=case when kind='garmin-recent' then 30 when payload#>>'{cursor,activityFrom}' is not null then 20 else 10 end where plugin_id='garmin' and kind in ('garmin-recent','garmin-history') and status in ('queued','running','paused','disabled')`;
     const [last] =
-      await tx`select created_at from host.jobs where plugin_id='garmin' and kind='garmin-recent' order by created_at desc limit 1`;
+      await tx`select created_at,status from host.jobs where plugin_id='garmin' and kind='garmin-recent' order by created_at desc limit 1`;
+    if (last?.status === 'failed') return;
     if (last && Date.now() - new Date(last.created_at).getTime() < 60 * 60 * 1000) return;
     const profile = await loadProfile(tx);
-    await enqueue(tx, 'garmin', 'garmin-recent', {
-      cursor: createSyncCursor({
-        today: today(profile?.timezone),
-        earliestHealthDate: automaticHealthHistoryStart(config.earliestDate),
-        mode: 'recent',
-        accountId: config.accountId,
-        timeZone: profile?.timezone,
-      }),
-      generation: config.generation,
-    });
+    await enqueue(
+      tx,
+      'garmin',
+      'garmin-recent',
+      {
+        cursor: createSyncCursor({
+          today: today(profile?.timezone),
+          earliestHealthDate: automaticHealthHistoryStart(config.earliestDate),
+          mode: 'recent',
+          accountId: config.accountId,
+          timeZone: profile?.timezone,
+        }),
+        generation: config.generation,
+      },
+      30,
+    );
   });
 }
 
@@ -353,7 +373,14 @@ function clientFor(config: Configuration) {
 }
 export async function runGarminJob(job: Job) {
   const config = await getConfiguration();
-  if (!config?.encryptedKey || config.paused) return;
+  if (!config?.encryptedKey || config.paused) {
+    await transaction(async (tx) => {
+      const current = await getConfiguration(tx);
+      if (!current?.encryptedKey || current.paused)
+        await tx`update host.jobs set status=${current?.encryptedKey ? 'paused' : 'cancelled'},lease_owner=null,lease_until=null where id=${job.id} and status='running' and lease_owner=${job.lease_owner} and lease_until>now()`;
+    });
+    return;
+  }
   let cursor = job.payload.cursor as GarminSyncCursor;
   let coverageCursor = cursor;
   let reverifiedIdentity = false;
@@ -488,9 +515,8 @@ export async function runGarminJob(job: Job) {
       known?.message ??
       'Import failed validation or persistence. The current window was not committed.';
     const attempts = job.attempts + 1,
-      retry = known?.retryable && attempts < 8;
-    const delay =
-      known?.retryAfterMs ?? Math.min(3600000, 2000 * 2 ** attempts) * (0.8 + Math.random() * 0.4);
+      retry = known?.retryable && attempts < MAX_JOB_ATTEMPTS;
+    const delay = known?.retryAfterMs ?? retryDelay(attempts) * (0.8 + Math.random() * 0.4);
     await transaction(async (tx) => {
       const current = await getConfiguration(tx),
         [lease] =

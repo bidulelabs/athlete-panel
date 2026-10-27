@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { connection } from './db';
 import { registry, schemaSignature } from '../../../instance/registry.metadata';
 import { validateComposition, manifestSchema } from '../../plugin-sdk/src';
+import { hostMigrationFiles } from './migration-files';
 
 export async function validateRetainedMigrations(
   root: string,
@@ -31,7 +32,7 @@ export async function migrate(root = process.cwd()) {
     registry.filter((e) => e.enabled).map((e) => e.manifest.id),
   );
   const sources = [
-    { id: 'host', files: ['packages/host/migrations/001-host.sql'] },
+    { id: 'host', files: hostMigrationFiles },
     ...ordered.map((m) => ({
       id: m.id,
       files: m.migrations.map((f) => `${registry.find((e) => e.manifest.id === m.id)!.path}/${f}`),

@@ -168,7 +168,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     };
     await transaction(async (tx) => {
       await tx`update host.jobs set status='completed' where plugin_id='garmin' and kind='garmin-recent'`;
-      await enqueue(tx, 'garmin', 'garmin-recent', { cursor, generation: config.generation });
+      await enqueue(tx, 'garmin', 'garmin-recent', { cursor, generation: config.generation }, 30);
     });
   }
 

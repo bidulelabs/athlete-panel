@@ -6989,8 +6989,15 @@
                   "enum": [
                     "healthy",
                     "maintenance",
-                    "failed"
+                    "failed",
+                    "degraded"
                   ]
+                },
+                "schedulerFailures": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 "consecutiveFailures": {
                   "type": "integer",

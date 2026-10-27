@@ -161,13 +161,13 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "1.2.0",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "1.1.0",
-      "hostApi": "^1.1.0",
+      "version": "1.2.0",
+      "hostApi": "^1.2.0",
       "dependencies": {
         "activity-records": "^1.0.0"
       },
@@ -312,4 +312,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="5f9f458b9db3ddfdab460ca64560b8e2313312db06f1f27609c8aa148011a630";
+export const schemaSignature="e3c78b04f91d4a88308ef7e6450a0e15f56a09194b21966f68d68f0395117006";

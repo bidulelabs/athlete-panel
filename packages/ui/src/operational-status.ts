@@ -8,13 +8,16 @@ export function operationalHealth(input: unknown, now = Date.now()) {
       : Infinity;
   const heartbeatAge = age(values.worker?.lastSeen);
   const failed = values.worker?.state === 'failed';
+  const degraded = values.worker?.state === 'degraded';
   const worker =
     heartbeatAge <= 90_000
       ? failed
         ? 'Worker needs attention'
-        : values.worker?.state === 'maintenance'
-          ? 'Paused for maintenance'
-          : 'Running'
+        : degraded
+          ? 'Running — a plugin scheduler needs attention'
+          : values.worker?.state === 'maintenance'
+            ? 'Paused for maintenance'
+            : 'Running'
       : values.worker?.lastSeen
         ? 'Worker is not responding'
         : 'Worker has not checked in';
@@ -38,7 +41,7 @@ export function operationalHealth(input: unknown, now = Date.now()) {
   return {
     worker,
     backup,
-    workerWarning: heartbeatAge > 90_000 || failed,
+    workerWarning: heartbeatAge > 90_000 || failed || degraded,
     backupWarning: !['Verified backup on registered remote storage', 'Backup in progress'].includes(
       backup,
     ),

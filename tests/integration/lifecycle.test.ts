@@ -10,6 +10,7 @@ import { closeDatabase, connection } from '../../packages/host/src/db';
 import { claimJob } from '../../packages/host/src/jobs';
 import { migrate } from '../../packages/host/src/migrations';
 import { checkSchema } from '../../packages/host/src/schema';
+import { hostMigrationFiles } from '../../packages/host/src/migration-files';
 
 const suppliedUrl = process.env.TEST_DATABASE_URL;
 if (!suppliedUrl)
@@ -25,7 +26,7 @@ if (
 const admin = postgres(suppliedUrl, { max: 1, onnotice: () => {} });
 const originalDatabaseUrl = process.env.DATABASE_URL;
 const migrationFiles = [
-  'packages/host/migrations/001-host.sql',
+  ...hostMigrationFiles,
   ...registry
     .filter((entry) => entry.enabled)
     .flatMap((entry) => entry.manifest.migrations.map((file) => `${entry.path}/${file}`)),

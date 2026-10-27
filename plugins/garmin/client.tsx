@@ -1,4 +1,5 @@
 'use client';
+import type { ImportStream } from '@athlete-panel/contracts';
 import { OnboardingConnection } from './onboarding-contribution';
 export const contributions = { connection: OnboardingConnection };
 import { Alert } from '@athlete-panel/ui';
@@ -35,9 +36,13 @@ export default function GarminPage() {
   const [editing, setEditing] = useState(false);
 
   const [retrying, setRetrying] = useState(false);
+  const [retryStream, setRetryStream] = useState<ImportStream>();
   const [rangeFrom, setRangeFrom] = useState(addDays(localDate(), -7));
   const [rangeTo, setRangeTo] = useState(localDate());
   const running = !!garmin.currentJob && ['running', 'queued'].includes(garmin.currentJob.status);
+  const historyBusy = envelope.jobs.some(
+    (job) => job.kind === 'garmin-history' && ['queued', 'running', 'paused'].includes(job.status),
+  );
   useEffect(() => {
     if (!running) return;
     const timer = setInterval(() => {
@@ -124,7 +129,7 @@ export default function GarminPage() {
               <Button
                 variant="outline"
                 className="button"
-                disabled={action.busy || running || garmin.paused}
+                disabled={action.busy || historyBusy || garmin.paused}
                 onClick={() => action.run(() => request('garmin', 'sync', { mode: 'full' }))}
               >
                 Import Garmin history
@@ -189,13 +194,54 @@ export default function GarminPage() {
       </div>
       <CoverageHistory
         checkedAt={garmin.checkedAt}
-        disabled={!garmin.connected || garmin.paused || running || action.busy}
-        onRetry={(from, to) => {
+        disabled={!garmin.connected || garmin.paused || historyBusy || action.busy}
+        onRetry={(from, to, stream) => {
+          setRetryStream(stream);
           if (from) setRangeFrom(from);
           if (to) setRangeTo(to);
           setRetrying(true);
         }}
       />
+      {garmin.recovery && garmin.connected && (
+        <section className="section-block" aria-label="Automatic recovery">
+          <h2>Automatic recovery</h2>
+          <p>
+            {garmin.recovery.unscannedWindows} unscanned windows. Recent data is checked hourly;
+            missing periods are recovered before older history is revisited.
+          </p>
+          <dl>
+            <div className="setting-line">
+              <dt>Gap recovery</dt>
+              <dd>
+                {garmin.recovery.catchup
+                  ? `${garmin.recovery.catchup.status} · ${garmin.recovery.catchup.stream ?? 'Checking checkpoint'} · ${garmin.recovery.catchup.from ?? 'Available history'} – ${garmin.recovery.catchup.to ?? '—'}`
+                  : 'Waiting for eligible work'}
+              </dd>
+            </div>
+            <div className="setting-line">
+              <dt>Historical reconciliation</dt>
+              <dd>
+                {garmin.recovery.reconciliation
+                  ? `${garmin.recovery.reconciliation.status} · ${garmin.recovery.reconciliation.stream ?? 'Checking checkpoint'} · ${garmin.recovery.reconciliation.from ?? 'Available history'} – ${garmin.recovery.reconciliation.to ?? '—'}`
+                  : 'Waiting for initial imports and recovery'}
+              </dd>
+            </div>
+          </dl>
+          <p className="muted-text">
+            All supported history is revisited gradually, at most one step every five minutes.{' '}
+            {garmin.recovery.nextReconcileAt
+              ? `Next eligible step: ${new Date(garmin.recovery.nextReconcileAt).toLocaleString()}.`
+              : ''}{' '}
+            Pauses and provider backoff may delay it.
+          </p>
+          {!!garmin.recovery.retryStreams.length && (
+            <Alert role="status">
+              Recovery needs an explicit retry for: {garmin.recovery.retryStreams.join(', ')}. Open
+              Failed windows to retry the affected period.
+            </Alert>
+          )}
+        </section>
+      )}
       <section className="section-block">
         <div className="section-heading">
           <h2>Import activity</h2>
@@ -244,14 +290,24 @@ export default function GarminPage() {
         open={retrying}
         onClose={() => setRetrying(false)}
         title="Retry a date range"
-        description="Request activities and health history again. Existing records are updated without creating duplicates."
+        description={
+          retryStream
+            ? `Request ${retryStream} records for this period again. Resolved rejection diagnostics are replaced after the scan completes.`
+            : 'Request activities and health history again. Existing records are updated without creating duplicates.'
+        }
       >
         <form
           className="dialog-body"
           onSubmit={(event) => {
             event.preventDefault();
             void action.run(
-              () => request('garmin', 'sync', { mode: 'full', from: rangeFrom, to: rangeTo }),
+              () =>
+                request('garmin', 'sync', {
+                  mode: 'full',
+                  from: rangeFrom,
+                  to: rangeTo,
+                  ...(retryStream ? { stream: retryStream } : {}),
+                }),
               () => setRetrying(false),
             );
           }}

@@ -12,7 +12,7 @@ On 2026-10-24 the owner additionally requested CLI connection with browser appro
 
 The agent reads a context digest, then submits typed commands, a summary and an idempotency key. Source records as well as resulting changes must be within the grant: copying an excluded source into an allowed date is forbidden. A full-plan operation needs access to all affected children. Aggregate-only parent revision changes do not extend a single workout edit beyond its granted date range.
 
-The server validates and expands the entire batch before storing it. The UI presents before/after changes, derived dates and ordering effects. Owner application references the exact immutable proposal digest and performs authorization, grant expiry/revocation, context freshness, revision, scope and expanded-diff checks inside one transaction. Newly inserted relevant data invalidates a proposal; unrelated older imports do not. There are no partial writes.
+The server validates and expands the entire batch before storing it. The UI presents before/after changes, derived dates and ordering effects. Proposals expire seven days after submission, independently of agent access expiry; reads/submissions still require active access and revocation still blocks owner application. New proposals store a versioned snapshot of the same permitted bounded context, preserving note exclusions. An owner-only review operation loads contextual differences and mutation conflicts on demand. Context-only changes permit renewed owner acknowledgement when domain validation, scope, revisions and the exact expanded diff still match. Application rechecks these conditions, the immutable digest and the reviewed current-context digest in one transaction. A further context change returns 409 and clears acknowledgement; changed edits require replacement. Legacy proposals without snapshots require replacement when context changes. There are no partial writes. See [ADR 009](../decisions/009-durable-proposal-review.md).
 
 Retries with the same idempotency key and content return the original result. Reusing a key for different content conflicts; a proposal cannot be applied twice with different keys. Audit snapshots and results commit with domain writes.
 
@@ -37,7 +37,9 @@ This addition defines agent instructions, not a server-enforced questionnaire, n
 | Read/propose grant attempts apply | Endpoint denied; owner session is required | HTTP/browser suite |
 | Ordinary notes excluded | No private narrative field in context or submission response, including nested intervals and completion reasons; hidden interval notes cannot be overwritten | [Database cases](../../tests/integration/domain.test.ts) |
 | Invalid second command | No mutation, audit or idempotency partial result | Database cases |
-| New relevant injury/import | Context digest changes; owner apply conflicts | Database cases |
+| New relevant injury/import | Fresh owner review required; further changes conflict; mutation conflicts require replacement | [Review cases](../../tests/integration/proposal-review.test.ts), [browser cases](../../tests/e2e/proposal-review.spec.ts) |
+| Expired access / seven-day deadline / revoked grant | Access expiry preserves owner application; proposal expiry and revocation block it | Review cases |
+| Legacy proposal / excluded notes | Matching legacy context remains usable; changed context requires replacement; snapshots preserve exclusions | Review cases |
 | Same payload/key retry | Same committed result | Database cases |
 | Later edit before undo | Entire undo conflicts | Database cases |
 | Out-of-scope duplication | Proposal denied before stored review | Database cases |

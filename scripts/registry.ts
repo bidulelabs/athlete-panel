@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { manifestSchema, validateComposition, type Composition } from '../packages/plugin-sdk/src';
+import { hostMigrationFiles } from '../packages/host/src/migration-files';
 
 const root = process.cwd();
 const composition = JSON.parse(
@@ -32,7 +33,7 @@ const banner =
 const client = selected.filter((e) => e.manifest.client);
 const server = selected.filter((e) => e.manifest.server);
 const migrationFiles = [
-  'packages/host/migrations/001-host.sql',
+  ...hostMigrationFiles,
   ...selected.flatMap((e) => e.manifest.migrations.map((f) => `${e.path}/${f}`)),
 ];
 const migrationHashes = await Promise.all(

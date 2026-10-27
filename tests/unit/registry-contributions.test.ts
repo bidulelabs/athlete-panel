@@ -4,6 +4,7 @@ import { afterEach, expect, it } from 'vitest';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { hostMigrationFiles } from '../../packages/host/src/migration-files';
 import { execFileSync } from 'node:child_process';
 const roots: string[] = [];
 afterEach(() => {
@@ -17,7 +18,7 @@ it('omits disabled optional contributions from generated imports without changin
     mkdirSync(dirname(join(root, file)), { recursive: true });
     copyFileSync(file, join(root, file));
   };
-  copy('packages/host/migrations/001-host.sql');
+  for (const file of hostMigrationFiles) copy(file);
   for (const entry of composition.plugins) {
     copy(`${entry.path}/manifest.json`);
     const manifest = JSON.parse(readFileSync(`${entry.path}/manifest.json`, 'utf8'));

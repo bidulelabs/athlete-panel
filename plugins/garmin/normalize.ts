@@ -81,6 +81,19 @@ function array(value: unknown): Row[] {
   }
   return value as Row[];
 }
+/** Validate the envelope separately so malformed individual rows can be diagnosed. */
+export function rawRows(stream: HealthStream | 'activities', payload: unknown): unknown[] {
+  if (payload === null) return [];
+  const value =
+    stream === 'daily'
+      ? object(payload).data
+      : stream === 'hrv'
+        ? object(payload).hrvSummaries
+        : payload;
+  if (!Array.isArray(value))
+    throw new GarminError('invalid_payload', 'Garmin returned an unexpected record collection.');
+  return value;
+}
 export function rowsForStream(stream: HealthStream, payload: unknown): Row[] {
   if (payload === null) return [];
   if (stream === 'daily') return array(object(payload).data);
@@ -88,17 +101,20 @@ export function rowsForStream(stream: HealthStream, payload: unknown): Row[] {
   return array(payload);
 }
 export function accountIds(payload: unknown, stream: HealthStream | 'activities'): string[] {
-  const rows = stream === 'activities' ? array(payload) : rowsForStream(stream, payload);
+  const rows = rawRows(stream, payload);
   const ids: string[] = [];
-  if (stream === 'hrv') {
-    const rootId = providerId(object(payload).userProfilePk);
-    if (rootId !== null) ids.push(rootId);
-  }
-  for (const row of rows) {
-    const value = stream === 'activities' ? row.ownerId : (row.userProfilePk ?? row.userProfilePK);
-    const id = providerId(value);
-    if (id !== null) ids.push(id);
-  }
+  const inspect = (row: Row, keys: string[]) => {
+    for (const key of keys) {
+      const id = providerId(row[key]);
+      if (id !== null) ids.push(id);
+    }
+  };
+  if (stream === 'hrv') inspect(object(payload), ['userProfilePk', 'userProfilePK']);
+  for (const raw of rows)
+    inspect(
+      object(raw),
+      stream === 'activities' ? ['ownerId'] : ['userProfilePk', 'userProfilePK'],
+    );
   return [...new Set(ids)];
 }
 export function assertAccountBinding(expected: string | null, ids: string[]): string | null {

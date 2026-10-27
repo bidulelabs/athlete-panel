@@ -161,13 +161,13 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "1.2.0",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "1.1.0",
-      "hostApi": "^1.1.0",
+      "version": "1.2.0",
+      "hostApi": "^1.2.0",
       "dependencies": {
         "activity-records": "^1.0.0"
       },
@@ -195,12 +195,16 @@ export const registry = [
       "schema": "garmin",
       "migrations": [
         "migrations/001-initial.sql",
-        "migrations/002-coverage-quality.sql"
+        "migrations/002-coverage-quality.sql",
+        "migrations/003-scan-diagnostics.sql",
+        "migrations/004-recovery-scheduling.sql"
       ],
       "services": [],
       "jobs": [
         "garmin-history",
-        "garmin-recent"
+        "garmin-recent",
+        "garmin-catchup",
+        "garmin-reconcile"
       ],
       "capabilities": [
         "network:personal.connectapi.garmin.com",
@@ -244,13 +248,13 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "1.2.0",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "1.1.0",
-      "hostApi": "^1.1.0",
+      "version": "1.2.0",
+      "hostApi": "^1.2.0",
       "dependencies": {
         "training": "^1.1.0",
         "athlete": "^1.1.0",
@@ -312,4 +316,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="5f9f458b9db3ddfdab460ca64560b8e2313312db06f1f27609c8aa148011a630";
+export const schemaSignature="3c0c6753a465298af93036dbf49f70a20d847692ed16763b10b24eacf1613a30";

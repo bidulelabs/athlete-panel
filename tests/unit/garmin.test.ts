@@ -584,7 +584,7 @@ describe('resumable Garmin pulls', () => {
       code: 'pagination_stalled',
     });
   });
-  it('retains cursor on interrupted or malformed responses', async () => {
+  it('retains input cursor on interruption and diagnoses an out-of-window record', async () => {
     const start = cursor({ phase: 'recent-health' });
     const before = structuredClone(start);
     await expect(
@@ -595,9 +595,15 @@ describe('resumable Garmin pulls', () => {
       }),
     ).rejects.toMatchObject({ retryable: true });
     expect(start).toEqual(before);
-    await expect(
-      runSyncStep(start, { get: async () => [{ calendarDate: '2025-10-01' }] }),
-    ).rejects.toMatchObject({ code: 'invalid_payload' });
+    const rejected = await runSyncStep(start, {
+      get: async () => [{ calendarDate: '2025-10-01' }],
+    });
+    expect(rejected.coverage).toMatchObject({
+      status: 'partial',
+      scanState: 'scanned',
+      rejectedRecords: 1,
+    });
+    expect(start).toEqual(before);
   });
   it('continues through empty historical health ranges to the earliest owner date', async () => {
     const requests: { route: string; query?: Record<string, unknown> }[] = [];

@@ -24,7 +24,7 @@
     {
       "path": "plugins/garmin",
       "enabled": true,
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "path": "plugins/health",
@@ -34,7 +34,7 @@
     {
       "path": "plugins/agent-bridge",
       "enabled": true,
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "path": "personal-plugins/cycling-sleep",

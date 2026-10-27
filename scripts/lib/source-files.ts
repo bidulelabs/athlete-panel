@@ -23,7 +23,6 @@ const sourceRoots = [
   'eslint.config.mjs',
   '.prettierrc.json',
   '.prettierignore',
-  '.git-blame-ignore-revs',
   'vitest.config.ts',
   'playwright.config.ts',
   'Dockerfile',

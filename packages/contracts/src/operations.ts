@@ -1,4 +1,10 @@
+import {
+  proposalApplyInputSchema,
+  proposalReviewInputSchema,
+  proposalReviewSchema,
+} from './proposal-review';
 import { z } from 'zod';
+import { importStreamSchema } from './import-recovery';
 import {
   commandsSchema,
   dateSchema,
@@ -48,6 +54,7 @@ export const operationContracts = {
           mode: z.enum(['recent', 'full']).default('recent'),
           from: dateSchema.nullable().optional(),
           to: dateSchema.optional(),
+          stream: importStreamSchema.optional(),
         })
         .strict(),
       z.object({ id: z.uuid(), status: z.string() }),
@@ -57,7 +64,7 @@ export const operationContracts = {
     coverage: operation(
       z
         .object({
-          filter: z.enum(['all', 'failed', 'unavailable']).default('all'),
+          filter: z.enum(['all', 'failed', 'unavailable', 'rejected', 'unscanned']).default('all'),
           offset: z.number().int().min(0).max(1000000).default(0),
         })
         .strict(),
@@ -72,8 +79,9 @@ export const operationContracts = {
     revoke: operation(id, ok),
     reject: operation(id, ok),
     undo: operation(undo, mutationResponseSchema),
+    review: operation(proposalReviewInputSchema, proposalReviewSchema),
     apply: operation(
-      undo.extend({ digest: z.string().length(64) }).strict(),
+      proposalApplyInputSchema,
       mutationResponseSchema.extend({ proposalId: z.uuid() }),
     ),
     connection: operation(agentConnectionIdSchema, agentConnectionStatusSchema),

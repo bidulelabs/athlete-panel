@@ -1,12 +1,23 @@
 import { createHash } from 'node:crypto';
+import { z } from 'zod';
+import {
+  activityScanSchema,
+  dateSchema,
+  importStreamSchema,
+  type ActivityScan,
+  type ImportStream,
+  type RejectionDiagnostic,
+} from '@athlete-panel/contracts';
+import { validateRecords } from './record-validation';
 import { GarminError, type GarminQuery, type GarminReader } from './transport';
 import {
   HEALTH_STREAMS,
   accountIds,
   assertAccountBinding,
   dayKey,
-  normalizeActivities,
-  normalizeHealth,
+  rawRows,
+  object,
+  providerId,
   streamMetrics,
   type HealthStream,
   type ImportedActivity,
@@ -35,6 +46,8 @@ export type GarminSyncCursor = {
   healthStreamIndex: number;
   windowEnd: string;
   unavailableStreams: Array<HealthStream | 'activities'>;
+  targetStream?: ImportStream;
+  activityScan?: ActivityScan;
 };
 export type SyncCoverage = {
   stream: 'identity' | 'activities' | HealthStream;
@@ -47,7 +60,45 @@ export type SyncCoverage = {
   oldestReturnedDate: string | null;
   status: 'available' | 'partial' | 'no-data' | 'complete' | 'unavailable';
   errorCode?: 'forbidden';
+  rejectedRecords: number;
+  diagnostics: RejectionDiagnostic[];
+  scanState: 'in-progress' | 'scanned' | 'unavailable';
 };
+export function parseSyncCursor(input: unknown): GarminSyncCursor {
+  const parsed = z
+    .object({
+      version: z.literal(1),
+      mode: z.enum(['initial', 'recent']),
+      phase: z.enum([
+        'identity',
+        'recent-activities',
+        'recent-health',
+        'history-activities',
+        'history-health',
+        'done',
+      ]),
+      today: dateSchema,
+      earliestHealthDate: dateSchema,
+      activityFrom: dateSchema.optional(),
+      timeZone: z.string(),
+      accountId: z.string().regex(/^\d+$/).nullable(),
+      activityOffset: z.number().int().nonnegative(),
+      previousPageFingerprint: z.string().nullable(),
+      healthStreamIndex: z.number().int().nonnegative(),
+      windowEnd: dateSchema,
+      unavailableStreams: z.array(importStreamSchema),
+      targetStream: importStreamSchema.optional(),
+      activityScan: activityScanSchema.optional(),
+    })
+    .safeParse(input);
+  if (!parsed.success)
+    throw new GarminError(
+      'invalid_configuration',
+      'The saved Garmin sync checkpoint is invalid or incompatible.',
+    );
+  validateCursor(parsed.data);
+  return parsed.data;
+}
 export type GarminSyncStep = {
   activities: ImportedActivity[];
   healthRecords: ImportedHealthRecord[];
@@ -75,6 +126,7 @@ export function createSyncCursor(options: {
   mode?: 'initial' | 'recent';
   accountId?: string | null;
   timeZone?: string;
+  targetStream?: ImportStream;
 }): GarminSyncCursor {
   if (
     !dayKey(options.today) ||
@@ -99,12 +151,21 @@ export function createSyncCursor(options: {
     healthStreamIndex: 0,
     windowEnd: options.today,
     unavailableStreams: [],
+    ...(options.targetStream ? { targetStream: options.targetStream } : {}),
   };
   validateCursor(cursor);
   return cursor;
 }
 
 function validateCursor(cursor: GarminSyncCursor) {
+  if (
+    (cursor.targetStream && !importStreamSchema.safeParse(cursor.targetStream).success) ||
+    (cursor.activityScan && !activityScanSchema.safeParse(cursor.activityScan).success) ||
+    (cursor.targetStream &&
+      cursor.targetStream !== 'activities' &&
+      dayCount(cursor.earliestHealthDate, cursor.today) > 28)
+  )
+    throw new GarminError('invalid_configuration', 'The saved stream checkpoint is invalid.');
   if (
     cursor.version !== 1 ||
     !['initial', 'recent'].includes(cursor.mode) ||
@@ -156,6 +217,16 @@ export function requestCoverageIdentity(
   cursor: GarminSyncCursor,
 ): Pick<SyncCoverage, 'stream' | 'phase' | 'from' | 'to'> {
   validateCursor(cursor);
+  if (cursor.targetStream && cursor.phase !== 'identity')
+    return {
+      stream: cursor.targetStream,
+      phase: cursor.phase,
+      from:
+        cursor.targetStream === 'activities'
+          ? (cursor.activityFrom ?? null)
+          : cursor.earliestHealthDate,
+      to: cursor.today,
+    };
   const recentStart = addDays(cursor.today, -6);
   if (cursor.phase === 'recent-activities')
     return {
@@ -264,6 +335,9 @@ export async function runSyncStep(
       unknownMetrics: 0,
       oldestReturnedDate: null,
       status: 'available',
+      rejectedRecords: 0,
+      diagnostics: [],
+      scanState: 'in-progress',
     },
   };
   if (cursor.phase === 'done') {
@@ -273,7 +347,12 @@ export async function runSyncStep(
   if (cursor.phase === 'identity') {
     const identity = await getAccountIdentity(client, cursor.today);
     result.accountId = next.accountId = assertAccountBinding(cursor.accountId, [identity]);
-    next.phase = 'recent-activities';
+    next.phase =
+      cursor.targetStream && cursor.targetStream !== 'activities'
+        ? 'recent-health'
+        : 'recent-activities';
+    if (cursor.targetStream && cursor.targetStream !== 'activities')
+      next.healthStreamIndex = HEALTH_STREAMS.indexOf(cursor.targetStream);
     return result;
   }
   if (cursor.accountId === null)
@@ -298,7 +377,11 @@ export async function runSyncStep(
     } catch (error) {
       if (!(error instanceof GarminError) || error.code !== 'forbidden') throw error;
       next.unavailableStreams = [...new Set([...next.unavailableStreams, 'activities' as const])];
-      next.phase = cursor.phase === 'recent-activities' ? 'recent-health' : 'history-health';
+      next.phase = cursor.targetStream
+        ? 'done'
+        : cursor.phase === 'recent-activities'
+          ? 'recent-health'
+          : 'history-health';
       next.windowEnd =
         cursor.phase === 'recent-activities' ? cursor.today : addDays(recentStart, -1);
       if (next.windowEnd < cursor.earliestHealthDate) next.phase = 'done';
@@ -306,40 +389,96 @@ export async function runSyncStep(
         ...result.coverage,
         stream: 'activities',
         status: 'unavailable',
+        scanState: 'unavailable',
         errorCode: 'forbidden',
       };
       return result;
     }
     assertAccountBinding(cursor.accountId, accountIds(payload, 'activities'));
-    result.activities = normalizeActivities(payload, cursor.timeZone);
+    const rows = rawRows('activities', payload);
+    const accepted = validateRecords(
+      rows,
+      {
+        stream: 'activities',
+        from: coverageIdentity.from,
+        to: coverageIdentity.to,
+        pageOffset: cursor.activityOffset,
+      },
+      cursor.timeZone,
+    );
+    result.activities = accepted.activities;
+    const prior = cursor.activityScan ?? {
+      records: 0,
+      rejectedRecords: 0,
+      diagnostics: [],
+      oldestReturnedDate: null,
+    };
+    const dates = result.activities
+      .map((record) => record.localDate)
+      .concat(prior.oldestReturnedDate ? [prior.oldestReturnedDate] : [])
+      .sort();
+    const scan: ActivityScan = {
+      records: prior.records + accepted.activities.length,
+      rejectedRecords: prior.rejectedRecords + accepted.rejectedRecords,
+      diagnostics: [...prior.diagnostics, ...accepted.diagnostics].slice(0, 50),
+      oldestReturnedDate: dates[0] ?? null,
+    };
     // Advancing by actual page length tolerates provider-side page caps; only an empty page ends traversal.
-    if (result.activities.length) {
+    if (rows.length) {
       const fingerprint = createHash('sha256')
-        .update(result.activities.map((a) => a.externalId).join('\0'))
+        .update(
+          rows
+            .map((raw) => {
+              try {
+                const id = providerId(object(raw).activityId);
+                if (id !== null) return id;
+              } catch {
+                /* Use a hash for rejected IDs, never the raw value. */
+              }
+              return createHash('sha256')
+                .update(JSON.stringify(raw) ?? 'null')
+                .digest('hex');
+            })
+            .join('\0'),
+        )
         .digest('hex');
       if (fingerprint === cursor.previousPageFingerprint)
         throw new GarminError(
           'pagination_stalled',
           'Garmin repeated an activity page without advancing. Sync stopped without skipping history.',
         );
-      next.activityOffset += result.activities.length;
+      next.activityOffset += rows.length;
       next.previousPageFingerprint = fingerprint;
+      next.activityScan = scan;
     } else {
       next.activityOffset = 0;
       next.previousPageFingerprint = null;
+      delete next.activityScan;
       next.healthStreamIndex = 0;
-      next.phase = cursor.phase === 'recent-activities' ? 'recent-health' : 'history-health';
+      next.phase = cursor.targetStream
+        ? 'done'
+        : cursor.phase === 'recent-activities'
+          ? 'recent-health'
+          : 'history-health';
       next.windowEnd =
         cursor.phase === 'recent-activities' ? cursor.today : addDays(recentStart, -1);
       if (next.phase === 'history-health' && next.windowEnd < cursor.earliestHealthDate)
         next.phase = 'done';
     }
-    const dates = result.activities.map((a) => a.localDate).sort();
     result.coverage = {
       ...result.coverage,
-      returnedRecords: result.activities.length,
-      oldestReturnedDate: dates[0] ?? null,
-      status: result.activities.length ? 'available' : 'no-data',
+      returnedRecords: scan.records,
+      oldestReturnedDate: scan.oldestReturnedDate,
+      rejectedRecords: scan.rejectedRecords,
+      diagnostics: scan.diagnostics,
+      scanState: rows.length ? 'in-progress' : 'scanned',
+      status: scan.rejectedRecords
+        ? 'partial'
+        : rows.length
+          ? 'available'
+          : scan.records
+            ? 'complete'
+            : 'no-data',
     };
     return result;
   }
@@ -353,18 +492,20 @@ export async function runSyncStep(
     try {
       const payload = await client.get(request.path, request.query);
       assertAccountBinding(cursor.accountId, accountIds(payload, stream));
-      result.healthRecords = normalizeHealth(stream, payload);
+      const accepted = validateRecords(
+        rawRows(stream, payload),
+        { stream, from, to, pageOffset: 0 },
+        cursor.timeZone,
+      );
+      result.healthRecords = accepted.healthRecords;
+      result.coverage.rejectedRecords = accepted.rejectedRecords;
+      result.coverage.diagnostics = accepted.diagnostics;
     } catch (error) {
       if (!(error instanceof GarminError) || error.code !== 'forbidden') throw error;
       unavailable = true;
       next.unavailableStreams.push(stream);
     }
   }
-  if (result.healthRecords.some((record) => record.localDate < from || record.localDate > to))
-    throw new GarminError(
-      'invalid_payload',
-      'Garmin returned health data outside the requested calendar window.',
-    );
   const dates = [...new Set(result.healthRecords.map((record) => record.localDate))].sort();
   const missingDays = dayCount(from, to) - dates.length;
   const unknownMetrics =
@@ -379,16 +520,26 @@ export async function runSyncStep(
     missingDays,
     unknownMetrics,
     oldestReturnedDate: dates[0] ?? null,
+    rejectedRecords: result.coverage.rejectedRecords,
+    diagnostics: result.coverage.diagnostics,
+    scanState: unavailable ? 'unavailable' : 'scanned',
     status: unavailable
       ? 'unavailable'
-      : dates.length === 0
-        ? 'no-data'
-        : unknownMetrics
-          ? 'partial'
-          : 'available',
+      : result.coverage.rejectedRecords
+        ? 'partial'
+        : dates.length === 0
+          ? 'no-data'
+          : unknownMetrics
+            ? 'partial'
+            : 'available',
     ...(unavailable ? { errorCode: 'forbidden' as const } : {}),
   };
   next.healthStreamIndex++;
+  if (cursor.targetStream) {
+    next.healthStreamIndex = cursor.healthStreamIndex;
+    next.phase = 'done';
+    return result;
+  }
   if (next.healthStreamIndex === HEALTH_STREAMS.length) {
     next.healthStreamIndex = 0;
     if (cursor.phase === 'recent-health') {

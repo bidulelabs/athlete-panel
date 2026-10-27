@@ -6,19 +6,24 @@ import {
   agentScopeSchema,
   agentGrantValuesSchema,
   type Command,
-  type EntityChange,
-  type WorkspaceState,
-  type WorkoutStep,
+  proposalApplyInputSchema,
 } from '../../packages/contracts/src';
 import { transaction, type Transaction } from '../../packages/host/src/db';
 import { canonical, digest, randomToken } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
 import { loadWorkspace } from '../../instance/services';
-import { applyCommands, effectiveDate } from '../training/public/server';
+import { applyCommands } from '../training/public/server';
 import { idempotent, undoChange } from '../training/public/server';
 
+import {
+  boundedContext,
+  hasStepNotes,
+  assertReadableSources,
+  assertBounded,
+} from './proposal-validation';
+import { evaluateProposal, reviewProposal } from './proposal-review';
 const scopeSchema = agentScopeSchema;
-type Scope = z.infer<typeof scopeSchema>;
+
 export async function createGrant(body: unknown) {
   const input = agentGrantValuesSchema.parse(body);
   const scope = scopeSchema.parse(input);
@@ -42,55 +47,6 @@ async function grantForToken(token: string, tx: Transaction) {
     await tx`select * from host.grants where token_hash=${digest(token)} and revoked=false and expires_at>now()`;
   assert(grant, 'invalid_grant', 'This agent grant is expired or revoked.', 401);
   return grant;
-}
-const hasStepNotes = (steps: WorkoutStep[]) =>
-  steps.some((step) =>
-    step.kind === 'repeat' ? step.steps.some((child) => Boolean(child.notes)) : Boolean(step.notes),
-  );
-const withoutStepNotes = (steps: WorkoutStep[]): WorkoutStep[] =>
-  steps.map((step) =>
-    step.kind === 'repeat'
-      ? { ...step, steps: step.steps.map((child) => ({ ...child, notes: '' })) }
-      : { ...step, notes: '' },
-  );
-function boundedContext(state: WorkspaceState, scope: Scope) {
-  const within = (date: string | null) => date !== null && date >= scope.from && date <= scope.to;
-  const workouts = state.workouts.filter(
-    (w) =>
-      within(effectiveDate(w, state.plans)) || (w.completion && within(w.completion.performedDate)),
-  );
-  const planIds = new Set(
-    workouts.flatMap((w) => (w.schedule.kind === 'plan' ? [w.schedule.planId] : [])),
-  );
-  const notes = scope.includeNotes
-    ? state.notes.filter((n) => within(effectiveDate(n, state.plans)))
-    : [];
-  for (const note of notes) if (note.schedule.kind === 'plan') planIds.add(note.schedule.planId);
-  return {
-    profile: state.profile,
-    plans: state.plans
-      .filter((p) => planIds.has(p.id) || within(p.startDate))
-      .map((p) => (scope.includeNotes ? p : { ...p, description: '' })),
-    workouts: workouts.map((w) =>
-      scope.includeNotes
-        ? w
-        : {
-            ...w,
-            notes: '',
-            steps: withoutStepNotes(w.steps),
-            completion: w.completion ? { ...w.completion, reason: '' } : null,
-          },
-    ),
-    notes,
-    events: state.events
-      .filter((e) => within(e.date))
-      .map((e) => (scope.includeNotes ? e : { ...e, notes: '' })),
-    injuries: state.injuries
-      .filter((i) => i.startDate <= scope.to && (i.endDate === null || i.endDate >= scope.from))
-      .map((i) => (scope.includeNotes ? i : { ...i, notes: '' })),
-    activities: state.activities.filter((a) => within(a.localDate)),
-    health: state.health.filter((h) => within(h.localDate)),
-  };
 }
 export async function contextForToken(token: string) {
   return transaction(async (tx) => {
@@ -118,127 +74,6 @@ function assignIds(commands: Command[]): Command[] {
         } as Command)
       : c,
   );
-}
-function assertReadableSources(commands: Command[], state: WorkspaceState, scope: Scope) {
-  const context = boundedContext(state, scope);
-  for (const command of commands) {
-    if (command.action === 'workout.reorder') {
-      assert(
-        command.workouts.every((w) => context.workouts.some((c) => c.id === w.id)),
-        'out_of_scope',
-        'Reordering references a workout outside the grant.',
-        403,
-      );
-      continue;
-    }
-    if (!('id' in command)) continue;
-    const kind = command.action.split('.')[0],
-      items =
-        kind === 'plan'
-          ? context.plans
-          : kind === 'workout'
-            ? context.workouts
-            : kind === 'note'
-              ? context.notes
-              : [];
-    assert(
-      items.some((i) => i.id === command.id),
-      'out_of_scope',
-      'The command references a source outside the granted context.',
-      403,
-    );
-    if (command.action === 'workout.duplicate') {
-      const source = state.workouts.find((w) => w.id === command.id)!;
-      assert(
-        scope.includeNotes || (!source.notes && !hasStepNotes(source.steps)),
-        'forbidden',
-        'Duplicating this workout requires access to its notes.',
-        403,
-      );
-    }
-    if (command.action === 'plan.duplicate') {
-      const workouts = state.workouts.filter(
-        (w) => w.schedule.kind === 'plan' && w.schedule.planId === command.id,
-      );
-      const notes = state.notes.filter(
-        (w) => w.schedule.kind === 'plan' && w.schedule.planId === command.id,
-      );
-      assert(
-        workouts.every((w) => context.workouts.some((c) => c.id === w.id)) &&
-          notes.every((w) => context.notes.some((c) => c.id === w.id)),
-        'out_of_scope',
-        'Duplicating this plan requires access to every source record.',
-        403,
-      );
-      assert(
-        scope.includeNotes ||
-          (!state.plans.find((p) => p.id === command.id)?.description &&
-            workouts.every((w) => !w.notes && !hasStepNotes(w.steps))),
-        'forbidden',
-        'Duplicating this plan requires access to its notes.',
-        403,
-      );
-    }
-  }
-}
-function assertBounded(
-  changes: EntityChange[],
-  before: WorkspaceState,
-  after: WorkspaceState,
-  scope: Scope,
-) {
-  for (const change of changes) {
-    assert(
-      ['plan', 'workout', 'note'].includes(change.entity),
-      'forbidden',
-      'Agent changes are limited to pending plans, workouts and selected notes.',
-      403,
-    );
-    if (change.entity === 'note')
-      assert(scope.includeNotes, 'forbidden', 'This grant does not include notes.', 403);
-    for (const [value, state] of [
-      [change.before, before],
-      [change.after, after],
-    ] as const) {
-      if (!value) continue;
-      if (change.entity === 'plan') {
-        if (
-          change.before &&
-          change.after &&
-          canonical({ ...change.before, revision: 0 }) ===
-            canonical({ ...change.after, revision: 0 })
-        )
-          continue;
-        const plan = value as WorkspaceState['plans'][number];
-        assert(
-          plan.startDate !== null && plan.startDate >= scope.from && plan.startDate <= scope.to,
-          'out_of_scope',
-          'Plan dates must stay within the grant bounds.',
-          403,
-        );
-        // A plan update can affect every child, including records omitted by the context.
-        for (const item of [...state.workouts, ...state.notes].filter(
-          (w) => w.schedule.kind === 'plan' && w.schedule.planId === value.id,
-        )) {
-          const date = effectiveDate(item, state.plans);
-          assert(
-            date && date >= scope.from && date <= scope.to,
-            'out_of_scope',
-            'This plan includes records outside the grant bounds.',
-            403,
-          );
-        }
-      } else {
-        const date = effectiveDate(value as WorkspaceState['workouts'][number], state.plans);
-        assert(
-          date && date >= scope.from && date <= scope.to,
-          'out_of_scope',
-          'All affected records must remain within the grant dates.',
-          403,
-        );
-      }
-    }
-  }
 }
 export async function submitProposal(token: string, body: unknown) {
   const input = z
@@ -321,7 +156,7 @@ export async function submitProposal(token: string, body: unknown) {
             summary: input.summary,
           }),
         );
-        await tx`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest) values(${id},${grant.id},'pending',${input.summary},${tx.json(commands as never)},${tx.json(result.changes as never)},${tx.json({ scope, digest: input.contextDigest })},${proposalDigest})`;
+        await tx`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest) values(${id},${grant.id},'pending',${input.summary},${tx.json(commands as never)},${tx.json(result.changes as never)},${tx.json({ version: 2, scope, digest: input.contextDigest, snapshot: context } as never)},${proposalDigest})`;
         return {
           id,
           digest: proposalDigest,
@@ -333,46 +168,30 @@ export async function submitProposal(token: string, body: unknown) {
   });
 }
 export async function applyProposal(body: unknown) {
-  const input = z
-    .object({ id: z.uuid(), digest: z.string().length(64), idempotencyKey: z.uuid() })
-    .strict()
-    .parse(body);
+  const input = proposalApplyInputSchema.parse(body);
   return transaction((tx) =>
     idempotent(tx, input.idempotencyKey, { operation: 'apply', ...input }, async () => {
-      const [proposal] =
-        await tx`select p.*,g.revoked,g.expires_at from host.proposals p join host.grants g on p.grant_id=g.id where p.id=${input.id} for update`;
+      const { proposal, result, review } = await evaluateProposal(tx, input);
+      const conflict = review.conflicts[0];
       assert(
-        proposal && proposal.status === 'pending',
-        'proposal_unavailable',
-        'This proposal is missing or no longer pending.',
-        409,
+        !conflict,
+        conflict?.code ?? 'proposal_unavailable',
+        conflict?.message ?? 'This proposal cannot be applied.',
+        conflict?.status ?? 409,
       );
+      assert(result, 'proposal_unavailable', 'This proposal cannot be applied.', 409);
       assert(
-        !proposal.revoked && new Date(proposal.expires_at).getTime() > Date.now(),
-        'invalid_grant',
-        'The proposal grant has expired or been revoked.',
-        403,
-      );
-      assert(
-        proposal.digest === input.digest,
-        'digest_mismatch',
-        'The reviewed proposal does not match this request.',
-        409,
-      );
-      const scope = scopeSchema.parse(proposal.context.scope),
-        before = await loadWorkspace(tx, scope);
-      assert(
-        digest(canonical(boundedContext(before, scope))) === proposal.context.digest,
+        input.reviewedContextDigest === undefined ||
+          input.reviewedContextDigest === review.currentContextDigest,
         'stale_context',
-        'Relevant context changed. Request a new proposal.',
+        'Context changed again. Review the latest context before applying.',
         409,
       );
-      const result = applyCommands(before, proposal.commands, { actor: 'agent' });
-      assertBounded(result.changes, before, result.state, scope);
       assert(
-        canonical(result.changes) === canonical(proposal.changes),
-        'proposal_changed',
-        'The expanded changes differ from the reviewed proposal.',
+        review.applicability !== 'review-required' ||
+          input.reviewedContextDigest === review.currentContextDigest,
+        'stale_context',
+        'Context changed. Review the latest context before applying.',
         409,
       );
       const id = await persistAndAudit(tx, result.changes, proposal.summary, 'agent');
@@ -389,4 +208,4 @@ export async function rejectProposal(body: unknown) {
   });
   return { ok: true };
 }
-export { undoChange };
+export { undoChange, reviewProposal };

@@ -13,6 +13,7 @@ import {
 } from './domain';
 import { onboardingSchema } from './onboarding';
 import { garminConnectionSchema } from './garmin-connection';
+import { rejectionDiagnosticSchema, scanStateSchema } from './import-recovery';
 
 const change = <K extends string, T extends z.ZodType>(entity: K, schema: T) =>
   z.object({
@@ -59,6 +60,10 @@ export const coverageRowSchema = z.object({
   missingDays: z.number().int().nonnegative(),
   unknownMetrics: z.number().int().nonnegative(),
   error: z.string().nullable(),
+  scanState: scanStateSchema.optional(),
+  lastScannedAt: z.iso.datetime().nullable().optional(),
+  rejectedRecords: z.number().int().nonnegative().default(0),
+  diagnostics: z.array(rejectionDiagnosticSchema).max(50).default([]),
 });
 export type CoverageRow = z.infer<typeof coverageRowSchema>;
 export const coveragePageSchema = z.object({
@@ -75,6 +80,7 @@ export const garminStatusSchema = garminConnectionSchema.extend({
   coverage: z.array(coverageRowSchema),
 });
 export const proposalSummarySchema = z.object({
+  expiresAt: z.iso.datetime().optional(),
   id: z.uuid(),
   status: z.enum(['pending', 'applied', 'rejected']),
   digest: z.string(),
@@ -122,7 +128,8 @@ export const workerStatusSchema = z
     lastSeen: z.iso.datetime().optional(),
     lastSuccess: z.iso.datetime().optional(),
     lastFailure: z.iso.datetime().optional(),
-    state: z.enum(['healthy', 'maintenance', 'failed']).optional(),
+    state: z.enum(['healthy', 'maintenance', 'failed', 'degraded']).optional(),
+    schedulerFailures: z.array(z.string()).optional(),
     consecutiveFailures: z.number().int().nonnegative().optional(),
   })
   .passthrough();

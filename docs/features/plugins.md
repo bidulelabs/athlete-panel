@@ -40,6 +40,8 @@ Tests use synthetic manifests and temporary directories. They establish validati
 
 ## Contracts and constraints
 
+Worker jobs retain checkpoints and retry deadlines across disable/re-enable; only one retained job per plugin/kind is activated behind any existing live job. Explicit pauses remain paused. Expired leases and unexpected handler failures count toward eight consecutive failures per checkpoint, with bounded exponential backoff; only committed progress resets the count. Failed jobs require explicit retry. Host API 1.2 adds generic job priority; each plugin owns its priority policy. Scheduler failures are isolated and reported as degraded worker status without preventing other schedulers or job claims. All settlements preserve lease fencing.
+
 Optional `slots` metadata declares calendar, inspector, dashboard and authenticated workspace contributions. Workspace contributions mount once inside the workspace context outside the current page; they can render an owner dialog without a feature import in the shell. The client exports a `contributions` map keyed by slot ID; each component receives public workspace props and an optional selected entity. Generated registration and the generic `ExtensionSlot` renderer require no feature import in the host shell.
 
 Uninstall removes executable/client source and composition entries while retaining the manifest/version record and applied migration files. Purging retained data is a separate owner operation requiring cross-schema reference checks and a verified backup; disabling a plugin never purges its data.

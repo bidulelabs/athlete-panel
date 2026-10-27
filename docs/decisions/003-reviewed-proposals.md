@@ -25,3 +25,7 @@ The owner subsequently approved a simplified connection flow on 2026-10-24: a CL
 ## Alternatives
 
 Embedded model orchestration, unrestricted agent SQL and autonomous owner-equivalent tokens are excluded. MCP transport is deferred; CLI and versioned HTTP adapters provide the initial integration.
+
+## Amendment
+
+[ADR 009](009-durable-proposal-review.md) supersedes grant-expiry coupling and mandatory replacement for context-only changes. Other permissions, immutable edits and atomicity remain in force.

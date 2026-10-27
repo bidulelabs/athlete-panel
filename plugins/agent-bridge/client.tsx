@@ -35,7 +35,12 @@ import {
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import type { ProposalSummary, Entity } from '@athlete-panel/contracts';
+import {
+  proposalReviewSchema,
+  type ProposalReview,
+  type ProposalSummary,
+  type Entity,
+} from '@athlete-panel/contracts';
 import { proposalRows } from './proposal-diff';
 import './review.css';
 import { ConnectAgentDialog, ConnectionApproval } from './connections-client';
@@ -261,11 +266,47 @@ function recordLabel(record: Entity | null): string | undefined {
   return undefined;
 }
 function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onClose: () => void }) {
-  const { request, data } = useWorkspace();
+  const { request } = useWorkspace();
   const action = useAction();
   const [acknowledged, setAcknowledged] = useState(false);
   const [idempotencyKey] = useState(requestId);
-  const canApply = ['pending', 'validated', 'proposed', 'ready'].includes(proposal.status);
+  const [review, setReview] = useState<ProposalReview | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewVersion, setReviewVersion] = useState(0);
+  const pending = proposal.status === 'pending';
+  const canApply =
+    pending && (review?.applicability === 'ready' || review?.applicability === 'review-required');
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    setAcknowledged(false);
+    setReview(null);
+    setReviewError(null);
+    if (!pending) return;
+    void (async () => {
+      try {
+        const response = await fetch('/api/plugins/agent-bridge/review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: proposal.id, digest: proposal.digest }),
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+          cache: 'no-store',
+        });
+        if (!response.ok) throw new Error('Proposal review could not load. Try again.');
+        const result = proposalReviewSchema.parse(await response.json());
+        if (active) setReview(result);
+      } catch (error) {
+        if (active)
+          setReviewError(
+            error instanceof Error ? error.message : 'Proposal review could not load.',
+          );
+      }
+    })();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [proposal.id, proposal.digest, pending, reviewVersion]);
   return (
     <Modal
       open
@@ -290,72 +331,58 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
             {typeof warning === 'string' ? warning : (warning.message ?? JSON.stringify(warning))}
           </Alert>
         ))}
-        {proposal.changes?.map((change, index) => (
-          <div className="proposal-diff" key={index}>
-            <div className="proposal-diff-head">
-              <Badge className="badge">
-                {!change.before ? 'Create' : !change.after ? 'Delete' : 'Update'}
-              </Badge>
-              <span>
-                {recordLabel(change.after) ?? recordLabel(change.before) ?? change.entity}
-              </span>
-            </div>
-            <Table className="review-fields">
-              <caption className="sr-only">Proposed field changes</caption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Field</TableHead>
-                  <TableHead>Before</TableHead>
-                  <TableHead>After</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {proposalRows(
-                  change,
-                  data.profile?.units,
-                  Object.fromEntries(data.plans.map((plan) => [plan.id, plan.title])),
-                ).map((row) => (
-                  <TableRow key={row.field}>
-                    <TableHead scope="row">{row.field}</TableHead>
-                    <TableCell>
-                      <span className="review-mobile-label">Before: </span>
-                      {row.before}
-                    </TableCell>
-                    <TableCell>
-                      <span className="review-mobile-label">After: </span>
-                      {row.after}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <details className="review-technical">
-              <summary>Technical details (complete record)</summary>
-              <div className="diff-columns">
-                <div>
-                  <small>BEFORE</small>
-                  <pre>{JSON.stringify(change.before, null, 2)}</pre>
-                </div>
-                <div>
-                  <small>AFTER</small>
-                  <pre>{JSON.stringify(change.after, null, 2)}</pre>
-                </div>
-              </div>
-            </details>
-          </div>
+        {pending && !review && !reviewError && (
+          <p role="status">Checking proposal and current context…</p>
+        )}
+        {reviewError && (
+          <>
+            <ErrorMessage error={reviewError} />
+            <Button variant="outline" onClick={() => setReviewVersion((value) => value + 1)}>
+              Retry review
+            </Button>
+          </>
+        )}
+        {review && (
+          <p className="muted-text">
+            Apply before {new Date(review.expiresAt).toLocaleString()} · Seven days from submission
+          </p>
+        )}
+        {review?.conflicts.map((conflict) => (
+          <Alert className="callout" key={conflict.code}>
+            {conflict.message}
+          </Alert>
         ))}
+        {!!review?.contextChanges.length && (
+          <section aria-label="Changed context">
+            <h3>Context changed since submission</h3>
+            <p>
+              These facts changed after the agent prepared this proposal. Review them before
+              deciding whether the proposed training still suits you.
+            </p>
+            <ReviewChanges
+              changes={review.contextChanges}
+              caption="Context at submission and now"
+            />
+          </section>
+        )}
+        <section aria-label="Proposed edits">
+          <h3>Proposed edits</h3>
+          <ReviewChanges changes={proposal.changes} caption="Proposed field changes" />
+        </section>
         {canApply && (
           <label className="checkbox-row" style={{ marginTop: 22 }}>
             <Checkbox
               checked={acknowledged}
               onCheckedChange={(value) => setAcknowledged(value === true)}
             />
-            I have reviewed these changes and want to apply them.
+            {review?.applicability === 'review-required'
+              ? 'I have reviewed the changed context and still want to apply these exact edits.'
+              : 'I have reviewed these changes and want to apply them.'}
           </label>
         )}
         <ErrorMessage error={action.error} />
         <div className="dialog-actions">
-          {canApply ? (
+          {pending ? (
             <>
               <Button
                 variant="outline"
@@ -370,17 +397,25 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
               <Button
                 variant="default"
                 className="button primary"
-                disabled={action.busy || !acknowledged}
+                disabled={action.busy || !acknowledged || !canApply}
                 onClick={() =>
-                  action.run(
-                    () =>
-                      request('agent-bridge', 'apply', {
+                  action.run(async () => {
+                    try {
+                      return await request('agent-bridge', 'apply', {
                         id: proposal.id,
                         digest: proposal.digest,
                         idempotencyKey,
-                      }),
-                    onClose,
-                  )
+                        ...(review?.currentContextDigest
+                          ? { reviewedContextDigest: review.currentContextDigest }
+                          : {}),
+                      });
+                    } catch (error) {
+                      setAcknowledged(false);
+                      setReview(null);
+                      setReviewVersion((value) => value + 1);
+                      throw error;
+                    }
+                  }, onClose)
                 }
               >
                 <CheckCircle2 size={16} />
@@ -395,5 +430,71 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
         </div>
       </div>
     </Modal>
+  );
+}
+
+function ReviewChanges({
+  changes,
+  caption,
+}: {
+  changes: ProposalSummary['changes'];
+  caption: string;
+}) {
+  const { data } = useWorkspace();
+  return (
+    <>
+      {changes.map((change, index) => (
+        <div className="proposal-diff" key={index}>
+          <div className="proposal-diff-head">
+            <Badge className="badge">
+              {!change.before ? 'Create' : !change.after ? 'Delete' : 'Update'}
+            </Badge>
+            <span>{recordLabel(change.after) ?? recordLabel(change.before) ?? change.entity}</span>
+          </div>
+          <Table className="review-fields">
+            <caption className="sr-only">{caption}</caption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Field</TableHead>
+                <TableHead>Before</TableHead>
+                <TableHead>After</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {proposalRows(
+                change,
+                data.profile?.units,
+                Object.fromEntries(data.plans.map((plan) => [plan.id, plan.title])),
+              ).map((row) => (
+                <TableRow key={row.field}>
+                  <TableHead scope="row">{row.field}</TableHead>
+                  <TableCell>
+                    <span className="review-mobile-label">Before: </span>
+                    {row.before}
+                  </TableCell>
+                  <TableCell>
+                    <span className="review-mobile-label">After: </span>
+                    {row.after}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <details className="review-technical">
+            <summary>Technical details (complete record)</summary>
+            <div className="diff-columns">
+              <div>
+                <small>BEFORE</small>
+                <pre>{JSON.stringify(change.before, null, 2)}</pre>
+              </div>
+              <div>
+                <small>AFTER</small>
+                <pre>{JSON.stringify(change.after, null, 2)}</pre>
+              </div>
+            </div>
+          </details>
+        </div>
+      ))}
+    </>
   );
 }

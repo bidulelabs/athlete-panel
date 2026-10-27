@@ -6,6 +6,22 @@ import { sourceDigest, sourceFiles } from '../../scripts/lib/source-files';
 import { readImageMetadata, releasedImageSchema } from '../../scripts/lib/release-data';
 
 describe('recovery source identity', () => {
+  it('keeps legacy blame files in old fingerprints without requiring them in new sources', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'athlete-panel-legacy-source-test-'));
+    try {
+      const current = await sourceDigest(root);
+      const legacy = join(root, '.git-blame-ignore-revs');
+      await writeFile(legacy, 'synthetic legacy formatting revision\n');
+      expect((await sourceFiles(root)).map((entry) => entry.path)).toEqual([
+        'source/.git-blame-ignore-revs',
+      ]);
+      expect(await sourceDigest(root)).not.toBe(current);
+      await rm(legacy);
+      expect(await sourceDigest(root)).toBe(current);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it('requires metadata for this application at the documented image path', async () => {
     const root = await mkdtemp(join(tmpdir(), 'athlete-panel-image-test-'));
     const metadata = {

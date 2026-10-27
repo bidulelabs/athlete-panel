@@ -44,7 +44,7 @@ class Browser:
 def copy_candidate(destination):
     # Explicit source roots, never .env, state, exports or the owner's database.
     roots = ['apps','packages','plugins','personal-plugins','instance','scripts','tests','docs','.agents','.claude','.github',
-             'package.json','pnpm-lock.yaml','pnpm-workspace.yaml','tsconfig.json', 'tsconfig.strict.json', 'eslint.config.mjs', '.prettierrc.json', '.prettierignore', '.git-blame-ignore-revs','vitest.config.ts','playwright.config.ts',
+             'package.json','pnpm-lock.yaml','pnpm-workspace.yaml','tsconfig.json', 'tsconfig.strict.json', 'eslint.config.mjs', '.prettierrc.json', '.prettierignore','vitest.config.ts','playwright.config.ts',
              'Dockerfile','compose.yml','compose.local.yml','compose.test.yml','Caddyfile','.dockerignore','.gitignore','.env.example',
              'AGENTS.md','README.md','PRODUCT.md','DESIGN.md','.impeccable/design.json','LICENSE','SECURITY.md','CONTRIBUTING.md']
     excluded = shutil.ignore_patterns('node_modules','.next','dist','.runtime','.env','.env.*','.secrets','private-exports','context.json','proposal.json','__pycache__','*.pyc','*.fgr','*.dump','*.key','*.pem')

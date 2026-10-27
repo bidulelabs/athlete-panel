@@ -27,6 +27,8 @@ class HostedCandidateSource(unittest.TestCase):
             words = shlex.split(line)
             if words and words[0].upper() == 'COPY' and not any(word.startswith('--from=') for word in words):
                 required.update(word for word in words[1:-1] if not word.startswith('--'))
+        for name in sorted(required):
+            self.assertTrue((ROOT / name).exists(), f'Docker COPY input is missing from source: {name}')
         with tempfile.TemporaryDirectory(prefix='athlete-panel-candidate-test-') as folder:
             source, candidate = Path(folder) / 'source', Path(folder) / 'candidate'
             source.mkdir()

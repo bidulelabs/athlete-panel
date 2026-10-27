@@ -23,6 +23,7 @@ const sourceRoots = [
   'eslint.config.mjs',
   '.prettierrc.json',
   '.prettierignore',
+  // Optional legacy input: old backup fingerprints still include it when present.
   '.git-blame-ignore-revs',
   'vitest.config.ts',
   'playwright.config.ts',

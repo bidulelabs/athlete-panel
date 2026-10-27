@@ -2,11 +2,11 @@
   "id": "calendar",
   "name": "Training calendar",
   "description": "Plan and review your week",
-  "version": "1.0.0",
-  "hostApi": "^1.0.0",
+  "version": "1.1.0",
+  "hostApi": "^1.1.0",
   "dependencies": {
-    "athlete": "^1.0.0",
-    "training": "^1.0.0",
+    "athlete": "^1.1.0",
+    "training": "^1.1.0",
     "activity-records": "^1.0.0"
   },
   "required": true,

@@ -554,3 +554,16 @@ Framework validation covered the changed instructions, feature requirements, lin
 Limits and activation: live Codex/Claude discovery, rendered question interactions and independent model adherence were not exercised. No private athlete context was read and no proposal was submitted. No application runtime code, schema, migration, dependency or server deployment changed; build, database and browser suites were not rerun for this instructions-only slice. The updated checkout supplies the skills when the harness reads them; there is no server rollout for this change.
 
 Pre-push verification on 2026-10-26: installed the updated locked dependencies and reran `pnpm check` successfully: **132 unit tests across 17 files**, TypeScript, generated-source/boundary checks and **31 documentation files**. The reviewed changes contain only the coaching skills, generated adapters and related documentation. The live-model and deployment limits above still apply.
+
+## A1–A4 source quality — 2026-10-27
+
+Implemented the approved sequence while preserving response shapes, stored data and transaction ownership.
+
+| Task | Outcome | Verification |
+| --- | --- | --- |
+| A1 | Pinned formatting/lint checks; mechanical commit registered for blame exclusion. | Formatting stable; zero lint errors, advisory warnings retained. |
+| A2 | Resolved import graph, versioned public APIs and optional Garmin onboarding contribution. | Boundary/composition fixtures, fresh installation and prior-MVP upgrade passed; applied migrations unchanged. |
+| A4 | Validated DTOs, typed repositories, explicit row helpers and production indexed-access checks. | Both typechecks, malformed-response/record and missing-row tests passed. |
+| A3 | Pure handlers, one finalizer and transaction-scoped persistence/audit helper. | 42 differential batches matched; revision, proposal, undo and rollback regressions passed. |
+
+Local verification: `pnpm check` (155 unit tests), 84 integration tests, 84 browser tests (two platform skips), 23 publication/controller tests, and web/worker/container builds passed. Synthetic desktop/phone checks covered both themes and enabled/disabled Garmin onboarding. Framework validation covered affected specifications, ownership, links and ADR 008. Limits: scripts/tests indexed-access enforcement remains follow-up; no deployment performed.

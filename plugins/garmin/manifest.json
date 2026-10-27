@@ -2,8 +2,8 @@
   "id": "garmin",
   "name": "Garmin import",
   "description": "Personal API activities and health imports",
-  "version": "1.0.0",
-  "hostApi": "^1.0.0",
+  "version": "1.1.0",
+  "hostApi": "^1.1.0",
   "dependencies": {
     "activity-records": "^1.0.0"
   },

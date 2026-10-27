@@ -154,6 +154,15 @@ export function checkBoundaries(root: string): string[] {
     for (const edge of module.edges) {
       if (!edge.target || edge.external) continue;
       const to = owner(edge.target);
+      if (
+        !to &&
+        !within(edge.target, resolve(root, 'packages')) &&
+        !within(edge.target, resolve(root, 'instance'))
+      ) {
+        errors.add(
+          `${label(file)}: plugin bypasses public infrastructure through ${edge.specifier}`,
+        );
+      }
       if (to && to !== from) {
         if (!publicPaths(to).includes(edge.target))
           errors.add(`${label(file)}: private plugin import ${edge.specifier}`);
@@ -182,8 +191,8 @@ export function checkBoundaries(root: string): string[] {
       if (entry) browserRoots.add(resolve(plugin.directory, entry));
   const generatedClient = resolve(root, 'instance/registry.client.ts');
   if (modules.has(generatedClient)) browserRoots.add(generatedClient);
-  const hostRoots = [...modules.keys()].filter((file) =>
-    within(file, resolve(root, 'packages/host')),
+  const foundationRoots = [...modules.keys()].filter((file) =>
+    within(file, resolve(root, 'packages')),
   );
   const walk = (start: string, browser: boolean) => {
     const seen = new Set<string>();
@@ -191,7 +200,7 @@ export function checkBoundaries(root: string): string[] {
       if (seen.has(file)) return;
       seen.add(file);
       for (const edge of modules.get(file)?.edges ?? []) {
-        if (edge.typeOnly) continue;
+        if (edge.typeOnly && browser) continue;
         const path = [...chain, edge.target ? label(edge.target) : edge.specifier];
         const serverImport =
           edge.specifier.startsWith('node:') ||
@@ -205,14 +214,15 @@ export function checkBoundaries(root: string): string[] {
             /(?:\.server|\/registry\.server)\.[cm]?[jt]sx?$/.test(edge.target));
         if (browser && (serverImport || serverTarget || !edge.target))
           errors.add(`Browser dependency: ${path.join(' → ')}`);
-        else if (!browser && edge.target && owner(edge.target))
-          errors.add(`Host imports feature code: ${path.join(' → ')}`);
-        else if (edge.target && !edge.external) visit(edge.target, path);
+        else if (!browser && edge.target && owner(edge.target)) {
+          const area = within(start, resolve(root, 'packages/host')) ? 'Host' : 'Shared package';
+          errors.add(`${area} imports feature code: ${path.join(' → ')}`);
+        } else if (edge.target && !edge.external) visit(edge.target, path);
       }
     };
     visit(start, [label(start)]);
   };
   for (const file of browserRoots) walk(file, true);
-  for (const file of hostRoots) walk(file, false);
+  for (const file of foundationRoots) walk(file, false);
   return [...errors].sort();
 }

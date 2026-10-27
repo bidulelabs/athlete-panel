@@ -208,3 +208,30 @@ test('closing during an accepted save defers the saved step instead of losing it
   await page.reload();
   await expect(welcome).not.toBeVisible();
 });
+
+test('disabled Garmin onboarding can be skipped without mounting provider controls', async ({
+  page,
+}) => {
+  await page.route('**/api/workspace?*', async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    body.plugins = body.plugins.map((plugin: { id: string; enabled: boolean }) =>
+      plugin.id === 'garmin' ? { ...plugin, enabled: false } : plugin,
+    );
+    await route.fulfill({ response, json: body });
+  });
+  const providerRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/plugins/garmin/')) providerRequests.push(request.url());
+  });
+  await login(page);
+  const welcome = dialog(page);
+  await welcome.getByRole('button', { name: 'Save and continue', exact: true }).click();
+  await expect(
+    welcome.getByText('Garmin is disabled. You can enable it later in Plugins.'),
+  ).toBeVisible();
+  await expect(welcome.getByLabel('Personal API key', { exact: true })).toHaveCount(0);
+  await welcome.getByRole('button', { name: 'Skip for now', exact: true }).click();
+  await expect(welcome.getByText('Garmin is disabled.', { exact: true })).toBeVisible();
+  expect(providerRequests).toEqual([]);
+});

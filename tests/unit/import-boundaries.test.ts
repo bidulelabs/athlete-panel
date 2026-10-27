@@ -145,4 +145,20 @@ describe('resolved source boundaries', () => {
     });
     expect(checkBoundaries(root)).toEqual([]);
   });
+  it('rejects feature imports hidden through shared packages, including host type imports', () => {
+    const root = fixture({
+      'packages/ui/index.ts': "export * from '../../plugins/provider/private';",
+      'packages/host/types.ts':
+        "import type { Value } from '../../plugins/provider/public/shared'; export type HostValue = Value;",
+    });
+    expect(checkBoundaries(root).join('\n')).toContain('Shared package imports feature code:');
+    expect(checkBoundaries(root).join('\n')).toContain('Host imports feature code:');
+  });
+  it('rejects a plugin hiding a private import behind an application barrel', () => {
+    const root = fixture({
+      'plugins/consumer/view.tsx': "export * from '../../bridge';",
+      'bridge.ts': "export * from './plugins/provider/private';",
+    });
+    expect(checkBoundaries(root).join('\n')).toContain('plugin bypasses public infrastructure');
+  });
 });

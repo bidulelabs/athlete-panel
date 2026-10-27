@@ -10,6 +10,7 @@ import { failure, json, readJson, contractJson } from '../../../../../../../pack
 import { stagePlugin, pluginEnabled } from '../../../../../../../packages/host/src/plugins';
 import { assert } from '../../../../../../../packages/host/src/errors';
 import type { ServerPlugin } from '../../../../../../../packages/plugin-sdk/src';
+import { operationHandler } from '../../../../../../../packages/host/src/operation-dispatch';
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string; operation: string }> },
@@ -23,9 +24,7 @@ export async function POST(
     if (id === 'host' && operation === 'plugins')
       return contractJson(operationContract('host', 'plugins')!.output, await stagePlugin(body));
     assert(pluginEnabled(id), 'plugin_disabled', 'This plugin is not enabled.', 404);
-    const server = (servers as Record<string, ServerPlugin>)[id],
-      handler = server?.operations[operation];
-    assert(handler, 'not_found', 'Operation does not exist.', 404);
+    const handler = operationHandler(servers as Record<string, ServerPlugin>, id, operation);
     const result = await handler(contract ? contract.input.parse(body) : body, { actor: 'owner' });
     return contract ? contractJson(contract.output, result) : json(result);
   } catch (e) {

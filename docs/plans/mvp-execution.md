@@ -580,3 +580,16 @@ Implemented the approved sequence on `codex/reliability-recovery` using syntheti
 | R4 | Seven-day proposals and renewed owner review. | Expiry, revocation, conflicts, legacy context, exclusions and idempotency passed. |
 
 Verification: `pnpm check` (165 unit tests), 104 integration tests, 86 browser checks (two skips), 23 security/controller tests, and web/worker/container builds passed. Desktop/phone checks covered both themes and enabled/disabled Garmin onboarding. Fresh installation and upgrade from `1caddcd` preserved data, offsets and 11 prior migration checksums/timestamps. Affected specifications and [ADR 009](../decisions/009-durable-proposal-review.md) passed framework validation. CI follow-ups removed obsolete packaging inputs and synchronized Garmin browser teardown; packaging checks and 30 repeated desktop/phone runs without retries passed. Limits: live-provider, physical-device and deployment verification remain separate; activation requires the existing matched-backup procedure.
+
+## S1, S2, A7 and S4 security boundaries — 2026-10-27
+
+Implemented on `codex/security-boundaries` using synthetic fixtures.
+
+| Task | Outcome | Verification |
+| --- | --- | --- |
+| S1 | Recursive packaging exclusions and shared policy. | Archive fingerprints, publication and both image stages passed. |
+| A7 | Own, callable operation dispatch. | Prototype, non-callable and worker-handler regressions passed. |
+| S2 | Persistent quotas and credential preflight. | Concurrency, restart/expiry and transactional revocation passed. |
+| S4 | Strict encryption and atomic password upgrades. | Legacy compatibility, restricted privileges, recovery races and rollback passed. |
+
+Checks passed: `pnpm check` (171 unit), 114 integration, 86 browser (two skips, no retries), 24 security/controller; web/worker builds and local/container installation/restore. Both themes covered desktop/phone flows. Upgrading `d19eafa` preserved 16 tables and 14 migration checksums/timestamps. Node 22/arm64: 228–263 ms/hash, 365 ms/two concurrent, 191 MiB peak RSS. [ADR 010](../decisions/010-runtime-password-upgrade.md) records restricted upgrade authority. Limits: deployment, target-server sizing and live-provider checks remain separate; rollback requires the matched pre-upgrade backup.

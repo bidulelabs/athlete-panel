@@ -82,6 +82,8 @@ Production web/worker/backup processes use a dedicated restricted PostgreSQL rol
 
 Operational follow-up: worker heartbeat is recorded after successful scheduling/job iterations; failures persist only sanitized state/count/timestamps in host settings. No new table or destructive migration is required. Garmin coverage has an owner-only paginated operation; the original normalized records/checkpoints remain authoritative. Profile/workout draft snapshots preserve original revisions across workspace refreshes. Runtime containers retain source for matched backups and production dependencies plus PostgreSQL client tools, while build/test tooling remains in the build stage.
 
+Agent enrollment uses persistent host-owned admission counters with plugin-owned limits; credential preflight precedes domain locking and transactional authorization remains authoritative. Runtime password upgrades use the narrowly granted function in [ADR 010](decisions/010-runtime-password-upgrade.md), sharing the recovery lock with final session creation while keeping hashing outside locks. Direct owner-table writes remain administrative.
+
 ## Hosted operational controller
 
 The Python standard-library controller in `scripts/hosted.py` coordinates the existing Compose services and console scripts. Operator state is private and separate from source: generated credentials, immutable image IDs, selected database, storage identity and resumable operation checkpoints. It does not run a second server or expose an administrative API. Image pulls/builds occur before maintenance; migration SQL remains owned by the host/plugin runner. Permission refresh has a distinct failure phase after the SQL commit. Workers report a healthy maintenance pause without scheduling imports.

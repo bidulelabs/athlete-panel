@@ -1,3 +1,5 @@
+import { garminStatusSchema, type CoverageRow } from '@athlete-panel/contracts';
+import { requiredRow } from '../../packages/host/src/rows';
 import { connectionMessage } from './connection-status';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -29,22 +31,23 @@ import {
 import { assertAccountBinding, streamMetrics, type HealthStream } from './normalize';
 import { automaticHealthHistoryStart } from './history-policy';
 
-type Configuration = {
-  lastErrorCode?: string | null;
-  verifiedGeneration?: string;
-  encryptedKey?: string;
-  generation: string;
-  earliestDate: string;
-  accountId: string | null;
-  paused: boolean;
-  lastSync: string | null;
-  lastError: string | null;
-};
+const configurationSchema = z.object({
+  lastErrorCode: z.string().nullable().optional(),
+  verifiedGeneration: z.string().optional(),
+  encryptedKey: z.string().optional(),
+  generation: z.string(),
+  earliestDate: dateSchema,
+  accountId: z.string().nullable(),
+  paused: z.boolean(),
+  lastSync: z.string().nullable(),
+  lastError: z.string().nullable(),
+});
+type Configuration = z.infer<typeof configurationSchema>;
 export async function getConfiguration(
   tx = connection() as unknown as Transaction,
 ): Promise<Configuration | null> {
-  const [row] = await tx`select value from host.settings where key='garmin'`;
-  return row?.value ?? null;
+  const [row] = await tx<{ value: unknown }[]>`select value from host.settings where key='garmin'`;
+  return row ? configurationSchema.parse(row.value) : null;
 }
 async function saveConfig(tx: Transaction, config: Configuration) {
   await tx`insert into host.settings(key,value) values('garmin',${tx.json(config)}) on conflict(key) do update set value=excluded.value`;
@@ -158,14 +161,15 @@ export async function sync(body: unknown) {
       (!exactEnd || saved.today === cursor.today);
     const active =
       await tx`select id,status,payload from host.jobs where plugin_id='garmin' and kind=${kind} and status in ('queued','running','paused') order by created_at desc`;
-    if (active.length) {
+    const activeJob = active[0];
+    if (activeJob) {
       assert(
         active.every((job) => matching(job.payload.cursor)),
         'import_busy',
         'Finish or cancel the current import before requesting a different range.',
         409,
       );
-      return { id: active[0].id, status: active[0].status };
+      return { id: activeJob.id, status: activeJob.status };
     }
     const [failed] =
       await tx`select id from host.jobs where plugin_id='garmin' and kind=${kind} and status='failed'
@@ -209,15 +213,30 @@ export async function status(includeCoverage = true) {
   const config = await getConfiguration(),
     sql = connection();
   const coverage = includeCoverage
-    ? await sql`select stream,start_date::text as "from",end_date::text as "to",status,records,missing_days as "missingDays",unknown_metrics as "unknownMetrics",error from garmin.coverage order by end_date desc,stream,start_date desc limit 300`
+    ? await sql<
+        CoverageRow[]
+      >`select stream,start_date::text as "from",end_date::text as "to",status,records,missing_days as "missingDays",unknown_metrics as "unknownMetrics",error from garmin.coverage order by end_date desc,stream,start_date desc limit 300`
     : [];
-  const [counts] =
-    await sql`select count(*)::int as windows, count(*) filter(where status='failed')::int as failed, count(*) filter(where status='complete')::int as complete, count(*) filter(where status='no-data')::int as empty, count(*) filter(where status='unavailable')::int as unavailable from garmin.coverage`;
-  const jobs =
-    await sql`select id,kind,status,progress,error,next_run_at,updated_at from host.jobs where plugin_id='garmin' and kind in ('garmin-history','garmin-recent')
+  const counts = requiredRow(
+    await sql<
+      { windows: number; failed: number; complete: number; empty: number; unavailable: number }[]
+    >`select count(*)::int as windows, count(*) filter(where status='failed')::int as failed, count(*) filter(where status='complete')::int as complete, count(*) filter(where status='no-data')::int as empty, count(*) filter(where status='unavailable')::int as unavailable from garmin.coverage`,
+  );
+  const jobs = await sql<
+    {
+      id: string;
+      kind: string;
+      status: string;
+      progress: { label?: string } | null;
+      error: string | null;
+      next_run_at: Date;
+      updated_at: Date;
+    }[]
+  >`select id,kind,status,progress,error,next_run_at,updated_at from host.jobs where plugin_id='garmin' and kind in ('garmin-history','garmin-recent')
     order by case when status in ('queued','running','paused') then 0 else 1 end,updated_at desc limit 1`;
-  const [history] =
-    await sql`select status from host.jobs where plugin_id='garmin' and kind='garmin-history' order by created_at desc limit 1`;
+  const [history] = await sql<
+    { status: string }[]
+  >`select status from host.jobs where plugin_id='garmin' and kind='garmin-history' order by created_at desc limit 1`;
   const job = jobs[0];
   const currentJob = job
     ? {
@@ -253,14 +272,14 @@ export async function status(includeCoverage = true) {
             : 'Key saved — waiting for verification',
     coverage,
     coverageSummary: {
-      windows: counts.windows as number,
-      failed: counts.failed as number,
-      complete: counts.complete as number,
-      empty: counts.empty as number,
-      unavailable: counts.unavailable as number,
+      windows: counts.windows,
+      failed: counts.failed,
+      complete: counts.complete,
+      empty: counts.empty,
+      unavailable: counts.unavailable,
     },
   };
-  return { ...result, status: connectionMessage(result) };
+  return garminStatusSchema.parse({ ...result, status: connectionMessage(result) });
 }
 
 export async function coveragePage(body: unknown) {
@@ -272,10 +291,14 @@ export async function coveragePage(body: unknown) {
     .strict()
     .parse(body);
   const sql = connection();
-  const [count] =
-    await sql`select count(*)::int as total from garmin.coverage where (${input.filter}='all' or status=${input.filter})`;
-  const rows =
-    await sql`select stream,start_date::text as "from",end_date::text as "to",status,records,missing_days as "missingDays",unknown_metrics as "unknownMetrics",error from garmin.coverage where (${input.filter}='all' or status=${input.filter}) order by end_date desc,stream,start_date desc limit 50 offset ${input.offset}`;
+  const count = requiredRow(
+    await sql<
+      { total: number }[]
+    >`select count(*)::int as total from garmin.coverage where (${input.filter}='all' or status=${input.filter})`,
+  );
+  const rows = await sql<
+    CoverageRow[]
+  >`select stream,start_date::text as "from",end_date::text as "to",status,records,missing_days as "missingDays",unknown_metrics as "unknownMetrics",error from garmin.coverage where (${input.filter}='all' or status=${input.filter}) order by end_date desc,stream,start_date desc limit 50 offset ${input.offset}`;
   return { rows, total: count.total, offset: input.offset, limit: 50 };
 }
 export async function scheduleRecent() {

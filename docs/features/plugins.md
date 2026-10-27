@@ -45,7 +45,7 @@ Optional `slots` metadata declares calendar, inspector, dashboard and authentica
 Uninstall removes executable/client source and composition entries while retaining the manifest/version record and applied migration files. Purging retained data is a separate owner operation requiring cross-schema reference checks and a verified backup; disabling a plugin never purges its data.
 
 - Metadata authority: [SDK manifest schema and composition validation](../../packages/plugin-sdk/src/index.ts).
-- Data authority: [versioned shared runtime schemas/types](../../packages/contracts/src/index.ts). Never expose ORM tables as the extension contract.
+- Workspace/onboarding responses and bundled operation inputs/results are runtime-validated DTOs; arbitrary extension results remain `unknown` until validated. Data authority: [versioned shared runtime schemas/types](../../packages/contracts/src/index.ts). Never expose ORM tables as the extension contract.
 - UI authority: [public UI exports](../../packages/ui/src/index.ts), including `PluginPageProps` with typed workspace data, refresh and authenticated plugin operation requests.
 - Composition authority: `instance/composition.json` plus each plugin's `manifest.json`. Generated registry files are derived and must not be edited directly.
 - Skill authority: `.agents/skills/`; generated Claude copies are checked for drift.

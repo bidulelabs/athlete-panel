@@ -1,24 +1,31 @@
-export interface GarminConnection {
-  connected: boolean;
-  verified?: boolean;
-  paused: boolean;
-  lastError: string | null;
-  lastErrorCode?: string | null;
-  checkedAt?: string;
-  historyStatus?: string | null;
-  currentJob?: {
-    id: string;
-    kind: string;
-    status: string;
-    progress: string;
-    nextRunAt: string | null;
-    retrying: boolean;
-  } | null;
-  coverageSummary?: {
-    windows: number;
-    failed: number;
-    complete: number;
-    empty: number;
-    unavailable?: number;
-  };
-}
+import { z } from 'zod';
+export const garminConnectionSchema = z.object({
+  connected: z.boolean(),
+  verified: z.boolean().optional(),
+  paused: z.boolean(),
+  lastError: z.string().nullable(),
+  lastErrorCode: z.string().nullable().optional(),
+  checkedAt: z.iso.datetime().optional(),
+  historyStatus: z.string().nullable().optional(),
+  currentJob: z
+    .object({
+      id: z.string(),
+      kind: z.string(),
+      status: z.string(),
+      progress: z.string(),
+      nextRunAt: z.iso.datetime().nullable(),
+      retrying: z.boolean(),
+    })
+    .nullable()
+    .optional(),
+  coverageSummary: z
+    .object({
+      windows: z.number().int().nonnegative(),
+      failed: z.number().int().nonnegative(),
+      complete: z.number().int().nonnegative(),
+      empty: z.number().int().nonnegative(),
+      unavailable: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+});
+export type GarminConnection = z.infer<typeof garminConnectionSchema>;

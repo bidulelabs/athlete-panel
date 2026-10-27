@@ -35,7 +35,7 @@ import {
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import type { EntityChange } from '@athlete-panel/contracts';
+import type { ProposalSummary, Entity } from '@athlete-panel/contracts';
 import { proposalRows } from './proposal-diff';
 import './review.css';
 import { ConnectAgentDialog, ConnectionApproval } from './connections-client';
@@ -254,7 +254,13 @@ export default function AgentBridgePage(_: PluginPageProps) {
   );
 }
 
-function ProposalDialog({ proposal, onClose }: { proposal: any; onClose: () => void }) {
+function recordLabel(record: Entity | null): string | undefined {
+  if (!record) return undefined;
+  if ('title' in record) return record.title;
+  if ('bodyPart' in record) return record.bodyPart;
+  return undefined;
+}
+function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onClose: () => void }) {
   const { request, data } = useWorkspace();
   const action = useAction();
   const [acknowledged, setAcknowledged] = useState(false);
@@ -279,23 +285,19 @@ function ProposalDialog({ proposal, onClose }: { proposal: any; onClose: () => v
             {proposal.changes?.length ?? 0} change{proposal.changes?.length === 1 ? '' : 's'}
           </span>
         </div>
-        {proposal.warnings?.map((warning: any, index: number) => (
+        {proposal.warnings?.map((warning, index) => (
           <Alert role="status" className="callout" key={index}>
             {typeof warning === 'string' ? warning : (warning.message ?? JSON.stringify(warning))}
           </Alert>
         ))}
-        {proposal.changes?.map((change: any, index: number) => (
+        {proposal.changes?.map((change, index) => (
           <div className="proposal-diff" key={index}>
             <div className="proposal-diff-head">
               <Badge className="badge">
                 {!change.before ? 'Create' : !change.after ? 'Delete' : 'Update'}
               </Badge>
               <span>
-                {change.after?.title ??
-                  change.before?.title ??
-                  change.after?.bodyPart ??
-                  change.before?.bodyPart ??
-                  change.entity}
+                {recordLabel(change.after) ?? recordLabel(change.before) ?? change.entity}
               </span>
             </div>
             <Table className="review-fields">
@@ -309,7 +311,7 @@ function ProposalDialog({ proposal, onClose }: { proposal: any; onClose: () => v
               </TableHeader>
               <TableBody>
                 {proposalRows(
-                  change as EntityChange,
+                  change,
                   data.profile?.units,
                   Object.fromEntries(data.plans.map((plan) => [plan.id, plan.title])),
                 ).map((row) => (

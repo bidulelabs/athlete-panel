@@ -29,9 +29,17 @@ import {
   type ComponentType,
   type ReactNode,
 } from 'react';
-import type { Onboarding } from '../../contracts/src/onboarding';
 import type { GarminConnection } from '../../contracts/src/garmin-connection';
-import type { WorkspaceState } from '@athlete-panel/contracts';
+import {
+  workspaceEnvelopeSchema,
+  createPluginRequester,
+  responseError,
+  operationalValuesSchema,
+  type PluginRequest,
+  type WorkspaceEnvelope,
+  type WorkspaceState,
+} from '@athlete-panel/contracts';
+export type { PluginInfo, WorkspaceEnvelope } from '@athlete-panel/contracts';
 import {
   Activity,
   CalendarDays,
@@ -71,7 +79,7 @@ import { resolveWeekStartsOn, startOfWeek, type WeekStartsOn } from './calendar-
 export interface PluginPageProps {
   data: WorkspaceState;
   refresh: () => Promise<void>;
-  request: (pluginId: string, operation: string, body?: unknown) => Promise<any>;
+  request: PluginRequest;
 }
 export interface ExtensionSelection {
   kind: string;
@@ -103,39 +111,6 @@ export interface WorkspacePage {
   title: string;
   icon?: string;
   component: ComponentType<PluginPageProps>;
-}
-export interface PluginInfo {
-  id: string;
-  name: string;
-  description: string;
-  version: string;
-  enabled: boolean;
-  desiredEnabled: boolean;
-  required: boolean;
-  dependencies: string[];
-  pending: boolean;
-}
-export interface WorkspaceEnvelope {
-  state: WorkspaceState;
-  onboarding?: Onboarding;
-  plugins: PluginInfo[];
-  garmin: GarminConnection & {
-    connected: boolean;
-    paused: boolean;
-    earliestDate: string | null;
-    accountId?: string;
-    lastSync: string | null;
-    lastError: string | null;
-    status: string;
-    verified?: boolean;
-    coverageSummary?: { windows: number; failed: number; complete: number; empty: number };
-    coverage: any[];
-  };
-  proposals: any[];
-  grants: any[];
-  changes: any[];
-  jobs: any[];
-  operational?: Array<{ key: string; value: any }>;
 }
 interface WorkspaceContextValue extends PluginPageProps {
   slots: WorkspaceSlot[];
@@ -247,11 +222,10 @@ export function WorkspaceApp({
         );
         return;
       }
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.error?.message ?? result.error ?? 'Unable to load your workspace.');
+      const result: unknown = await response.json();
+      if (!response.ok) throw new Error(responseError(result, 'Unable to load your workspace.'));
       if (sequence === refreshSequence.current) {
-        setEnvelope(result);
+        setEnvelope(workspaceEnvelopeSchema.parse(result));
         setLoadedRange({ from, to });
         setError(null);
         setRefreshNotice(null);
@@ -274,7 +248,7 @@ export function WorkspaceApp({
     return () => clearInterval(timer);
   }, [path, refresh]);
   const request = useCallback(
-    async (pluginId: string, operation: string, body: unknown = {}) => {
+    createPluginRequester(async (pluginId: string, operation: string, body: unknown) => {
       const response = await fetch(
         `/api/plugins/${encodeURIComponent(pluginId)}/${encodeURIComponent(operation)}`,
         {
@@ -284,26 +258,13 @@ export function WorkspaceApp({
           signal: AbortSignal.timeout(15000),
         },
       );
-      const result = await response.json();
-      if (!response.ok) {
-        const message =
-          typeof result.error === 'string'
-            ? result.error
-            : (result.error?.message ?? result.message ?? 'The change could not be saved.');
-        const details = Array.isArray(result.error?.details)
-          ? result.error.details
-              .map((issue: { message?: string }) => issue.message)
-              .filter(Boolean)
-              .slice(0, 3)
-              .join(' ')
-          : '';
-        throw new Error([message, details].filter(Boolean).join(' '));
-      }
+      const result: unknown = await response.json();
+      if (!response.ok) throw new Error(responseError(result, 'The change could not be saved.'));
       // The mutation is committed even if reloading the workspace fails.
       setRefreshNotice('Your change was saved. Reloading the workspace…');
       await refresh();
       return result;
-    },
+    }),
     [refresh],
   );
   const navigate = useCallback((nextPath: string) => {
@@ -321,7 +282,7 @@ export function WorkspaceApp({
   const currentPage =
     pages.find((p) => p.path === path) ??
     (path === '/' ? pages.find((p) => p.path === '/calendar') : undefined);
-  const profile = (envelope?.state as any)?.profile;
+  const profile = envelope?.state.profile;
   const navPages = pages.filter(
     (page, i, all) => all.findIndex((p) => p.path === page.path) === i && page.path !== '/plugins',
   );
@@ -803,8 +764,8 @@ export function ExtensionSlot({
 
 export function OperationalStatus() {
   const { envelope } = useWorkspace();
-  const values = Object.fromEntries(
-    (envelope.operational ?? []).map((row) => [row.key, row.value]),
+  const values = operationalValuesSchema.parse(
+    Object.fromEntries((envelope.operational ?? []).map((row) => [row.key, row.value])),
   );
   const health = operationalHealth(values);
   const migrations: Array<{ pluginId: string; name: string; appliedAt: string }> = Array.isArray(

@@ -1,4 +1,5 @@
 'use client';
+import { coveragePageSchema, type CoveragePage } from '@athlete-panel/contracts';
 import { Alert } from '@athlete-panel/ui';
 import {
   Button,
@@ -13,17 +14,6 @@ import {
 import { useEffect, useState } from 'react';
 import { ErrorMessage } from '@athlete-panel/ui';
 
-type CoverageRow = {
-  stream: string;
-  from: string;
-  to: string;
-  status: string;
-  records: number;
-  missingDays: number;
-  unknownMetrics: number;
-  error: string | null;
-};
-type CoveragePage = { rows: CoverageRow[]; total: number; offset: number; limit: number };
 export function CoverageHistory({
   checkedAt,
   disabled,
@@ -59,7 +49,7 @@ export function CoverageHistory({
               ? 'Your session expired. Sign in again to check history.'
               : 'History coverage could not refresh. Try again.',
           );
-        const data = (await response.json()) as CoveragePage;
+        const data = coveragePageSchema.parse(await response.json());
         if (active) {
           setPage({ key, data });
           setError(null);

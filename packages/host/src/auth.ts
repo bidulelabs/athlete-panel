@@ -1,3 +1,4 @@
+import { requiredRow } from './rows';
 import { connection } from './db';
 import { initialOnboarding, writeOnboarding } from './onboarding';
 import { digest, passwordHash, randomToken, verifyPasswordAsync } from './crypto';
@@ -78,12 +79,13 @@ export async function login(password: string, client = 'local') {
   // Keep address-derived keys only for the current window, never the raw address.
   const key = `client:${digest(client)}`;
   await sql`delete from host.login_attempts where reset_at<now()`;
-  const attempts =
-    await sql`insert into host.login_attempts (key,count,reset_at) values (${key},1,now()+interval '15 minutes')
+  const attempts = await sql<
+    { count: number }[]
+  >`insert into host.login_attempts (key,count,reset_at) values (${key},1,now()+interval '15 minutes')
     on conflict(key) do update set count=case when host.login_attempts.reset_at<now() then 1 else host.login_attempts.count+1 end,
     reset_at=case when host.login_attempts.reset_at<now() then now()+interval '15 minutes' else host.login_attempts.reset_at end returning count`;
   assert(
-    attempts[0].count <= 20,
+    requiredRow(attempts).count <= 20,
     'rate_limited',
     'Too many login attempts. Try again in 15 minutes.',
     429,

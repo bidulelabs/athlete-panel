@@ -1,4 +1,7 @@
-export function operationalHealth(values: Record<string, any>, now = Date.now()) {
+import { operationalValuesSchema } from '@athlete-panel/contracts';
+export function operationalHealth(input: unknown, now = Date.now()) {
+  const parsed = operationalValuesSchema.safeParse(input);
+  const values = parsed.success ? parsed.data : {};
   const age = (value: unknown) =>
     typeof value === 'string' && Number.isFinite(Date.parse(value))
       ? now - Date.parse(value)

@@ -34,6 +34,16 @@ export function json(value: unknown, status = 200) {
     },
   });
 }
+/** Validate server output separately from submitted input; never expose invalid stored values. */
+export function contractValue<T>(schema: z.ZodType<T>, value: unknown): T {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success)
+    throw new AppError('invalid_response', 'The server returned an invalid response.', 500);
+  return parsed.data;
+}
+export function contractJson<T>(schema: z.ZodType<T>, value: unknown) {
+  return json(contractValue(schema, JSON.parse(JSON.stringify(value))));
+}
 export function failure(error: unknown) {
   if (error instanceof z.ZodError)
     return json(

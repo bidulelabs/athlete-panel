@@ -145,6 +145,13 @@ function validateCursor(cursor: GarminSyncCursor) {
 }
 
 /** Stable coverage key for the request represented by this checkpoint, including failed attempts. */
+function healthStreamAt(index: number): HealthStream {
+  const stream = HEALTH_STREAMS[index];
+  if (!stream)
+    throw new GarminError('invalid_configuration', 'Invalid Garmin health stream cursor.');
+  return stream;
+}
+
 export function requestCoverageIdentity(
   cursor: GarminSyncCursor,
 ): Pick<SyncCoverage, 'stream' | 'phase' | 'from' | 'to'> {
@@ -166,7 +173,7 @@ export function requestCoverageIdentity(
     };
   if (cursor.phase === 'recent-health' || cursor.phase === 'history-health') {
     return {
-      stream: HEALTH_STREAMS[cursor.healthStreamIndex],
+      stream: healthStreamAt(cursor.healthStreamIndex),
       phase: cursor.phase,
       from: later(
         cursor.earliestHealthDate,
@@ -337,7 +344,7 @@ export async function runSyncStep(
     return result;
   }
 
-  const stream = HEALTH_STREAMS[cursor.healthStreamIndex];
+  const stream = healthStreamAt(cursor.healthStreamIndex);
   const from = coverageIdentity.from!;
   const to = coverageIdentity.to;
   const request = healthRequest(stream, from, to);

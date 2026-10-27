@@ -14,7 +14,9 @@ export function initialOnboarding(status: Onboarding['status'] = 'pending'): Onb
 export async function readOnboarding(
   tx = connection() as unknown as Transaction,
 ): Promise<Onboarding> {
-  const [row] = await tx`select value from host.settings where key='onboarding'`;
+  const [row] = await tx<
+    { value: unknown }[]
+  >`select value from host.settings where key='onboarding'`;
   // An absent marker never identifies an existing owner as new.
   return row
     ? onboardingSchema.parse(row.value)

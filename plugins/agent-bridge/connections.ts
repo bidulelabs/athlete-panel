@@ -1,3 +1,4 @@
+import { requiredRow } from '../../packages/host/src/rows';
 import { randomBytes, randomUUID } from 'node:crypto';
 import {
   agentConnectionApprovalSchema,
@@ -27,8 +28,11 @@ export async function startConnection(body: unknown) {
   const { label } = agentConnectionStartSchema.parse(body);
   return transaction(async (tx) => {
     await tx`delete from agent_bridge.connections where created_at < now() - interval '1 day'`;
-    const [recent] =
-      await tx`select count(*)::int as count from agent_bridge.connections where created_at > now() - interval '10 minutes'`;
+    const recent = requiredRow(
+      await tx<
+        { count: number }[]
+      >`select count(*)::int as count from agent_bridge.connections where created_at > now() - interval '10 minutes'`,
+    );
     assert(
       recent.count < 30,
       'rate_limited',
@@ -39,8 +43,11 @@ export async function startConnection(body: unknown) {
       id = randomUUID();
     const value = randomBytes(4).toString('hex').toUpperCase();
     const code = `${value.slice(0, 4)}-${value.slice(4)}`;
-    const [row] =
-      await tx`insert into agent_bridge.connections(id,token_hash,label,code) values(${id},${digest(token)},${label},${code}) returning expires_at`;
+    const row = requiredRow(
+      await tx<
+        { expires_at: Date }[]
+      >`insert into agent_bridge.connections(id,token_hash,label,code) values(${id},${digest(token)},${label},${code}) returning expires_at`,
+    );
     return {
       id,
       token,

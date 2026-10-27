@@ -98,9 +98,10 @@ const sleep = (milliseconds: number, signal?: AbortSignal) =>
 function tokenExpiration(token: string, now: number): number {
   try {
     const pieces = token.split('.');
-    if (pieces.length !== 3) throw new Error();
+    const payload = pieces[1];
+    if (pieces.length !== 3 || payload === undefined) throw new Error();
     // exp is used only for cache expiry, never as proof of identity or authorization.
-    const claims: unknown = JSON.parse(Buffer.from(pieces[1], 'base64url').toString('utf8'));
+    const claims: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     const expiry = (claims as { exp?: unknown })?.exp;
     if (typeof expiry !== 'number' || !Number.isFinite(expiry) || expiry * 1000 <= now)
       throw new Error();

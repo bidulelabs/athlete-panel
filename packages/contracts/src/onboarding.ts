@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { timezoneSchema, weekStartsOnPreferenceSchema } from './index';
+import { timezoneSchema, weekStartsOnPreferenceSchema } from './domain';
 
 export const preferencesSchema = z
   .object({

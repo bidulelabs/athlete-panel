@@ -1,3 +1,4 @@
+import { requiredRow } from './rows';
 import type { Sql } from 'postgres';
 
 /** Run only from the console/admin process after migrations, never from web or worker. */
@@ -13,7 +14,11 @@ export async function provisionApplicationRole(
   }
   await sql.begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(736147002)`;
-    const [database] = await tx`select current_database() as name, current_user as owner`;
+    const database = requiredRow(
+      await tx<
+        { name: string; owner: string }[]
+      >`select current_database() as name, current_user as owner`,
+    );
     if (database.owner === role)
       throw new Error('Migration and application database roles must differ.');
     const [existing] = await tx`select oid from pg_roles where rolname=${role}`;
@@ -28,8 +33,11 @@ export async function provisionApplicationRole(
     }
     // PostgreSQL DDL does not accept password bind parameters. Quote on the server;
     // callers must never log the resulting statement or database error payload.
-    const [statement] =
-      await tx`select format(${existing ? 'ALTER ROLE %I' : 'CREATE ROLE %I'} || ' LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS PASSWORD %L',${role}::text,${password}::text) as value`;
+    const statement = requiredRow(
+      await tx<
+        { value: string }[]
+      >`select format(${existing ? 'ALTER ROLE %I' : 'CREATE ROLE %I'} || ' LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS PASSWORD %L',${role}::text,${password}::text) as value`,
+    );
     await tx.unsafe(statement.value);
     await tx`revoke create, temporary on database ${tx(database.name)} from public`;
     await tx`revoke all on database ${tx(database.name)} from ${tx(role)}`;

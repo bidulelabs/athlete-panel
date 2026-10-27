@@ -73,7 +73,7 @@ export async function loadWorkspace(
           tx,
         )
       : await repository.list(kind, tx);
-    if (kind === 'profile') state.profile = (values[0] ?? null) as WorkspaceState['profile'];
+    if (kind === 'profile') state.profile = values[0] ? profileSchema.parse(values[0]) : null;
     else
       (state as unknown as Record<string, unknown>)[collections[kind as keyof typeof collections]] =
         values;

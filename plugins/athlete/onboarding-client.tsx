@@ -1,4 +1,5 @@
 'use client';
+import { onboardingStatusSchema, onboardingActionSchema } from '@athlete-panel/contracts';
 import {
   Button,
   ErrorMessage,
@@ -140,7 +141,7 @@ export function OnboardingDialog() {
         return;
       }
       if (!response.ok) throw new Error('Status unavailable');
-      const result = await response.json();
+      const result = onboardingStatusSchema.parse(await response.json());
       if (sequence !== pollSequence.current) return;
       acceptState(result.onboarding);
       setConnection(result.garmin);
@@ -183,10 +184,14 @@ export function OnboardingDialog() {
     const fingerprint = JSON.stringify(payload);
     if (attempt.current?.payload !== fingerprint)
       attempt.current = { payload: fingerprint, id: requestId() };
-    const promise = request('athlete', 'onboarding', {
-      ...payload,
-      idempotencyKey: attempt.current.id,
-    });
+    const promise = request(
+      'athlete',
+      'onboarding',
+      onboardingActionSchema.parse({
+        ...payload,
+        idempotencyKey: attempt.current.id,
+      }),
+    );
     inFlight.current = promise;
     try {
       const next = (await promise) as Onboarding;
@@ -216,7 +221,7 @@ export function OnboardingDialog() {
         signal: AbortSignal.timeout(15000),
       });
       if (!response.ok) throw new Error('Unable to load setup');
-      const current = (await response.json()).onboarding as Onboarding;
+      const current = onboardingStatusSchema.parse(await response.json()).onboarding;
       if (current.status !== 'completed') {
         const next = (await request('athlete', 'onboarding', {
           action: 'defer',

@@ -19,6 +19,7 @@ const sourceRoots = [
   'pnpm-lock.yaml',
   'pnpm-workspace.yaml',
   'tsconfig.json',
+  'tsconfig.strict.json',
   'eslint.config.mjs',
   '.prettierrc.json',
   '.prettierignore',

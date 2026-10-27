@@ -1,6 +1,9 @@
 import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import { z } from 'zod';
 import {
+  workspaceEnvelopeSchema,
+  onboardingStatusSchema,
+  operationContracts,
   commandsSchema,
   workspaceStateSchema,
   agentGrantValuesSchema,
@@ -14,6 +17,24 @@ const output =
   JSON.stringify(
     {
       version: 1,
+      responses: {
+        workspace: z.toJSONSchema(workspaceEnvelopeSchema, { unrepresentable: 'any' }),
+        onboarding: z.toJSONSchema(onboardingStatusSchema, { unrepresentable: 'any' }),
+      },
+      operations: Object.fromEntries(
+        Object.entries(operationContracts).map(([plugin, operations]) => [
+          plugin,
+          Object.fromEntries(
+            Object.entries(operations).map(([name, contract]) => [
+              name,
+              {
+                input: z.toJSONSchema(contract.input, { unrepresentable: 'any' }),
+                output: z.toJSONSchema(contract.output, { unrepresentable: 'any' }),
+              },
+            ]),
+          ),
+        ]),
+      ),
       note: 'Generated from runtime schemas. Custom refinements additionally apply at runtime.',
       onboarding: {
         state: z.toJSONSchema(onboardingSchema),

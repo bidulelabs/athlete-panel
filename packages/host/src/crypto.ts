@@ -31,6 +31,7 @@ export function passwordHash(password: string) {
 export function verifyPassword(password: string, encoded: string) {
   try {
     const [salt, hash] = encoded.split(':');
+    if (!salt || !hash) return false;
     const actual = scryptSync(password, salt, 64),
       expected = Buffer.from(hash, 'hex');
     return actual.length === expected.length && timingSafeEqual(actual, expected);
@@ -69,6 +70,7 @@ export function encrypt(secret: string) {
 export function decrypt(value: string) {
   try {
     const [iv, tag, data] = value.split('.').map((x) => Buffer.from(x, 'base64'));
+    if (!iv || !tag || !data) throw new Error('Invalid encrypted envelope.');
     const cipher = createDecipheriv('aes-256-gcm', key(), iv);
     cipher.setAuthTag(tag);
     return Buffer.concat([cipher.update(data), cipher.final()]).toString('utf8');

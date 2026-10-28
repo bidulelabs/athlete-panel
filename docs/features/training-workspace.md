@@ -89,6 +89,7 @@ The expanded summary stays inside the calendar and supports native keyboard acti
 | Shift a plan with completion | Explicit history conflict; duplication remains available | Domain tests |
 | Link/unlink/manual/imported mixed data | Single linked count, no resurrected manual values | [Summary tests](../../tests/unit/summary.test.ts) |
 | Undo after a later affected edit | Whole undo rejected; later edit preserved | Database tests |
+| Undo an unlink after the activity was linked to another workout | Whole undo rejected with a 409 `ALREADY_LINKED`; the newer link stays | [Database tests](../../tests/integration/domain.test.ts) |
 | Sunday/Monday choice and reload | Saved choice aligns headings, date jumps and weekly totals; original workout dates persist | [Browser scenarios](../../tests/e2e/week-start.spec.ts), [database tests](../../tests/integration/domain.test.ts) |
 | Automatic and boundary dates | US/French locales, year/leap/DST boundaries and athlete-timezone Today resolve correctly | [Calendar tests](../../tests/unit/calendar-dates.test.ts), browser scenarios |
 | Preference save fails or is stale | Draft retained; persisted preference unchanged until a successful retry | Browser/database scenarios |

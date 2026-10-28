@@ -16,7 +16,7 @@ Create, edit, duplicate, delete, move and reorder operations share domain valida
 
 Completed, partial and skipped are explicit states. Partial requires a reason. RPE is 1–10 when supplied. Skipped has no numerical actuals. Performed date is independent of planned date. Clearing completion returns to planned. A recorded workout must first be cleared or unlinked before structural movement/deletion; plan shift/unschedule/delete is blocked by any active completion, including skipped.
 
-An imported activity links to at most one same-sport workout. The owner sees manual actuals being replaced. Imported numbers become authoritative, and annotations remain editable without numerical overrides. Linking defaults to completed. Unlink returns to planned, preserves the activity and does not resurrect prior manual values. Previous values remain in audit; conflict-safe undo may restore them.
+An imported activity links to at most one same-sport workout. The owner sees manual actuals being replaced. Imported numbers become authoritative, and annotations remain editable without numerical overrides. Linking a planned workout records it as completed; linking over a partial manual completion keeps partial, its reason and RPE. Unlink returns to planned, preserves the activity and does not resurrect prior manual values. Previous values remain in audit; conflict-safe undo may restore them.
 
 Actual totals count every imported activity once and every unlinked manual completion once. Linked pairs contribute the imported session only. Duration is combined; distance remains separated by sport. Missing metrics carry explicit missing counts. Possible unlinked overlap is a reconciliation hint, never an automatic match. Generic activities remain distinguishable.
 

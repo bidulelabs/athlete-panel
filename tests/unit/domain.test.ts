@@ -263,7 +263,7 @@ describe('pure training engine', () => {
         .workouts[0].completion,
     ).toBeNull();
   });
-  it('links once, replaces manual numbers, and unlinks without resurrecting them', () => {
+  it('links once keeping partial status, replaces manual numbers, and unlinks without resurrecting them', () => {
     const state = training();
     state.activities.push(activity());
     const manual = run(state, [
@@ -285,6 +285,8 @@ describe('pure training engine', () => {
     ]);
     expect(result.state.workouts[0].completion).toMatchObject({
       source: 'garmin',
+      status: 'partial',
+      reason: 'Time',
       durationSeconds: 4000,
       rpe: 4,
     });
@@ -296,6 +298,19 @@ describe('pure training engine', () => {
     ]).state;
     expect(unlinked.workouts[0].completion).toBeNull();
     expect(unlinked.activities).toEqual(state.activities);
+  });
+  it('links a planned workout as completed', () => {
+    const state = training();
+    state.activities.push(activity());
+    const linked = run(state, [
+      { action: 'workout.link', id: id(2), expectedRevision: 1, activityId: id(9) },
+    ]).state;
+    expect(linked.workouts[0].completion).toMatchObject({
+      source: 'garmin',
+      status: 'completed',
+      reason: '',
+      rpe: null,
+    });
   });
   it('rejects duplicate links, mismatched sport and implicit imported completion clearing', () => {
     const state = training();

@@ -87,14 +87,14 @@ export function handleCompletion(
       if (workout.completion?.status === 'skipped')
         fail('HISTORY_CONFLICT', 'Clear skipped completion before linking an actual activity.');
       workout.completion = {
-        status: 'completed',
+        status: workout.completion?.status ?? 'completed',
         source: 'garmin',
         performedDate: activity.localDate,
         durationSeconds: activity.durationSeconds,
         distanceMeters: activity.distanceMeters,
         activityId: activity.id,
         rpe: workout.completion?.rpe ?? null,
-        reason: '',
+        reason: workout.completion?.reason ?? '',
       };
       break;
     }

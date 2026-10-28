@@ -237,6 +237,8 @@ export function WorkspaceApp({
       if (sequence === refreshSequence.current) setRefreshing(false);
     }
   }, [from, to]);
+  const latestRefresh = useRef(refresh);
+  latestRefresh.current = refresh;
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -262,10 +264,10 @@ export function WorkspaceApp({
       if (!response.ok) throw new Error(responseError(result, 'The change could not be saved.'));
       // The mutation is committed even if reloading the workspace fails.
       setRefreshNotice('Your change was saved. Reloading the workspace…');
-      await refresh();
+      await latestRefresh.current();
       return result;
     }),
-    [refresh],
+    [],
   );
   const navigate = useCallback((nextPath: string) => {
     setPath(nextPath);

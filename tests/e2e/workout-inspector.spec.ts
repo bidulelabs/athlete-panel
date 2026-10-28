@@ -301,3 +301,31 @@ test('calendar stays compact on desktop with usable phone cards', async ({ page 
   }
   expect(writes()).toBe(0);
 });
+
+test('a save finishing after a week change reloads the new week', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'The phone inspector is modal.');
+  await preview(page);
+  let releaseSave: () => void = () => undefined;
+  const heldSave = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  await page.route('**/api/plugins/training/mutate', async (route) => {
+    await heldSave;
+    await route.fulfill({ json: { id: crypto.randomUUID(), changes: [] } });
+  });
+  await page.getByRole('button', { name: 'Open Short easy run', exact: true }).click();
+  const inspector = page.getByRole('complementary', { name: 'Workout details' });
+  await inspector.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  const nextWeekLoaded = page.waitForResponse((response) =>
+    response.url().includes('/api/workspace?from=2030-01-14'),
+  );
+  await page.getByRole('button', { name: 'Next week', exact: true }).click();
+  await nextWeekLoaded;
+  const reload = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/workspace?') && response.request().method() === 'GET',
+  );
+  releaseSave();
+  expect(new URL((await reload).url()).searchParams.get('from')).toBe('2030-01-14');
+  await expect(page.getByLabel('Go to date')).toHaveValue('2030-01-14');
+});

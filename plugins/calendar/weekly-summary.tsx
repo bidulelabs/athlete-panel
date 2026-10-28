@@ -1,5 +1,6 @@
 'use client';
 
+import { sportSelectionLabel } from '@athlete-panel/contracts';
 import { useId, useState, type ReactNode } from 'react';
 import {
   ChevronDown,
@@ -473,6 +474,81 @@ export function WeeklySummary({
                 format={distanceFormat}
               />
             </div>
+            <section className="week-sport-breakdown" aria-label="Sport group and subgroup summary">
+              <h3>By sport</h3>
+              <p className="week-context-caption">
+                Group totals include their subgroups. Recorded / planned; missing measurements stay
+                explicit.
+              </p>
+              <div className="sport-breakdown-scroll">
+                <table aria-label="Training by Garmin group and subgroup">
+                  <thead>
+                    <tr>
+                      <th>Sport</th>
+                      <th>Sessions</th>
+                      <th>Duration</th>
+                      <th>Distance</th>
+                      <th>Elevation gain</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.sportBreakdown.map((row) => (
+                      <tr key={`${row.sport}:${row.sportSubgroup ?? ''}:${row.sportResolution}`}>
+                        <th scope="row">{sportSelectionLabel(row)}</th>
+                        <td>
+                          {row.actual.sessions} / {row.planned.sessions}
+                        </td>
+                        <td>
+                          <Measurement
+                            empty="0"
+                            metric={row.actual.durationSeconds}
+                            format={duration}
+                            label="Recorded duration"
+                          />{' '}
+                          /{' '}
+                          <Measurement
+                            empty="0"
+                            metric={row.planned.durationSeconds}
+                            format={duration}
+                            label="Planned duration"
+                          />
+                        </td>
+                        <td>
+                          <Measurement
+                            empty="0"
+                            metric={row.actual.distanceMeters}
+                            format={distanceFormat}
+                            label="Recorded distance"
+                          />{' '}
+                          /{' '}
+                          <Measurement
+                            empty="0"
+                            metric={row.planned.distanceMeters}
+                            format={distanceFormat}
+                            label="Planned distance"
+                          />
+                        </td>
+                        <td>
+                          <Measurement
+                            empty="0"
+                            metric={row.actual.elevationMeters}
+                            format={elevationFormat}
+                            label="Recorded elevation"
+                          />{' '}
+                          /{' '}
+                          <Measurement
+                            empty="0"
+                            metric={row.planned.elevationMeters}
+                            format={elevationFormat}
+                            label="Planned elevation"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
             <section className="week-plan-status" aria-label="Planned-session status">
               <div>
                 <h3>Planned sessions</h3>
@@ -493,7 +569,7 @@ export function WeeklySummary({
                   <Mountain size={16} aria-hidden="true" />
                   Elevation gain
                 </h3>
-                <p className="week-context-caption">Recorded only · no planned target</p>
+                <p className="week-context-caption">Recorded running and cycling</p>
                 <dl>
                   <div>
                     <dt>Running</dt>

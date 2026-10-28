@@ -112,7 +112,7 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
       dialog
         .getByRole('region', { name: 'Proposed edits' })
         .getByRole('row')
-        .filter({ hasText: 'Notes' }),
+        .filter({ hasText: 'Workout description' }),
     ).toContainText('Keep an easy conversational effort.');
     await expect(dialog.locator('.review-technical pre').first()).not.toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Apply reviewed changes' })).toBeDisabled();

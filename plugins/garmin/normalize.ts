@@ -1,4 +1,4 @@
-import type { Activity, HealthRecord } from '@athlete-panel/contracts';
+import { classifyGarminSport, type Activity, type HealthRecord } from '@athlete-panel/contracts';
 import { GarminError } from './transport';
 
 export type ImportedActivity = Omit<Activity, 'id' | 'revision'>;
@@ -138,12 +138,13 @@ export function normalizeActivities(payload: unknown, timeZone = 'UTC'): Importe
       );
     const local =
       typeof row.startTimeLocal === 'string' ? dayKey(row.startTimeLocal.slice(0, 10)) : null;
-    const type = String(object(row.activityType).typeKey ?? '').toLowerCase();
-    const sport: Activity['sport'] = /cycling|biking|bike|virtual_ride/.test(type)
-      ? 'cycling'
-      : /running|treadmill|trail_run|track_run|virtual_run/.test(type)
-        ? 'running'
-        : 'other';
+    const rawType = object(row.activityType);
+    const garminActivityType = {
+      typeKey: typeof rawType.typeKey === 'string' && rawType.typeKey ? rawType.typeKey : 'unknown',
+      typeId: providerId(rawType.typeId),
+      parentTypeId: providerId(rawType.parentTypeId),
+    };
+    const classification = classifyGarminSport(garminActivityType);
     return {
       provider: 'garmin',
       externalId,
@@ -151,7 +152,11 @@ export function normalizeActivities(payload: unknown, timeZone = 'UTC'): Importe
         typeof row.activityName === 'string' && row.activityName.trim()
           ? row.activityName.trim().slice(0, 300)
           : 'Garmin activity',
-      sport,
+      ...classification,
+      garminActivityType,
+      trainingStressScore: knownNumber(row.trainingStressScore),
+      intensityFactor: knownNumber(row.intensityFactor),
+      normalizedPowerWatts: knownNumber(row.normPower),
       startedAt,
       localDate: local ?? dateInTimezone(startedAt, timeZone),
       dateSource: local ? 'provider' : 'inferred',

@@ -83,7 +83,7 @@ function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
         <Field label="Description">
           <Textarea
             name="description"
-            maxLength={4000}
+            maxLength={20000}
             rows={3}
             defaultValue={plan?.description ?? ''}
             placeholder="Goals, focus, and training approach…"
@@ -148,14 +148,23 @@ export default function TrainingPage({ data, request }: PluginPageProps) {
                 </div>
                 <div className="plan-row-copy">
                   <h3>{plan.title}</h3>
-                  {plan.description && <p>{plan.description}</p>}
+                  {plan.description && (
+                    <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                      {plan.description}
+                    </p>
+                  )}
                   <div className="plan-row-meta">
                     <span>
                       {plan.startDate
                         ? `Starts ${dateLabel(plan.startDate, { day: 'numeric', month: 'long', year: 'numeric' })}`
                         : 'Unscheduled'}
                     </span>
-                    <span>{workouts.length} workouts</span>
+                    <span>
+                      {workouts.filter((workout) => workout.kind !== 'rest').length} workouts
+                      {workouts.some((workout) => workout.kind === 'rest')
+                        ? ` · ${workouts.filter((workout) => workout.kind === 'rest').length} rest days`
+                        : ''}
+                    </span>
                     <span>
                       {duration(workouts.reduce((total, w) => total + (w.durationSeconds ?? 0), 0))}{' '}
                       planned
@@ -243,7 +252,9 @@ export default function TrainingPage({ data, request }: PluginPageProps) {
                       <span>
                         Day {workout.schedule.kind === 'plan' ? workout.schedule.day : '—'}
                       </span>
-                      <span>{duration(workout.durationSeconds)}</span>
+                      <span>
+                        {workout.kind === 'rest' ? 'Rest day' : duration(workout.durationSeconds)}
+                      </span>
                       <Edit3 size={13} />
                     </Button>
                   ))}

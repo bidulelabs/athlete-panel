@@ -2,10 +2,10 @@
   "id": "activity-records",
   "name": "Activity history",
   "description": "Normalized activities and health history",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "hostApi": "^1.1.0",
   "dependencies": {
-    "training": "^1.1.0"
+    "training": "^2.0.0"
   },
   "required": true,
   "routes": [

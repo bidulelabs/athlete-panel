@@ -8,6 +8,7 @@ import {
   AlertDialogCancel,
 } from '@athlete-panel/ui';
 import { Button } from '@athlete-panel/ui';
+import { sportSelectionLabel } from '@athlete-panel/contracts';
 import { useState, type ReactNode } from 'react';
 import type {
   Activity,
@@ -427,7 +428,7 @@ export function ActivityDetails({
   return (
     <Detail
       title={activity.title || 'Garmin activity'}
-      description={`${sportLabel(activity.sport)} · ${fullDate(activity.localDate)}`}
+      description={`${sportSelectionLabel(activity)} · ${fullDate(activity.localDate)}`}
       onClose={onClose}
     >
       <dl className="calendar-detail-metrics">
@@ -453,6 +454,13 @@ export function ActivityDetails({
             dateStyle: 'medium',
             timeStyle: 'short',
           })}
+        </Metric>
+        <Metric label="TSS">{activity.trainingStressScore ?? 'Unavailable'}</Metric>
+        <Metric label="Intensity factor">{activity.intensityFactor ?? 'Unavailable'}</Metric>
+        <Metric label="Normalized power">
+          {activity.normalizedPowerWatts == null
+            ? 'Unavailable'
+            : `${activity.normalizedPowerWatts} W`}
         </Metric>
         <Metric label="Source">Garmin</Metric>
       </dl>

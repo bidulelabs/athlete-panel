@@ -4,6 +4,8 @@
 
 Let an external local harness read selected athlete context and propose pending training edits while the owner retains control. Athlete Panel runs no model or chat orchestration. Completion, links, athlete settings, injuries, secrets, activation, deployment and provider changes are outside agent mutation scope.
 
+The [Garmin sport planning specification](garmin-sport-planning.md) extends structured context with sport groups/subgroups, rest, elevation and exercises. Notes-disabled grants redact exercise instructions and completion notes as well as existing narrative, and cannot duplicate or replace hidden instructions.
+
 ## Intended behavior
 
 Specification status: approved. Authority: owner implementation request dated 2026-10-24, P6/R3–R4 and T6, preserved in the [execution record](../plans/mvp-execution.md).

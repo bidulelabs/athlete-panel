@@ -31,6 +31,7 @@ import {
 } from 'react';
 import type { GarminConnection } from '../../contracts/src/garmin-connection';
 import {
+  dateSchema,
   workspaceEnvelopeSchema,
   createPluginRequester,
   responseError,
@@ -122,6 +123,8 @@ interface WorkspaceContextValue extends PluginPageProps {
   setFrom: (from: string) => void;
   navigate: (path: string) => void;
 }
+const earliestAnchorDate = '0001-01-07';
+const latestAnchorDate = '9999-12-11';
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 export function useWorkspace() {
   const context = useContext(WorkspaceContext);
@@ -164,7 +167,15 @@ export function WorkspaceApp({
   const [path, setPath] = useState(initialPath === '/' ? '/calendar' : initialPath);
   // Keep the selected day, so changing week starts never moves the viewed week
   // repeatedly backwards as the owner switches preferences.
-  const [anchorDate, setFrom] = useState(() => localDate());
+  const [anchorDate, setAnchorDate] = useState(() => localDate());
+  const setFrom = useCallback((date: string) => {
+    if (
+      dateSchema.safeParse(date).success &&
+      date >= earliestAnchorDate &&
+      date <= latestAnchorDate
+    )
+      setAnchorDate(date);
+  }, []);
   const [locale, setLocale] = useState<string>();
   const [envelope, setEnvelope] = useState<WorkspaceEnvelope | null>(null);
   const weekStartsOn = resolveWeekStartsOn(envelope?.state.profile?.weekStartsOnPreference, locale);

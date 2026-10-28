@@ -611,6 +611,8 @@ export function WorkoutEditor({
 
 export function CompletionEditor({ workout, onClose }: { workout: Workout; onClose: () => void }) {
   const { data, request } = useWorkspace();
+  const today = localDate(new Date(), data.profile?.timezone);
+  const plannedDate = effectiveDate(workout, data.plans);
   const [status, setStatus] = useState<'completed' | 'partial' | 'skipped'>(
     workout.completion?.status ?? 'completed',
   );
@@ -688,8 +690,10 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
             readOnly={linked}
             type="date"
             name="date"
+            max={linked || status === 'skipped' ? undefined : today}
             defaultValue={
-              workout.completion?.performedDate ?? effectiveDate(workout, data.plans) ?? localDate()
+              workout.completion?.performedDate ??
+              (plannedDate && plannedDate < today ? plannedDate : today)
             }
           />
         </Field>

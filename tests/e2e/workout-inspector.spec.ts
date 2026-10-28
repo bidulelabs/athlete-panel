@@ -304,6 +304,19 @@ test('calendar stays compact on desktop with usable phone cards', async ({ page 
   expect(writes()).toBe(0);
 });
 
+test('logging a future workout starts on today and cannot pick a later date', async ({ page }) => {
+  await preview(page);
+  await page.getByRole('button', { name: 'Open Threshold intervals', exact: true }).click();
+  const inspector = page.getByRole('complementary', { name: 'Workout details' });
+  await inspector.getByRole('button', { name: 'Log workout', exact: true }).click();
+  const completion = page.getByRole('dialog', { name: 'Log completion', exact: true });
+  const date = completion.getByLabel('Performed date');
+  await expect(date).toHaveValue('2030-01-09');
+  await expect(date).toHaveAttribute('max', '2030-01-09');
+  await completion.getByRole('radio', { name: 'Skipped', exact: true }).click();
+  await expect(date).not.toHaveAttribute('max');
+});
+
 test('a save finishing after a week change reloads the new week', async ({ page }, info) => {
   test.skip(info.project.name === 'mobile', 'The phone inspector is modal.');
   await preview(page);

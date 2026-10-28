@@ -9,6 +9,15 @@ export function addDays(date: string, days: number): string {
   return dateSchema.parse(result.toISOString().slice(0, 10));
 }
 
+export function todayInTimeZone(timeZone = 'UTC') {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
 export function scheduleDate(schedule: Schedule, plans: readonly Plan[]): string | null {
   if (schedule.kind === 'independent') return schedule.date;
   const plan = plans.find((candidate) => candidate.id === schedule.planId);

@@ -4,7 +4,7 @@ import {
   canLinkSport,
   isRest,
 } from '@athlete-panel/contracts';
-import { effectiveDate } from '../../dates';
+import { effectiveDate, todayInTimeZone } from '../../dates';
 import type { CommandContext } from '../context';
 import { fail } from '../errors';
 
@@ -64,6 +64,11 @@ export function handleCompletion(
       if (!effectiveDate(workout, state.plans))
         fail('INVALID_SCHEDULE', 'Schedule this plan before recording completion.');
       const skipped = values.status === 'skipped';
+      if (!skipped && values.performedDate > todayInTimeZone(state.profile?.timezone))
+        fail(
+          'FUTURE_COMPLETION',
+          'Record a completed or partial workout on today or an earlier date.',
+        );
       workout.completion = {
         ...values,
         source: 'manual',

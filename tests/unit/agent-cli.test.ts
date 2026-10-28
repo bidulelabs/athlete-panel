@@ -1,8 +1,13 @@
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { agentConfigPath, instanceOrigin, savePrivateFile } from '../../scripts/lib/agent-client';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  agentConfigPath,
+  instanceOrigin,
+  runAgentCli,
+  savePrivateFile,
+} from '../../scripts/lib/agent-client';
 
 describe('agent CLI credential handling', () => {
   it('uses the standard credential location unless an explicit path is configured', async () => {
@@ -44,5 +49,54 @@ describe('agent CLI credential handling', () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe('agent CLI server errors', () => {
+  async function proposeWithServerError(error: unknown) {
+    const directory = await mkdtemp(join(tmpdir(), 'athlete-panel-agent-'));
+    const config = join(directory, 'agent.json');
+    const proposal = join(directory, 'proposal.json');
+    await savePrivateFile(
+      config,
+      JSON.stringify({ url: 'http://127.0.0.1:3000', token: 'A'.repeat(43) }),
+    );
+    await writeFile(proposal, '{}');
+    vi.stubEnv('ATHLETE_PANEL_AGENT_CONFIG', config);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ error }, { status: 400 })),
+    );
+    try {
+      return await runAgentCli(['propose', '--file', proposal]).catch((thrown: Error) => thrown);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+      await rm(directory, { recursive: true, force: true });
+    }
+  }
+
+  it('prints the path and message of each validation issue', async () => {
+    const thrown = await proposeWithServerError({
+      code: 'validation',
+      message: 'Check the submitted values.',
+      details: [
+        { path: ['commands', 0, 'values', 'title'], message: 'Too small' },
+        { path: ['summary'], message: 'Required' },
+      ],
+    });
+    expect(thrown).toMatchObject({
+      message:
+        'Check the submitted values.\n  commands.0.values.title: Too small\n  summary: Required',
+    });
+  });
+
+  it('prints only the message for other errors', async () => {
+    const thrown = await proposeWithServerError({
+      code: 'stale_context',
+      message: 'The context changed.',
+      details: { changed: ['plans'] },
+    });
+    expect(thrown).toMatchObject({ message: 'The context changed.' });
   });
 });

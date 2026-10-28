@@ -1,6 +1,7 @@
 import { createCipheriv, randomBytes, scryptSync } from 'node:crypto';
 import { afterEach, expect, it } from 'vitest';
 import {
+  canonical,
   decrypt,
   encrypt,
   passwordHash,
@@ -80,4 +81,11 @@ it('preserves the legacy UTF-8 salt interpretation and creates strictly versione
     expect(await verifyPasswordAsync(password, hash)).toBe(false);
     expect(passwordNeedsRehash(hash)).toBe(false);
   }
+});
+
+it('sorts canonical keys by code unit, uppercase before lowercase', () => {
+  const profile = { weeklyAvailability: 1, weekStartsOnPreference: 'auto', B: 2, a: 3 };
+  expect(canonical(profile)).toBe(
+    '{"B":2,"a":3,"weekStartsOnPreference":"auto","weeklyAvailability":1}',
+  );
 });

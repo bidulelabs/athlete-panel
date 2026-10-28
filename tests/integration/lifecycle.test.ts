@@ -106,6 +106,18 @@ describe('transactional migration and source lifecycle', () => {
     );
   });
 
+  it('names the migration whose checksum no longer matches', async () => {
+    await migrate(root);
+    const [first] = await connection()`select name from host.migrations order by name limit 1`;
+    await connection()`update host.migrations set checksum=${'0'.repeat(64)} where name=${first.name}`;
+    const failed = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/migrate.ts'], {
+      env: process.env,
+      encoding: 'utf8',
+    });
+    expect(failed.status).toBe(1);
+    expect(failed.stderr).toContain(`checksum mismatch: ${first.name}`);
+  });
+
   it('verifies retained migration files even after their plugin leaves the active composition', async () => {
     await migrate(root);
     const file = 'personal-plugins/retired-fixture/migrations/001.sql';

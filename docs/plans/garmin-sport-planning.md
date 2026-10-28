@@ -19,6 +19,12 @@ Completed locally on 2026-10-28 using synthetic fixtures only:
 
 Live-provider verification, image deployment and backup/restore rehearsal for this new release remain unperformed. No production credentials or provider data were used. The catalog is a pinned recorded response, not a fresh authenticated taxonomy fetch; unknown or conflicting metadata remains unresolved.
 
+## CI rehearsal follow-up
+
+PR #64 exposed a stale version pin in the hosted rehearsal: its synthetic owner plugin copied the cycling/sleep manifest at version 1.1.0 while its composition entry still required 1.0.0. Local reproduction failed with `Version pin mismatch: owner-example`. The fixture now pins the version from the copied manifest; production version validation remains unchanged.
+
+Follow-up verification on 2026-10-28 passed: registry generation for the actual synthetic upgrade candidate, all 20 hosted-controller tests, a Node 22 runtime image build, and both complete hosted rehearsals (source rebuild and registry image). Each rehearsal verified upgrade, interruption after commit, resume, backup recovery and restoration into an empty replacement cluster, then removed its disposable services, volumes and state. These local synthetic checks do not constitute production deployment or real off-host recovery acceptance.
+
 ## Deployment and rollback
 
 Deploy through the documented [upgrade procedure](../development.md#coordinated-upgrades-and-plugin-activation) only after operator authorization. Existing activity records gain authoritative classifications and recorded metrics through the normal historical reimport described in the [sport contract upgrade guidance](../development.md#garmin-sport-contract-upgrade). A rollback after new classifications/fields are saved may need the matched pre-upgrade backup.

@@ -137,7 +137,7 @@ export async function evaluateProposal(tx: Transaction, input: { id: string; dig
     assert(
       canonical(result.changes) === canonical(changes),
       'proposal_changed',
-      'The resulting edits differ from the proposed changes. Request a replacement.',
+      'The resulting edits differ from the proposed changes.',
       409,
     );
   } catch (error) {

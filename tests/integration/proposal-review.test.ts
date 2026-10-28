@@ -204,7 +204,11 @@ it('detects a changed expanded diff even when a record revision was not bumped',
   await connection()`update training.records set data=jsonb_set(data,'{title}','"Unexpected correction"') where id=${workoutId}`;
   const review = await reviewProposal(input);
   expect(review.applicability).toBe('conflict');
-  expect(review.conflicts[0]?.code).toBe('proposal_changed');
+  expect(review.conflicts[0]).toMatchObject({
+    code: 'proposal_changed',
+    message:
+      'The resulting edits differ from the proposed changes. Request a replacement proposal.',
+  });
 });
 it.each([false, true])('handles legacy context with changed=%s', async (changed) => {
   const { input, context } = await proposal();

@@ -309,6 +309,7 @@ describe('transactional training and external-agent workflow', () => {
           externalId: 'synthetic-ride',
           title: 'Synthetic ride',
           sport: 'cycling',
+          sportSubgroup: 'gravel_cycling',
           startedAt: '2026-10-24T08:00:00.000Z',
           localDate: '2026-10-24',
           dateSource: 'provider',
@@ -321,30 +322,91 @@ describe('transactional training and external-agent workflow', () => {
       ),
     );
     await save([
-      { action: 'workout.create', values: workout() as never },
-      { action: 'workout.create', values: workout({ id: id(3) }) as never },
+      {
+        action: 'workout.create',
+        values: workout({ sportSubgroup: 'gravel_cycling' }) as never,
+      },
+      {
+        action: 'workout.create',
+        values: workout({ id: id(3), sportSubgroup: 'gravel_cycling' }) as never,
+      },
+      {
+        action: 'workout.complete',
+        id: id(2),
+        expectedRevision: 1,
+        values: {
+          status: 'partial',
+          performedDate: '2026-10-24',
+          rpe: 6,
+          reason: 'Stopped early',
+          notes: 'Synthetic completion note\nSecond line',
+        },
+      },
       { action: 'workout.link', id: id(2), expectedRevision: 1, activityId },
     ]);
     const unlinked = await save([{ action: 'workout.unlink', id: id(2), expectedRevision: 1 }]);
     return { activityId, unlinked };
   }
 
-  it('restores an activity link on undo', async () => {
+  it('restores a subgroup activity link and annotations on undo, with identical retries', async () => {
     const { activityId, unlinked } = await unlinkedRide();
-    await undoChange({ id: unlinked.id, idempotencyKey: randomUUID() });
+    const input = { id: unlinked.id, idempotencyKey: randomUUID() };
+    const restored = await undoChange(input);
     const state = await loadWorkspace();
-    expect(state.workouts.find((w) => w.id === id(2))?.completion?.activityId).toBe(activityId);
+    expect(state.workouts.find((w) => w.id === id(2))).toMatchObject({
+      sportSubgroup: 'gravel_cycling',
+      revision: 3,
+      completion: {
+        activityId,
+        status: 'partial',
+        rpe: 6,
+        reason: 'Stopped early',
+        notes: 'Synthetic completion note\nSecond line',
+        durationSeconds: 3600,
+        distanceMeters: 30000,
+      },
+    });
+    expect(await undoChange(input)).toEqual(restored);
+    expect(await loadWorkspace()).toEqual(state);
   });
 
   it('refuses with a conflict to undo an unlink once the activity is linked elsewhere', async () => {
     const { activityId, unlinked } = await unlinkedRide();
     await save([{ action: 'workout.link', id: id(3), expectedRevision: 1, activityId }]);
-    await expect(
-      undoChange({ id: unlinked.id, idempotencyKey: randomUUID() }),
-    ).rejects.toMatchObject({ code: 'ALREADY_LINKED', status: 409 });
+    const before = await loadWorkspace();
+    const auditBefore = await connection()`select * from host.changes order by id`;
+    const idempotencyKey = randomUUID();
+    await expect(undoChange({ id: unlinked.id, idempotencyKey })).rejects.toMatchObject({
+      code: 'ALREADY_LINKED',
+      status: 409,
+    });
     const state = await loadWorkspace();
+    expect(state).toEqual(before);
+    expect(await connection()`select * from host.changes order by id`).toEqual(auditBefore);
+    expect(
+      await connection()`select key from host.idempotency where key=${idempotencyKey}`,
+    ).toHaveLength(0);
     expect(state.workouts.find((w) => w.id === id(2))?.completion).toBeNull();
     expect(state.workouts.find((w) => w.id === id(3))?.completion?.activityId).toBe(activityId);
+  });
+
+  it('refuses undo when an unlinked activity now has an incompatible Garmin subgroup', async () => {
+    const { activityId, unlinked } = await unlinkedRide();
+    const activity = (await loadWorkspace()).activities.find((item) => item.id === activityId)!;
+    await connection().begin((tx) =>
+      recordsRepository.save(
+        'activity',
+        { ...activity, revision: 2, sportSubgroup: 'mountain_biking' },
+        tx,
+      ),
+    );
+    const before = await loadWorkspace();
+    const auditBefore = await connection()`select * from host.changes order by id`;
+    await expect(
+      undoChange({ id: unlinked.id, idempotencyKey: randomUUID() }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE', status: 400 });
+    expect(await loadWorkspace()).toEqual(before);
+    expect(await connection()`select * from host.changes order by id`).toEqual(auditBefore);
   });
 
   it('bounds grant context and stores only a token hash', async () => {

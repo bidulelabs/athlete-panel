@@ -18,6 +18,6 @@ For UI work, read [product context](PRODUCT.md) and the [design system](DESIGN.m
 
 - Create/update a feature spec for a new capability or changed persisted behavior, permission or public contract, following [the feature template](docs/templates/Feature-Template.md).
 - Update architecture when ownership or interactions change. Record consequential decisions with [the ADR template](docs/templates/ADR-Template.md); acceptance requires evidence.
-- Keep commands canonical in the development guide. Keep progress and individual results in the execution/task record.
+- Keep commands canonical in the development guide. The everyday loop is in [Verification](docs/development.md#verification): `pnpm test:db:start`, export `TEST_DATABASE_URL`, then `pnpm check`, `pnpm test:integration` and `pnpm build`; every other command is in the [command reference](docs/development.md#command-reference). Keep progress and individual results in the execution/task record.
 - Run relevant type/build/domain/integration/browser checks. Distinguish implementation, actual verification and deployment. Apply [framework validation](docs/Framework-Guide.md#validation) to affected docs.
 - Continue authorized implementation and reversible local verification. Deployment to a real private server, destructive data operations and external communications need authorization for that action.

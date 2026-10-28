@@ -128,3 +128,22 @@ test('a proxy error page on sign-in does not show a parser error', async ({ page
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByText('Unable to reach this instance.', { exact: false })).toBeVisible();
 });
+
+test('an out-of-range year in Go to date keeps the current week', async ({ page }) => {
+  await login(page);
+  const field = page.getByLabel('Go to date');
+  const before = await field.inputValue();
+  await field.evaluate((input: HTMLInputElement) => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+      input,
+      '20261-01-01',
+    );
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  await expect(field).toHaveValue(before);
+  await field.fill('9999-12-31');
+  await expect(field).toHaveValue(before);
+  await field.fill('2030-01-09');
+  await expect(field).not.toHaveValue(before);
+});

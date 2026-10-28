@@ -111,8 +111,13 @@ async function request(
         response.status,
         'invalid_grant',
       );
+    const issues: { path: (string | number)[]; message: string }[] =
+      body?.error?.code === 'validation' ? body.error.details : [];
     throw new RequestError(
-      body?.error?.message ?? `Athlete Panel returned HTTP ${response.status}.`,
+      [
+        body?.error?.message ?? `Athlete Panel returned HTTP ${response.status}.`,
+        ...issues.map((issue) => `  ${issue.path.join('.')}: ${issue.message}`),
+      ].join('\n'),
       response.status,
       body?.error?.code,
     );

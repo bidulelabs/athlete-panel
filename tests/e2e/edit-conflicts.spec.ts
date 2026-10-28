@@ -90,3 +90,41 @@ test('successful mutation with failed refresh is clearly reported without losing
   await page.reload();
   await expect(page.getByLabel('Training goals')).toHaveValue('Saved during reload outage');
 });
+
+test('a proxy error page on save says the change may have been saved', async ({ page }) => {
+  await login(page);
+  await settings(page);
+  await page.getByLabel('Training goals').fill('Saved behind a failing proxy');
+  await page.route('**/api/plugins/training/mutate', (route) =>
+    route.fulfill({ status: 502, contentType: 'text/html', body: '<html>Bad gateway</html>' }),
+  );
+  await page.getByRole('button', { name: 'Save profile' }).click();
+  await expect(page.locator('.error-message')).toContainText(
+    'The server did not answer, so the change may have been saved.',
+  );
+  await page.unroute('**/api/plugins/training/mutate');
+  await page.route('**/api/plugins/training/mutate', (route) =>
+    route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: '{"error":{"code":"STALE_REVISION","message":"Synthetic conflict"}}',
+    }),
+  );
+  await page.getByRole('button', { name: 'Save profile' }).click();
+  await expect(page.locator('.error-message')).toContainText('Synthetic conflict');
+  await page.unroute('**/api/plugins/training/mutate');
+  await page.route('**/api/plugins/training/mutate', (route) => route.abort());
+  await page.getByRole('button', { name: 'Save profile' }).click();
+  await expect(page.locator('.error-message')).toContainText(
+    'The server did not answer, so the change may have been saved.',
+  );
+});
+test('a proxy error page on sign-in does not show a parser error', async ({ page }) => {
+  await page.route('**/api/auth/login', (route) =>
+    route.fulfill({ status: 502, contentType: 'text/html', body: '<html>Bad gateway</html>' }),
+  );
+  await page.goto('/login');
+  await page.getByLabel('Password', { exact: true }).fill(process.env.E2E_PASSWORD!);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByText('Unable to reach this instance.', { exact: false })).toBeVisible();
+});

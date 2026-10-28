@@ -222,7 +222,7 @@ export function WorkspaceApp({
         );
         return;
       }
-      const result: unknown = await response.json();
+      const result: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(responseError(result, 'Unable to load your workspace.'));
       if (sequence === refreshSequence.current) {
         setEnvelope(workspaceEnvelopeSchema.parse(result));
@@ -251,6 +251,8 @@ export function WorkspaceApp({
   }, [path, refresh]);
   const request = useCallback(
     createPluginRequester(async (pluginId: string, operation: string, body: unknown) => {
+      const serverDidNotAnswerMessage =
+        'The server did not answer, so the change may have been saved. Reload to check before trying again.';
       const response = await fetch(
         `/api/plugins/${encodeURIComponent(pluginId)}/${encodeURIComponent(operation)}`,
         {
@@ -259,9 +261,16 @@ export function WorkspaceApp({
           body: JSON.stringify(body),
           signal: AbortSignal.timeout(15000),
         },
-      );
-      const result: unknown = await response.json();
-      if (!response.ok) throw new Error(responseError(result, 'The change could not be saved.'));
+      ).catch(() => {
+        throw new Error(serverDidNotAnswerMessage);
+      });
+      const result: unknown = await response.json().catch(() => null);
+      if (!response.ok)
+        throw new Error(
+          result === null
+            ? serverDidNotAnswerMessage
+            : responseError(result, 'The change could not be saved.'),
+        );
       // The mutation is committed even if reloading the workspace fails.
       setRefreshNotice('Your change was saved. Reloading the workspace…');
       await latestRefresh.current();

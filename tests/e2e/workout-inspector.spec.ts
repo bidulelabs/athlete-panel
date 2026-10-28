@@ -361,3 +361,34 @@ test('imperial edits keep stored distances the owner did not change', async ({ p
   await reloaded;
   expect(sent[2]!.values.distanceMeters).toBe(2 * 1609.344);
 });
+
+test('a new interval target starts empty and cannot be saved until filled', async ({ page }) => {
+  await preview(page);
+  const sent: { values: { steps: { target: unknown }[] } }[] = [];
+  await page.route('**/api/plugins/training/mutate', async (route) => {
+    sent.push(...route.request().postDataJSON().commands);
+    await route.fulfill({ json: { id: crypto.randomUUID(), changes: [] } });
+  });
+  await page.getByRole('button', { name: 'Add workout', exact: true }).first().click();
+  const editor = page.getByRole('dialog', { name: 'Add workout' });
+  await page.getByLabel('Workout title').fill('Tempo run');
+  await page.getByRole('button', { name: 'Add intervals', exact: true }).click();
+  await page.getByRole('button', { name: 'Add interval', exact: true }).click();
+  await page.getByLabel('Effort target').selectOption('paceSecondsPerKilometer');
+  await expect(page.getByLabel('Minimum')).toHaveValue('');
+  await expect(page.getByLabel('Maximum')).toHaveValue('');
+  await editor.getByRole('button', { name: 'Add workout', exact: true }).click();
+  await expect(editor).toBeVisible();
+  expect(sent).toHaveLength(0);
+  await page.getByLabel('Minimum').fill('270');
+  await page.getByLabel('Maximum').fill('285');
+  const reloaded = page.waitForResponse((response) => response.url().includes('/api/workspace?'));
+  await editor.getByRole('button', { name: 'Add workout', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  await reloaded;
+  expect(sent[0]!.values.steps[0]!.target).toEqual({
+    kind: 'paceSecondsPerKilometer',
+    min: 270,
+    max: 285,
+  });
+});

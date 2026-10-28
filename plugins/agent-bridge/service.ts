@@ -23,6 +23,10 @@ import {
 } from './proposal-validation';
 import { evaluateProposal, reviewProposal } from './proposal-review';
 const scopeSchema = agentScopeSchema;
+function digestWithoutImports(context: ReturnType<typeof boundedContext>) {
+  const { activities: _activities, health: _health, ...contextWithoutImports } = context;
+  return digest(canonical(contextWithoutImports));
+}
 
 export async function createGrant(body: unknown) {
   const input = agentGrantValuesSchema.parse(body);
@@ -64,7 +68,7 @@ export async function contextForToken(token: string) {
       version: 1,
       scope,
       context,
-      contextDigest: digest(canonical(context)),
+      contextDigest: digestWithoutImports(context),
       expiresAt: grant.expires_at,
     };
   });
@@ -110,7 +114,7 @@ export async function submitProposal(token: string, body: unknown) {
         const before = await loadWorkspace(tx, scope),
           context = boundedContext(before, scope);
         assert(
-          digest(canonical(context)) === input.contextDigest,
+          digestWithoutImports(context) === input.contextDigest,
           'stale_context',
           'Training context changed. Read it again and review your proposal.',
           409,
@@ -161,16 +165,17 @@ export async function submitProposal(token: string, body: unknown) {
             }
           }
         assertBounded(result.changes, before, result.state, scope);
-        const id = randomUUID();
+        const id = randomUUID(),
+          snapshotDigest = digest(canonical(context));
         const proposalDigest = digest(
           canonical({
             commands,
             changes: result.changes,
-            contextDigest: input.contextDigest,
+            contextDigest: snapshotDigest,
             summary: input.summary,
           }),
         );
-        await tx`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest) values(${id},${grant.id},'pending',${input.summary},${tx.json(commands as never)},${tx.json(result.changes as never)},${tx.json({ version: 2, scope, digest: input.contextDigest, snapshot: context } as never)},${proposalDigest})`;
+        await tx`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest) values(${id},${grant.id},'pending',${input.summary},${tx.json(commands as never)},${tx.json(result.changes as never)},${tx.json({ version: 2, scope, digest: snapshotDigest, snapshot: context } as never)},${proposalDigest})`;
         return {
           id,
           digest: proposalDigest,

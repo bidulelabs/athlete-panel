@@ -126,6 +126,64 @@ it('still blocks a revoked grant after a successful review', async () => {
     }),
   ).rejects.toMatchObject({ code: 'invalid_grant' });
 });
+async function activity(durationSeconds = 3000) {
+  const sql = connection();
+  const record = {
+    id: '00000000-0000-4000-8000-000000000010',
+    revision: 1,
+    provider: 'garmin',
+    externalId: '555:activity:1',
+    title: 'Synthetic ride',
+    sport: 'cycling',
+    startedAt: '2026-10-24T08:00:00Z',
+    localDate: '2026-10-24',
+    dateSource: 'provider',
+    durationSeconds,
+    distanceMeters: null,
+    elevationMeters: null,
+    averageHeartRateBpm: null,
+  };
+  await sql`insert into activity_records.records(kind,id,revision,data) values('activity',${record.id},1,${sql.json(record)}) on conflict(kind,id) do update set data=excluded.data`;
+}
+it.each([
+  { imported: 'health', importRecord: health, importAgain: () => health(6500) },
+  { imported: 'activity', importRecord: activity, importAgain: () => activity(3300) },
+])(
+  'accepts a submission after a new $imported record, then asks the owner to review it',
+  async ({ importRecord, importAgain }) => {
+    const { grant } = await proposal();
+    const context = await contextForToken(grant.token);
+    await importRecord();
+    const submitted = await submitProposal(grant.token, {
+      commands: [{ action: 'workout.delete', id: workoutId, expectedRevision: 1 }],
+      summary: 'Drop ride',
+      contextDigest: context.contextDigest,
+      idempotencyKey: randomUUID(),
+    });
+    const input = { id: submitted.id, digest: submitted.digest };
+    expect((await reviewProposal(input)).applicability).toBe('ready');
+    await importAgain();
+    expect((await reviewProposal(input)).applicability).toBe('review-required');
+  },
+);
+it('refuses a submission after a training change since the context was read', async () => {
+  const { grant } = await proposal();
+  const context = await contextForToken(grant.token);
+  await mutate({
+    idempotencyKey: randomUUID(),
+    commands: [
+      { action: 'workout.update', id: workoutId, expectedRevision: 1, values: { title: 'Easy' } },
+    ],
+  });
+  await expect(
+    submitProposal(grant.token, {
+      commands: [{ action: 'workout.delete', id: workoutId, expectedRevision: 2 }],
+      summary: 'Drop ride',
+      contextDigest: context.contextDigest,
+      idempotencyKey: randomUUID(),
+    }),
+  ).rejects.toMatchObject({ code: 'stale_context' });
+});
 it('requires fresh review of context-only changes and preserves the exact immutable edits', async () => {
   const { input } = await proposal();
   const [original] =
@@ -207,8 +265,8 @@ it('detects a changed expanded diff even when a record revision was not bumped',
   expect(review.conflicts[0]?.code).toBe('proposal_changed');
 });
 it.each([false, true])('handles legacy context with changed=%s', async (changed) => {
-  const { input, context } = await proposal();
-  await connection()`update host.proposals set context=${connection().json({ scope: context.scope, digest: context.contextDigest })} where id=${input.id}`;
+  const { input } = await proposal();
+  await connection()`update host.proposals set context=jsonb_build_object('scope',context->'scope','digest',context->'digest') where id=${input.id}`;
   if (changed) await health();
   const review = await reviewProposal(input);
   expect(review.applicability).toBe(changed ? 'replacement-required' : 'ready');

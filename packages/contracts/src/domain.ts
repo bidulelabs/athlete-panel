@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { validSportSelection, isRest } from './sports';
 
-export const CONTRACT_VERSION = 2 as const;
 export const sportSchema = z.string().min(1).max(100);
 export type Sport = z.infer<typeof sportSchema>;
 export const idSchema = z.uuid();

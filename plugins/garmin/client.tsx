@@ -40,13 +40,14 @@ export default function GarminPage() {
   const [rangeFrom, setRangeFrom] = useState(addDays(localDate(), -7));
   const [rangeTo, setRangeTo] = useState(localDate());
   const running = !!garmin.currentJob && ['running', 'queued'].includes(garmin.currentJob.status);
+  const recentSyncActive = running && garmin.currentJob?.kind === 'garmin-recent';
   const historyBusy = envelope.jobs.some(
     (job) => job.kind === 'garmin-history' && ['queued', 'running', 'paused'].includes(job.status),
   );
   useEffect(() => {
     if (!running) return;
     const timer = setInterval(() => {
-      void refresh();
+      if (!document.hidden) void refresh();
     }, 10000);
     return () => clearInterval(timer);
   }, [running, refresh]);
@@ -61,11 +62,11 @@ export default function GarminPage() {
             <Button
               variant="default"
               className="button primary"
-              disabled={action.busy || running || garmin.paused}
+              disabled={action.busy || recentSyncActive || garmin.paused}
               onClick={() => action.run(() => request('garmin', 'sync', { mode: 'recent' }))}
             >
-              <RefreshCw size={16} className={running ? 'spin' : ''} />
-              {running ? 'Sync in progress' : 'Sync now'}
+              <RefreshCw size={16} className={recentSyncActive ? 'spin' : ''} />
+              {recentSyncActive ? 'Sync in progress' : 'Sync now'}
             </Button>
           )
         }

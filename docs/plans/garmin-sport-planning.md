@@ -21,9 +21,11 @@ Live-provider verification, image deployment and backup/restore rehearsal for th
 
 ## CI rehearsal follow-up
 
-PR #64 exposed a stale version pin in the hosted rehearsal: its synthetic owner plugin copied the cycling/sleep manifest at version 1.1.0 while its composition entry still required 1.0.0. Local reproduction failed with `Version pin mismatch: owner-example`. The fixture now pins the version from the copied manifest; production version validation remains unchanged.
+PR #47 exposed a stale version pin in the hosted rehearsal: its synthetic owner plugin copied the cycling/sleep manifest at version 1.1.0 while its composition entry still required 1.0.0. Local reproduction failed with `Version pin mismatch: owner-example`. The fixture now pins the version from the copied manifest; production version validation remains unchanged.
 
 Follow-up verification on 2026-10-28 passed: registry generation for the actual synthetic upgrade candidate, all 20 hosted-controller tests, a Node 22 runtime image build, and both complete hosted rehearsals (source rebuild and registry image). Each rehearsal verified upgrade, interruption after commit, resume, backup recovery and restoration into an empty replacement cluster, then removed its disposable services, volumes and state. These local synthetic checks do not constitute production deployment or real off-host recovery acceptance.
+
+The subsequent publication-security failure was reproduced with the pinned Gitleaks 8.30.1 image: all seven findings were public `typeKey` values in the Garmin catalog, not credentials. The scanner configuration now extends the default rules with an exception restricted to those exact values, field lines and catalog path; CI loads it explicitly. The complete locally reachable history then reported zero findings. Seven synthetic negative controls still triggered, covering unknown credential-like type keys, other fields, adjacent credentials, other paths and a provider-specific token rule. All 24 security tests passed. No history rewrite or broad file exclusion was used.
 
 ## Deployment and rollback
 

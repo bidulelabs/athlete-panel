@@ -27,6 +27,7 @@ The weekly summary's two independent disclosures and factual metrics are specifi
 | Open dialog, nested editor or confirmation | Correct focus entry/return; Escape closes one layer; background cannot receive modal focus | [Inspector tests](../../tests/e2e/workout-inspector.spec.ts), shared UI and onboarding suites |
 | Resize with a draft editor open | Draft remains; inspector mode changes after closing the editor | Inspector browser test |
 | Failed or stale save | Draft remains recoverable; no duplicate mutation or overwrite | [Conflict tests](../../tests/e2e/edit-conflicts.spec.ts), calendar-card and workspace suites |
+| Database or schema failure while opening a page | Error page with **Try again**; only a missing or expired session goes to sign-in | [Workspace page tests](../../tests/unit/workspace-page.test.ts) |
 | Metric hover/focus/tap | Explanation appears independently; Escape/outside dismissal works; no training write | [Weekly tests](../../tests/e2e/weekly-summary.spec.ts) |
 | 320, 390, 768, 1060, 1280, 1440px | All five metrics remain available; complete groups wrap; values remain readable | Weekly theme/width matrix including imperial values and open inspector |
 | Agent proposal and Garmin forms | Scope acknowledgement, review, validation and fixture behavior remain intact | Existing full browser suite against isolated synthetic storage |

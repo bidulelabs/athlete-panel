@@ -282,3 +282,45 @@ test('coverage distinguishes unscanned and rejected windows and retries only the
   }
   await expect(dialog).not.toBeVisible();
 });
+
+test('a queued history import leaves Sync available and polls only a visible tab', async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.goto('/login');
+  await page.getByLabel('Password', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  let refreshes = 0;
+  await page.route('**/api/workspace?**', async (route) => {
+    refreshes++;
+    const response = await route.fetch(),
+      body = await response.json();
+    body.garmin = {
+      ...body.garmin,
+      connected: true,
+      verified: true,
+      paused: false,
+      lastError: null,
+      lastErrorCode: null,
+      currentJob: {
+        id: '00000000-0000-4000-8000-000000000098',
+        kind: 'garmin-history',
+        status: 'queued',
+        progress: '',
+        nextRunAt: null,
+        retrying: false,
+      },
+    };
+    await route.fulfill({ response, json: body });
+  });
+  await page.goto('/garmin');
+  await expect(page.getByRole('button', { name: 'Sync now', exact: true })).toBeEnabled();
+  const visibleStart = refreshes;
+  await page.clock.runFor(10_000);
+  await expect.poll(() => refreshes).toBeGreaterThan(visibleStart);
+  await page.evaluate(() => Object.defineProperty(document, 'hidden', { value: true }));
+  const hiddenStart = refreshes;
+  await page.clock.runFor(30_000);
+  expect(refreshes).toBe(hiddenStart);
+});

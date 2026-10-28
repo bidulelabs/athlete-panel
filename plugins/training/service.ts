@@ -1,9 +1,15 @@
 import { z } from 'zod';
-import { commandsSchema, type EntityChange } from '../../packages/contracts/src';
+import { commandsSchema, type EntityChange, type Workout } from '../../packages/contracts/src';
 import { transaction } from '../../packages/host/src/db';
 import { canonical } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
-import { loadWorkspace, persistChanges, repositories, findEntity } from '../../instance/services';
+import {
+  loadWorkspace,
+  persistChanges,
+  repositories,
+  findEntity,
+  stateWithChanges,
+} from '../../instance/services';
 import { applyCommands, validateWorkspace } from './engine';
 
 export { idempotent } from '../../packages/host/src/idempotency';
@@ -52,8 +58,13 @@ export async function undoChange(body: unknown) {
         'This change is missing or already undone.',
         409,
       );
-      const state = await loadWorkspace(tx, undefined, { records: 'linked' });
       const original = entry.changes as EntityChange[];
+      const activityIds = original.flatMap((change) => {
+        const activityId =
+          change.entity === 'workout' && (change.before as Workout | null)?.completion?.activityId;
+        return activityId ? [activityId] : [];
+      });
+      const state = await loadWorkspace(tx, undefined, { records: 'linked', activityIds });
       const changes: EntityChange[] = [];
       for (const change of original) {
         const current = findEntity(state, change.entity, change.id);
@@ -91,8 +102,8 @@ export async function undoChange(body: unknown) {
             : {}),
         });
       }
+      validateWorkspace(stateWithChanges(state, changes));
       await persistChanges(changes, tx);
-      validateWorkspace(await loadWorkspace(tx, undefined, { records: 'linked' }));
       const id = await audit(tx, changes, `Undo: ${entry.summary}`);
       await tx`update host.changes set undone_at=now(),undo_id=${id} where id=${input.id}`;
       return { id, changes };

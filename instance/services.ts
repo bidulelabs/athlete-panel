@@ -85,6 +85,20 @@ export function findEntity(state: WorkspaceState, kind: EntityKind, id: string):
     ? state.profile
     : (state[collections[kind]].find((e) => e.id === id) ?? null);
 }
+export function stateWithChanges(state: WorkspaceState, changes: EntityChange[]): WorkspaceState {
+  const next = structuredClone(state);
+  for (const change of changes) {
+    if (change.entity === 'profile') next.profile = change.after as WorkspaceState['profile'];
+    else {
+      const key = collections[change.entity];
+      const kept = (next[key] as Entity[]).filter((entity) => entity.id !== change.id);
+      (next as unknown as Record<string, Entity[]>)[key] = change.after
+        ? [...kept, change.after]
+        : kept;
+    }
+  }
+  return next;
+}
 export async function persistChanges(changes: EntityChange[], tx: Transaction) {
   for (const change of changes)
     if (change.before === null && change.after?.revision === 1) {

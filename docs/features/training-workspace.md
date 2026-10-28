@@ -20,6 +20,8 @@ Completed, partial and skipped are explicit states. Partial requires a reason. R
 
 An imported activity links to at most one compatible Garmin group/subgroup workout. The owner sees manual actuals being replaced. Imported numbers become authoritative, and annotations remain editable without numerical overrides. Linking preserves existing completion status and annotations; an unrecorded workout defaults to completed. Unlink returns to planned, preserves the activity and does not resurrect prior manual values. Previous values remain in audit; conflict-safe undo may restore them.
 
+Undo validates the complete proposed restoration before persisting any record, using current imported activities including those referenced by the prior state. An activity linked elsewhere or a now-incompatible Garmin subgroup prevents restoration; records and audit remain unchanged. Successful restoration preserves the recorded completion annotations and supports identical idempotent retries.
+
 Actual totals count every imported activity once and every unlinked manual completion once. Linked pairs contribute the imported session only. Duration is combined; distance remains separated by sport. Missing metrics carry explicit missing counts. Possible unlinked overlap is a reconciliation hint, never an automatic match. Generic activities remain distinguishable.
 
 The responsive calendar uses a bounded multiweek desktop grid, mobile day cards, an editor/inspector, Today and date navigation, and explicit move/up/down actions. Both themes provide focus visibility and reduced-motion styling. Errors retain drafts; stale saves request refresh/review. Notes, race/goal events and dated injury constraints give planning context.
@@ -89,6 +91,8 @@ The expanded summary stays inside the calendar and supports native keyboard acti
 | Shift a plan with completion | Explicit history conflict; duplication remains available | Domain tests |
 | Link/unlink/manual/imported mixed data | Single linked count, no resurrected manual values | [Summary tests](../../tests/unit/summary.test.ts) |
 | Undo after a later affected edit | Whole undo rejected; later edit preserved | Database tests |
+| Undo an unlink after the activity was linked to another workout | Whole undo rejected with a 409 `ALREADY_LINKED`; the newer link stays | [Database tests](../../tests/integration/domain.test.ts) |
+| Undo an unlink with annotations or a corrected activity subgroup | Compatible link and annotations restored once; incompatible subgroup rejected without writes | Database tests |
 | Sunday/Monday choice and reload | Saved choice aligns headings, date jumps and weekly totals; original workout dates persist | [Browser scenarios](../../tests/e2e/week-start.spec.ts), [database tests](../../tests/integration/domain.test.ts) |
 | Automatic and boundary dates | US/French locales, year/leap/DST boundaries and athlete-timezone Today resolve correctly | [Calendar tests](../../tests/unit/calendar-dates.test.ts), browser scenarios |
 | Preference save fails or is stale | Draft retained; persisted preference unchanged until a successful retry | Browser/database scenarios |

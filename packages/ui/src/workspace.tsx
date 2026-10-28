@@ -31,6 +31,7 @@ import {
 } from 'react';
 import type { GarminConnection } from '../../contracts/src/garmin-connection';
 import {
+  dateSchema,
   workspaceEnvelopeSchema,
   createPluginRequester,
   responseError,
@@ -122,6 +123,8 @@ interface WorkspaceContextValue extends PluginPageProps {
   setFrom: (from: string) => void;
   navigate: (path: string) => void;
 }
+const earliestAnchorDate = '0001-01-07';
+const latestAnchorDate = '9999-12-11';
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 export function useWorkspace() {
   const context = useContext(WorkspaceContext);
@@ -164,7 +167,15 @@ export function WorkspaceApp({
   const [path, setPath] = useState(initialPath === '/' ? '/calendar' : initialPath);
   // Keep the selected day, so changing week starts never moves the viewed week
   // repeatedly backwards as the owner switches preferences.
-  const [anchorDate, setFrom] = useState(() => localDate());
+  const [anchorDate, setAnchorDate] = useState(() => localDate());
+  const setFrom = useCallback((date: string) => {
+    if (
+      dateSchema.safeParse(date).success &&
+      date >= earliestAnchorDate &&
+      date <= latestAnchorDate
+    )
+      setAnchorDate(date);
+  }, []);
   const [locale, setLocale] = useState<string>();
   const [envelope, setEnvelope] = useState<WorkspaceEnvelope | null>(null);
   const weekStartsOn = resolveWeekStartsOn(envelope?.state.profile?.weekStartsOnPreference, locale);
@@ -222,7 +233,7 @@ export function WorkspaceApp({
         );
         return;
       }
-      const result: unknown = await response.json();
+      const result: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(responseError(result, 'Unable to load your workspace.'));
       if (sequence === refreshSequence.current) {
         setEnvelope(workspaceEnvelopeSchema.parse(result));
@@ -237,6 +248,8 @@ export function WorkspaceApp({
       if (sequence === refreshSequence.current) setRefreshing(false);
     }
   }, [from, to]);
+  const latestRefresh = useRef(refresh);
+  latestRefresh.current = refresh;
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -249,6 +262,8 @@ export function WorkspaceApp({
   }, [path, refresh]);
   const request = useCallback(
     createPluginRequester(async (pluginId: string, operation: string, body: unknown) => {
+      const serverDidNotAnswerMessage =
+        'The server did not answer, so the change may have been saved. Reload to check before trying again.';
       const response = await fetch(
         `/api/plugins/${encodeURIComponent(pluginId)}/${encodeURIComponent(operation)}`,
         {
@@ -257,15 +272,22 @@ export function WorkspaceApp({
           body: JSON.stringify(body),
           signal: AbortSignal.timeout(15000),
         },
-      );
-      const result: unknown = await response.json();
-      if (!response.ok) throw new Error(responseError(result, 'The change could not be saved.'));
+      ).catch(() => {
+        throw new Error(serverDidNotAnswerMessage);
+      });
+      const result: unknown = await response.json().catch(() => null);
+      if (!response.ok)
+        throw new Error(
+          result === null
+            ? serverDidNotAnswerMessage
+            : responseError(result, 'The change could not be saved.'),
+        );
       // The mutation is committed even if reloading the workspace fails.
       setRefreshNotice('Your change was saved. Reloading the workspace…');
-      await refresh();
+      await latestRefresh.current();
       return result;
     }),
-    [refresh],
+    [],
   );
   const navigate = useCallback((nextPath: string) => {
     setPath(nextPath);

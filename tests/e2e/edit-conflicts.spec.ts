@@ -90,3 +90,60 @@ test('successful mutation with failed refresh is clearly reported without losing
   await page.reload();
   await expect(page.getByLabel('Training goals')).toHaveValue('Saved during reload outage');
 });
+
+test('a proxy error page on save says the change may have been saved', async ({ page }) => {
+  await login(page);
+  await settings(page);
+  await page.getByLabel('Training goals').fill('Saved behind a failing proxy');
+  await page.route('**/api/plugins/training/mutate', (route) =>
+    route.fulfill({ status: 502, contentType: 'text/html', body: '<html>Bad gateway</html>' }),
+  );
+  await page.getByRole('button', { name: 'Save profile' }).click();
+  await expect(page.locator('.error-message')).toContainText(
+    'The server did not answer, so the change may have been saved.',
+  );
+  await page.unroute('**/api/plugins/training/mutate');
+  await page.route('**/api/plugins/training/mutate', (route) =>
+    route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: '{"error":{"code":"STALE_REVISION","message":"Synthetic conflict"}}',
+    }),
+  );
+  await page.getByRole('button', { name: 'Save profile' }).click();
+  await expect(page.locator('.error-message')).toContainText('Synthetic conflict');
+  await page.unroute('**/api/plugins/training/mutate');
+  await page.route('**/api/plugins/training/mutate', (route) => route.abort());
+  await page.getByRole('button', { name: 'Save profile' }).click();
+  await expect(page.locator('.error-message')).toContainText(
+    'The server did not answer, so the change may have been saved.',
+  );
+});
+test('a proxy error page on sign-in does not show a parser error', async ({ page }) => {
+  await page.route('**/api/auth/login', (route) =>
+    route.fulfill({ status: 502, contentType: 'text/html', body: '<html>Bad gateway</html>' }),
+  );
+  await page.goto('/login');
+  await page.getByLabel('Password', { exact: true }).fill(process.env.E2E_PASSWORD!);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByText('Unable to reach this instance.', { exact: false })).toBeVisible();
+});
+
+test('an out-of-range year in Go to date keeps the current week', async ({ page }) => {
+  await login(page);
+  const field = page.getByLabel('Go to date');
+  const before = await field.inputValue();
+  await field.evaluate((input: HTMLInputElement) => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+      input,
+      '20261-01-01',
+    );
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  await expect(field).toHaveValue(before);
+  await field.fill('9999-12-31');
+  await expect(field).toHaveValue(before);
+  await field.fill('2030-01-09');
+  await expect(field).not.toHaveValue(before);
+});

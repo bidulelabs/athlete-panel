@@ -27,12 +27,14 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
       });
-      const value = await response.json();
+      const value = await response.json().catch(() => null);
       if (!response.ok)
         throw new Error(
-          typeof value.error === 'string'
-            ? value.error
-            : (value.error?.message ?? 'Unable to sign in. Check your password.'),
+          value === null
+            ? 'Unable to reach this instance. Please refresh and try again.'
+            : typeof value.error === 'string'
+              ? value.error
+              : (value.error?.message ?? 'Unable to sign in. Check your password.'),
         );
       const next = new URLSearchParams(window.location.search).get('next');
       window.location.assign(

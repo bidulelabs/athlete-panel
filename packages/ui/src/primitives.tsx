@@ -218,7 +218,7 @@ export function useAction() {
   return { busy, error, setError, run };
 }
 
-export function SportIcon({ sport, size = 19 }: { sport?: string; size?: number }) {
+export function SportIcon({ sport, size = 19 }: { sport?: string | null; size?: number }) {
   const key = (sport ?? '').toLowerCase();
   const Icon =
     key.includes('cycl') || key.includes('bike')

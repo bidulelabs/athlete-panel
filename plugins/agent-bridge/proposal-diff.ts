@@ -12,6 +12,11 @@ const labels: Record<string, string> = {
   endDate: 'End date',
   order: 'Position in day',
   steps: 'Intervals',
+  sport: 'Sport group',
+  sportSubgroup: 'Sport subgroup',
+  plannedElevationGainMeters: 'Planned elevation gain',
+  exercises: 'Strength exercises',
+  weightKg: 'Weight',
   kind: 'Type',
   times: 'Repetitions',
   target: 'Target',
@@ -29,6 +34,8 @@ const readable = (key: string) =>
   labels[key] ??
   key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (first) => first.toUpperCase());
 const words: Record<string, string> = {
+  rest: 'Rest day',
+  workout: 'Training session',
   independent: 'Independent workout',
   plan: 'Plan workout',
   warmup: 'Warm-up',
@@ -67,6 +74,10 @@ function valueText(
         .filter(Boolean)
         .join(' ');
     }
+    if (key === 'weightKg')
+      return `${Number((value * (units === 'imperial' ? 2.2046226218 : 1)).toPrecision(10))} ${units === 'imperial' ? 'lb' : 'kg'}`;
+    if (key === 'plannedElevationGainMeters')
+      return `${Number((value * (units === 'imperial' ? 3.28084 : 1)).toPrecision(10))} ${units === 'imperial' ? 'ft' : 'm'}`;
     if (key.endsWith('Meters'))
       return `${Number((value / (units === 'imperial' ? 1609.344 : 1000)).toPrecision(10))} ${units === 'imperial' ? 'mi' : 'km'}`;
     if (key === 'min' || key === 'max') {
@@ -110,7 +121,13 @@ export function proposalRows(
     }
     rows.push({
       field: path
-        .map((part) => (/^\d+$/.test(part) ? `Step ${Number(part) + 1}` : readable(part)))
+        .map((part, index) =>
+          /^\d+$/.test(part)
+            ? `${path[index - 1] === 'exercises' ? 'Exercise' : 'Step'} ${Number(part) + 1}`
+            : path.length === 1 && part === 'notes' && change.entity === 'workout'
+              ? 'Workout description'
+              : readable(part),
+        )
         .join(' · '),
       before: valueText(before, key, beforeParent, units, plans),
       after: valueText(after, key, afterParent, units, plans),

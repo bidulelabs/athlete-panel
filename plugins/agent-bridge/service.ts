@@ -18,6 +18,7 @@ import { idempotent, undoChange } from '../training/public/server';
 import {
   boundedContext,
   hasStepNotes,
+  hasExerciseInstructions,
   assertReadableSources,
   assertBounded,
 } from './proposal-validation';
@@ -144,6 +145,22 @@ export async function submitProposal(token: string, body: unknown) {
                 'Creating plan notes requires notes access.',
                 403,
               );
+            if (
+              (command.action === 'workout.create' || command.action === 'workout.update') &&
+              command.values.exercises
+            ) {
+              const source =
+                command.action === 'workout.update'
+                  ? before.workouts.find((w) => w.id === command.id)
+                  : undefined;
+              assert(
+                !hasExerciseInstructions(command.values.exercises) &&
+                  !hasExerciseInstructions(source?.exercises),
+                'forbidden',
+                'Editing exercises with private instructions requires notes access.',
+                403,
+              );
+            }
             if (
               (command.action === 'workout.create' || command.action === 'workout.update') &&
               command.values.steps

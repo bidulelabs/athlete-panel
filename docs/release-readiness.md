@@ -24,6 +24,8 @@ The rehearsal checks production pnpm execution, migrations, console owner bootst
 
 CI additionally scans reachable Git history with Gitleaks, locked dependencies and the built container with Trivy. Scanner versions/images and GitHub actions are pinned. Scans execute on the runner; vulnerability databases are downloaded. Private source and health data are not submitted to an external scanning service. The production runtime uses a pinned Node Alpine image, PostgreSQL client tools only, production dependencies and pnpm 11.28.8. npm/Yarn and build/test packages are absent from the installed runtime dependency tree. High/critical vulnerabilities fail CI even if no fix exists; investigate and document any narrowly scoped, time-limited exception instead of disabling the checks or adding blanket ignores. Scan databases and upstream images change, so a previous pass is not permanent assurance.
 
+The [Gitleaks configuration](../.gitleaks.toml) retains every built-in detection rule. Its generic API-key rule excludes only seven verified public Garmin sport identifiers, requiring both the exact catalog path and a complete matching `typeKey` line. Other fields, values, files and provider-specific rules remain scanned. Changes to this exception require review and negative-control scans with the pinned scanner, including credential-like values in the catalog and matching text outside the allowed context. This exception addresses public taxonomy false positives, not accepted credential exposure.
+
 ## Operator acceptance on the intended server
 
 The local rehearsal cannot verify these external conditions. Complete and record them before treating a real deployment as production-ready:

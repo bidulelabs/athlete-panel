@@ -445,3 +445,28 @@
     transition: none;
   }
 }
+
+.week-sport-breakdown {
+  margin-block: 20px;
+}
+.sport-breakdown-scroll {
+  overflow-x: auto;
+}
+.sport-breakdown-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.sport-breakdown-scroll th,
+.sport-breakdown-scroll td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.sport-breakdown-scroll td {
+  min-width: 100px;
+}
+.sport-breakdown-scroll th[scope='row'] {
+  min-width: 150px;
+}

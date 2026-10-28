@@ -1,0 +1,16 @@
+title = "Athlete Panel secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+# Public Garmin sport identifiers, not credentials. Match both the exact file
+# and a complete typeKey line; other values, fields and rules remain scanned.
+description = "Verified public Garmin activity type keys"
+condition = "AND"
+paths = ['''^packages/contracts/src/garmin-activity-types\.json$''']
+regexTarget = "line"
+regexes = ['''^\s*"typeKey": "(motorcycling_v2|swimToBikeTransition_v2|bikeToRunTransition_v2|runToBikeTransition_v2|offshore_grinding_v2|whitewater_rafting_v2|windsurfing_v2)",?\s*$''']

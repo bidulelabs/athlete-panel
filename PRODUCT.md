@@ -8,7 +8,7 @@ web
 
 ## Users
 
-One athlete owns and uses each private instance. The owner confirmed on 2026-10-25 that the primary operating pattern is planning the week on desktop, then reviewing and logging sessions on a phone. Broader sport and experience-level ambitions are described in the [README](README.md); the present structured workout editor supports cycling and running.
+One athlete owns and uses each private instance. The owner confirmed on 2026-10-25 that the primary operating pattern is planning the week on desktop, then reviewing and logging sessions on a phone. Broader sport and experience-level ambitions are described in the [README](README.md); the structured workout editor now supports Garmin groups/subgroups, rest entries, planned elevation, intervals and ordered strength prescriptions.
 
 ## Product Purpose
 

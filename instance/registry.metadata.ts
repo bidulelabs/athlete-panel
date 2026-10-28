@@ -3,18 +3,18 @@ export const registry = [
   {
     "path": "plugins/athlete",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "1.2.0",
     "manifest": {
       "id": "athlete",
       "name": "Athlete",
       "description": "Profile, preferences and training constraints",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "hostApi": "^1.1.0",
       "dependencies": {
-        "training": "^1.1.0"
+        "training": "^2.0.0"
       },
       "optionalDependencies": {
-        "garmin": "^1.0.0"
+        "garmin": "^2.0.0"
       },
       "required": true,
       "client": "client.tsx",
@@ -51,12 +51,12 @@ export const registry = [
   {
     "path": "plugins/training",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "2.0.0",
     "manifest": {
       "id": "training",
       "name": "Training",
       "description": "Plans, workouts and recorded completion",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "hostApi": "^1.1.0",
       "dependencies": {},
       "optionalDependencies": {},
@@ -90,15 +90,15 @@ export const registry = [
   {
     "path": "plugins/activity-records",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "2.0.0",
     "manifest": {
       "id": "activity-records",
       "name": "Activity history",
       "description": "Normalized activities and health history",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "hostApi": "^1.1.0",
       "dependencies": {
-        "training": "^1.1.0"
+        "training": "^2.0.0"
       },
       "optionalDependencies": {},
       "required": true,
@@ -127,17 +127,17 @@ export const registry = [
   {
     "path": "plugins/calendar",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "2.0.0",
     "manifest": {
       "id": "calendar",
       "name": "Training calendar",
       "description": "Plan and review your week",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "hostApi": "^1.1.0",
       "dependencies": {
-        "athlete": "^1.1.0",
-        "training": "^1.1.0",
-        "activity-records": "^1.0.0"
+        "athlete": "^1.2.0",
+        "training": "^2.0.0",
+        "activity-records": "^2.0.0"
       },
       "optionalDependencies": {},
       "required": true,
@@ -161,15 +161,15 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "1.2.0",
+    "version": "2.0.0",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "1.2.0",
+      "version": "2.0.0",
       "hostApi": "^1.2.0",
       "dependencies": {
-        "activity-records": "^1.0.0"
+        "activity-records": "^2.0.0"
       },
       "optionalDependencies": {},
       "required": false,
@@ -216,15 +216,15 @@ export const registry = [
   {
     "path": "plugins/health",
     "enabled": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "manifest": {
       "id": "health",
       "name": "Health trends",
       "description": "Sleep, heart rate, HRV, steps, stress and Body Battery",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "hostApi": "^1.0.0",
       "dependencies": {
-        "activity-records": "^1.0.0"
+        "activity-records": "^2.0.0"
       },
       "optionalDependencies": {},
       "required": false,
@@ -248,17 +248,17 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "1.2.1",
+    "version": "2.0.0",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "1.2.1",
+      "version": "2.0.0",
       "hostApi": "^1.2.0",
       "dependencies": {
-        "training": "^1.1.0",
-        "athlete": "^1.1.0",
-        "activity-records": "^1.0.0"
+        "training": "^2.0.0",
+        "athlete": "^1.2.0",
+        "activity-records": "^2.0.0"
       },
       "optionalDependencies": {},
       "required": false,
@@ -286,15 +286,15 @@ export const registry = [
   {
     "path": "personal-plugins/cycling-sleep",
     "enabled": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "manifest": {
       "id": "cycling-sleep",
       "name": "Cycling & sleep",
       "description": "Compare cycling volume with recorded nightly sleep",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "hostApi": "^1.0.0",
       "dependencies": {
-        "activity-records": "^1.0.0"
+        "activity-records": "^2.0.0"
       },
       "optionalDependencies": {},
       "required": false,

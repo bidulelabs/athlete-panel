@@ -135,7 +135,7 @@ function Day({
             </div>
             <strong>{workout.title}</strong>
             <span>
-              {duration(workout.durationSeconds)}
+              {workout.kind === 'rest' ? 'Rest day' : duration(workout.durationSeconds)}
               {workout.completion?.status === 'partial'
                 ? ' · Partial'
                 : workout.completion?.status === 'skipped'

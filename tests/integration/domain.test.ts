@@ -6,6 +6,7 @@ import { migrate } from '../../packages/host/src/migrations';
 import { digest } from '../../packages/host/src/crypto';
 import { bootstrapOwner, login, logout, requireSession } from '../../packages/host/src/auth';
 import { loadWorkspace } from '../../instance/services';
+import { recordsRepository } from '../../plugins/activity-records/repository';
 import { mutate, undoChange } from '../../plugins/training/service';
 import {
   applyProposal,
@@ -309,6 +310,56 @@ describe('transactional training and external-agent workflow', () => {
       undoChange({ id: deleted.id, idempotencyKey: randomUUID() }),
     ).rejects.toMatchObject({ code: 'undo_conflict' });
     expect((await loadWorkspace()).workouts).toHaveLength(0);
+  });
+
+  async function unlinkedRide() {
+    const activityId = id(9);
+    await connection().begin((tx) =>
+      recordsRepository.save(
+        'activity',
+        {
+          id: activityId,
+          revision: 1,
+          provider: 'garmin',
+          externalId: 'synthetic-ride',
+          title: 'Synthetic ride',
+          sport: 'cycling',
+          startedAt: '2026-10-24T08:00:00.000Z',
+          localDate: '2026-10-24',
+          dateSource: 'provider',
+          durationSeconds: 3600,
+          distanceMeters: 30000,
+          elevationMeters: null,
+          averageHeartRateBpm: null,
+        },
+        tx,
+      ),
+    );
+    await save([
+      { action: 'workout.create', values: workout() as never },
+      { action: 'workout.create', values: workout({ id: id(3) }) as never },
+      { action: 'workout.link', id: id(2), expectedRevision: 1, activityId },
+    ]);
+    const unlinked = await save([{ action: 'workout.unlink', id: id(2), expectedRevision: 1 }]);
+    return { activityId, unlinked };
+  }
+
+  it('restores an activity link on undo', async () => {
+    const { activityId, unlinked } = await unlinkedRide();
+    await undoChange({ id: unlinked.id, idempotencyKey: randomUUID() });
+    const state = await loadWorkspace();
+    expect(state.workouts.find((w) => w.id === id(2))?.completion?.activityId).toBe(activityId);
+  });
+
+  it('refuses with a conflict to undo an unlink once the activity is linked elsewhere', async () => {
+    const { activityId, unlinked } = await unlinkedRide();
+    await save([{ action: 'workout.link', id: id(3), expectedRevision: 1, activityId }]);
+    await expect(
+      undoChange({ id: unlinked.id, idempotencyKey: randomUUID() }),
+    ).rejects.toMatchObject({ code: 'ALREADY_LINKED', status: 409 });
+    const state = await loadWorkspace();
+    expect(state.workouts.find((w) => w.id === id(2))?.completion).toBeNull();
+    expect(state.workouts.find((w) => w.id === id(3))?.completion?.activityId).toBe(activityId);
   });
 
   it('bounds grant context and stores only a token hash', async () => {

@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { createServer } from 'node:net';
+import { connect, createServer } from 'node:net';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { LocalError, systemEnvironment, type LocalConfig } from './local-config';
 
@@ -76,15 +76,21 @@ export async function runCommand(
 }
 
 export async function requireFreePort(port: number, purpose: string) {
+  const portUnavailableError = new LocalError(
+    `Port ${port} is unavailable for ${purpose}. Stop the process using it, then retry.`,
+  );
+  const somethingIsListening = await new Promise<boolean>((resolve) => {
+    const socket = connect(port, '127.0.0.1');
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('error', () => resolve(false));
+  });
+  if (somethingIsListening) throw portUnavailableError;
   await new Promise<void>((resolve, reject) => {
     const server = createServer();
-    server.once('error', () =>
-      reject(
-        new LocalError(
-          `Port ${port} is unavailable for ${purpose}. Stop the process using it, then retry.`,
-        ),
-      ),
-    );
+    server.once('error', () => reject(portUnavailableError));
     server.listen(port, '127.0.0.1', () => server.close(() => resolve()));
   });
 }

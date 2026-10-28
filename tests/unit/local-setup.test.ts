@@ -143,6 +143,17 @@ describe('local process lifecycle', () => {
     await requireFreePort(port, 'test');
   });
 
+  it('detects a port held on every interface', async () => {
+    const server = createServer();
+    await new Promise<void>((resolve) => server.listen(0, '0.0.0.0', resolve));
+    const port = (server.address() as { port: number }).port;
+    try {
+      await expect(requireFreePort(port, 'test')).rejects.toThrow(`Port ${port}`);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   it('redacts subprocess failures and aborts an active command', async () => {
     const root = await temporary();
     await expect(

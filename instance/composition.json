@@ -4,42 +4,42 @@
     {
       "path": "plugins/athlete",
       "enabled": true,
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "path": "plugins/training",
       "enabled": true,
-      "version": "1.1.0"
+      "version": "2.0.0"
     },
     {
       "path": "plugins/activity-records",
       "enabled": true,
-      "version": "1.1.0"
+      "version": "2.0.0"
     },
     {
       "path": "plugins/calendar",
       "enabled": true,
-      "version": "1.1.0"
+      "version": "2.0.0"
     },
     {
       "path": "plugins/garmin",
       "enabled": true,
-      "version": "1.2.0"
+      "version": "2.0.0"
     },
     {
       "path": "plugins/health",
       "enabled": true,
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "path": "plugins/agent-bridge",
       "enabled": true,
-      "version": "1.2.1"
+      "version": "2.0.0"
     },
     {
       "path": "personal-plugins/cycling-sleep",
       "enabled": true,
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ]
 }

@@ -1,6 +1,18 @@
 'use client';
 
-import type { CommandInput, Plan, Schedule, Workout, WorkoutStep } from '@athlete-panel/contracts';
+import {
+  canLinkSport,
+  isRest,
+  sportGroups,
+  sportSubgroups,
+  sportTypeLabel,
+  sportSelectionLabel,
+  type CommandInput,
+  type Plan,
+  type Schedule,
+  type Workout,
+  type WorkoutStep,
+} from '@athlete-panel/contracts';
 import {
   Badge,
   Button,
@@ -43,6 +55,7 @@ import { useState, type FormEvent } from 'react';
 import { effectiveDate } from './dates';
 import { InspectorPanel } from './inspector-panel';
 import { WorkoutPrescription } from './prescription';
+import { ExerciseEditor, ExercisePrescription } from './exercises';
 
 export async function mutate(
   request: PluginPageProps['request'],
@@ -389,6 +402,12 @@ export function WorkoutEditor({
         : { kind: 'independent', date: defaultDate ?? localDate() }),
   );
   const [steps, setSteps] = useState<WorkoutStep[]>(workout?.steps ?? []);
+  const [kind, setKind] = useState<'workout' | 'rest'>(workout?.kind ?? 'workout');
+  const [sport, setSport] = useState(workout?.sport ?? 'cycling');
+  const [subgroup, setSubgroup] = useState(workout?.sportSubgroup ?? '');
+  const [exercises, setExercises] = useState(workout?.exercises ?? []);
+  const rest = kind === 'rest';
+  const imperial = data.profile?.units === 'imperial';
   const [showStructure, setShowStructure] = useState(Boolean(workout?.steps.length));
   const [key] = useState(requestId);
   const [createId] = useState(requestId);
@@ -399,12 +418,20 @@ export function WorkoutEditor({
     const values = new FormData(event.currentTarget);
     const payload = {
       title: String(values.get('title')),
-      sport: String(values.get('sport')) as 'cycling' | 'running',
+      kind,
+      sport: rest ? null : sport,
+      sportSubgroup: rest ? null : subgroup || null,
       schedule,
-      durationSeconds: values.get('duration') === '' ? null : Number(values.get('duration')) * 60,
+      durationSeconds:
+        rest || values.get('duration') === '' ? null : Number(values.get('duration')) * 60,
       distanceMeters:
-        values.get('distance') === '' ? null : Number(values.get('distance')) * factor,
-      steps,
+        rest || values.get('distance') === '' ? null : Number(values.get('distance')) * factor,
+      plannedElevationGainMeters:
+        rest || values.get('elevation') === ''
+          ? null
+          : Number(values.get('elevation')) / (imperial ? 3.28084 : 1),
+      steps: rest ? [] : steps,
+      exercises: rest ? [] : exercises,
       notes: String(values.get('notes') ?? ''),
       order:
         workout?.order ??
@@ -452,57 +479,120 @@ export function WorkoutEditor({
             placeholder="e.g. Endurance ride"
           />
         </Field>
-        <div className="form-grid three">
-          <Field label="Sport">
-            <NativeSelect name="sport" defaultValue={workout?.sport ?? 'cycling'}>
-              <option value="cycling">Cycling</option>
-              <option value="running">Running</option>
-            </NativeSelect>
-          </Field>
-          <Field label="Duration · minutes">
-            <Input
-              name="duration"
-              type="number"
-              min="0"
-              step="any"
-              defaultValue={workout?.durationSeconds != null ? workout.durationSeconds / 60 : ''}
-              placeholder="Optional"
-            />
-          </Field>
-          <Field label={`Distance · ${factor === 1000 ? 'km' : 'mi'}`}>
-            <Input
-              name="distance"
-              type="number"
-              min="0"
-              step="any"
-              defaultValue={
-                workout?.distanceMeters != null
-                  ? Number((workout.distanceMeters / factor).toFixed(3))
-                  : ''
-              }
-              placeholder="Optional"
-            />
-          </Field>
-        </div>
+        <Field label="Planning kind">
+          <NativeSelect
+            value={kind}
+            disabled={Boolean(workout?.completion)}
+            onChange={(event) => setKind(event.target.value as 'workout' | 'rest')}
+          >
+            <option value="workout">Training session</option>
+            <option value="rest">Rest day</option>
+          </NativeSelect>
+        </Field>
+        {!rest && (
+          <>
+            <div className="form-grid">
+              <Field label="Sport group">
+                <NativeSelect
+                  value={sport}
+                  disabled={Boolean(workout?.completion)}
+                  onChange={(event) => {
+                    setSport(event.target.value);
+                    setSubgroup('');
+                  }}
+                >
+                  {sportGroups.map((group) => (
+                    <option key={group.typeKey} value={group.typeKey}>
+                      {sportTypeLabel(group.typeKey)}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <Field label="Sport subgroup">
+                <NativeSelect
+                  value={subgroup}
+                  disabled={Boolean(workout?.completion)}
+                  onChange={(event) => setSubgroup(event.target.value)}
+                >
+                  <option value="">Group only</option>
+                  {sportSubgroups(sport).map((type) => (
+                    <option key={type.typeKey} value={type.typeKey}>
+                      {sportTypeLabel(type.typeKey)}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+            </div>
+            <div className="form-grid three">
+              <Field label="Duration · minutes">
+                <Input
+                  name="duration"
+                  type="number"
+                  min="0"
+                  step="any"
+                  defaultValue={
+                    workout?.durationSeconds != null ? workout.durationSeconds / 60 : ''
+                  }
+                  placeholder="Optional"
+                />
+              </Field>
+              <Field label={`Distance · ${factor === 1000 ? 'km' : 'mi'}`}>
+                <Input
+                  name="distance"
+                  type="number"
+                  min="0"
+                  step="any"
+                  defaultValue={
+                    workout?.distanceMeters != null
+                      ? Number((workout.distanceMeters / factor).toFixed(3))
+                      : ''
+                  }
+                  placeholder="Optional"
+                />
+              </Field>
+            </div>
+            <Field label={`Elevation gain · ${imperial ? 'ft' : 'm'}`}>
+              <Input
+                name="elevation"
+                type="number"
+                min="0"
+                step="any"
+                placeholder="Unknown"
+                defaultValue={
+                  workout?.plannedElevationGainMeters == null
+                    ? ''
+                    : Number(
+                        (workout.plannedElevationGainMeters * (imperial ? 3.28084 : 1)).toFixed(2),
+                      )
+                }
+              />
+            </Field>
+          </>
+        )}
         <ScheduleFields schedule={schedule} onChange={setSchedule} plans={data.plans} />
         <div className="form-divider" />
-        <div className="section-heading" style={{ border: 0, paddingBottom: 10 }}>
-          <h3>Session structure</h3>
-          <Button
-            variant="link"
-            className="text-button"
-            type="button"
-            onClick={() => setShowStructure(!showStructure)}
-          >
-            {showStructure ? 'Collapse' : 'Add intervals'}
-          </Button>
-        </div>
-        {showStructure && <IntervalEditor steps={steps} setSteps={setSteps} />}
-        <Field label="Workout notes">
+        {!rest && (
+          <>
+            <div className="section-heading" style={{ border: 0, paddingBottom: 10 }}>
+              <h3>Session structure</h3>
+              <Button
+                variant="link"
+                className="text-button"
+                type="button"
+                onClick={() => setShowStructure(!showStructure)}
+              >
+                {showStructure ? 'Collapse' : 'Add intervals'}
+              </Button>
+            </div>
+            {showStructure && <IntervalEditor steps={steps} setSteps={setSteps} />}
+            <ExerciseEditor exercises={exercises} onChange={setExercises} imperial={imperial} />
+          </>
+        )}
+        <Field label="Workout description">
           <Textarea
             name="notes"
             rows={3}
-            maxLength={4000}
+            maxLength={20000}
             defaultValue={workout?.notes ?? ''}
             placeholder="Effort, route, or anything to remember…"
           />
@@ -563,7 +653,8 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
                         status === 'skipped' || fields.get('rpe') === ''
                           ? null
                           : Number(fields.get('rpe')),
-                      reason: String(fields.get('reason')),
+                      reason: String(fields.get('reason') ?? ''),
+                      notes: String(fields.get('completionNotes') ?? ''),
                     },
                   },
                 ],
@@ -655,16 +746,25 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
             </Field>
           </>
         )}
-        <Field label={status === 'partial' ? 'Reason for partial completion' : 'Completion notes'}>
+        <Field label={status === 'partial' ? 'Reason for partial completion' : 'Completion reason'}>
           <Textarea
             name="reason"
             required={status === 'partial'}
             defaultValue={workout.completion?.reason ?? ''}
             rows={3}
-            maxLength={2000}
+            maxLength={20000}
             placeholder={
               status === 'partial' ? 'What changed during this session?' : 'How did it go?'
             }
+          />
+        </Field>
+        <Field label="Completion notes">
+          <Textarea
+            name="completionNotes"
+            rows={3}
+            maxLength={20000}
+            defaultValue={workout.completion?.notes ?? ''}
+            placeholder="How did it go?"
           />
         </Field>
         <ErrorMessage error={action.error} />
@@ -737,96 +837,147 @@ export function WorkoutInspector({
         </div>
         <h2>{workout.title}</h2>
         <div className="inspector-subtitle">
-          {duration(workout.durationSeconds)} · {sportLabel(workout.sport)}
+          {isRest(workout)
+            ? 'Rest day'
+            : `${duration(workout.durationSeconds)} · ${sportSelectionLabel(workout)}`}
           {workout.distanceMeters != null
             ? ` · ${distance(workout.distanceMeters, data.profile?.units)}`
             : ''}
         </div>
-        <div className="inspector-log-action">
-          <Button
-            variant="default"
-            className="button primary full-width"
-            onClick={() => setCompleting(true)}
-          >
-            {completion ? 'Edit completion' : 'Log workout'}
-          </Button>
-        </div>
+        {workout.plannedElevationGainMeters != null && (
+          <p>
+            Elevation gain ·{' '}
+            {Math.round(
+              workout.plannedElevationGainMeters *
+                (data.profile?.units === 'imperial' ? 3.28084 : 1),
+            )}{' '}
+            {data.profile?.units === 'imperial' ? 'ft' : 'm'}
+          </p>
+        )}
+        {!isRest(workout) && (
+          <div className="inspector-log-action">
+            <Button
+              variant="default"
+              className="button primary full-width"
+              onClick={() => setCompleting(true)}
+            >
+              {completion ? 'Edit completion' : 'Log workout'}
+            </Button>
+          </div>
+        )}
+        <ExercisePrescription
+          exercises={workout.exercises ?? []}
+          imperial={data.profile?.units === 'imperial'}
+        />
         {workout.steps.length > 0 && (
           <WorkoutPrescription steps={workout.steps} units={data.profile?.units ?? 'metric'} />
         )}
         {workout.notes && (
           <div className="inspector-section">
-            <h3>Notes</h3>
+            <h3>Workout description</h3>
             <p>{workout.notes}</p>
           </div>
         )}
-        <div className="inspector-section">
-          <h3>Completion</h3>
-          {completion ? (
-            <>
-              <div className="completion-state">
-                <CheckCircle2 size={16} />
-                {completion.status}
-                {completion.source === 'garmin' && <Badge className="badge">Garmin</Badge>}
-              </div>
-              <dl className="inspector-details">
-                <div>
-                  <dt>Duration</dt>
-                  <dd>{duration(completion.durationSeconds)}</dd>
+        {!isRest(workout) && (
+          <div className="inspector-section">
+            <h3>Completion</h3>
+            {completion ? (
+              <>
+                <div className="completion-state">
+                  <CheckCircle2 size={16} />
+                  {completion.status}
+                  {completion.source === 'garmin' && <Badge className="badge">Garmin</Badge>}
                 </div>
-                <div>
-                  <dt>Distance</dt>
-                  <dd>{distance(completion.distanceMeters, data.profile?.units)}</dd>
-                </div>
-                <div>
-                  <dt>Effort</dt>
-                  <dd>{completion.rpe == null ? '—' : `${completion.rpe} / 10`}</dd>
-                </div>
-                <div>
-                  <dt>Date</dt>
-                  <dd>{dateLabel(completion.performedDate)}</dd>
-                </div>
-              </dl>
-              {completion.reason && <p style={{ marginTop: 13 }}>{completion.reason}</p>}
-              {completion.activityId && onActivityDetails && (
-                <Button
-                  variant="link"
-                  className="text-button"
-                  style={{ marginTop: 12 }}
-                  onClick={() => onActivityDetails(completion.activityId!)}
-                >
-                  View imported activity
-                </Button>
-              )}
-            </>
-          ) : (
-            <p>This session has not been logged yet.</p>
-          )}
-          {completion && (
-            <Button
-              variant="link"
-              className="text-button"
-              style={{ marginTop: 8 }}
-              disabled={action.busy}
-              onClick={() =>
-                action.run(() =>
-                  mutate(request, [
-                    {
-                      action:
-                        completion.source === 'garmin'
-                          ? 'workout.unlink'
-                          : 'workout.clearCompletion',
-                      id: workout.id,
-                      expectedRevision: workout.revision,
-                    },
-                  ]),
-                )
-              }
-            >
-              {completion.source === 'garmin' ? 'Unlink Garmin activity' : 'Clear completion'}
-            </Button>
-          )}
-        </div>
+                <dl className="inspector-details">
+                  <div>
+                    <dt>Duration</dt>
+                    <dd>{duration(completion.durationSeconds)}</dd>
+                  </div>
+                  <div>
+                    <dt>Distance</dt>
+                    <dd>{distance(completion.distanceMeters, data.profile?.units)}</dd>
+                  </div>
+                  <div>
+                    <dt>Effort</dt>
+                    <dd>{completion.rpe == null ? '—' : `${completion.rpe} / 10`}</dd>
+                  </div>
+                  <div>
+                    <dt>Date</dt>
+                    <dd>{dateLabel(completion.performedDate)}</dd>
+                  </div>
+                </dl>
+                {completion.reason && (
+                  <p style={{ marginTop: 13, whiteSpace: 'pre-wrap' }}>{completion.reason}</p>
+                )}
+                {completion.notes && (
+                  <p style={{ marginTop: 13, whiteSpace: 'pre-wrap' }}>{completion.notes}</p>
+                )}
+                {completion.activityId && (
+                  <dl className="inspector-details">
+                    {[
+                      [
+                        'TSS',
+                        data.activities.find((item) => item.id === completion.activityId)
+                          ?.trainingStressScore,
+                      ],
+                      [
+                        'Intensity factor',
+                        data.activities.find((item) => item.id === completion.activityId)
+                          ?.intensityFactor,
+                      ],
+                      [
+                        'Normalized power · W',
+                        data.activities.find((item) => item.id === completion.activityId)
+                          ?.normalizedPowerWatts,
+                      ],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <dt>{label}</dt>
+                        <dd>{value ?? '—'}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                {completion.activityId && onActivityDetails && (
+                  <Button
+                    variant="link"
+                    className="text-button"
+                    style={{ marginTop: 12 }}
+                    onClick={() => onActivityDetails(completion.activityId!)}
+                  >
+                    View imported activity
+                  </Button>
+                )}
+              </>
+            ) : (
+              <p>This session has not been logged yet.</p>
+            )}
+            {completion && (
+              <Button
+                variant="link"
+                className="text-button"
+                style={{ marginTop: 8 }}
+                disabled={action.busy}
+                onClick={() =>
+                  action.run(() =>
+                    mutate(request, [
+                      {
+                        action:
+                          completion.source === 'garmin'
+                            ? 'workout.unlink'
+                            : 'workout.clearCompletion',
+                        id: workout.id,
+                        expectedRevision: workout.revision,
+                      },
+                    ]),
+                  )
+                }
+              >
+                {completion.source === 'garmin' ? 'Unlink Garmin activity' : 'Clear completion'}
+              </Button>
+            )}
+          </div>
+        )}
         <div className="inspector-actions">
           <Button variant="outline" className="button" onClick={() => setEditing(true)}>
             <Edit3 size={14} />
@@ -859,7 +1010,13 @@ export function WorkoutInspector({
             size="sm"
             className="button small"
             onClick={() => setLinking(true)}
-            disabled={completion?.source === 'garmin'}
+            hidden={isRest(workout)}
+            disabled={
+              isRest(workout) ||
+              completion?.status === 'skipped' ||
+              completion?.source === 'garmin' ||
+              !date
+            }
           >
             <Link2 size={13} />
             Link activity
@@ -930,7 +1087,7 @@ export function LinkActivityDialog({
   const { data, request } = useWorkspace();
   const action = useAction();
   const linked = new Set(data.workouts.map((w) => w.completion?.activityId).filter(Boolean));
-  const available = data.activities.filter((a) => !linked.has(a.id));
+  const available = data.activities.filter((a) => !linked.has(a.id) && canLinkSport(workout, a));
   const [selected, setSelected] = useState('');
   return (
     <Modal
@@ -980,8 +1137,8 @@ export function LinkActivityDialog({
             </p>
           </>
         ) : (
-          <EmptyState title="No unlinked activities">
-            Import activities from Garmin before linking a session.
+          <EmptyState title="No compatible unlinked activities">
+            Import Garmin activities with a matching sport group and subgroup before linking.
           </EmptyState>
         )}
         <ErrorMessage error={action.error} />

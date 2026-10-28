@@ -92,13 +92,7 @@ export function ContextEditor({
         {kind === 'note' && (
           <>
             <Field label="Note">
-              <Textarea
-                required
-                name="body"
-                maxLength={4000}
-                rows={4}
-                defaultValue={record?.body ?? ''}
-              />
+              <Textarea name="body" maxLength={20000} rows={4} defaultValue={record?.body ?? ''} />
             </Field>
             <ScheduleFields schedule={schedule} onChange={setSchedule} plans={data.plans} />
           </>

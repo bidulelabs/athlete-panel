@@ -397,14 +397,24 @@ describe('transactional training and external-agent workflow', () => {
       },
       {
         action: 'workout.create',
-        values: workout({ steps, schedule: { kind: 'plan', planId: id(1), day: 6 } }) as never,
+        values: workout({
+          exercises: [{ name: 'Squat', repetitions: '8–10', instructions: 'PRIVATE_EXERCISE' }],
+          plannedElevationGainMeters: 0,
+          steps,
+          schedule: { kind: 'plan', planId: id(1), day: 6 },
+        }) as never,
       },
       { action: 'workout.create', values: workout({ id: id(3), steps }) as never },
       {
         action: 'workout.complete',
         id: id(3),
         expectedRevision: 1,
-        values: { status: 'partial', performedDate: '2026-10-24', reason: 'PRIVATE_COMPLETION' },
+        values: {
+          status: 'partial',
+          performedDate: '2026-10-24',
+          reason: 'PRIVATE_COMPLETION',
+          notes: 'PRIVATE_COMPLETION_NOTES',
+        },
       },
     ]);
     const grant = await createGrant({
@@ -420,7 +430,14 @@ describe('transactional training and external-agent workflow', () => {
       to: '2026-10-25',
       includeNotes: true,
     });
-    for (const value of ['PRIVATE_WARMUP', 'PRIVATE_REPEAT', 'PRIVATE_COMPLETION', 'PRIVATE_PLAN'])
+    for (const value of [
+      'PRIVATE_WARMUP',
+      'PRIVATE_REPEAT',
+      'PRIVATE_COMPLETION',
+      'PRIVATE_PLAN',
+      'PRIVATE_EXERCISE',
+      'PRIVATE_COMPLETION_NOTES',
+    ])
       expect(JSON.stringify(await contextForToken(included.token))).toContain(value);
     const proposal = {
       summary: 'Change intervals',
@@ -453,6 +470,24 @@ describe('transactional training and external-agent workflow', () => {
         ],
       }),
     ).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(
+      submitProposal(grant.token, {
+        ...proposal,
+        idempotencyKey: randomUUID(),
+        commands: [
+          {
+            action: 'workout.update',
+            id: id(2),
+            expectedRevision: 1,
+            values: { exercises: [{ name: 'Squat', repetitions: '10' }] },
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: 'forbidden' });
+    expect(context.context.workouts.find((w) => w.id === id(2))).toMatchObject({
+      plannedElevationGainMeters: 0,
+      exercises: [{ name: 'Squat', repetitions: '8–10', instructions: '' }],
+    });
     expect(JSON.stringify(await loadWorkspace())).toContain('PRIVATE_REPEAT');
   });
 

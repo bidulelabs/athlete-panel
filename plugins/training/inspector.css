@@ -150,3 +150,23 @@
     padding-bottom: max(24px, env(safe-area-inset-bottom));
   }
 }
+
+.exercise-editor {
+  min-width: 0;
+  border: 0;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.exercise-editor legend {
+  font-weight: 600;
+}
+.inspector-section p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.inspector-section > .text-button {
+  display: flex;
+  width: fit-content;
+  min-height: 44px;
+}

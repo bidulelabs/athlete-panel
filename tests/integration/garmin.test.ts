@@ -340,10 +340,31 @@ describe('durable Garmin worker with synthetic Personal API', () => {
             schedule: { kind: 'independent', date: day },
           },
         },
+        {
+          action: 'workout.complete',
+          id: workoutId,
+          expectedRevision: 1,
+          values: {
+            status: 'partial',
+            performedDate: day,
+            reason: 'Fatigue',
+            notes: 'Preserve this annotation',
+            rpe: 7,
+          },
+        },
         { action: 'workout.link', id: workoutId, expectedRevision: 1, activityId: before.id },
       ],
     });
-    activities = [activityRow({ duration: 4200, distance: 22000 })];
+    activities = [
+      activityRow({
+        duration: 4200,
+        distance: 22000,
+        trainingStressScore: 0,
+        intensityFactor: 1.1,
+        normPower: 230,
+        activityType: { typeKey: 'gravel_cycling' },
+      }),
+    ];
     await scheduleCursor({ phase: 'recent-activities' });
     await takeStep();
     state = await loadWorkspace();
@@ -352,9 +373,17 @@ describe('durable Garmin worker with synthetic Personal API', () => {
       id: before.id,
       revision: 2,
       durationSeconds: 4200,
+      trainingStressScore: 0,
+      intensityFactor: 1.1,
+      normalizedPowerWatts: 230,
+      sportSubgroup: 'gravel_cycling',
     });
     expect(state.workouts[0].completion).toMatchObject({
       source: 'garmin',
+      status: 'partial',
+      reason: 'Fatigue',
+      notes: 'Preserve this annotation',
+      rpe: 7,
       durationSeconds: 4200,
       distanceMeters: 22000,
     });
@@ -427,7 +456,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     ).toBe(true);
   });
 
-  it('rejects a provider sport correction atomically when it would invalidate a confirmed link', async () => {
+  it('rejects a provider subgroup correction atomically when it would invalidate a confirmed link', async () => {
     await bootstrap();
     await takeStep();
     const activity = (await loadWorkspace()).activities[0];
@@ -441,6 +470,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
             id: workoutId,
             title: 'Confirmed cycling session',
             sport: 'cycling',
+            sportSubgroup: 'road_biking',
             schedule: { kind: 'independent', date: day },
           },
         },
@@ -448,7 +478,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
       ],
     });
     const before = await loadWorkspace();
-    activities = [activityRow({ activityType: { typeKey: 'running' } })];
+    activities = [activityRow({ activityType: { typeKey: 'gravel_cycling' } })];
     await scheduleCursor({ phase: 'recent-activities' });
     const { job, saved } = await takeStep();
     expect(saved.status).toBe('failed');

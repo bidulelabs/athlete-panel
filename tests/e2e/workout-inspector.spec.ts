@@ -174,9 +174,11 @@ test('overlay contains keyboard focus, closes one layer at a time, and preserves
   await expect(inspector.getByRole('button', { name: 'Log workout', exact: true })).toBeFocused();
   await inspector.getByRole('button', { name: 'Edit', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Edit workout', exact: true });
-  await editor.getByLabel('Workout notes').fill('An unsaved draft must survive a viewport change.');
+  await editor
+    .getByLabel('Workout description')
+    .fill('An unsaved draft must survive a viewport change.');
   await page.setViewportSize({ width: info.project.name === 'mobile' ? 1440 : 390, height: 844 });
-  await expect(editor.getByLabel('Workout notes')).toHaveValue(
+  await expect(editor.getByLabel('Workout description')).toHaveValue(
     'An unsaved draft must survive a viewport change.',
   );
   expect(await editor.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);

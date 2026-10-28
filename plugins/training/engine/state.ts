@@ -1,5 +1,6 @@
 import {
   workspaceStateSchema,
+  canLinkSport,
   type Entity,
   type EntityKind,
   type Workout,
@@ -55,7 +56,7 @@ export function assertReferences(state: WorkspaceState): void {
     if (!activity) fail('INVALID_STATE', 'Linked activity does not exist.');
     if (linkedActivities.has(activityId!))
       fail('ALREADY_LINKED', 'An activity may be linked to only one workout.');
-    if (workout.sport !== activity.sport)
+    if (!canLinkSport(workout, activity))
       fail('INVALID_STATE', 'Linked workout and activity sports differ.');
     linkedActivities.add(activityId!);
   }

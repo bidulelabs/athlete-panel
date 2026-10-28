@@ -1,5 +1,8 @@
 import {
   dateSchema,
+  isRest,
+  isUnresolvedActivitySport,
+  canLinkSport,
   type Activity,
   type Completion,
   type Workout,
@@ -18,6 +21,7 @@ export type TrainingSummary = {
   endDate: string;
   planned: VolumeSummary;
   actual: VolumeSummary & { elevationMeters: { cycling: MetricTotal; running: MetricTotal } };
+  sportBreakdown: SportBreakdown[];
   plannedStatus: Record<'completed' | 'partial' | 'skipped' | 'pending', number>;
   recordedSessions: RecordedSession[];
   /** Heuristic prompts for review only; these are never automatically removed from totals. */
@@ -27,13 +31,17 @@ export type RecordedSession = {
   kind: 'activity' | 'workout';
   id: string;
   title: string;
-  sport: 'cycling' | 'running' | 'other';
+  sport: string | null;
+  sportSubgroup?: string | null;
+  sportResolution?: 'resolved' | 'unresolved';
   localDate: string;
   startedAt: string | null;
   durationSeconds: number | null;
 };
 type Session = {
-  sport: 'cycling' | 'running' | 'other';
+  sport: string | null;
+  sportSubgroup?: string | null;
+  sportResolution?: 'resolved' | 'unresolved';
   durationSeconds: number | null;
   distanceMeters: number | null;
 };
@@ -93,10 +101,80 @@ function volume(sessions: Session[]): VolumeSummary {
         sessions.filter((item) => item.sport === 'running').map((item) => item.distanceMeters),
       ),
       other: total(
-        sessions.filter((item) => item.sport === 'other').map((item) => item.distanceMeters),
+        sessions
+          .filter((item) => item.sport !== 'running' && item.sport !== 'cycling')
+          .map((item) => item.distanceMeters),
       ),
     },
   };
+}
+
+type SportVolume = {
+  sessions: number;
+  durationSeconds: MetricTotal;
+  distanceMeters: MetricTotal;
+  elevationMeters: MetricTotal;
+};
+export type SportBreakdown = {
+  sport: string;
+  sportSubgroup: string | null;
+  sportResolution: 'resolved' | 'unresolved';
+  planned: SportVolume;
+  actual: SportVolume;
+};
+type MeasuredSession = Session & {
+  elevationMeters?: number | null;
+  plannedElevationGainMeters?: number | null;
+};
+function sportVolume(items: MeasuredSession[], planned: boolean): SportVolume {
+  return {
+    sessions: items.length,
+    durationSeconds: total(items.map((item) => item.durationSeconds)),
+    distanceMeters: total(items.map((item) => item.distanceMeters)),
+    elevationMeters: total(
+      items.map(
+        (item) => (planned ? item.plannedElevationGainMeters : item.elevationMeters) ?? null,
+      ),
+    ),
+  };
+}
+function breakdown(planned: MeasuredSession[], actual: MeasuredSession[]): SportBreakdown[] {
+  const keys = new Map<
+    string,
+    { sport: string; sportSubgroup: string | null; sportResolution: 'resolved' | 'unresolved' }
+  >();
+  for (const item of [...planned, ...actual]) {
+    if (!item.sport) continue;
+    const sportResolution = isUnresolvedActivitySport(item) ? 'unresolved' : 'resolved';
+    keys.set(JSON.stringify([item.sport, null, sportResolution]), {
+      sport: item.sport,
+      sportSubgroup: null,
+      sportResolution,
+    });
+    if (item.sportSubgroup)
+      keys.set(JSON.stringify([item.sport, item.sportSubgroup, sportResolution]), {
+        sport: item.sport,
+        sportSubgroup: item.sportSubgroup,
+        sportResolution,
+      });
+  }
+  return [...keys.values()]
+    .sort(
+      (a, b) =>
+        a.sport.localeCompare(b.sport) ||
+        (a.sportSubgroup ?? '').localeCompare(b.sportSubgroup ?? ''),
+    )
+    .map((key) => {
+      const matches = (item: MeasuredSession) =>
+        item.sport === key.sport &&
+        (isUnresolvedActivitySport(item) ? 'unresolved' : 'resolved') === key.sportResolution &&
+        (!key.sportSubgroup || item.sportSubgroup === key.sportSubgroup);
+      return {
+        ...key,
+        planned: sportVolume(planned.filter(matches), true),
+        actual: sportVolume(actual.filter(matches), false),
+      };
+    });
 }
 
 /** Actual chronology uses performed/provider dates, never the workout's planned date. */
@@ -109,7 +187,9 @@ export function summarizeRange(
   if (range.endDate < range.startDate) throw new Error('End date must not precede start date.');
   const inRange = (date: string | null) =>
     date !== null && date >= range.startDate && date <= range.endDate;
-  const planned = state.workouts.filter((workout) => inRange(effectiveDate(workout, state.plans)));
+  const planned = state.workouts.filter(
+    (workout) => !isRest(workout) && inRange(effectiveDate(workout, state.plans)),
+  );
   // Defense in depth: transport normally guarantees unique provider identities.
   const uniqueActivities = new Map<string, Activity>();
   for (const activity of state.activities) {
@@ -131,6 +211,7 @@ export function summarizeRange(
   );
   const manual = state.workouts.filter(
     (workout) =>
+      !isRest(workout) &&
       workout.completion?.source === 'manual' &&
       workout.completion.status !== 'skipped' &&
       inRange(workout.completion.performedDate),
@@ -143,6 +224,7 @@ export function summarizeRange(
     ...activities,
     ...manual.map((workout) => ({
       sport: workout.sport,
+      sportSubgroup: workout.sportSubgroup,
       durationSeconds: workout.completion!.durationSeconds,
       distanceMeters: workout.completion!.distanceMeters,
       elevationMeters: null,
@@ -156,6 +238,7 @@ export function summarizeRange(
       id: activity.id,
       title: activity.title || 'Garmin activity',
       sport: activity.sport,
+      sportSubgroup: activity.sportSubgroup,
       localDate: activity.localDate,
       startedAt: activity.startedAt,
       durationSeconds: activity.durationSeconds,
@@ -165,6 +248,7 @@ export function summarizeRange(
       id: workout.id,
       title: workout.title,
       sport: workout.sport,
+      sportSubgroup: workout.sportSubgroup,
       localDate: workout.completion!.performedDate,
       startedAt: null,
       durationSeconds: workout.completion!.durationSeconds,
@@ -179,6 +263,7 @@ export function summarizeRange(
   );
   return {
     ...range,
+    sportBreakdown: breakdown(planned, actual),
     plannedStatus,
     recordedSessions,
     planned: volume(planned),
@@ -202,7 +287,7 @@ export function summarizeRange(
         unmatched.some(
           (activity) =>
             activity.localDate === workout.completion!.performedDate &&
-            activity.sport === workout.sport,
+            canLinkSport(workout, activity),
         ),
       )
       .map((workout) => workout.id),

@@ -6,6 +6,8 @@ Import the instance owner's Garmin activities and selected health records into p
 
 Outside scope: partner OAuth, refresh tokens, callbacks, other sports providers, Garmin write-back, workout export, FIT files and GPS tracks. This is a fresh-data application; historical Garmin import is not legacy Athlete Panel migration.
 
+The [Garmin sport planning specification](garmin-sport-planning.md) defines preserved type identities, group/subgroup classification and activity-list power metrics. Historical activity-only reimport enriches these fields without changing activity IDs or owner annotations.
+
 ## Intended behavior
 
 Specification status: approved product scope; transport and normalization choices below describe this implementation.

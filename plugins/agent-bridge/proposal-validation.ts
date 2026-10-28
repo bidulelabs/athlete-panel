@@ -10,6 +10,9 @@ import { canonical } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
 import { effectiveDate } from '../training/public/server';
 type Scope = z.infer<typeof agentScopeSchema>;
+export const hasExerciseInstructions = (
+  exercises: WorkspaceState['workouts'][number]['exercises'],
+) => exercises?.some((exercise) => Boolean(exercise.instructions)) ?? false;
 export const hasStepNotes = (steps: WorkoutStep[]) =>
   steps.some((step) =>
     step.kind === 'repeat' ? step.steps.some((child) => Boolean(child.notes)) : Boolean(step.notes),
@@ -45,7 +48,21 @@ export function boundedContext(state: WorkspaceState, scope: Scope) {
             ...w,
             notes: '',
             steps: withoutStepNotes(w.steps),
-            completion: w.completion ? { ...w.completion, reason: '' } : null,
+            ...(w.exercises
+              ? {
+                  exercises: w.exercises.map((exercise) => ({
+                    ...exercise,
+                    ...(exercise.instructions !== undefined ? { instructions: '' } : {}),
+                  })),
+                }
+              : {}),
+            completion: w.completion
+              ? {
+                  ...w.completion,
+                  reason: '',
+                  ...(w.completion.notes !== undefined ? { notes: '' } : {}),
+                }
+              : null,
           },
     ),
     notes,
@@ -90,7 +107,10 @@ export function assertReadableSources(commands: Command[], state: WorkspaceState
     if (command.action === 'workout.duplicate') {
       const source = state.workouts.find((w) => w.id === command.id)!;
       assert(
-        scope.includeNotes || (!source.notes && !hasStepNotes(source.steps)),
+        scope.includeNotes ||
+          (!source.notes &&
+            !hasStepNotes(source.steps) &&
+            !hasExerciseInstructions(source.exercises)),
         'forbidden',
         'Duplicating this workout requires access to its notes.',
         403,
@@ -113,7 +133,9 @@ export function assertReadableSources(commands: Command[], state: WorkspaceState
       assert(
         scope.includeNotes ||
           (!state.plans.find((p) => p.id === command.id)?.description &&
-            workouts.every((w) => !w.notes && !hasStepNotes(w.steps))),
+            workouts.every(
+              (w) => !w.notes && !hasStepNotes(w.steps) && !hasExerciseInstructions(w.exercises),
+            )),
         'forbidden',
         'Duplicating this plan requires access to its notes.',
         403,

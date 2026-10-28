@@ -43,7 +43,13 @@ export function handleWorkout(
             'Clear completion or unlink the activity before moving this workout.',
           );
       }
-      if (workout.completion && command.values.sport && command.values.sport !== workout.sport)
+      if (
+        workout.completion &&
+        (('sport' in command.values && command.values.sport !== workout.sport) ||
+          ('sportSubgroup' in command.values &&
+            (command.values.sportSubgroup ?? null) !== (workout.sportSubgroup ?? null)) ||
+          ('kind' in command.values && command.values.kind !== (workout.kind ?? 'workout')))
+      )
         fail(
           'HISTORY_CONFLICT',
           'Clear completion or unlink the activity before changing its sport.',

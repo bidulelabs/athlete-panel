@@ -24,22 +24,15 @@ You might be preparing for your first trail race, enjoying long rides, balancing
 
 Here is what the current preview supports:
 
-| Training style            | Available today                                                                                            | Direction for future development                                    |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Road and trail running    | Running workouts, intervals, recorded distance and elevation; imported trail runs use the running category | More specific trail-running workflows and sport distinctions        |
-| Cycling                   | Cycling workouts, intervals, FTP, activity linking and weekly comparisons                                  | Further sport-specific planning and analysis                        |
-| Triathlon and multisport  | Running and cycling planning in the same calendar; other Garmin activities retained as generic history     | Dedicated swimming, combined-session and multisport planning        |
-| Strength and gym training | Imported Garmin strength activities retained as generic history with available summary measurements        | Dedicated strength workouts, exercises, sets, repetitions and loads |
-
-Generic history preserves an activity's available summary; it does not provide sport-specific workout editing or detailed swim/strength analysis. The future directions above still need design and implementation.
+Planning now follows Garmin sport groups and subgroups, with separate hiking and mountaineering, swimming, winter sports, rowing/paddling and gym/strength selections. Rest days sit outside the sport taxonomy. Workouts can include planned elevation, intervals and ordered strength prescriptions; completion remains session-level. Unknown Garmin types remain explicitly unresolved. See [sport planning](docs/features/garmin-sport-planning.md) for the catalog source and compatibility limits.
 
 ## Key features
 
-- **Plan your training:** individual workouts, scheduled or undated plans, structured intervals, duplication, rescheduling and explicit ordering controls. Structured workout editing currently supports running and cycling.
+- **Plan your training:** individual workouts, scheduled or undated plans, structured intervals, duplication, rescheduling and explicit ordering controls. Use Garmin groups/subgroups, rest days, planned elevation and ordered strength exercises.
 - **Keep context close:** notes, races, goals, availability, injury constraints, heart-rate zones and cycling FTP.
 - **Record what happened:** completed, partial and skipped sessions; actual duration and distance; effort and notes. Manually link an imported activity to a workout without counting the pair twice.
 - **Understand each week:** planned versus recorded duration, running/cycling distance and elevation, sleep and HRV averages, session status and clickable details. Missing measurements remain visible.
-- **Import Garmin history:** activity summaries and selected health data, automatic recent sync, resumable historical imports and visible coverage/errors. Other sports remain available as generic activity history.
+- **Import Garmin history:** activity summaries and selected health data, automatic recent sync, resumable historical imports and visible coverage/errors. Garmin groups and subgroups remain distinct; unfamiliar identities are explicitly unresolved.
 - **Make the calendar yours:** light/dark themes, phone layouts, configurable week starts, timezone and metric/imperial preferences, and keyboard-accessible controls.
 - **Work with external agents:** approve bounded access, review proposed training changes, apply them atomically and undo a batch when later edits do not conflict.
 - **Extend your instance:** trusted source plugins, typed contracts, a scaffolder and a working cycling/sleep dashboard example.
@@ -306,6 +299,7 @@ Workout libraries, automatic activity matching, advanced training-load/recovery 
 | [First-time onboarding](docs/features/first-time-onboarding.md) | Welcome setup, preferences, optional Garmin connection and saved progress                            |
 | [Architecture](docs/architecture.md)                            | Processes, ownership, contracts, data boundaries and trust                                           |
 | [Shared interface](docs/features/shared-ui.md) | Component ownership, themes, modal behavior and migration constraints |
+| [Garmin sport planning](docs/features/garmin-sport-planning.md) | Sport hierarchy, rest, elevation, strength, notes and recorded metrics |
 | [Training workspace](docs/features/training-workspace.md)       | Planning, calendar, completion, linking, cards and weekly summaries                                  |
 | [Garmin import and health](docs/features/garmin-import.md)      | Authentication, normalized records, history traversal, coverage and limits                           |
 | [Reviewed agent training](docs/features/agent-training.md)      | Grants, context, proposal review, atomic apply and undo                                              |

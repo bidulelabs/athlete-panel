@@ -2,10 +2,10 @@
   "id": "cycling-sleep",
   "name": "Cycling & sleep",
   "description": "Compare cycling volume with recorded nightly sleep",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "hostApi": "^1.0.0",
   "dependencies": {
-    "activity-records": "^1.0.0"
+    "activity-records": "^2.0.0"
   },
   "required": false,
   "routes": [

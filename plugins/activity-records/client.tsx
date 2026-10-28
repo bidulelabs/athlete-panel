@@ -2,7 +2,16 @@
 
 import { Button, NativeSelect, Input, Badge } from '@athlete-panel/ui';
 import { useMemo, useState } from 'react';
-import type { Activity as ActivityRecord } from '@athlete-panel/contracts';
+import {
+  canLinkSport,
+  isUnresolvedActivitySport,
+  isRest,
+  sportGroups,
+  sportSubgroups,
+  sportTypeLabel,
+  sportSelectionLabel,
+  type Activity as ActivityRecord,
+} from '@athlete-panel/contracts';
 import { Activity, ArrowUpRight, Link2, Unlink } from 'lucide-react';
 import {
   dateLabel,
@@ -15,7 +24,6 @@ import {
   Modal,
   PageHeader,
   SportIcon,
-  sportLabel,
   Stat,
   SubmitButton,
   useAction,
@@ -24,10 +32,12 @@ import {
 } from '@athlete-panel/ui';
 import { mutate } from '../training/public/client';
 import { effectiveDate } from '../training/public/shared';
+import './client.css';
 
 export default function ActivitiesPage({ data }: PluginPageProps) {
   const { from, to, navigate } = useWorkspace();
   const [sport, setSport] = useState('all');
+  const [subgroup, setSubgroup] = useState('');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<ActivityRecord | null>(null);
   const activities = useMemo(
@@ -37,11 +47,15 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
           (activity) =>
             activity.localDate >= from &&
             activity.localDate <= to &&
-            (sport === 'all' || activity.sport === sport) &&
+            (sport === 'all' ||
+              (sport === 'unresolved'
+                ? isUnresolvedActivitySport(activity)
+                : activity.sport === sport)) &&
+            (!subgroup || activity.sportSubgroup === subgroup) &&
             activity.title.toLowerCase().includes(search.toLowerCase()),
         )
         .sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
-    [data.activities, from, to, sport, search],
+    [data.activities, from, to, sport, subgroup, search],
   );
   const knownDuration = activities.filter((activity) => activity.durationSeconds != null);
   const knownDistance = activities.filter((activity) => activity.distanceMeters != null);
@@ -82,18 +96,38 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
         />
         <DateNavigation />
       </div>
-      <div className="section-toolbar" style={{ paddingBottom: 15 }}>
+      <div className="section-toolbar activity-filters" style={{ paddingBottom: 15 }}>
         <div className="filter-row">
           <NativeSelect
             aria-label="Filter activities by sport"
             value={sport}
-            onChange={(event) => setSport(event.target.value)}
+            onChange={(event) => {
+              setSport(event.target.value);
+              setSubgroup('');
+            }}
           >
             <option value="all">All sports</option>
-            <option value="cycling">Cycling</option>
-            <option value="running">Running</option>
-            <option value="other">Other</option>
+            {sportGroups.map((group) => (
+              <option key={group.typeKey} value={group.typeKey}>
+                {sportTypeLabel(group.typeKey)}
+              </option>
+            ))}
+            <option value="unresolved">Unresolved classification</option>
           </NativeSelect>
+          {sportSubgroups(sport).length > 0 && (
+            <NativeSelect
+              aria-label="Filter activities by subgroup"
+              value={subgroup}
+              onChange={(event) => setSubgroup(event.target.value)}
+            >
+              <option value="">All subgroups</option>
+              {sportSubgroups(sport).map((type) => (
+                <option key={type.typeKey} value={type.typeKey}>
+                  {sportTypeLabel(type.typeKey)}
+                </option>
+              ))}
+            </NativeSelect>
+          )}
         </div>
         <Input
           className="search-input"
@@ -122,8 +156,8 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
                 <div className="row-main">
                   <SportIcon sport={activity.sport} size={23} />
                   <div>
-                    <strong>{activity.title || `${sportLabel(activity.sport)} activity`}</strong>
-                    <small>{sportLabel(activity.sport)} · Garmin</small>
+                    <strong>{activity.title || `${sportSelectionLabel(activity)} activity`}</strong>
+                    <small>{sportSelectionLabel(activity)} · Garmin</small>
                   </div>
                 </div>
                 <span>{dateLabel(activity.localDate)}</span>
@@ -185,13 +219,20 @@ function ActivityDetail({ activity, onClose }: { activity: ActivityRecord; onClo
   const action = useAction();
   const [workoutId, setWorkoutId] = useState('');
   const linked = data.workouts.find((workout) => workout.completion?.activityId === activity.id);
-  const available = data.workouts.filter((workout) => workout.completion?.source !== 'garmin');
+  const available = data.workouts.filter(
+    (workout) =>
+      !isRest(workout) &&
+      workout.completion?.source !== 'garmin' &&
+      workout.completion?.status !== 'skipped' &&
+      effectiveDate(workout, data.plans) &&
+      canLinkSport(workout, activity),
+  );
   return (
     <Modal
       open
       onClose={onClose}
       title={activity.title || 'Garmin activity'}
-      description={`${sportLabel(activity.sport)} · ${dateLabel(activity.localDate, { day: 'numeric', month: 'long', year: 'numeric' })}`}
+      description={`${sportSelectionLabel(activity)} · ${dateLabel(activity.localDate, { day: 'numeric', month: 'long', year: 'numeric' })}`}
     >
       <div className="dialog-body">
         <div className="summary-strip" style={{ marginBottom: 20, marginTop: 0 }}>
@@ -213,6 +254,20 @@ function ActivityDetail({ activity, onClose }: { activity: ActivityRecord; onClo
               {activity.elevationMeters == null
                 ? '—'
                 : `${Math.round(activity.elevationMeters * (data.profile?.units === 'imperial' ? 3.28084 : 1))} ${data.profile?.units === 'imperial' ? 'ft' : 'm'}`}
+            </dd>
+          </div>
+          <div>
+            <dt>TSS</dt>
+            <dd>{activity.trainingStressScore ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>Intensity factor</dt>
+            <dd>{activity.intensityFactor ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>Normalized power</dt>
+            <dd>
+              {activity.normalizedPowerWatts == null ? '—' : `${activity.normalizedPowerWatts} W`}
             </dd>
           </div>
           <div>
@@ -282,7 +337,10 @@ function ActivityDetail({ activity, onClose }: { activity: ActivityRecord; onClo
               </NativeSelect>
             </Field>
             {available.length === 0 && (
-              <p className="form-footnote">Add a planned workout to your calendar first.</p>
+              <p className="form-footnote">
+                No compatible scheduled workouts. Check the sport group and subgroup, or resolve the
+                activity classification through Garmin reimport.
+              </p>
             )}
             <SubmitButton busy={action.busy || !workoutId}>Link workout</SubmitButton>
           </form>

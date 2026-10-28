@@ -45,7 +45,7 @@ test('create, edit, log completion and reload a manual workout', async ({ page }
   await page.getByRole('button', { name: 'Add workout', exact: true }).click();
   const create = page.getByRole('dialog');
   await create.getByLabel('Workout title').fill(title);
-  await create.getByRole('combobox', { name: 'Sport', exact: true }).selectOption('running');
+  await create.getByRole('combobox', { name: 'Sport group', exact: true }).selectOption('running');
   await create.getByLabel('Duration · minutes', { exact: true }).fill('45');
   await create.getByLabel('Distance · km', { exact: true }).fill('8');
   await create.getByLabel('Scheduled date').fill(await today(page));
@@ -57,7 +57,7 @@ test('create, edit, log completion and reload a manual workout', async ({ page }
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   await inspector.getByRole('button', { name: 'Edit', exact: true }).click();
   const edit = page.getByRole('dialog', { name: 'Edit workout', exact: true });
-  await edit.getByLabel('Workout notes').fill('Keep the effort conversational.');
+  await edit.getByLabel('Workout description').fill('Keep the effort conversational.');
   await edit.getByRole('button', { name: 'Save workout', exact: true }).click();
   await expect(edit).not.toBeVisible();
   await expect(inspector.getByText('Keep the effort conversational.')).toBeVisible();

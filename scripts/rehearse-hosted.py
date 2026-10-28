@@ -163,7 +163,7 @@ def main():
         custom_manifest=json.loads((candidate/'personal-plugins/cycling-sleep/manifest.json').read_text())
         custom_manifest.update(id='owner-example',name='Owner example',routes=[{'path':'/owner-example','title':'Owner example','icon':'ChartNoAxesCombined'}])
         (custom/'manifest.json').write_text(json.dumps(custom_manifest));(custom/'client.tsx').write_text("'use client';\nexport default function OwnerExample(){return <p>Synthetic owner extension</p>;}\n")
-        composition=json.loads((candidate/'instance/composition.json').read_text());composition['plugins'].append({'path':'personal-plugins/owner-example','version':'1.0.0','enabled':True})
+        composition=json.loads((candidate/'instance/composition.json').read_text());composition['plugins'].append({'path':'personal-plugins/owner-example','version':custom_manifest['version'],'enabled':True})
         (candidate/'instance/composition.json').write_text(json.dumps(composition))
         candidate_remote=None
         if remote:

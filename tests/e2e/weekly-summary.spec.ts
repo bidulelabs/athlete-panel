@@ -49,7 +49,9 @@ test('each week expands independently with accurate volume, elevation, sleep and
   await page.keyboard.press('Enter');
   await expect(week.locator('.week-summary-body')).toBeVisible();
   await expect(week.locator('.week-band-metric')).toHaveCount(8);
-  await expect(week.getByRole('table')).not.toBeVisible();
+  await expect(
+    week.getByRole('table', { name: 'Planned and recorded training' }),
+  ).not.toBeVisible();
   await week.getByRole('button', { name: 'Show details', exact: true }).click();
   await expect(row(week, 'Training duration').getByRole('cell').nth(0)).toContainText('4h');
   await expect(row(week, 'Training duration').getByRole('cell').nth(1)).toContainText('5h');
@@ -334,14 +336,16 @@ test('metric explanations support hover, focus and touch without toggling or wri
     'false',
   );
   await week.getByRole('button', { name: 'Show details', exact: true }).click();
-  await expect(week.getByRole('table')).toBeVisible();
+  await expect(week.getByRole('table', { name: 'Planned and recorded training' })).toBeVisible();
   await week.locator('.week-summary-toggle').click();
   await week.locator('.week-summary-toggle').click();
   await expect(week.getByRole('button', { name: 'Show details', exact: true })).toHaveAttribute(
     'aria-expanded',
     'false',
   );
-  await expect(week.getByRole('table')).not.toBeVisible();
+  await expect(
+    week.getByRole('table', { name: 'Planned and recorded training' }),
+  ).not.toBeVisible();
   expect(mutations()).toBe(0);
 });
 

@@ -1,8 +1,6 @@
 import type { ZodType } from 'zod';
 import { AppError } from './errors';
-import { and, eq } from 'drizzle-orm';
-import { database, recordTable, type Transaction } from './db';
-import { connection } from './db';
+import { connection, type Transaction } from './db';
 
 export type StoredRecord = { id: string; revision: number; [key: string]: unknown };
 export type RecordSelection = {
@@ -12,26 +10,17 @@ export type RecordSelection = {
 };
 /** A plugin receives a repository for its own declared schema, never another plugin's ORM types. */
 export class RecordRepository<T extends StoredRecord> {
-  readonly table;
   constructor(
     readonly schema: string,
     private readonly schemas: Record<string, ZodType<T>>,
   ) {
     if (!/^[a-z][a-z0-9_]*$/.test(schema)) throw new Error('Invalid schema');
-    this.table = recordTable(schema);
   }
   async list(kind: string, tx?: Transaction): Promise<T[]> {
-    if (tx) {
-      const rows = await tx<
-        { data: unknown }[]
-      >`select data from ${tx(this.schema + '.records')} where kind=${kind} and deleted=false order by id`;
-      return rows.map((row) => this.parse(kind, row.data));
-    }
-    const rows = await database()
-      .select({ data: this.table.data })
-      .from(this.table)
-      .where(and(eq(this.table.kind, kind), eq(this.table.deleted, false)))
-      .orderBy(this.table.id);
+    const sql = tx ?? connection();
+    const rows = await sql<
+      { data: unknown }[]
+    >`select data from ${sql(this.schema + '.records')} where kind=${kind} and deleted=false order by id`;
     return rows.map((row) => this.parse(kind, row.data));
   }
   async range(

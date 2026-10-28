@@ -205,7 +205,7 @@ export function checkBoundaries(root: string): string[] {
         const serverImport =
           edge.specifier.startsWith('node:') ||
           builtins.has(edge.specifier) ||
-          /^(server-only|postgres|drizzle-orm|next\/(headers|server))(\/|$)/.test(edge.specifier);
+          /^(server-only|postgres|next\/(headers|server))(\/|$)/.test(edge.specifier);
         const serverTarget =
           edge.target &&
           (within(edge.target, resolve(root, 'packages/host')) ||

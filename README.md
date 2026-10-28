@@ -57,7 +57,7 @@ For a private server, the supplied Compose configuration runs **Caddy → web ap
 | Layer                | Technology and role                                                                          |
 | -------------------- | -------------------------------------------------------------------------------------------- |
 | Web interface        | TypeScript, React, Next.js, Tailwind CSS, shared shadcn/Radix primitives and Lucide icons              |
-| Data and validation  | PostgreSQL 17, Drizzle ORM, explicit SQL transactions and Zod runtime contracts              |
+| Data and validation  | PostgreSQL 17, postgres.js, explicit SQL transactions and Zod runtime contracts              |
 | Background work      | Database-backed jobs with leases, retries and persistent checkpoints                         |
 | Extensions           | Build-time plugin composition with validated dependencies and separate client/server entries |
 | Agent access         | Local TypeScript CLI and scoped JSON HTTP API; owner approval in the browser                 |

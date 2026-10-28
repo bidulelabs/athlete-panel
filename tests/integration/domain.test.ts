@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { type CommandInput } from '@athlete-panel/contracts';
@@ -15,23 +16,7 @@ import {
   submitProposal,
 } from '../../plugins/agent-bridge/service';
 
-// Destructive cleanup is allowed only against an explicitly supplied isolated local test DB.
-const suppliedUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
-if (!suppliedUrl)
-  throw new Error(
-    'Domain integration tests require an explicitly configured isolated local *_test database.',
-  );
-if (suppliedUrl) {
-  const url = new URL(suppliedUrl);
-  if (
-    !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
-    !url.pathname.slice(1).endsWith('_test')
-  ) {
-    throw new Error(
-      'Domain integration tests require an explicit localhost database whose name ends in _test.',
-    );
-  }
-}
+const suppliedUrl = isolatedDatabaseUrl();
 const id = (value: number) => `00000000-0000-4000-8000-${value.toString().padStart(12, '0')}`;
 const save = (commands: CommandInput[], idempotencyKey = randomUUID()) =>
   mutate({ commands, idempotencyKey });

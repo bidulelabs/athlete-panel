@@ -1,16 +1,9 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { test, expect, type Page } from '@playwright/test';
 import postgres from 'postgres';
 import { randomUUID } from 'node:crypto';
 
-const target = process.env.E2E_DATABASE_URL;
-if (
-  !target ||
-  !['localhost', '127.0.0.1', '[::1]'].includes(new URL(target).hostname) ||
-  !new URL(target).pathname.endsWith('_test')
-)
-  throw new Error(
-    'Onboarding browser tests require explicit E2E_DATABASE_URL for the isolated synthetic server, ending in _test.',
-  );
+const target = isolatedDatabaseUrl('E2E_DATABASE_URL');
 const sql = postgres(target, { max: 1, onnotice: () => {} });
 let savedProfile: any;
 async function setSetup(status = 'pending') {

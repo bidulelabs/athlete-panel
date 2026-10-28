@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { closeDatabase, connection, transaction } from '../../packages/host/src/db';
@@ -29,13 +30,7 @@ vi.mock('../../plugins/garmin/transport', async (original) => {
       module.createGarminClient({ ...options, requestIntervalMs: 0 }),
   };
 });
-const url = process.env.TEST_DATABASE_URL;
-if (
-  !url ||
-  !['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname) ||
-  !new URL(url).pathname.endsWith('_test')
-)
-  throw new Error('Explicit loopback *_test database required');
+const url = isolatedDatabaseUrl();
 let context: RecoveryContext,
   fetcher: ReturnType<typeof vi.fn>,
   deniedSleep: boolean,

@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { closeDatabase, connection } from '../../packages/host/src/db';
@@ -13,13 +14,7 @@ import {
   submitProposal,
 } from '../../plugins/agent-bridge/service';
 import { PROPOSAL_LIFETIME_MS } from '../../packages/contracts/src';
-const url = process.env.TEST_DATABASE_URL;
-if (
-  !url ||
-  !['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname) ||
-  !new URL(url).pathname.endsWith('_test')
-)
-  throw new Error('Explicit loopback *_test database required');
+const url = isolatedDatabaseUrl();
 const workoutId = '00000000-0000-4000-8000-000000000002';
 beforeAll(async () => {
   await closeDatabase();

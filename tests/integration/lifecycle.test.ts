@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { createHash, randomUUID } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -12,17 +13,8 @@ import { migrate } from '../../packages/host/src/migrations';
 import { checkSchema } from '../../packages/host/src/schema';
 import { hostMigrationFiles } from '../../packages/host/src/migration-files';
 
-const suppliedUrl = process.env.TEST_DATABASE_URL;
-if (!suppliedUrl)
-  throw new Error(
-    'Lifecycle tests require explicit TEST_DATABASE_URL for isolated local *_test storage.',
-  );
+const suppliedUrl = isolatedDatabaseUrl();
 const base = new URL(suppliedUrl);
-if (
-  !['localhost', '127.0.0.1', '[::1]'].includes(base.hostname) ||
-  !base.pathname.endsWith('_test')
-)
-  throw new Error('Lifecycle tests require an explicit localhost *_test database.');
 const admin = postgres(suppliedUrl, { max: 1, onnotice: () => {} });
 const originalDatabaseUrl = process.env.DATABASE_URL;
 const migrationFiles = [

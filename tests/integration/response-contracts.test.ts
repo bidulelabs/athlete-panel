@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { persistAndAudit } from '../../instance/commit';
 import { applyCommands } from '../../plugins/training/engine';
 import { emptyWorkspace } from '@athlete-panel/contracts';
@@ -11,11 +12,7 @@ import { trainingRepository } from '../../plugins/training/repository';
 import { mutate } from '../../plugins/training/service';
 import { requiredRow, optionalRow } from '../../packages/host/src/rows';
 import { AppError } from '../../packages/host/src/errors';
-const supplied = process.env.TEST_DATABASE_URL;
-if (!supplied) throw new Error('Response integration checks require TEST_DATABASE_URL.');
-const url = new URL(supplied);
-if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) || !url.pathname.endsWith('_test'))
-  throw new Error('Use isolated local *_test storage.');
+const supplied = isolatedDatabaseUrl();
 describe('typed database responses', () => {
   beforeAll(async () => {
     await closeDatabase();

@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { closeDatabase, connection } from '../../packages/host/src/db';
@@ -12,11 +13,7 @@ import {
 } from '../../plugins/agent-bridge/connections';
 import { contextForToken, revokeGrant } from '../../plugins/agent-bridge/service';
 
-const suppliedUrl = process.env.TEST_DATABASE_URL;
-if (!suppliedUrl) throw new Error('An explicit isolated TEST_DATABASE_URL is required.');
-const url = new URL(suppliedUrl);
-if (!['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) || !url.pathname.endsWith('_test'))
-  throw new Error('Connection tests require isolated loopback *_test storage.');
+const suppliedUrl = isolatedDatabaseUrl();
 
 describe('browser-approved agent connections', () => {
   beforeAll(async () => {

@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { closeDatabase, connection, transaction } from '../../packages/host/src/db';
@@ -37,21 +38,7 @@ vi.mock('../../plugins/garmin/transport', async (original) => {
   };
 });
 
-const suppliedUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
-if (!suppliedUrl)
-  throw new Error(
-    'Garmin integration tests require an explicitly configured isolated local *_test database.',
-  );
-if (suppliedUrl) {
-  const parsed = new URL(suppliedUrl);
-  if (
-    !['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname) ||
-    !parsed.pathname.slice(1).endsWith('_test')
-  )
-    throw new Error(
-      'Garmin integration tests require an explicit isolated localhost *_test database.',
-    );
-}
+const suppliedUrl = isolatedDatabaseUrl();
 const key = 'synthetic-personal-key-never-valid';
 const day = '2026-10-24';
 const activityRow = (overrides: Record<string, unknown> = {}) => ({

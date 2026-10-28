@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 import { closeDatabase, connection } from '../../packages/host/src/db';
@@ -7,13 +8,7 @@ import { failure } from '../../packages/host/src/http';
 import { startConnection, cancelConnection } from '../../plugins/agent-bridge/connections';
 import { contextForToken, submitProposal, createGrant } from '../../plugins/agent-bridge/service';
 
-const supplied = process.env.TEST_DATABASE_URL;
-if (
-  !supplied ||
-  !['localhost', '127.0.0.1'].includes(new URL(supplied).hostname) ||
-  !new URL(supplied).pathname.endsWith('_test')
-)
-  throw new Error('Explicit isolated loopback TEST_DATABASE_URL ending in _test required.');
+const supplied = isolatedDatabaseUrl();
 const policy = {
   namespace: 'agent-enrollment',
   clientLimit: 5,

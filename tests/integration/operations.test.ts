@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { chmod, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -14,17 +15,8 @@ import { releaseMetadata } from '../../scripts/release-metadata';
 import { BACKUP_MAGIC } from '../../scripts/lib/backup-format';
 
 // Never fall back to the production DATABASE_URL, even when a test variable is absent.
-const suppliedUrl = process.env.TEST_DATABASE_URL;
-if (!suppliedUrl)
-  throw new Error(
-    'Operations tests require TEST_DATABASE_URL for an isolated local *_test database and a role permitted to create databases.',
-  );
+const suppliedUrl = isolatedDatabaseUrl();
 const base = new URL(suppliedUrl);
-if (
-  !['localhost', '127.0.0.1', '[::1]'].includes(base.hostname) ||
-  !base.pathname.endsWith('_test')
-)
-  throw new Error('Operations tests require an explicit localhost *_test database.');
 const unique = randomUUID().replaceAll('-', '');
 const sourceName = `athlete_panel_ops_${unique}_source_test`,
   targetName = `athlete_panel_ops_${unique}_target_test`;

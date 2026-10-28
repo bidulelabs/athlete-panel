@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { beforeAll, beforeEach, afterAll, expect, it } from 'vitest';
@@ -11,15 +12,7 @@ import { mutate } from '../../plugins/training/service';
 import { configure, getConfiguration, status, sync } from '../../plugins/garmin/service';
 import athlete from '../../plugins/athlete/server';
 
-const url = process.env.TEST_DATABASE_URL;
-if (
-  !url ||
-  !['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname) ||
-  !new URL(url).pathname.endsWith('_test')
-)
-  throw new Error(
-    'Onboarding tests require explicit isolated local TEST_DATABASE_URL ending in _test.',
-  );
+const url = isolatedDatabaseUrl();
 const preferences = {
   timezone: 'America/New_York',
   units: 'imperial',

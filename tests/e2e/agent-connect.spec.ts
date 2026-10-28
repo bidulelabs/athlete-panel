@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -7,15 +8,7 @@ import postgres from 'postgres';
 
 const password = process.env.E2E_PASSWORD;
 if (!password) throw new Error('E2E_PASSWORD is required for the synthetic instance.');
-const database = process.env.E2E_DATABASE_URL;
-if (
-  !database ||
-  !['localhost', '127.0.0.1', '[::1]'].includes(new URL(database).hostname) ||
-  !new URL(database).pathname.endsWith('_test')
-)
-  throw new Error(
-    'Agent browser tests require isolated loopback E2E_DATABASE_URL ending in _test.',
-  );
+const database = isolatedDatabaseUrl('E2E_DATABASE_URL');
 const sql = postgres(database, { max: 1, onnotice: () => {} });
 test.beforeEach(async () => {
   await sql`delete from host.request_budgets where namespace='agent-enrollment'`;

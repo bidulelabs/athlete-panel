@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomBytes, scryptSync } from 'node:crypto';
 import postgres from 'postgres';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
@@ -7,13 +8,7 @@ import { provisionApplicationRole } from '../../packages/host/src/database-acces
 import { login, requireSession } from '../../packages/host/src/auth';
 import { passwordHashAsync, verifyPasswordAsync } from '../../packages/host/src/crypto';
 
-const supplied = process.env.TEST_DATABASE_URL;
-if (
-  !supplied ||
-  !['localhost', '127.0.0.1'].includes(new URL(supplied).hostname) ||
-  !new URL(supplied).pathname.endsWith('_test')
-)
-  throw new Error('Explicit isolated loopback TEST_DATABASE_URL ending in _test required.');
+const supplied = isolatedDatabaseUrl();
 const original = process.env.DATABASE_URL;
 const suffix = randomBytes(6).toString('hex');
 const name = `password_${suffix}_test`,

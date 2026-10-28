@@ -1,3 +1,4 @@
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import postgres from 'postgres';
@@ -5,11 +6,7 @@ import { expect, it } from 'vitest';
 import { provisionApplicationRole } from '../../packages/host/src/database-access';
 
 it('keeps runtime data access while denying role, schema, owner and migration administration', async () => {
-  if (!process.env.TEST_DATABASE_URL)
-    throw new Error('Explicit isolated TEST_DATABASE_URL required.');
-  const source = new URL(process.env.TEST_DATABASE_URL);
-  if (!['127.0.0.1', 'localhost'].includes(source.hostname) || !source.pathname.endsWith('_test'))
-    throw new Error('Use a loopback *_test database.');
+  const source = new URL(isolatedDatabaseUrl());
   const admin = postgres(source.href, { max: 1, onnotice: () => {} });
   const suffix = randomBytes(6).toString('hex'),
     name = `roles_${suffix}_test`,

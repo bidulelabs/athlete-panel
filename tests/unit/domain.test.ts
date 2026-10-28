@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   emptyWorkspace,
   type Activity,
@@ -168,6 +168,42 @@ describe('pure training engine', () => {
     };
     expect(() => run(pending, [{ ...complete, expectedRevision: 2 }])).toThrow(/Schedule/);
     expect(run(state, [complete]).state.workouts[0].completion?.performedDate).toBe('2026-10-25');
+  });
+  describe('completion dates', () => {
+    afterEach(() => vi.useRealTimers());
+    const complete = (status: 'completed' | 'partial' | 'skipped', performedDate: string) =>
+      ({
+        action: 'workout.complete',
+        id: id(3),
+        expectedRevision: 1,
+        values: { status, performedDate, reason: status === 'partial' ? 'Time' : '' },
+      }) as CommandInput;
+    it('refuses to log a completed or partial workout dated after today, but not a skipped one', () => {
+      vi.useFakeTimers({ now: new Date('2026-10-25T12:00:00Z'), toFake: ['Date'] });
+      const state = training();
+      for (const status of ['completed', 'partial'] as const)
+        expect(() => run(state, [complete(status, '2026-10-26')])).toThrow(
+          expect.objectContaining({ code: 'FUTURE_COMPLETION' }),
+        );
+      expect(
+        run(state, [complete('completed', '2026-10-25')]).state.workouts[1].completion,
+      ).not.toBeNull();
+      expect(
+        run(state, [complete('skipped', '2026-10-26')]).state.workouts[1].completion?.status,
+      ).toBe('skipped');
+    });
+    it.each([
+      { timezone: 'Pacific/Auckland', now: '2026-10-25T12:00:00Z', accepted: true },
+      { timezone: 'America/Los_Angeles', now: '2026-10-26T05:00:00Z', accepted: false },
+    ])("decides today in the athlete's timezone ($timezone)", ({ timezone, now, accepted }) => {
+      vi.useFakeTimers({ now: new Date(now), toFake: ['Date'] });
+      const state = run(training(), [
+        { action: 'profile.set', expectedRevision: null, values: { timezone } },
+      ]).state;
+      const logging = () => run(state, [complete('completed', '2026-10-26')]);
+      if (accepted) expect(logging().state.workouts[1].completion).not.toBeNull();
+      else expect(logging).toThrow(expect.objectContaining({ code: 'FUTURE_COMPLETION' }));
+    });
   });
   it('guards history against whole-plan shifts, deletion and workout rescheduling', () => {
     const state = run(training(), [

@@ -301,3 +301,31 @@ test('calendar stays compact on desktop with usable phone cards', async ({ page 
   }
   expect(writes()).toBe(0);
 });
+
+test('imperial edits keep stored distances the owner did not change', async ({ page }) => {
+  const { data } = await preview(page);
+  data.profile!.units = 'imperial';
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+  const sent: { values: Record<string, unknown> }[] = [];
+  await page.route('**/api/plugins/training/mutate', async (route) => {
+    sent.push(...route.request().postDataJSON().commands);
+    await route.fulfill({ json: { id: crypto.randomUUID(), changes: [] } });
+  });
+  await page.getByRole('button', { name: 'Open Short easy run', exact: true }).click();
+  const inspector = page.getByRole('complementary', { name: 'Workout details' });
+  await inspector.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByLabel('Workout title').fill('Short easy run, renamed');
+  await page.getByRole('button', { name: 'Save workout', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]!.values.distanceMeters).toBe(10000);
+  await inspector.getByRole('button', { name: 'Edit completion', exact: true }).click();
+  await page.getByRole('button', { name: 'Save completion', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]!.values.distanceMeters).toBe(5000);
+  await inspector.getByRole('button', { name: 'Edit completion', exact: true }).click();
+  await page.getByLabel('Actual distance · mi').fill('2');
+  await page.getByRole('button', { name: 'Save completion', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(3);
+  expect(sent[2]!.values.distanceMeters).toBe(2 * 1609.344);
+});

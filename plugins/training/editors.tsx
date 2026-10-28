@@ -43,6 +43,7 @@ import { useState, type FormEvent } from 'react';
 import { effectiveDate } from './dates';
 import { InspectorPanel } from './inspector-panel';
 import { WorkoutPrescription } from './prescription';
+import { distanceFieldText, distanceMetersFromField } from './distance-field';
 
 export async function mutate(
   request: PluginPageProps['request'],
@@ -402,8 +403,11 @@ export function WorkoutEditor({
       sport: String(values.get('sport')) as 'cycling' | 'running',
       schedule,
       durationSeconds: values.get('duration') === '' ? null : Number(values.get('duration')) * 60,
-      distanceMeters:
-        values.get('distance') === '' ? null : Number(values.get('distance')) * factor,
+      distanceMeters: distanceMetersFromField(
+        values.get('distance'),
+        workout?.distanceMeters,
+        factor,
+      ),
       steps,
       notes: String(values.get('notes') ?? ''),
       order:
@@ -475,11 +479,7 @@ export function WorkoutEditor({
               type="number"
               min="0"
               step="any"
-              defaultValue={
-                workout?.distanceMeters != null
-                  ? Number((workout.distanceMeters / factor).toFixed(3))
-                  : ''
-              }
+              defaultValue={distanceFieldText(workout?.distanceMeters, factor)}
               placeholder="Optional"
             />
           </Field>
@@ -556,9 +556,13 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
                           : Number(fields.get('duration')) * 60,
                       distanceMeters: linked
                         ? workout.completion!.distanceMeters
-                        : status === 'skipped' || fields.get('distance') === ''
+                        : status === 'skipped'
                           ? null
-                          : Number(fields.get('distance')) * factor,
+                          : distanceMetersFromField(
+                              fields.get('distance'),
+                              workout.completion?.distanceMeters,
+                              factor,
+                            ),
                       rpe:
                         status === 'skipped' || fields.get('rpe') === ''
                           ? null
@@ -628,11 +632,7 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
                   min="0"
                   step="any"
                   placeholder="Unknown"
-                  defaultValue={
-                    workout.completion?.distanceMeters != null
-                      ? Number((workout.completion.distanceMeters / factor).toFixed(3))
-                      : ''
-                  }
+                  defaultValue={distanceFieldText(workout.completion?.distanceMeters, factor)}
                 />
               </Field>
             </div>

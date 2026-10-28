@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Workspace from '../workspace';
 import { requireSession, SESSION_COOKIE } from '../../../../packages/host/src/auth';
+import { AppError } from '../../../../packages/host/src/errors';
 export default async function Page({
   params,
   searchParams,
@@ -19,7 +20,8 @@ export default async function Page({
       : null;
   try {
     await requireSession((await cookies()).get(SESSION_COOKIE)?.value);
-  } catch {
+  } catch (error) {
+    if (!(error instanceof AppError) || error.code !== 'unauthorized') throw error;
     redirect(next ? `/login?next=${encodeURIComponent(next)}` : '/login');
   }
   return <Workspace initialPath={'/' + path.join('/')} />;

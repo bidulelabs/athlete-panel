@@ -72,7 +72,6 @@ async function publicStatus(row: ConnectionRow, tx: Transaction): Promise<AgentC
   return agentConnectionStatusSchema.parse({
     id: row.id,
     label: row.label,
-    code: row.code,
     expiresAt: row.expires_at.toISOString(),
     status,
     grant,

@@ -56,10 +56,10 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     await page.getByLabel('Password', { exact: true }).fill(password!);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Connect your training agent' })).toBeVisible();
-    await expect(page.getByLabel('Approval code', { exact: true })).toHaveText(code);
+    await expect(page.getByText(code)).toHaveCount(0);
     const approve = page.getByRole('button', { name: 'Approve connection', exact: true });
-    await expect(approve).toBeDisabled();
-    await page.getByLabel('This code matches my terminal').check();
+    const codeField = page.getByLabel('Approval code', { exact: true });
+    await codeField.fill(code.toLowerCase());
     await page.getByLabel('Access expires after').selectOption('4');
     await page.evaluate(() => {
       document.documentElement.dataset.theme = 'light';
@@ -80,6 +80,10 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
+    await codeField.fill(code === '0000-0000' ? '1111-1111' : '0000-0000');
+    await approve.click();
+    await expect(page.getByText('The connection code does not match.')).toBeVisible();
+    await codeField.fill(` ${code.replace('-', ' ').toLowerCase()} `);
     await approve.click();
     await expect(page.getByRole('heading', { name: 'Agent access approved' })).toBeVisible();
     expect(await process.done).toBe(0);

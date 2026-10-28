@@ -45,7 +45,7 @@ This addition defines agent instructions, not a server-enforced questionnaire, n
 | Same payload/key retry | Same committed result | Database cases |
 | Later edit before undo | Entire undo conflicts | Database cases |
 | Out-of-scope duplication | Proposal denied before stored review | Database cases |
-| CLI connection approved | Sign-in returns to the request; matching-code confirmation and explicit scope issue one grant, then CLI saves it privately without printing it | [Browser/CLI cases](../../tests/e2e/agent-connect.spec.ts) |
+| CLI connection approved | Sign-in returns to the request; typing the terminal code and explicit scope issue one grant, then CLI saves it privately without printing it | [Browser/CLI cases](../../tests/e2e/agent-connect.spec.ts) |
 | Declined, expired, cancelled or wrong-code request | No usable new connection; previous saved configuration remains unchanged | [Connection cases](../../tests/integration/agent-connections.test.ts), browser/CLI cases |
 | Repeated approval or changed approval payload | Identical retry reuses the grant; changed scope conflicts | Connection cases |
 | Anonymous approval or foreign browser origin | Denied; public enrollment and polling cannot approve | Browser/CLI cases |
@@ -70,7 +70,7 @@ Current implementation bounds grants to 121 calendar days and at most 24 hours. 
 
 The [CLI implementation](../../scripts/lib/agent-client.ts) opens the default browser and provides an approval-link fallback. It atomically replaces private local configuration only after approval. Cancellation attempts server cleanup, and the owner can always disconnect access in the application. A lost network response or unavailable server can prevent immediate cancellation; no automatic renewal is provided. The owner chooses one, four or 24 hours in the browser. Manual stdin configuration remains an advanced compatibility path.
 
-The [approval UI](../../plugins/agent-bridge/connections-client.tsx) preserves the connection through sign-in, shows the shared context and requires confirmation of the terminal code. Revoked/expired access requires fresh browser approval. Actual discovery/loading by each external harness remains a separate demonstration recorded in the execution record.
+The [approval UI](../../plugins/agent-bridge/connections-client.tsx) preserves the connection through sign-in, shows the shared context and requires the owner to type the terminal code; the server never sends that code to the browser. Revoked/expired access requires fresh browser approval. Actual discovery/loading by each external harness remains a separate demonstration recorded in the execution record.
 
 The [coaching skill](../../.agents/skills/athlete-panel-training-coaching/SKILL.md) implements the clarification instructions, and the [training-planning skill](../../.agents/skills/athlete-panel-training-planning/SKILL.md) links to it after context retrieval. Both have generated Claude discovery copies. Source inspection establishes the routing and instructions; it does not establish live model compliance. The CLI, proposal schema, server authorization and application UI are unchanged by this addition.
 

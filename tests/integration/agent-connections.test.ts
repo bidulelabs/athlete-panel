@@ -48,7 +48,8 @@ describe('browser-approved agent connections', () => {
       JSON.stringify(await connection()`select * from agent_bridge.connections`),
     ).not.toContain(request.token);
     const inspection = await inspectConnection({ id: request.id });
-    expect(inspection).toMatchObject({ status: 'pending', code: request.code, grant: null });
+    expect(inspection).toMatchObject({ status: 'pending', grant: null });
+    expect(JSON.stringify(inspection)).not.toContain(request.code);
     expect(JSON.stringify(inspection)).not.toContain(request.token);
     expect(JSON.stringify(inspection)).not.toContain('token_hash');
     await expect(pollConnection('A'.repeat(43))).rejects.toMatchObject({ status: 401 });

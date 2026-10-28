@@ -53,7 +53,7 @@ export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
           {copied ? 'Command copied' : 'Copy command'}
         </Button>
         <ol>
-          <li>Check that the approval code matches your terminal.</li>
+          <li>Type the approval code shown in your terminal.</li>
           <li>Choose dates, notes access, and when access expires.</li>
           <li>
             Ask your agent to read the training-planning skill linked in AGENTS.md and propose your
@@ -79,7 +79,6 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
   const { request, data } = useWorkspace();
   const [connection, setConnection] = useState<AgentConnectionStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [matched, setMatched] = useState(false);
   const [now, setNow] = useState(Date.now());
   const action = useAction();
   useEffect(() => {
@@ -125,10 +124,13 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
             onSubmit={(event) => {
               event.preventDefault();
               const form = new FormData(event.currentTarget);
+              const typedCode = String(form.get('code'))
+                .replace(/[^0-9a-f]/gi, '')
+                .toUpperCase();
               void action.run(async () => {
                 const result = await request('agent-bridge', 'approve-connection', {
                   id,
-                  code: connection.code,
+                  code: `${typedCode.slice(0, 4)}-${typedCode.slice(4)}`,
                   label: String(form.get('label')),
                   from: String(form.get('from')),
                   to: String(form.get('to')),
@@ -139,24 +141,16 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
               });
             }}
           >
-            <p>
-              Compare this code with the one shown by <code>pnpm agent connect</code>:
-            </p>
-            <div
-              className="token-reveal"
-              style={{ fontSize: 26, letterSpacing: '0.12em', textAlign: 'center' }}
-              aria-label="Approval code"
-            >
-              {connection.code}
-            </div>
-            <label className="checkbox-row">
-              <Checkbox
+            <Field label="Approval code" hint="Type the code shown by pnpm agent connect.">
+              <Input
                 required
-                checked={matched}
-                onCheckedChange={(value) => setMatched(value === true)}
+                name="code"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="XXXX-XXXX"
+                style={{ fontSize: 26, letterSpacing: '0.12em', textAlign: 'center' }}
               />
-              This code matches my terminal
-            </label>
+            </Field>
             <div className="form-divider" />
             <Field label="Agent name">
               <Input required name="label" maxLength={100} defaultValue={connection.label} />
@@ -216,7 +210,7 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
                 variant="default"
                 type="submit"
                 className="button primary"
-                disabled={action.busy || !matched}
+                disabled={action.busy}
               >
                 <ShieldCheck size={16} />
                 {action.busy ? 'Approving…' : 'Approve connection'}

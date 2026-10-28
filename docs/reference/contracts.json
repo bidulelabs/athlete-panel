@@ -26664,9 +26664,6 @@
             "label": {
               "type": "string"
             },
-            "code": {
-              "type": "string"
-            },
             "expiresAt": {
               "type": "string",
               "format": "date-time",
@@ -26732,7 +26729,6 @@
           "required": [
             "id",
             "label",
-            "code",
             "expiresAt",
             "status",
             "grant"
@@ -26801,9 +26797,6 @@
             "label": {
               "type": "string"
             },
-            "code": {
-              "type": "string"
-            },
             "expiresAt": {
               "type": "string",
               "format": "date-time",
@@ -26869,7 +26862,6 @@
           "required": [
             "id",
             "label",
-            "code",
             "expiresAt",
             "status",
             "grant"
@@ -26905,9 +26897,6 @@
             "label": {
               "type": "string"
             },
-            "code": {
-              "type": "string"
-            },
             "expiresAt": {
               "type": "string",
               "format": "date-time",
@@ -26973,7 +26962,6 @@
           "required": [
             "id",
             "label",
-            "code",
             "expiresAt",
             "status",
             "grant"
@@ -30857,9 +30845,6 @@
         "label": {
           "type": "string"
         },
-        "code": {
-          "type": "string"
-        },
         "expiresAt": {
           "type": "string",
           "format": "date-time",
@@ -30925,7 +30910,6 @@
       "required": [
         "id",
         "label",
-        "code",
         "expiresAt",
         "status",
         "grant"

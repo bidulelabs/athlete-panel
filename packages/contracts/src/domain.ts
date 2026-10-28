@@ -572,7 +572,6 @@ export const agentConnectionStartedSchema = z.object({
 export const agentConnectionStatusSchema = z.object({
   id: idSchema,
   label: z.string(),
-  code: z.string(),
   expiresAt: timestampSchema,
   status: z.enum(['pending', 'approved', 'denied', 'cancelled', 'expired']),
   grant: z

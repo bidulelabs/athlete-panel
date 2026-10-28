@@ -97,7 +97,7 @@ export default function AgentBridgePage(_: PluginPageProps) {
             <span>1</span>Run the connect command
           </div>
           <div className="agent-step">
-            <span>2</span>Approve the matching code and access
+            <span>2</span>Type the terminal code and approve access
           </div>
           <div className="agent-step">
             <span>3</span>Review proposed training changes here

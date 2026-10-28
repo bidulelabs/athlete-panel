@@ -156,7 +156,7 @@ async function connect(origin: string, configPath: string, label: string, noOpen
     token = started.token;
     const approvalUrl = `${origin}/agent?connect=${encodeURIComponent(started.id)}`;
     console.log(
-      `\nApproval code: ${started.code}\nOpen: ${approvalUrl}\n\nApprove this matching code in your browser. No token copying is needed.\nWaiting for approval (up to 10 minutes). Press Ctrl+C to cancel.`,
+      `\nApproval code: ${started.code}\nOpen: ${approvalUrl}\n\nType this code in your browser to approve. No token copying is needed.\nWaiting for approval (up to 10 minutes). Press Ctrl+C to cancel.`,
     );
     if (!noOpen) await openBrowser(approvalUrl);
     const deadline = Date.now() + 10 * 60 * 1000;

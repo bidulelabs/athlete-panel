@@ -132,11 +132,7 @@ function IntervalRow({
               onChange({
                 ...step,
                 target: event.target.value
-                  ? {
-                      kind: event.target.value,
-                      min: event.target.value === 'rpe' ? 3 : 100,
-                      max: event.target.value === 'rpe' ? 5 : 150,
-                    }
+                  ? { kind: event.target.value, min: NaN, max: NaN }
                   : null,
               })
             }
@@ -156,9 +152,12 @@ function IntervalRow({
                 type="number"
                 step="any"
                 min="1"
-                value={step.target.min}
+                value={Number.isNaN(step.target.min) ? '' : step.target.min}
                 onChange={(event) =>
-                  onChange({ ...step, target: { ...step.target, min: Number(event.target.value) } })
+                  onChange({
+                    ...step,
+                    target: { ...step.target, min: event.target.valueAsNumber },
+                  })
                 }
               />
             </Field>
@@ -168,9 +167,12 @@ function IntervalRow({
                 type="number"
                 step="any"
                 min="1"
-                value={step.target.max}
+                value={Number.isNaN(step.target.max) ? '' : step.target.max}
                 onChange={(event) =>
-                  onChange({ ...step, target: { ...step.target, max: Number(event.target.value) } })
+                  onChange({
+                    ...step,
+                    target: { ...step.target, max: event.target.valueAsNumber },
+                  })
                 }
               />
             </Field>

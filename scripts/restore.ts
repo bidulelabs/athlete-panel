@@ -103,9 +103,10 @@ export async function verifyBackup(
   file: string,
   keyFile: string,
   encryptionKey: string,
+  parent = tmpdir(),
 ): Promise<{ stage: string; metadata: BackupMetadata; cleanup: () => Promise<void> }> {
   const key = await loadBackupKey(keyFile);
-  const stage = await mkdtemp(join(tmpdir(), 'athlete-panel-restore-'));
+  const stage = await mkdtemp(join(parent, 'athlete-panel-restore-'));
   await chmod(stage, 0o700);
   const cleanup = () => rm(stage, { recursive: true, force: true });
   try {

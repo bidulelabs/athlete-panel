@@ -1,9 +1,10 @@
+import { spawn } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { chmod, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import postgres from 'postgres';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { closeDatabase } from '../../packages/host/src/db';
 import { decrypt, encrypt } from '../../packages/host/src/crypto';
 import { migrate } from '../../packages/host/src/migrations';
@@ -272,8 +273,9 @@ describe('matched encrypted backup and isolated database restore', () => {
         root: restoredSource,
       };
       const backup = await createBackup(options);
-      const verified = await verifyBackup(backup.file, keyFile, encryptionKey);
+      const verified = await verifyBackup(backup.file, keyFile, encryptionKey, temp);
       try {
+        expect(verified.stage.startsWith(join(temp, 'athlete-panel-restore-'))).toBe(true);
         expect(verified.metadata.release).toEqual(identity);
       } finally {
         await verified.cleanup();
@@ -348,6 +350,48 @@ describe('matched encrypted backup and isolated database restore', () => {
     expect(remaining.filter((name) => /^athlete-panel-daily-/.test(name))).toHaveLength(9);
     expect(await pruneDailyBackups(destination)).toBe(0);
   });
+
+  it('removes the clear database dump when stopped during pg_dump', async () => {
+    const fakeBin = join(temp, 'slow-pg-bin');
+    const stageParent = join(temp, 'stopped-backup-tmp');
+    await mkdir(fakeBin, { recursive: true });
+    await mkdir(stageParent);
+    await writeFile(
+      join(fakeBin, 'pg_dump'),
+      '#!/bin/sh\nfor last; do :; done\necho synthetic-clear-dump > "$last"\nexec sleep 5\n',
+      { mode: 0o700 },
+    );
+    const child = spawn(
+      process.execPath,
+      [
+        '--import',
+        'tsx',
+        '-e',
+        `import('./scripts/backup.ts').then((m) => m.createBackup(${JSON.stringify({
+          databaseUrl: sourceUrl,
+          keyFile,
+          encryptionKey,
+          destination: join(temp, 'stopped-backups'),
+          root: resolve('.'),
+          pgBinDirectory: fakeBin,
+        })}))`,
+      ],
+      { env: { ...process.env, TMPDIR: stageParent }, stdio: 'ignore' },
+    );
+    const dumpWritten = async () => {
+      for (const stage of await readdir(stageParent))
+        if (await stat(join(stageParent, stage, 'database.dump')).catch(() => null)) return true;
+      return false;
+    };
+    await vi.waitFor(async () => expect(await dumpWritten()).toBe(true), { timeout: 20000 });
+    const exited = new Promise((done) => child.once('exit', (code) => done(code)));
+    child.kill('SIGTERM');
+    const code = await exited;
+    expect(
+      (await readdir(stageParent)).filter((name) => name.startsWith('athlete-panel-backup-')),
+    ).toEqual([]);
+    expect(code).toBe(143);
+  }, 30000);
 
   it('schedules daily backups in UTC across date boundaries', () => {
     expect(nextBackupTime(new Date('2026-10-24T02:59:59Z')).toISOString()).toBe(

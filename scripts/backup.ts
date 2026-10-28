@@ -1,5 +1,5 @@
 import { createCipheriv, createHash, randomBytes, randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream, rmSync } from 'node:fs';
 import {
   appendFile,
   chmod,
@@ -14,7 +14,7 @@ import {
   stat,
   writeFile,
 } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { constants, tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -102,6 +102,13 @@ async function writeBackup(
   await chmod(stage, 0o700);
   const sql = postgres(options.databaseUrl, { max: 1, onnotice: () => {} });
   let partial: string | null = null;
+  const deleteUnencryptedFilesAndExit = (signal: NodeJS.Signals) => {
+    rmSync(stage, { recursive: true, force: true });
+    if (partial) rmSync(partial, { force: true });
+    process.exit(128 + constants.signals[signal]);
+  };
+  process.once('SIGINT', deleteUnencryptedFilesAndExit);
+  process.once('SIGTERM', deleteUnencryptedFilesAndExit);
   try {
     const metadata = await sql.begin(async (tx) => {
       // Coordinate snapshot collection with all domain mutations and migration runs.
@@ -230,7 +237,7 @@ async function writeBackup(
     }
     // Read the destination back before publishing a completed archive name.
     const { verifyBackup } = await import('./restore');
-    const verified = await verifyBackup(partial, options.keyFile, options.encryptionKey);
+    const verified = await verifyBackup(partial, options.keyFile, options.encryptionKey, stage);
     await verified.cleanup();
     const storage = await verifyStorage(options.destination);
     await rename(partial, file);
@@ -248,6 +255,8 @@ async function writeBackup(
     });
     return { file, metadata };
   } finally {
+    process.off('SIGINT', deleteUnencryptedFilesAndExit);
+    process.off('SIGTERM', deleteUnencryptedFilesAndExit);
     key.fill(0);
     await sql.end();
     await rm(stage, { recursive: true, force: true });

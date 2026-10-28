@@ -30,7 +30,6 @@ export function json(value: unknown, status = 200) {
     headers: {
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
-      'X-Athlete-Panel-Contract': '1',
     },
   });
 }

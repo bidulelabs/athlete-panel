@@ -262,11 +262,11 @@ async function writeBackup(
     });
     return { file, metadata };
   } finally {
-    process.off('exit', deleteStageAndPartialArchive);
     key.fill(0);
     await sql.end();
     await rm(stage, { recursive: true, force: true });
     if (partial) await rm(partial, { force: true });
+    process.off('exit', deleteStageAndPartialArchive);
   }
 }
 

@@ -348,6 +348,7 @@ describe('matched encrypted backup and isolated database restore', () => {
     command: string[],
     pgDumpScript: string,
     stallVerificationAt = '',
+    stallStagingRemoval = false,
   ) => {
     const fakePgBinDirectory = join(temp, `${caseName}-pg-bin`);
     const stagingTmpDirectory = join(temp, `${caseName}-staging-tmp`);
@@ -362,11 +363,12 @@ describe('matched encrypted backup and isolated database restore', () => {
       `import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import { syncBuiltinESMExports } from 'node:module';
+import { basename } from 'node:path';
 import { PassThrough } from 'node:stream';
 const isArchive = (path) => String(path).endsWith('archive.stream');
 const started = () => fs.writeFileSync(process.env.VERIFICATION_STARTED_FILE, '');
 const { createReadStream } = fs;
-const { open } = fsPromises;
+const { open, rm } = fsPromises;
 if (process.env.STALL_VERIFICATION_AT === 'read_archive')
   fs.createReadStream = (path, options) => {
     if (!isArchive(path)) return createReadStream(path, options);
@@ -380,6 +382,12 @@ if (process.env.STALL_VERIFICATION_AT === 'open_archive')
       await new Promise((resolve) => setTimeout(resolve, 60000));
     }
     return open(path, ...rest);
+  };
+if (process.env.STALL_STAGING_REMOVAL === 'true')
+  fsPromises.rm = async (path, ...rest) => {
+    if (basename(String(path)).startsWith('athlete-panel-backup-'))
+      await new Promise((resolve) => setTimeout(resolve, 60000));
+    return rm(path, ...rest);
   };
 syncBuiltinESMExports();
 `,
@@ -397,6 +405,7 @@ syncBuiltinESMExports();
           PG_BIN_DIR: fakePgBinDirectory,
           TMPDIR: stagingTmpDirectory,
           STALL_VERIFICATION_AT: stallVerificationAt,
+          STALL_STAGING_REMOVAL: String(stallStagingRemoval),
           VERIFICATION_STARTED_FILE: verificationStartedFile,
         },
         stdio: 'ignore',
@@ -477,6 +486,22 @@ syncBuiltinESMExports();
       ['scripts/backup.ts'],
       quickPgDumpScript,
       'open_archive',
+    );
+    await vi.waitFor(async () => expect(await stat(backup.verificationStartedFile)).toBeTruthy(), {
+      timeout: 20000,
+    });
+    backup.child.kill('SIGTERM');
+    expect(await backup.childExitCode).toBe(143);
+    expect(await backup.leftoverFiles()).toEqual([]);
+  }, 40000);
+
+  it('deletes both staging directories when the cancelled backup is forced to exit after 10 s during slow cleanup', async () => {
+    const backup = await startBackup(
+      'slow-cleanup',
+      ['scripts/backup.ts'],
+      quickPgDumpScript,
+      'read_archive',
+      true,
     );
     await vi.waitFor(async () => expect(await stat(backup.verificationStartedFile)).toBeTruthy(), {
       timeout: 20000,

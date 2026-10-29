@@ -1,5 +1,5 @@
 import { createCipheriv, createHash, randomBytes, randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream, rmSync } from 'node:fs';
 import {
   appendFile,
   chmod,
@@ -102,6 +102,11 @@ async function writeBackup(
   await chmod(stage, 0o700);
   const sql = postgres(options.databaseUrl, { max: 1, onnotice: () => {} });
   let partial: string | null = null;
+  const deleteStageAndPartialArchive = () => {
+    rmSync(stage, { recursive: true, force: true });
+    if (partial) rmSync(partial, { force: true });
+  };
+  process.once('exit', deleteStageAndPartialArchive);
   try {
     const metadata = await sql.begin(async (tx) => {
       // Coordinate snapshot collection with all domain mutations and migration runs.
@@ -232,7 +237,13 @@ async function writeBackup(
     }
     // Read the destination back before publishing a completed archive name.
     const { verifyBackup } = await import('./restore');
-    const verified = await verifyBackup(partial, options.keyFile, options.encryptionKey);
+    const verified = await verifyBackup(
+      partial,
+      options.keyFile,
+      options.encryptionKey,
+      stage,
+      options.signal,
+    );
     await verified.cleanup();
     const storage = await verifyStorage(options.destination);
     options.signal?.throwIfAborted();
@@ -251,6 +262,7 @@ async function writeBackup(
     });
     return { file, metadata };
   } finally {
+    process.off('exit', deleteStageAndPartialArchive);
     key.fill(0);
     await sql.end();
     await rm(stage, { recursive: true, force: true });

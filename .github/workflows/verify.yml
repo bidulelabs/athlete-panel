@@ -96,6 +96,7 @@ jobs:
           aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
           fs --include-dev-deps --scanners vuln --severity HIGH,CRITICAL --exit-code 1 /src
   container-rehearsal:
+    name: container-rehearsal (${{ matrix.rehearsal }})
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     strategy:

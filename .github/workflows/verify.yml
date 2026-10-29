@@ -5,11 +5,32 @@ on:
 permissions:
   contents: read
 jobs:
-  verify:
+  check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      - run: pnpm check
+
+  local-setup-rehearsal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      - name: Rehearse guided local setup and combined startup on isolated storage
+        run: python3 scripts/rehearse-local.py
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     services:
-      postgres:
+      postgres: &test-postgres
         image: postgres:17-alpine
         env:
           POSTGRES_USER: athlete_panel_test
@@ -19,7 +40,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U athlete_panel_test -d athlete_panel_test"
           --health-interval 2s --health-timeout 5s --health-retries 20
-    env:
+    env: &test-env
       DATABASE_URL: postgres://athlete_panel_test:synthetic-test-only@127.0.0.1:55439/athlete_panel_test
       TEST_DATABASE_URL: postgres://athlete_panel_test:synthetic-test-only@127.0.0.1:55439/athlete_panel_test
       ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
@@ -33,23 +54,25 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '22'
-      - run: npm install --global pnpm@11.28.8
-      - run: pnpm install --frozen-lockfile
-      - name: Install PostgreSQL 17 client from the official repository
-        run: |
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl --fail -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
-      - run: pnpm check
-      - name: Rehearse guided local setup and combined startup on isolated storage
-        run: python3 scripts/rehearse-local.py
+      - uses: ./.github/actions/setup-workspace
       - run: pnpm db:migrate
       - run: pnpm test:integration
+
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [desktop, mobile]
+    services:
+      postgres: *test-postgres
+    env: *test-env
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - name: Seed and start isolated production server
@@ -65,14 +88,23 @@ jobs:
           for attempt in $(seq 1 30); do if curl --fail --silent http://127.0.0.1:3000/api/health; then exit 0; fi; sleep 1; done
           cat /tmp/athlete-panel-web.log
           exit 1
-      - run: pnpm test:e2e
+      - run: pnpm test:e2e --project=${{ matrix.project }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
-          name: verification-evidence
+          name: verification-evidence-${{ matrix.project }}
           path: |
             .runtime/playwright-report
             .runtime/playwright-results
+
+  verify:
+    if: always()
+    needs: [check, local-setup-rehearsal, integration, e2e]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
 
   publication-security:
     runs-on: ubuntu-24.04

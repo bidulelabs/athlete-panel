@@ -58,7 +58,9 @@ describe('transactional migration and source lifecycle', () => {
     const original = await readFile(last, 'utf8');
     try {
       await writeFile(last, `${original}\nselect * from lifecycle_deliberate_failure;\n`);
-      await expect(migrate(root)).rejects.toThrow('lifecycle_deliberate_failure');
+      await expect(migrate(root)).rejects.toThrow(
+        `Migration ${migrationFiles.at(-1)} failed with SQLSTATE 42P01.`,
+      );
       expect(
         await connection()`select schema_name from information_schema.schemata where schema_name in ('host','athlete','training','activity_records','garmin')`,
       ).toHaveLength(0);
@@ -104,6 +106,30 @@ describe('transactional migration and source lifecycle', () => {
     expect(await connection()`select name,checksum from host.migrations order by name`).toEqual(
       before,
     );
+  });
+
+  it('names the failing migration without the database values in the SQL error', async () => {
+    const last = join(root, migrationFiles.at(-1)!);
+    const original = await readFile(last, 'utf8');
+    try {
+      await writeFile(last, `${original}\nselect 'synthetic-private-value'::uuid;\n`);
+      const failure = await migrate(root).catch((error: Error) => error.message);
+      expect(failure).toBe(`Migration ${migrationFiles.at(-1)} failed with SQLSTATE 22P02.`);
+    } finally {
+      await writeFile(last, original);
+    }
+  });
+
+  it('names the migration whose checksum no longer matches', async () => {
+    await migrate(root);
+    const [first] = await connection()`select name from host.migrations order by name limit 1`;
+    await connection()`update host.migrations set checksum=${'0'.repeat(64)} where name=${first.name}`;
+    const failed = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/migrate.ts'], {
+      env: process.env,
+      encoding: 'utf8',
+    });
+    expect(failed.status).toBe(1);
+    expect(failed.stderr).toContain(`checksum mismatch: ${first.name}`);
   });
 
   it('verifies retained migration files even after their plugin leaves the active composition', async () => {

@@ -56,7 +56,9 @@ export async function migrate(root = process.cwd()) {
           if (old.checksum !== checksum) throw new Error(`Migration checksum mismatch: ${file}`);
           continue;
         }
-        await tx.unsafe(body);
+        await tx.unsafe(body).catch((error: { code: string }) => {
+          throw new Error(`Migration ${file} failed with SQLSTATE ${error.code}.`);
+        });
         await tx`insert into host.migrations(plugin_id,name,checksum) values (${source.id},${file},${checksum})`;
       }
     await tx`insert into host.settings(key,value) values ('composition',${tx.json(registry.map((e) => ({ id: e.manifest.id, version: e.manifest.version, enabled: e.enabled })))}) on conflict(key) do update set value=excluded.value`;

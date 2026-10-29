@@ -156,6 +156,13 @@ Run these from the repository root. Setup/local load their own `.env`; advanced 
 | `pnpm backup --daily` | Creates an encrypted archive and applies seven-daily/four-weekly retention. |
 | `pnpm backup:verify /backups/recovery.fgr` | Authenticates and checks an archive using the configured backup/application keys without modifying a database. |
 | `pnpm ops backup-loop` | Immediate backup, then daily backups at the configured UTC hour. |
+| `python3 scripts/hosted.py upgrade` | From a trusted bundle: prepare/rehearse, create final recovery point, migrate, verify and reopen. |
+| `python3 scripts/hosted.py status` | Read current release, operation attempts/timings and sanitized backup/worker/notification status without taking the deployment lock. |
+| `python3 scripts/hosted.py resume` | Reconcile and continue the pinned pending operation; after activation retry only backups. |
+| `python3 scripts/hosted.py restore-test` | Restore the latest successful backup in disposable isolated containers; optional `--archive PATH` selects another. |
+| `python3 scripts/hosted.py recover --archive PATH --confirm-recovery` | Explicit matched snapshot recovery into a new database, retaining the previous database. |
+| `node --import tsx scripts/hosted-console.ts verify-data` | Console-only schema, retained-migration, owner and existing domain validation against configured storage. |
+| `python3 scripts/release-ci.py export\|verify --commit FULL_COMMIT` | Export or verify the run-scoped AMD64 CI image artifact; never publish. |
 | `pnpm restore /backups/recovery.fgr --confirm-replace --source-dir /recovery/new-source` | Authenticates a backup, restores the target database and extracts matching source into a new directory. Destructive; follow the recovery procedure below. |
 
 ### External-agent CLI
@@ -220,13 +227,13 @@ Garmin routine tests use injectable transport and synthetic fixtures. An owner-a
 
 The recommended VPS path uses **Linux, Python 3.10+ and Docker Engine with Compose v2**. Node, pnpm and PostgreSQL client tools run inside the image. The primary path uses a reviewed, digest-pinned deployment bundle and prebuilt Linux image, a persistent server disk, a DNS hostname pointing to that server, and ports 80/443 available to Caddy. Arrange a mounted off-host backup directory dedicated to this installation first; supported filesystem checks cover NFS, SMB/CIFS and SSHFS. Provisioning the server, DNS and remote storage remains outside the application.
 
-No official registry location or downloadable bundle is published yet. Obtain the image and matching bundle from a trusted maintainer when available; see [release bundle preparation](#preparing-a-release-image-and-bundle) for local artifact preparation. Do not substitute an arbitrary public image. From the extracted bundle directory:
+The release workflow targets `ghcr.io/bidulelabs/athlete-panel` and matching GitHub Release assets. Implementing the workflow does not mean a version has already been published: obtain an available image and matching bundle through that trusted release channel; see [release bundle preparation](#preparing-a-release-image-and-bundle). Do not substitute an arbitrary public image. From the extracted bundle directory:
 
 ```sh
 python3 scripts/hosted.py install --domain training.example.com --backup-directory /mnt/offsite/athlete_panel
 ```
 
-Choose and confirm the owner login password when prompted. The prompt does not echo or save it. The controller registers the remote storage identity, pulls the bundle’s immutable image digest, generates independent database passwords/application/backup keys, starts PostgreSQL, applies migrations, creates the owner, starts web/worker/Caddy, verifies HTTPS and worker readiness, and authenticates a first backup read back from its destination before reopening writes. It starts the daily backup service automatically. A bundle contains only the controller, a pinned image descriptor and brief instructions. Download/extract it for review; there is no download-and-execute installer. Python only coordinates Docker and private checkpoints; application tools run inside containers.
+Choose and confirm the owner login password when prompted. The prompt does not echo or save it. The controller registers the remote storage identity, pulls the bundle’s immutable image digest, generates independent database passwords/application/backup keys, starts PostgreSQL, applies migrations, creates the owner, starts web/worker/Caddy and verifies HTTPS, saved data and fresh worker readiness. It reopens writes, starts the daily backup service and waits for its first authenticated backup. A bundle contains the controller and isolated-rehearsal helper, a pinned image descriptor and brief instructions. Download/extract it for review; there is no download-and-execute installer. Python only coordinates Docker and private checkpoints; application tools run inside containers.
 
 Private operator state lives in `~/.local/share/athlete-panel/hosted` with mode 0700 and private files. Use `--state /absolute/private/directory` **before** the subcommand to choose another location, consistently for all commands. State contains generated `.env`, `.secrets`, the installed image/database identity, private rendered Compose configuration and operation checkpoints. It is separate from source checkouts; the controller never reads the checkout's `.env`. Keep the state directory outside the repository and backup destination.
 
@@ -274,6 +281,10 @@ Backups contain a custom-format PostgreSQL dump, source/configuration including 
 The archive streams through gzip and AES-256-GCM with a fresh random nonce. An authenticated completion tag and per-file hashes protect integrity. The final destination is read back and authenticated before a partial archive is renamed to a successful `.fgr` file. Backup and application keys remain separate. The script coordinates with domain and migration locks while collecting the database/source snapshot; long backups can temporarily delay writes.
 
 The scheduled sidecar runs immediately at startup and then at the configured UTC hour. After each successful daily backup it retains the newest archive for seven distinct days and four distinct ISO weeks; a single archive may satisfy both. Manual backups are not pruned. A failed run logs `backup_failed`, keeps previous completed archives and tries again at the next scheduled time. Monitor both the process and the age of the newest off-host archive; a running container alone does not demonstrate successful backup. Alert externally if no successful daily archive arrives within 26 hours. Store periodic recovery evidence outside the archived instance.
+
+Retention cleanup has a separate outcome: a verified archive keeps `backupAttempt.state=succeeded` even when `backupAttempt.retention=failed`. The `backup_retention_failed` log and scheduled failure heartbeat still report the storage problem. Inspect remote permissions/free space and let the next daily backup retry cleanup. Deployment accepts the verified archive with a warning instead of repeatedly restarting backups. An intentional SIGINT/SIGTERM cancellation preserves local failed-attempt status and cleanup but sends no failure heartbeat; missing-success monitoring continues to detect prolonged downtime.
+
+Optional monitoring uses a private file in the operator state, `.secrets/backup-heartbeat.json`, owned by the operator with mode 0600. Set `success` to the monitor's secret HTTPS success URL and optionally `failure` to its failure URL. Obtain these from your chosen monitor; never put real URLs in source, shell arguments or logs. The next backup-service start mounts this file read-only. Configure the external monitor for daily signals plus a suitable grace period (for example 26 hours). Its missing-signal alert also detects a stopped VPS when that deadline passes, not immediately. Backup success is sent only after authenticated read-back and retention succeed; delivery has three attempts, each with a five-second timeout and no redirects. Notification failure is logged as `backup_notification`/`failed` and saved in `host.settings.backupNotification`, without endpoints or response bodies. A notification outage does not invalidate a completed backup. No additional scheduler or host monitor is needed. Real monitor activation is an operator action.
 
 For a managed installation, create or independently verify an archive with:
 
@@ -345,7 +356,20 @@ The bundle selects its pinned digest. To select an image explicitly instead, use
 
 Image metadata compatibility and installed-plugin checks run before maintenance. Only trusted images are supported: images and source plugins are executable code, and matching fingerprints are integrity checks, not publisher authentication. A stock image cannot carry arbitrary local edits. See the custom path below.
 
-The controller pulls/inspects the candidate (or builds custom source) before downtime, checks retained migration files and enabled plugin identities, enables maintenance, authenticates a fresh backup from the installed image, stops web/worker/backup, applies candidate migrations and runtime grants, verifies schema/HTTPS/worker status, creates a verified installed-release backup, selects the new image, reopens writes and restarts scheduled backups. Old images and databases are retained. Checkpoints record the phase, selected immutable image and recovery archive. After interruption use `status` and `resume`; a migration already committed is safe to execute again because its journal prevents replay.
+The command performs the complete deployment in this order:
+
+1. Lock and reload private state; pull/inspect the pinned candidate (or build custom source), validate platform/configuration, retained migrations and installed plugins.
+2. Create a verified preparation snapshot. Restore it to disposable containers with separate storage and an internal network, apply candidate migrations/grants, and check schema, saved data, application health and a paused worker. Normal use stays open during this work.
+3. Enable maintenance and drain mutations, then create the **final verified recovery point**. This includes writes accepted during rehearsal; the earlier preparation snapshot is not substituted for it.
+4. Stop web/worker/backup together, apply migrations and refresh runtime grants. PostgreSQL stays running. Caddy keeps its stable configuration mount; explicit ingress changes are reloaded.
+5. Start the candidate web/worker, verify schema/data/HTTPS and a fresh heartbeat from that image, select the release and reopen normal use.
+6. Start the backup service and observe its matching startup backup. There is no separate controller post-upgrade backup. A failure reports **application deployed, backup failed**; `resume` retries only the backup service while normal use remains open.
+
+Old images/databases and manual recovery snapshots are retained. `status` remains readable while an operation holds the lock. Private `operation.json`, `completed-*.json` and `rehearsal-result-*.json` record phase intent, attempts, durations, image/commit identity and recovery references. After interruption use `status` and `resume`; lingering operation containers are reconciled, recorded archives are authenticated again, and current readiness is rechecked. A committed migration is not reapplied because its journal records it; an interrupted permission refresh is retried. Finish operations created by an older controller with that controller before switching versions.
+
+Ingress changes are validated before the mounted Caddyfile is written. A durable pending-reload record makes resume retry even when that file already contains the candidate configuration; unchanged ingress is not reloaded. If the previous worker misses the drain heartbeat deadline, the controller stops it with a 30-second grace period and confirms it is no longer running before the final snapshot. A failed stop keeps maintenance enabled and blocks migration. These rules do not relax the new worker's fresh-readiness requirement.
+
+CI publication failures report the failed operation, exit code when available and a sanitized category such as permissions, network, rate limit, storage or conflicting assets. Command arguments, private paths, URLs and arbitrary remote stderr are withheld from public logs.
 
 SQL migrations run in one exclusive transaction. A failed SQL migration rolls back its data/schema/journal changes. Runtime-role provisioning runs afterward: its failure means **the migrations have committed**. The CLI distinguishes these failures. Correct the underlying candidate/administrative configuration before retrying; if the prepared image itself is defective, recover the recorded snapshot rather than editing deployed source. A worker paused for maintenance remains healthy but does not import or claim work. If a prepared candidate fails validation **before maintenance starts**, use `python3 scripts/hosted.py cancel`, fix the source and start a new upgrade. Cancel is refused as soon as maintenance may have started; use resume or recovery then.
 
@@ -370,7 +394,31 @@ No application SQL migration is introduced by this image workflow. Existing mana
 
 ### Preparing a release image and bundle
 
-Maintainers build and test the Dockerfile from reviewed release source; it generates `.athlete-panel-release.json` with protocol version, application version, source fingerprint and plugin composition. Source and custom plugins remain in the image for matched backups. No application secret belongs in the build context. Use a distinct version/tag and verify every supported CPU architecture. A version label is descriptive; the digest identifies the actual artifact.
+The existing Verify application workflow builds a Linux AMD64 candidate once, with the full commit in OCI labels and `.athlete-panel-release.json`. Build-stage/runtime exclusion checks run there. A run-scoped artifact carries the image tar, checksum, local image ID and metadata; all three parallel container rehearsals verify and load that exact artifact. Quality, setup, integration, desktop/mobile and security checks retain their existing parallel jobs. The `verify` and `container-installation` aggregates reject failed, cancelled and unexpectedly skipped prerequisites. Ordinary feature-branch pushes do not run CI; superseded PR runs remain cancellable.
+
+After an authorized version tag such as `v0.1.0` is pushed, or manual dispatch selects that existing tag, all gates run before publication. The tag must match the package version and verified commit. Only the publication job receives package/release write access. It serializes the same release, loads the tested artifact without rebuilding, publishes version and `sha-FULL_COMMIT` tags to `ghcr.io/bidulelabs/athlete-panel`, pulls the resolved digest and verifies image/metadata identity. GitHub Release assets include `athlete-panel-deploy.tgz`, its SHA-256 checksum, `release-record.json` and sanitized `verification.json` with rehearsal timings. A retry preserves existing matching assets and refuses different contents; use a new version for changed contents. An interrupted draft can be completed. Published incomplete/conflicting releases require explicit investigation, not overwrite.
+
+Use temporary feature branches and versioned prereleases; a permanent `dev` branch is not required:
+
+| Version tag | Source and publication behavior |
+| --- | --- |
+| `v0.2.0-beta.1` (also `-rc.1` or another supported suffix) | May identify a feature-branch or main commit. Published as a GitHub prerelease, explicitly excluded from Latest. |
+| `v0.2.0` | Must identify a commit reachable from freshly fetched `origin/main`. Published as a normal stable release; GitHub selects Latest without forcing an older retry over a newer version. |
+
+Create the feature branch from main containing this release tooling and open a PR. Commit the root `package.json` version as `0.2.0-beta.1` before tagging that exact commit. An authorized releaser can then publish the example beta with:
+
+```sh
+git tag -a v0.2.0-beta.1 -m "Beta 0.2.0-beta.1"
+git push origin refs/tags/v0.2.0-beta.1
+```
+
+Pushing the tag starts the full CI pipeline and gated publication; do not manually publish an empty GitHub Release first. Install the resulting digest-pinned bundle only on an explicitly selected test instance with separate database, storage, keys and synthetic data. Each further beta needs a new committed package version and new tag, such as `0.2.0-beta.2`. When ready, change the package version to `0.2.0` in the reviewed PR, merge, and tag the resulting main commit `v0.2.0`. CI tests and publishes that stable commit independently. Publishing a beta or merging a PR does not deploy either instance automatically.
+
+Both channels use identical gates, image identity checks and immutable bundles. Every stable publication attempt refreshes main, including retries; an unavailable remote or failed ancestry check blocks publication. The CI checkout retains full history. An interrupted draft receives the correct prerelease/latest flags when completed. A published release whose prerelease classification conflicts with its tag is preserved and requires explicit investigation.
+
+Repository administrators must configure an active `v*` tag ruleset restricting creation, updates and deletion, with only authorized releasers allowed to bypass it, and enable release immutability for future releases. For this repository, both the **Maintain** and **Repository admin** roles are intended releasers and belong in that bypass list. The GitHub ruleset is the authorization boundary: the stable/main check is a mistake guard in versioned code and cannot authorize an untrusted workflow. Upload all assets to the draft before publication; immutable releases cannot have their tags or assets silently replaced. Keep registry digests available separately for recovery. Source files alone cannot activate these GitHub settings.
+
+Source and custom plugins remain in the image for matched backups. No application secret belongs in the build context. AMD64 is the current CI release architecture; custom images must match their server. Version labels are descriptive; the digest identifies the artifact. Source-only and older metadata without commit identity remain readable. Custom image builders may pass `--build-arg ATHLETE_PANEL_COMMIT=FULL_COMMIT` when it accurately identifies their reviewed source; retain source fingerprints regardless.
 
 After a **separately authorized** image publication to the chosen registry, capture its real immutable registry digest (not `docker image inspect`’s local image ID). Create the small bundle locally:
 
@@ -378,7 +426,7 @@ After a **separately authorized** image publication to the chosen registry, capt
 python3 scripts/package-release.py --image registry.example.com/athlete-panel@sha256:REPLACE_WITH_REAL_DIGEST --output athlete-panel-deploy.tgz
 ```
 
-The example reference is intentionally nonfunctional. The command requires a real 64-hex digest, writes the bundle and adjacent SHA-256 checksum, refuses overwrites, and never pushes or publishes anything. Review/distribute that bundle through the same trusted release channel as the image. A checksum detects damage; it does not establish publisher identity. Registry selection, signing, public publishing and release downloads are not automated here.
+The example reference is intentionally nonfunctional. The command requires a real 64-hex digest, writes a deterministic bundle and adjacent SHA-256 checksum, refuses overwrites, and never pushes or publishes anything. Add `--commit FULL_COMMIT` for a known matching image. Review/distribute that custom bundle through its trusted release channel. A checksum detects damage; it does not establish publisher identity. The CI publication command is `python3 scripts/release-ci.py publish --commit FULL_COMMIT --repository bidulelabs/athlete-panel --tag vVERSION`; it requires the candidate artifact, successful rehearsal reports and authenticated registry/GitHub access. Do not run it as an ordinary deployment command.
 
 CI rehearses both source recovery and registry installation with `python3 scripts/rehearse-hosted.py --image athlete-panel:release-check --registry`. The registry is a disposable container bound to loopback, not a public service. Keep old published image digests available for recovery; custom users should retain a saved image as well as source and backups. Registries/base images/dependency availability remain external recovery dependencies.
 
@@ -429,6 +477,18 @@ Alternatively transfer a reviewed composition change manually. Staging is not ne
 If build or verification fails, keep maintenance enabled. A previous image can be restarted only when its composition and all applied migration semantics remain compatible; image rollback alone never reverses a database migration. If compatibility is uncertain or a migration changed data, use the matched backup recovery below. Do not remove a database volume to make an upgrade pass.
 
 ## Restore and owner recovery
+
+### Test restoration without changing the live installation
+
+Run on demand, for example after changing storage/keys or as a periodic operator exercise:
+
+```sh
+python3 scripts/hosted.py restore-test
+# Or choose a specific completed archive:
+python3 scripts/hosted.py restore-test --archive /mnt/offsite/athlete-panel/recorded-archive.fgr
+```
+
+The default is the installed database's most recent successful backup. The command authenticates it and selects its matching release, then uses the same isolated runner as upgrade preparation. It publishes no ports, uses an internal network and its own PostgreSQL volume, mounts only the selected archive/key, and leaves provider jobs paused. It validates schema, persisted data, app and worker. Cleanup verifies run-specific labels before removing resources. An interruption is resumable; `cancel` can discard an isolated test's temporary resources without altering live data. Ensure enough spare disk/memory for a second database/application and source extraction; resource contention can still affect the live VPS. No monthly scheduler is installed. Keep the resulting evidence, and separately exercise recovery on another machine with independently recovered keys to prove loss-of-VPS recovery.
 
 ### Managed recovery after a failed update
 

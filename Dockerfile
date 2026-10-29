@@ -3,6 +3,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm install --global pnpm@11.28.8
 
 FROM base AS build
+ARG ATHLETE_PANEL_COMMIT
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -26,12 +27,14 @@ COPY .claude ./.claude
 COPY .github ./.github
 COPY .impeccable/design.json ./.impeccable/design.json
 COPY tsconfig.json tsconfig.strict.json eslint.config.mjs .prettierrc.json .prettierignore vitest.config.ts playwright.config.ts Dockerfile compose.yml compose.local.yml compose.test.yml Caddyfile .dockerignore .gitignore .env.example AGENTS.md README.md PRODUCT.md DESIGN.md LICENSE SECURITY.md CONTRIBUTING.md ./
-RUN pnpm build && node --import tsx scripts/release-metadata.ts
+RUN pnpm build && ATHLETE_PANEL_COMMIT="$ATHLETE_PANEL_COMMIT" node --import tsx scripts/release-metadata.ts
 
 # Operational commands use tsx at runtime; compilers/test runners stay in the build stage.
 RUN CI=true pnpm install --prod --frozen-lockfile --offline
 
 FROM base AS runtime
+ARG ATHLETE_PANEL_COMMIT
+LABEL org.opencontainers.image.revision="$ATHLETE_PANEL_COMMIT" org.opencontainers.image.source="https://github.com/bidulelabs/athlete-panel"
 LABEL io.athlete-panel.hosted.protocol="1" org.opencontainers.image.title="Athlete Panel" org.opencontainers.image.licenses="MIT"
 # Client tools only: no PostgreSQL server or gosu in application processes.
 RUN apk upgrade --no-cache && apk add --no-cache postgresql17-client && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /opt/yarn* /usr/local/bin/yarn /usr/local/bin/yarnpkg

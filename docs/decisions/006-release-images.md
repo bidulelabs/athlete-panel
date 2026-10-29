@@ -19,3 +19,5 @@ Keep explicit local-image and source-build options for custom plugins/code. Chec
 Ordinary users need no application checkout or server-side build. Python and Docker remain prerequisites; no always-running updater, registry service or runtime database privilege is added. Image availability and publisher trust remain external dependencies. The digest is an integrity identifier, not a signature. Custom users must merge and test their own code; a stock image cannot preserve arbitrary source changes automatically. Database major upgrades and automatic adoption of manual installations remain separate work.
 
 Commands and compatibility transitions belong in [development](../development.md#coordinated-upgrades-and-plugin-activation); individual verification outcomes belong in the [execution record](../plans/mvp-execution.md).
+
+[ADR 012](012-deployment-recovery.md) extends this decision with exact-image CI publication, mandatory pre-deployment restore rehearsal and one backup scheduler. The original identity/custom-source/recovery rules remain in force.

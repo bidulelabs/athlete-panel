@@ -277,7 +277,7 @@ export async function restoreBackup(options: RestoreOptions): Promise<BackupMeta
         );
       await tx`insert into host.settings(key,value) values('maintenance','true'::jsonb) on conflict(key) do update set value='true'::jsonb`;
       await tx`delete from host.sessions`;
-      await tx`delete from host.settings where key in ('worker','lastBackup','backupAttempt','backupSchedule')`;
+      await tx`delete from host.settings where key in ('worker','lastBackup','backupAttempt','backupSchedule','backupNotification')`;
       await tx`update host.grants set revoked=true`;
       await tx`update host.jobs set status='queued',lease_owner=null,lease_until=null where status='running'`;
     });

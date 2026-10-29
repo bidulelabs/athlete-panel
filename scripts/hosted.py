@@ -15,12 +15,44 @@ import ssl
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 import uuid
+from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[1]
 REMOTE_FILESYSTEMS = {'nfs', 'nfs4', 'cifs', 'smb3', 'fuse.sshfs'}
 IMAGE_ID = re.compile(r'^sha256:[a-f0-9]{64}$')
+OPERATION_FORMAT = 2
+
+
+class NoHealthRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Readiness must come from the configured endpoint, never a redirect target.
+        return None
+
+
+def timestamp():
+    return datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+
+
+# Existing instance/domain validation works with older hosted-protocol-1 images too.
+DATA_CHECK = """import {existsSync} from 'node:fs';
+import {connection,closeDatabase} from './packages/host/src/db.ts';
+import {loadWorkspace} from './instance/services.ts';
+import {validateRetainedMigrations} from './packages/host/src/migrations.ts';
+try {
+if(existsSync('./scripts/lib/verify-data.ts')) {
+const {verifyData}=await import('./scripts/lib/verify-data.ts'); await verifyData();
+} else {
+await connection().begin('isolation level repeatable read read only',async tx=>{
+await validateRetainedMigrations(process.cwd(),await tx`select name,checksum from host.migrations`);
+await loadWorkspace(tx,undefined,{records:'all'});
+const [owner]=await tx`select count(*)::int as count from host.owner`;
+if(owner.count!==1)throw Error('Owner verification failed');});
+}
+} finally {await closeDatabase();}"""
+BACKUP_STATUS = "import {connection,closeDatabase} from './packages/host/src/db.ts'; const rows=await connection()`select key,value from host.settings where key in ('backupAttempt','lastBackup','backupNotification','worker')`; console.log(JSON.stringify(Object.fromEntries(rows.map(r=>[r.key,r.value])))); await closeDatabase();"
 
 
 def image_reference(value, local=False):
@@ -48,10 +80,16 @@ def valid_metadata(value):
             or not isinstance(value.get('version'), str) or not value['version'] or len(value['version']) > 128
             or not isinstance(value.get('sourceDigest'), str) or not re.fullmatch('[a-f0-9]{64}', value['sourceDigest']) or not isinstance(value.get('plugins'), list)):
         raise OperationError('This image does not support hosted protocol 1. Use a compatible release; no database was migrated.')
+    if 'commit' in value and (not isinstance(value['commit'], str) or not re.fullmatch('[a-f0-9]{40}', value['commit'])):
+        raise OperationError('Invalid image commit identity.')
     return value
 
 
 class OperationError(Exception):
+    pass
+
+
+class WorkerHeartbeatTimeout(OperationError):
     pass
 
 
@@ -156,6 +194,9 @@ class Hosted:
         try:
             try: fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError: raise OperationError('Another hosted operation is running. Wait for it to finish.') from None
+            # Another operation may have completed between construction and acquiring the lock.
+            self.record = read_json(self.state / 'installation.json')
+            self.pending = read_json(self.state / 'operation.json')
             yield
         finally: os.close(fd)
 
@@ -192,14 +233,27 @@ class Hosted:
 
     def step(self, name, function):
         if name in self.pending['completed']: return
-        self.pending['phase'] = name; self.checkpoint()
+        self.pending['phase'] = name
+        attempt = {'phase': name, 'startedAt': timestamp(), 'state': 'running'}
+        self.pending.setdefault('attempts', []).append(attempt); self.checkpoint()
         print(name.replace('-', ' ').capitalize() + '…', flush=True)
-        function()
+        started = time.monotonic()
+        try:
+            function()
+        except BaseException:
+            attempt.update(state='failed', finishedAt=timestamp(), seconds=round(time.monotonic() - started, 3))
+            self.checkpoint()
+            raise
+        attempt.update(state='succeeded', finishedAt=timestamp(), seconds=round(time.monotonic() - started, 3))
+        print(f"{name}: completed in {attempt['seconds']:.1f}s", flush=True)
         self.pending['completed'].append(name); self.checkpoint()
 
     def begin(self, kind, **values):
         if self.pending: raise OperationError('An operation is pending. Use resume, or recover its recorded backup before starting another operation.')
-        self.pending = {'kind': kind, 'id': uuid.uuid4().hex, 'completed': [], **values}; self.checkpoint()
+        self.pending = {'format': OPERATION_FORMAT, 'kind': kind, 'id': uuid.uuid4().hex,
+                        'startedAt': timestamp(), 'completed': [], 'attempts': [], **values}
+        if getattr(self, 'expected_commit', None): self.pending['expectedCommit'] = self.expected_commit
+        self.checkpoint()
 
     def docker_ready(self):
         self.run(['docker', 'info'], timeout=30)
@@ -251,12 +305,13 @@ class Hosted:
 
     def prepare_image(self, source=None, key='candidate', supplied=None, remote=None, local=None, expected=None):
         """Resolve once, persist the immutable ID, then extract controls without running the image."""
+        platform = ['--platform', self.test['platform']] if self.test and self.test.get('platform') else []
         resolved = (self.pending or {}).get('resolvedImages', {}).get(key)
         if not resolved:
             if supplied and self.test: local = supplied
             if remote:
                 image_reference(remote)
-                self.run(['docker', 'pull', remote])
+                self.run(['docker', 'pull', *platform, remote])
                 image, origin = remote, {'kind': 'registry', 'requested': remote}
             elif local:
                 image_reference(local, local=True)
@@ -266,11 +321,16 @@ class Hosted:
                 if self.state.is_relative_to(source): raise OperationError('Candidate source must not contain the private hosted state directory.')
                 if not (source / 'Dockerfile').is_file(): raise OperationError('Choose --image, --local-image or a source directory containing Dockerfile.')
                 image = f"{self.record['project']}:{self.pending['id']}-{key}"
-                self.run(['docker', 'build', '-t', image, str(source)], timeout=3600)
+                build_args = ['--build-arg', 'ATHLETE_PANEL_COMMIT=' + expected['commit']] if expected and expected.get('commit') else []
+                self.run(['docker', 'build', *platform, *build_args, '-t', image, str(source)], timeout=3600)
                 origin = {'kind': 'source'}
             info = json.loads(self.run(['docker', 'image', 'inspect', image]).stdout)[0]
             image_id = info['Id']
             if not IMAGE_ID.fullmatch(image_id) or info.get('Os') != 'linux': raise OperationError('A Linux image with an immutable image ID is required.')
+            if not self.test:
+                architecture = self.run(['docker', 'version', '--format', '{{.Server.Arch}}']).stdout.strip()
+                if info.get('Architecture') != architecture:
+                    raise OperationError('Candidate image architecture differs from this server. Select a compatible custom image or supported release before maintenance.')
             registry_ref = None
             if remote:
                 refs = [ref for ref in info.get('RepoDigests', []) if registry_repository(ref) == registry_repository(remote)]
@@ -284,7 +344,7 @@ class Hosted:
         image_id = resolved['image']
         if self.run(['docker', 'image', 'inspect', image_id], check=False).returncode:
             if not resolved.get('registryRef'): raise OperationError('The prepared local image is missing. Restore that image or cancel preparation/start recovery; a different image was not substituted.')
-            self.run(['docker', 'pull', resolved['registryRef']])
+            self.run(['docker', 'pull', *platform, resolved['registryRef']])
             restored_id = self.run(['docker', 'image', 'inspect', '--format', '{{.Id}}', resolved['registryRef']]).stdout.strip()
             if restored_id != image_id: raise OperationError('The pinned image does not match this server platform. Start a reviewed recovery with compatible tools.')
         directory = private_directory(self.state / ('release-' + self.pending['id'] + '-' + key))
@@ -298,10 +358,12 @@ class Hosted:
                 raise OperationError('Image release metadata is missing. Rebuild this source with image-workflow support; existing installations were not modified.')
             metadata = valid_metadata(json.loads(metadata_path.read_text()))
         finally: self.run(['docker', 'rm', container], check=False)
-        if expected and (not metadata or metadata['sourceDigest'] != expected['sourceDigest'] or metadata['version'] != expected['version']):
+        if expected and (not metadata or metadata['sourceDigest'] != expected['sourceDigest'] or metadata['version'] != expected['version'] or metadata.get('commit') != expected.get('commit')):
             raise OperationError('Recovery image differs from the authenticated archive source. No release switch was performed.')
         if self.test:
             path = directory / 'Caddyfile'; path.write_text(path.read_text().replace('{$ATHLETE_PANEL_DOMAIN} {', 'localhost {\n    tls internal'))
+        if key == 'candidate' and self.pending.get('expectedCommit') and metadata.get('commit') != self.pending['expectedCommit']:
+            raise OperationError('Image commit differs from its deployment bundle. No release was activated.')
         self.pending[key] = {**resolved, 'metadata': metadata, 'controls': str(directory),
                              'database': self.record.get('active', {}).get('database', self.record.get('database', 'athlete_panel'))}
         self.checkpoint()
@@ -385,13 +447,39 @@ class Hosted:
                 service['environment']['ATHLETE_PANEL_RELEASE_IDENTITY'] = json.dumps({
                     'imageId': release['image'], 'registryRef': release.get('registryRef'),
                     'kind': release.get('origin', {}).get('kind', 'source'),
-                    'sourceDigest': release['metadata']['sourceDigest'], 'version': release['metadata']['version']})
+                    'sourceDigest': release['metadata']['sourceDigest'], 'version': release['metadata']['version'],
+                    **({'commit': release['metadata']['commit']} if release['metadata'].get('commit') else {})})
         for name in ['backup', 'recovery']:
             service = config['services'][name]; service['user'] = f'{os.getuid()}:{os.getgid()}'; service.pop('cap_add', None)
             service['environment']['BACKUP_STORAGE_POLICY'] = '/run/secrets/backup_storage'
             service.setdefault('volumes', []).append({'type': 'bind', 'source': str(self.state / '.secrets' / 'backup-storage.json'), 'target': '/run/secrets/backup_storage', 'read_only': True, 'bind': {'create_host_path': False}})
             for volume in service['volumes']:
                 if volume['type'] == 'bind': volume.setdefault('bind', {})['create_host_path'] = False
+        config['services']['backup']['environment']['ATHLETE_PANEL_BACKUP_RUN'] = release.get('backupRun', '')
+        heartbeat = self.state / '.secrets' / 'backup-heartbeat.json'
+        if heartbeat.exists():
+            read_json(heartbeat)  # Enforce private ownership before mounting the optional secret.
+            config['services']['backup']['environment']['BACKUP_HEARTBEAT_FILE'] = '/run/secrets/backup_heartbeat'
+            config['services']['backup']['volumes'].append({'type': 'bind', 'source': str(heartbeat), 'target': '/run/secrets/backup_heartbeat', 'read_only': True, 'bind': {'create_host_path': False}})
+        # Adopt the old controller's existing mount once, then keep it stable across releases.
+        if not self.record.get('ingress'):
+            active_controls = self.record.get('active', {}).get('controls')
+            existing = Path(active_controls) / 'Caddyfile' if active_controls else None
+            self.record['ingress'] = str(existing if existing and existing.is_file() else private_directory(self.state / 'ingress') / 'Caddyfile')
+            self.save()
+        ingress = Path(self.record['ingress'])
+        if not ingress.is_relative_to(self.state):
+            # A recovery kit moved to a new operator directory has no usable old mount.
+            ingress = private_directory(self.state / 'ingress') / 'Caddyfile'
+            self.record['ingress'] = str(ingress); self.save()
+        if not ingress.exists():
+            private_directory(ingress.parent)
+            current = self.record.get('active') or release
+            source = Path(current['controls']) / 'Caddyfile'
+            if not source.exists(): source = Path(release['controls']) / 'Caddyfile'
+            ingress.write_bytes(source.read_bytes())
+        for volume in config['services']['caddy'].get('volumes', []):
+            if volume.get('target') == '/etc/caddy/Caddyfile': volume['source'] = str(ingress)
         if self.test:
             config['services']['caddy']['ports'] = [{'target': 443, 'published': str(self.test['port']), 'host_ip': '127.0.0.1', 'protocol': 'tcp'}]
         # Keep the cluster's initial database stable when switching to a restored database.
@@ -406,14 +494,114 @@ class Hosted:
     def database_user(self): return parse_configuration(self.state / '.env')['POSTGRES_USER']
 
     def console(self, release, service, script, *args, data=None, extra=None):
-        result = self.compose(release, ['run', '--rm', '--no-deps', '-T', *(extra or []), service, 'node', '--import', 'tsx', script, *args], data=data)
+        labels = ['--label', 'io.athlete-panel.operation=' + self.pending['id']] if self.pending else []
+        result = self.compose(release, ['run', '--rm', '--no-deps', '-T', *labels, *(extra or []), service, 'node', '--import', 'tsx', script, *args], data=data)
         return result.stdout.strip()
+
+    def reconcile_commands(self):
+        containers = self.run(['docker', 'ps', '-q', '--filter', 'label=io.athlete-panel.operation=' + self.pending['id']]).stdout.split()
+        for container in containers:
+            print('Waiting for the interrupted operation’s container to finish…', flush=True)
+            self.run(['docker', 'wait', container], check=False)
+
+    def maintenance(self, release, enabled):
+        if enabled and not self.pending.get('maintenanceStartedAt'):
+            self.pending['maintenanceStartedAt'] = timestamp(); self.checkpoint()
+        self.console(release, 'web', 'scripts/operations.ts', 'maintenance', 'on' if enabled else 'off')
+        if not enabled:
+            self.pending['reopenedAt'] = timestamp(); self.checkpoint()
+
+    def start_backups(self, candidate):
+        candidate['backupRun'] = uuid.uuid4().hex
+        self.pending['backupStartedAt'] = timestamp(); self.checkpoint()
+        if self.record.get('active', {}).get('image') == candidate['image']:
+            self.record['active'] = candidate; self.save()
+        self.compose(candidate, ['--profile', 'backup', 'up', '-d', '--no-deps', 'backup'])
+
+    def await_backup(self, candidate):
+        started = self.pending['backupStartedAt']
+        container = self.compose(candidate, ['--profile', 'backup', 'ps', '-q', 'backup']).stdout.strip()
+        if not container or self.run(['docker', 'inspect', '--format', '{{.Image}}', container]).stdout.strip() != candidate['image']:
+            raise OperationError('Application deployed, backup failed: the selected backup service is not running. Resume to retry it.')
+        for _ in range(360):
+            status = self.backup_status(candidate)
+            attempt, latest = status.get('backupAttempt') or {}, status.get('lastBackup') or {}
+            matches = attempt.get('startedAt', '') >= started and attempt.get('runId', candidate['backupRun']) == candidate['backupRun']
+            if matches and attempt.get('state') == 'failed': break
+            if (matches and attempt.get('state') == 'succeeded' and latest.get('completedAt', '') >= started
+                    and latest.get('verifiedAt') and latest.get('kind') == 'daily'
+                    and latest.get('runId', candidate['backupRun']) == candidate['backupRun']
+                    and latest.get('imageId', candidate['image']) == candidate['image']):
+                self.pending['verifiedBackup'] = latest; self.checkpoint()
+                if attempt.get('retention') == 'failed':
+                    print('Backup verified; retention cleanup failed. Inspect backup storage permissions and logs. The next daily run retries retention.', flush=True)
+                return
+            time.sleep(5)
+        raise OperationError('Application deployed, backup failed or did not complete in time. Normal use remains open. Inspect backup logs/storage, then resume to retry only the backup service.')
+
+    def finish(self):
+        self.pending.update(phase='complete', finishedAt=timestamp())
+        elapsed = lambda start, end: round((datetime.fromisoformat(end.replace('Z', '+00:00')) - datetime.fromisoformat(start.replace('Z', '+00:00'))).total_seconds(), 3)
+        self.pending['seconds'] = elapsed(self.pending['startedAt'], self.pending['finishedAt'])
+        if self.pending.get('maintenanceStartedAt') and self.pending.get('reopenedAt'):
+            self.pending['maintenanceSeconds'] = elapsed(self.pending['maintenanceStartedAt'], self.pending['reopenedAt'])
+        write_json(self.state / ('completed-' + self.pending['id'] + '.json'), self.pending)
+        (self.state / 'operation.json').unlink(); self.pending = None
+
+    def rehearsal(self, archive, candidate=None):
+        from hosted_rehearsal import rehearse
+        return rehearse(self, Path(archive), candidate)
+
+    def restore_test(self, archive=None):
+        if not self.record or not self.record.get('active'): raise OperationError('A managed installation and its recovery keys are required.')
+        if archive is None:
+            latest = self.backup_status(self.record['active']).get('lastBackup') or {}
+            filename = latest.get('file', '')
+            if not filename or Path(filename).name != filename: raise OperationError('No completed backup is recorded. Create a backup or supply --archive.')
+            archive = Path(self.record['backupDirectory']) / filename
+        self.begin('restore-test', archive=str(Path(archive).resolve()), previous=self.record['active'])
+        self.resume()
 
     def origin(self): return f"https://localhost:{self.test['port']}" if self.test else 'https://' + self.record['domain']
 
     def ready(self, release):
         self.console(release, 'web', 'scripts/operations.ts', 'verify-schema')
-        self.compose(release, ['up', '-d', '--wait', 'web', 'worker', 'caddy'], timeout=180)
+        self.verify_data(release)
+        fresh_after = timestamp()
+        self.compose(release, ['up', '-d', '--wait', '--no-deps', 'web', 'worker'], timeout=180)
+        ingress = Path(self.record['ingress'])
+        contents = (Path(release['controls']) / 'Caddyfile').read_bytes()
+        changed = ingress.read_bytes() != contents
+        digest = hashlib.sha256(contents).hexdigest()
+        reload_state = (self.pending or {}).get('ingressReload', {})
+        reload_needed = changed or reload_state.get('state') == 'pending'
+        if reload_needed:
+            if not self.pending:
+                raise OperationError('Changed ingress requires a recorded upgrade or recovery operation. Use upgrade or resume before activating it.')
+            # Persist intent before either validation or the live-file write. A successful
+            # reload can safely be repeated after losing its completion checkpoint.
+            self.pending['ingressReload'] = {'sha256': digest, 'state': 'pending'}; self.checkpoint()
+            self.compose(release, ['run', '--rm', '--no-deps', '-T', '--label', 'io.athlete-panel.operation=' + self.pending['id'],
+                                  '-v', str(Path(release['controls']) / 'Caddyfile') + ':/etc/caddy/candidate:ro',
+                                  'caddy', 'caddy', 'validate', '--config', '/etc/caddy/candidate', '--adapter', 'caddyfile'])
+            # Preserve the inode of the bind-mounted file; only readiness activates candidate ingress.
+            with ingress.open('wb') as output:
+                output.write(contents); output.flush(); os.fsync(output.fileno())
+        self.compose(release, ['up', '-d', '--no-deps', 'caddy'], timeout=180)
+        if reload_needed:
+            self.compose(release, ['exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile'])
+            self.pending['ingressReload'] = {'sha256': digest, 'state': 'applied'}; self.checkpoint()
+        self.running_health(release, fresh_after)
+
+    def verify_deployed(self, release):
+        self.console(release, 'web', 'scripts/operations.ts', 'verify-schema')
+        self.verify_data(release)
+        self.running_health(release, timestamp())
+
+    def running_health(self, release, after):
+        container = self.compose(release, ['ps', '-q', 'web']).stdout.strip()
+        if not container or self.run(['docker', 'inspect', '--format', '{{.Image}}', container]).stdout.strip() != release['image']:
+            raise OperationError('The selected web service is not running. Inspect service logs and correct it before resuming.')
         context = ssl.create_default_context()
         if self.test:
             container = self.compose(release, ['ps', '-q', 'caddy']).stdout.strip()
@@ -423,14 +611,60 @@ class Hosted:
                 if result.returncode == 0: break
                 time.sleep(1)
             context = ssl.create_default_context(cafile=str(certificate))
+        health = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context), NoHealthRedirects())
         for _ in range(60):
             try:
-                with urllib.request.urlopen(self.origin() + '/api/health', context=context, timeout=5) as response:
-                    if response.status == 200: break
+                with health.open(self.origin() + '/api/health', timeout=5) as response:
+                    if response.status == 200 and response.headers.get_content_type() == 'application/json':
+                        body = response.read(4097)
+                        if len(body) <= 4096:
+                            payload = json.loads(body)
+                            if isinstance(payload, dict) and payload.get('status') == 'ready': break
+            except urllib.error.HTTPError as error:
+                error.close()
             except (OSError, ValueError): pass
             time.sleep(2)
-        else: raise OperationError('HTTPS readiness failed. Check DNS, ports 80/443 and Caddy logs. Maintenance remains enabled; fix ingress and resume.')
-        self.console(release, 'worker', 'scripts/operations.ts', 'worker-health')
+        else: raise OperationError('HTTPS readiness failed: /api/health must return HTTP 200 JSON with status ready without redirects. Check DNS, ports 80/443 and Caddy logs, then resume. Read status before choosing recovery.')
+        self.fresh_worker(release, after)
+
+    def verify_data(self, release):
+        self.compose(release, ['run', '--rm', '--no-deps', '-T', 'web', 'node', '--import', 'tsx', '--input-type=module', '-e', DATA_CHECK])
+
+    def backup_status(self, release):
+        # Use stable infrastructure imports so archived releases need no newer console command.
+        return json.loads(self.compose(release, ['run', '--rm', '--no-deps', '-T', 'web', 'node', '--import', 'tsx', '--input-type=module', '-e', BACKUP_STATUS]).stdout)
+
+    def runtime_status(self):
+        # Read the running service directly: status must never rewrite shared Compose state.
+        if not self.record: return None
+        try:
+            container = self.run(['docker', 'ps', '-q', '--filter', 'label=com.docker.compose.project=' + self.record['project'],
+                                  '--filter', 'label=com.docker.compose.service=web', '--filter', 'label=com.docker.compose.oneoff=False'], timeout=10).stdout.strip()
+            if not container: return {'available': False}
+            return json.loads(self.run(['docker', 'exec', container, 'node', '--import', 'tsx', '--input-type=module', '-e', BACKUP_STATUS], timeout=10).stdout)
+        except (OperationError, OSError, ValueError, subprocess.SubprocessError): return {'available': False}
+
+    def fresh_worker(self, release, after, states=None):
+        container = self.compose(release, ['ps', '-q', 'worker']).stdout.strip()
+        actual = self.run(['docker', 'inspect', '--format', '{{.Image}}', container]).stdout.strip()
+        if actual != release['image']: raise OperationError('The running worker is not the selected image. Inspect service configuration before resuming.')
+        for _ in range(45):
+            worker = self.backup_status(release).get('worker') or {}
+            if worker.get('lastSeen', '') >= after and worker.get('state') in (states or {'healthy', 'maintenance'}): return
+            time.sleep(2)
+        raise WorkerHeartbeatTimeout('The selected worker has not reported a fresh healthy heartbeat. Inspect worker logs and resume.')
+
+    def drain_work(self, release):
+        # Maintenance has drained serialized writes. Wait for any external job iteration
+        # to finish too, before choosing the final snapshot. A stopped worker is drained.
+        if self.compose(release, ['ps', '-q', 'worker']).stdout.strip():
+            try:
+                self.fresh_worker(release, timestamp(), {'maintenance'})
+            except WorkerHeartbeatTimeout:
+                print('Previous worker did not drain in time. Stopping it before the final recovery snapshot…', flush=True)
+                self.compose(release, ['stop', '--timeout', '30', 'worker'], timeout=60)
+                if self.compose(release, ['ps', '-q', 'worker']).stdout.strip():
+                    raise OperationError('Previous worker is still running. Keep maintenance enabled, stop the worker and resume; no final snapshot or migration was started.')
 
     def backup(self, release=None):
         if release is None and self.pending: raise OperationError('Resume the pending operation before creating another manual backup.')
@@ -438,7 +672,8 @@ class Hosted:
         if not release: raise OperationError('No installed release is available for backup.')
         self.verify_storage()
         result = json.loads(self.console(release, 'backup', 'scripts/hosted-console.ts', 'backup'))
-        self.verify_archive(Path(self.record['backupDirectory']) / result['file'], release)
+        if result.get('verified') is not True or Path(result.get('file', '')).name != result.get('file'):
+            raise OperationError('Backup did not report a verified archive.')
         return result
 
     def verify_archive(self, archive, release=None):
@@ -476,12 +711,17 @@ class Hosted:
         self.resume()
 
     def cancel(self):
-        safe = {'prepare-image', 'validate-upgrade-source'}
-        if not self.pending or self.pending['kind'] != 'upgrade' or not set(self.pending['completed']).issubset(safe) or self.pending.get('phase') not in safe | {None}:
-            raise OperationError('Only upgrade preparation can be cancelled. Once maintenance may have started, resume or recover its recorded backup instead.')
+        safe = {'prepare-image', 'validate-upgrade-source', 'prepare-rehearsal-backup', 'rehearse-candidate'}
+        restore_test = self.pending and self.pending['kind'] == 'restore-test'
+        if not restore_test and (not self.pending or self.pending['kind'] != 'upgrade' or not set(self.pending['completed']).issubset(safe) or self.pending.get('phase') not in safe | {None}):
+            raise OperationError('Only upgrade preparation or a restore test can be cancelled. Once maintenance may have started, resume or recover its recorded backup instead.')
+        self.reconcile_commands()
+        if self.pending.get('rehearsal'):
+            from hosted_rehearsal import cleanup
+            cleanup(self, self.pending['rehearsal']['id'])
         write_json(self.state / ('cancelled-' + self.pending['id'] + '.json'), self.pending)
         (self.state / 'operation.json').unlink(); self.pending = None
-        print('Upgrade preparation cancelled. The installed release, credentials and database were unchanged.')
+        print('Preparation/test cancelled. The installed release, credentials and database were unchanged.')
 
     def select_release(self, candidate):
         # A crash between save and checkpoint must not replace the previous release with itself.
@@ -492,6 +732,10 @@ class Hosted:
     def recover(self, archive, source=None, image=None, image_ref=None, local_image=None, rebuild_source=False):
         if not self.record: raise OperationError('Recover the private hosted state and keys first; see the lost-server runbook.')
         if self.pending:
+            self.docker_ready(); self.reconcile_commands()
+            if self.pending.get('rehearsal'):
+                from hosted_rehearsal import cleanup
+                cleanup(self, self.pending['rehearsal']['id'])
             # Preserve the failed operation record; a deliberate recovery replaces the pending action only.
             write_json(self.state / ('failed-' + self.pending['id'] + '.json'), self.pending)
         release = self.record.get('active') or (self.pending or {}).get('candidate')
@@ -505,7 +749,24 @@ class Hosted:
 
     def resume(self, password=None):
         if not self.pending: raise OperationError('No pending operation. Use status to see the installed release.')
-        self.docker_ready(); kind = self.pending['kind']
+        if self.pending.get('format') != OPERATION_FORMAT:
+            raise OperationError('Finish this pending operation with the controller that started it before upgrading controller versions.')
+        self.docker_ready(); self.reconcile_commands(); kind = self.pending['kind']
+        entry_completed = set(self.pending['completed'])
+        if kind == 'restore-test':
+            self.verify_storage()
+            self.step('test-recovery', lambda: self.rehearsal(self.pending['archive']))
+            self.finish(); print('Restore test passed. Live services and data were unchanged.'); return
+        if 'reopen-application' in entry_completed:
+            # The application is already serving. Never re-enter maintenance or replay migration.
+            candidate = self.pending['candidate']
+            self.verify_deployed(candidate)
+            if 'verify-scheduled-backup' in entry_completed:
+                self.verify_archive(Path(self.record['backupDirectory']) / self.pending['verifiedBackup']['file'], candidate)
+                self.finish(); print('Application ready; recorded backup authenticated.'); return
+            self.step('retry-scheduled-backups-' + str(len(self.pending['attempts'])), lambda: self.start_backups(candidate))
+            self.step('verify-scheduled-backup', lambda: self.await_backup(candidate)); self.finish()
+            print('Application ready; scheduled backup verified.'); return
         if kind == 'install':
             self.step('register-backup-storage', self.register_storage)
             self.step('prepare-image', self.prepare_candidate)
@@ -519,18 +780,23 @@ class Hosted:
                     chosen = password if password is not None else owner_password()
                     self.console(candidate, 'admin', 'scripts/owner.ts', 'bootstrap', '--password-stdin', data=chosen + '\n')
             self.step('create-owner', owner)
-            self.step('enable-maintenance', lambda: self.console(candidate, 'web', 'scripts/operations.ts', 'maintenance', 'on'))
+            self.step('enable-maintenance', lambda: self.maintenance(candidate, True))
         elif kind == 'upgrade':
             self.verify_storage()
             self.step('prepare-image', self.prepare_candidate)
             candidate, previous = self.pending['candidate'], self.pending['previous']
             self.step('validate-upgrade-source', self.validate_upgrade)
-            self.step('enable-maintenance', lambda: self.console(previous, 'web', 'scripts/operations.ts', 'maintenance', 'on'))
+            def preparation(): self.pending['preparationBackup'] = self.backup(previous); self.checkpoint()
+            self.step('prepare-rehearsal-backup', preparation)
+            self.step('rehearse-candidate', lambda: self.rehearsal(Path(self.record['backupDirectory']) / self.pending['preparationBackup']['file'], candidate))
+            self.step('enable-maintenance', lambda: self.maintenance(previous, True))
+            self.step('drain-active-work', lambda: self.drain_work(previous))
             def snapshot(): self.pending['backup'] = self.backup(previous); self.checkpoint()
             self.step('verify-pre-upgrade-backup', snapshot)
             self.step('stop-application', lambda: self.compose(previous, ['--profile', 'backup', 'stop', 'web', 'worker', 'backup']))
             # Authenticate the recorded point again even when resuming after interruption.
-            self.verify_archive(Path(self.record['backupDirectory']) / self.pending['backup']['file'], previous)
+            if 'verify-pre-upgrade-backup' in entry_completed:
+                self.verify_archive(Path(self.record['backupDirectory']) / self.pending['backup']['file'], previous)
             self.step('apply-migrations', lambda: self.console(candidate, 'admin', 'scripts/migrate.ts'))
         elif kind == 'recover':
             self.verify_storage()
@@ -547,7 +813,7 @@ class Hosted:
                 exists = self.compose(previous, ['exec', '-T', 'db', 'psql', '-U', self.database_user(), '-d', self.record['database'], '-Atc', f"select 1 from pg_database where datname='{name}'"]).stdout.strip()
                 if exists:
                     table = self.compose(previous, ['exec', '-T', 'db', 'psql', '-U', self.database_user(), '-d', name, '-Atc', "select to_regclass('host.settings')"]).stdout.strip()
-                    if table: self.console(previous, 'web', 'scripts/operations.ts', 'maintenance', 'on')
+                    if table: self.maintenance(previous, True)
             self.step('enable-maintenance', maintenance)
             self.step('stop-application', lambda: self.compose(previous, ['--profile', 'backup', 'stop', 'web', 'worker', 'backup']))
             def database():
@@ -580,14 +846,13 @@ class Hosted:
             candidate = self.pending['candidate']; candidate['database'] = restored['database']; self.checkpoint()
             self.step('refresh-recovered-permissions', lambda: self.console(candidate, 'admin', 'scripts/migrate.ts'))
         else: raise OperationError('Unknown pending operation.')
+        if 'verify-https-and-services' in entry_completed: self.ready(candidate)
         self.step('verify-https-and-services', lambda: self.ready(candidate))
-        def final_backup(): self.pending['verifiedBackup'] = self.backup(candidate); self.checkpoint()
-        self.step('verify-installed-backup', final_backup)
         self.step('select-active-release', lambda: self.select_release(candidate))
-        self.step('reopen-application', lambda: self.console(candidate, 'web', 'scripts/operations.ts', 'maintenance', 'off'))
-        self.step('start-scheduled-backups', lambda: self.compose(candidate, ['--profile', 'backup', 'up', '-d', 'backup']))
-        self.pending['phase'] = 'complete'; write_json(self.state / ('completed-' + self.pending['id'] + '.json'), self.pending)
-        (self.state / 'operation.json').unlink(); self.pending = None
+        self.step('reopen-application', lambda: self.maintenance(candidate, False))
+        self.step('start-scheduled-backups', lambda: self.start_backups(candidate))
+        self.step('verify-scheduled-backup', lambda: self.await_backup(candidate))
+        self.finish()
         print('Ready: ' + self.origin() + '\nKeep a separate protected recovery copy of this state directory, especially .env and .secrets. Remote storage verification is not a substitute for a second-machine restore rehearsal.', flush=True)
 
 
@@ -608,6 +873,7 @@ def main():
     commands.add_parser('resume'); commands.add_parser('backup'); commands.add_parser('status'); commands.add_parser('cancel')
     logs = commands.add_parser('logs'); logs.add_argument('--service', choices=['web','worker','backup','caddy'], default='worker')
     verify = commands.add_parser('verify-backup'); verify.add_argument('--archive', type=Path, required=True)
+    restore_test = commands.add_parser('restore-test'); restore_test.add_argument('--archive', type=Path)
     recover = commands.add_parser('recover'); recover.add_argument('--archive', type=Path, required=True); recover.add_argument('--confirm-recovery', action='store_true', required=True)
     recover.add_argument('--rebuild-source', action='store_true', help='Rebuild authenticated archived source when its matching image is unavailable')
     for command in [install, update, recover]:
@@ -619,13 +885,15 @@ def main():
     if args.state is None:
         try: args.state = default_state()
         except OperationError as error: parser.error(str(error))
-    selected = {}
+    selected = {}; expected_commit = None
     if args.command in ['install', 'upgrade', 'recover']:
         if not (args.image or args.local_image or args.source) and args.command != 'recover':
             bundle = ROOT / 'release.json'
             if bundle.is_file():
                 release = json.loads(bundle.read_text())
                 if release.get('format') != 1 or '@sha256:' not in release.get('image', ''): parser.error('Invalid release bundle descriptor.')
+                expected_commit = release.get('commit')
+                if expected_commit is not None and (not isinstance(expected_commit, str) or not re.fullmatch('[a-f0-9]{40}', expected_commit)): parser.error('Invalid release commit identity.')
                 args.image = release['image']
             elif args.command == 'install' and (ROOT / 'Dockerfile').is_file(): args.source = ROOT
             else: parser.error('Select --image, --local-image or --source, or run from a release bundle.')
@@ -636,6 +904,12 @@ def main():
         selected = {'source': args.source, 'image_ref': args.image, 'local_image': args.local_image}
     try:
         instance = Hosted(args.state)
+        instance.expected_commit = expected_commit
+        if args.command == 'status':
+            record = instance.record or {}
+            print(json.dumps({'installed': bool(record.get('active')), 'origin': instance.origin() if record else None,
+                              'release': record.get('active'), 'pending': instance.pending, 'runtime': instance.runtime_status()}, indent=2))
+            return 0
         with instance.lock():
             if args.command == 'install': instance.install(domain=args.domain, backup_directory=args.backup_directory, **selected)
             elif args.command == 'upgrade': instance.upgrade(**selected, accept_custom_changes=args.accept_custom_changes)
@@ -644,13 +918,11 @@ def main():
             elif args.command == 'recover': instance.recover(args.archive, **selected, rebuild_source=args.rebuild_source)
             elif args.command == 'backup': print(json.dumps(instance.backup()))
             elif args.command == 'verify-backup': print(json.dumps(instance.verify_archive(args.archive)))
+            elif args.command == 'restore-test': instance.restore_test(args.archive)
             elif args.command == 'logs':
                 release = (instance.pending or {}).get('candidate') or (instance.record or {}).get('active')
                 if not release: raise OperationError('No prepared release is available for logs.')
                 print(instance.compose(release, ['logs', '--tail=100', args.service]).stdout)
-            else:
-                record = instance.record or {}
-                print(json.dumps({'installed': bool(record.get('active')), 'origin': instance.origin() if record else None, 'image': record.get('active', {}).get('image'), 'registryRef': record.get('active', {}).get('registryRef'), 'version': (record.get('active', {}).get('metadata') or {}).get('version'), 'pending': instance.pending and {'kind': instance.pending['kind'], 'phase': instance.pending.get('phase'), 'backup': instance.pending.get('backup')}}, indent=2))
     except (OperationError, OSError, ValueError, subprocess.SubprocessError) as error:
         print(str(error) if isinstance(error, OperationError) else 'Hosted operation could not complete. Check Docker, private state permissions and storage. Data and recovery points were retained.', file=sys.stderr)
         print('Use status for the saved phase, then resume after correcting the problem. No automatic rollback or database deletion was attempted.', file=sys.stderr)

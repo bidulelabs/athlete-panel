@@ -1,5 +1,7 @@
 # Private MVP execution record
 
+The 2026-10-29 deployment/recovery implementation has a dedicated [execution record](deployment-recovery.md), including baseline, accepted simplifications, checks and operational limits.
+
 ## Authority and scope
 
 On 2026-10-24 the owner explicitly requested: “PLEASE IMPLEMENT THIS PLAN” and supplied the complete private MVP implementation plan from the previous planning phase. This supersedes the earlier planning-only instruction. There is no durable conversation link available; this dated statement records the authority and its scope.

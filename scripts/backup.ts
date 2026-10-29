@@ -56,9 +56,12 @@ async function* archive(entries: Array<{ path: string; file: string }>) {
 // Store only safe status, never credential values, local paths or database errors.
 export async function createBackup(
   options: BackupOptions,
-): Promise<{ file: string; metadata: BackupMetadata }> {
+): Promise<{ file: string; metadata: BackupMetadata; retention?: 'succeeded' | 'failed' }> {
   const startedAt = new Date().toISOString();
-  const record = async (state: 'running' | 'succeeded' | 'failed') => {
+  const record = async (
+    state: 'running' | 'succeeded' | 'failed',
+    retention?: 'succeeded' | 'failed',
+  ) => {
     if (!options.databaseUrl) return;
     const statusSql = postgres(options.databaseUrl, {
       max: 1,
@@ -66,21 +69,48 @@ export async function createBackup(
       onnotice: () => {},
     });
     try {
-      await statusSql`insert into host.settings(key,value) values('backupAttempt',${statusSql.json({ state, startedAt, updatedAt: new Date().toISOString() })}) on conflict(key) do update set value=excluded.value`;
+      await statusSql`insert into host.settings(key,value) values('backupAttempt',${statusSql.json({ state, startedAt, updatedAt: new Date().toISOString(), runId: process.env.ATHLETE_PANEL_BACKUP_RUN ?? null, kind: options.kind ?? 'manual', ...(retention ? { retention } : {}) })}) on conflict(key) do update set value=excluded.value`;
     } catch {
       /* If the database is unavailable, its status cannot be updated. */
     } finally {
       await statusSql.end();
     }
   };
-  await record('running');
+  // One database-scoped lock covers publication AND retention, including one-off backups.
+  // Do not overwrite another running attempt's status while waiting for its lock.
+  const coordinator = postgres(options.databaseUrl, { max: 1, onnotice: () => {} });
   try {
-    const result = await writeBackup(options);
-    await record('succeeded');
-    return result;
-  } catch (error) {
-    await record('failed');
-    throw error;
+    return await coordinator.begin(async (tx) => {
+      await tx`select pg_advisory_xact_lock(736147003)`;
+      await record('running');
+      try {
+        options.signal?.throwIfAborted();
+        const result = await writeBackup(options);
+        let retention: 'succeeded' | 'failed' | undefined;
+        if (result.metadata.kind === 'daily') {
+          try {
+            await pruneDailyBackups(options.destination);
+            retention = 'succeeded';
+          } catch {
+            retention = 'failed';
+            console.error(
+              JSON.stringify({
+                event: 'backup_retention_failed',
+                message:
+                  'Backup verified; inspect storage permissions and retention. Cleanup will retry with the next daily backup.',
+              }),
+            );
+          }
+        }
+        await record('succeeded', retention);
+        return { ...result, retention };
+      } catch (error) {
+        await record('failed');
+        throw error;
+      }
+    });
+  } finally {
+    await coordinator.end();
   }
 }
 
@@ -187,6 +217,7 @@ async function writeBackup(
         if (
           identity.sourceDigest !== built.sourceDigest ||
           identity.version !== built.version ||
+          identity.commit !== built.commit ||
           (await sourceDigest(join(stage, 'source'))) !== built.sourceDigest
         )
           throw new Error('Backup source differs from the installed image metadata.');
@@ -258,7 +289,7 @@ async function writeBackup(
     // Publish health only after the archive has a completed authenticated form at its final path.
     await sql.begin(async (tx) => {
       await tx`select pg_advisory_xact_lock(736147001)`;
-      await tx`insert into host.settings(key,value) values ('lastBackup',${tx.json({ completedAt: new Date().toISOString(), verifiedAt: new Date().toISOString(), storage, file: basename(file), kind: metadata.kind })}) on conflict(key) do update set value=excluded.value`;
+      await tx`insert into host.settings(key,value) values ('lastBackup',${tx.json({ completedAt: new Date().toISOString(), verifiedAt: new Date().toISOString(), storage, file: basename(file), kind: metadata.kind, runId: process.env.ATHLETE_PANEL_BACKUP_RUN ?? null, imageId: metadata.release?.imageId ?? null })}) on conflict(key) do update set value=excluded.value`;
     });
     return { file, metadata };
   } finally {
@@ -330,7 +361,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     if (controller.signal.aborted) process.exit();
     throw error;
   });
-  if (result.metadata.kind === 'daily')
-    await pruneDailyBackups(resolve(process.env.BACKUP_DESTINATION ?? 'backups'));
   console.log(`Encrypted backup completed: ${result.file}`);
 }

@@ -95,9 +95,22 @@ jobs:
           docker run --rm -v "$PWD:/src:ro"
           aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
           fs --include-dev-deps --scanners vuln --severity HIGH,CRITICAL --exit-code 1 /src
-  container-installation:
+  container-rehearsal:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rehearsal: release
+            title: Rehearse clean installation, HTTPS, restart and recovery
+            command: python3 scripts/rehearse-release.py --image athlete-panel:release-check
+          - rehearsal: hosted
+            title: Rehearse guided VPS install, schema upgrade, resume and full recovery
+            command: python3 scripts/rehearse-hosted.py --image athlete-panel:release-check
+          - rehearsal: hosted-registry
+            title: Rehearse release bundle, registry upgrades and image recovery
+            command: python3 scripts/rehearse-hosted.py --image athlete-panel:release-check --registry
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -105,6 +118,7 @@ jobs:
       - name: Add synthetic private files to test image exclusions
         run: python3 scripts/packaging-fixtures.py create
       - name: Build and inspect build-stage candidate
+        if: matrix.rehearsal == 'release'
         run: |
           docker build --target build -t athlete-panel:build-check .
           python3 scripts/packaging-fixtures.py verify --image athlete-panel:build-check
@@ -112,15 +126,19 @@ jobs:
         run: |
           docker build -t athlete-panel:release-check .
           python3 scripts/packaging-fixtures.py verify --image athlete-panel:release-check
-      - name: Rehearse clean installation, HTTPS, restart and recovery
-        run: python3 scripts/rehearse-release.py --image athlete-panel:release-check
-      - name: Rehearse guided VPS install, schema upgrade, resume and full recovery
-        run: python3 scripts/rehearse-hosted.py --image athlete-panel:release-check
-      - name: Rehearse release bundle, registry upgrades and image recovery
-        run: python3 scripts/rehearse-hosted.py --image athlete-panel:release-check --registry
+      - name: ${{ matrix.title }}
+        run: ${{ matrix.command }}
       - name: Scan container OS and installed dependencies locally
+        if: matrix.rehearsal == 'release'
         run: |
           docker save athlete-panel:release-check -o "$RUNNER_TEMP/athlete-panel-image.tar"
           docker run --rm -v "$RUNNER_TEMP:/scan:ro" \
             aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
             image --input /scan/athlete-panel-image.tar --scanners vuln --severity HIGH,CRITICAL --exit-code 1
+  container-installation:
+    if: always()
+    needs: container-rehearsal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: test "${{ needs.container-rehearsal.result }}" = success

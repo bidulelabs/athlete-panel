@@ -94,23 +94,25 @@ test('plan-relative sessions persist with an explicit plan start', async ({ page
   await dialog.getByLabel('Description').fill('Synthetic browser test plan.');
   await dialog.getByRole('button', { name: 'Create plan', exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  const row = page
-    .locator('.plan-row')
-    .filter({ has: page.getByRole('heading', { name: planTitle, exact: true }) });
-  await row.getByRole('button', { name: 'Workout', exact: true }).click();
-  await dialog.getByLabel('Workout title').fill(`${planTitle} session`);
-  await dialog.getByLabel('Duration · minutes', { exact: true }).fill('60');
-  await dialog.getByLabel('Day in plan').fill('2');
-  await dialog.getByRole('button', { name: 'Add workout', exact: true }).click();
-  await expect(dialog).not.toBeVisible();
+  const row = page.getByRole('button', { name: `Open ${planTitle}`, exact: true });
+  await row.click();
+  const plan = page.getByRole('dialog', { name: planTitle, exact: true });
+  await plan.getByRole('button', { name: 'Add workout', exact: true }).click();
+  const workoutEditor = page.getByRole('dialog', { name: 'Add workout', exact: true });
+  await workoutEditor.getByLabel('Workout title').fill(`${planTitle} session`);
+  await workoutEditor.getByLabel('Duration · minutes', { exact: true }).fill('60');
+  await workoutEditor.getByLabel('Day in plan').fill('2');
+  await workoutEditor.getByRole('button', { name: 'Add workout', exact: true }).click();
+  await expect(workoutEditor).not.toBeVisible();
   await expect(
-    page.getByRole('button', { name: new RegExp(`${planTitle} session`) }),
+    plan.getByRole('button', { name: `Open ${planTitle} session`, exact: true }),
   ).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('heading', { name: planTitle, exact: true })).toBeVisible();
+  await row.click();
   await expect(
-    page.getByRole('button', { name: new RegExp(`${planTitle} session`) }),
-  ).toContainText('Day 2');
+    plan.getByRole('button', { name: `Open ${planTitle} session`, exact: true }),
+  ).toBeVisible();
+  await expect(plan.getByRole('heading', { name: /Day 2/ })).toBeVisible();
 });
 
 test('keyboard dialog controls, theme persistence and failed-save recovery', async ({

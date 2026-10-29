@@ -102,6 +102,29 @@ export function Modal({
         showCloseButton={false}
         className={`ui-modal dialog ${wide ? 'ui-modal-wide dialog-wide' : ''} ${className}`}
         aria-describedby={description ? descriptionId : undefined}
+        onEscapeKeyDown={(event) => {
+          // Focused dialogs handle Escape below. If a backdrop click moved focus
+          // to body, let Radix dismiss its top layer instead.
+          if (
+            (event.target instanceof Element &&
+              event.target.closest('[role="dialog"], [role="alertdialog"]')) ||
+            document.querySelector('[role="alertdialog"][data-state="open"]')
+          )
+            event.preventDefault();
+        }}
+        onKeyDown={(event) => {
+          // Dismiss the dialog containing keyboard focus. Document-level listeners
+          // can still belong to the previous layer during nested portal transitions.
+          if (
+            event.key === 'Escape' &&
+            event.target instanceof Element &&
+            event.target.closest('[role="dialog"], [role="alertdialog"]') === event.currentTarget
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!document.querySelector('[role="alertdialog"][data-state="open"]')) onClose();
+          }
+        }}
         onOpenAutoFocus={(event) => {
           trigger.current =
             document.activeElement instanceof HTMLElement ? document.activeElement : null;

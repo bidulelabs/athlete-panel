@@ -787,8 +787,10 @@ export function WorkoutInspector({
   workout,
   onClose,
   onActivityDetails,
+  alwaysOverlay = false,
 }: {
   workout: Workout;
+  alwaysOverlay?: boolean;
   onClose: () => void;
   onActivityDetails?: (id: string) => void;
 }) {
@@ -819,7 +821,11 @@ export function WorkoutInspector({
   }
   return (
     <>
-      <InspectorPanel onClose={onClose} deferResize={editing || completing || linking}>
+      <InspectorPanel
+        onClose={onClose}
+        deferResize={editing || completing || linking}
+        alwaysOverlay={alwaysOverlay}
+      >
         <div className="inspector-head">
           <span>
             {date
@@ -991,18 +997,24 @@ export function WorkoutInspector({
             variant="outline"
             className="button"
             disabled={action.busy}
-            onClick={() =>
-              action.run(() =>
-                mutate(request, [
-                  {
-                    action: 'workout.duplicate',
-                    id: workout.id,
-                    expectedRevision: workout.revision,
-                    values: { title: `${workout.title} (copy)`, schedule: workout.schedule },
-                  },
-                ]),
+            onClick={async () => {
+              if (
+                await confirm(
+                  `Duplicate “${workout.title}”? The copy will not include completion history.`,
+                  'Duplicate workout',
+                )
               )
-            }
+                void action.run(() =>
+                  mutate(request, [
+                    {
+                      action: 'workout.duplicate',
+                      id: workout.id,
+                      expectedRevision: workout.revision,
+                      values: { title: `${workout.title} (copy)`, schedule: workout.schedule },
+                    },
+                  ]),
+                );
+            }}
           >
             <Copy size={14} />
             Duplicate
@@ -1053,7 +1065,7 @@ export function WorkoutInspector({
             style={{ color: 'var(--danger)' }}
             disabled={action.busy}
             onClick={async () => {
-              if (await confirm(`Delete “${workout.title}”?`))
+              if (await confirm(`Delete “${workout.title}”?`, 'Delete workout'))
                 void action.run(
                   () =>
                     mutate(request, [

@@ -1,12 +1,12 @@
 'use client';
 
-import type { Plan, Workout } from '@athlete-panel/contracts';
+import { sportSelectionLabel, type Plan, type Workout } from '@athlete-panel/contracts';
 import {
   AddButton,
-  Badge,
   Button,
   dateLabel,
   duration,
+  distance,
   EmptyState,
   ErrorMessage,
   Field,
@@ -22,10 +22,15 @@ import {
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import { Copy, Edit3, Layers, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { ChevronRight, Copy, Edit3, Layers, Moon, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { mutate, WorkoutEditor } from './editors';
+import { mutate, WorkoutEditor, WorkoutInspector } from './editors';
+import { addDays } from './dates';
+import { planWeeks, plannedDuration } from './plan-workouts';
+import { prescriptionPreview } from './prescription';
+import { TrainingHistory } from './history';
+import './plans.css';
 function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
   const { request } = useWorkspace();
   const action = useAction();
@@ -101,29 +106,287 @@ function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
   );
 }
 
-export default function TrainingPage({ data, request }: PluginPageProps) {
-  const confirm = useConfirm();
-  const { envelope } = useWorkspace();
-  const historyAction = useAction();
-  const [editing, setEditing] = useState<Plan | 'new' | null>(null);
-  const [adding, setAdding] = useState<Plan | null>(null);
-  const [workoutEdit, setWorkoutEdit] = useState<Workout | null>(null);
-  const action = useAction();
+function DurationSummary({ workouts }: { workouts: Workout[] }) {
+  const total = plannedDuration(workouts);
+  if (!total.sessions) return null;
+  return (
+    <span>
+      {total.seconds === null
+        ? 'Duration not set'
+        : `${duration(total.seconds)} ${total.missing ? 'known' : 'planned'}`}
+      {total.missing > 0 && total.seconds !== null ? ` · ${total.missing} without duration` : ''}
+    </span>
+  );
+}
+
+function PlanMeta({ plan, workouts }: { plan: Plan; workouts: Workout[] }) {
+  const total = plannedDuration(workouts);
+  return (
+    <span className="plans-meta">
+      <span>
+        {plan.startDate
+          ? `Starts ${dateLabel(plan.startDate, { day: 'numeric', month: 'short', year: 'numeric' })}`
+          : 'Unscheduled'}
+      </span>
+      <span>
+        {total.sessions} {total.sessions === 1 ? 'workout' : 'workouts'}
+        {total.rests ? ` · ${total.rests} ${total.rests === 1 ? 'rest day' : 'rest days'}` : ''}
+      </span>
+    </span>
+  );
+}
+
+function WorkoutSummary({ workout }: { workout: Workout }) {
+  const { data } = useWorkspace();
+  const units = data.profile?.units ?? 'metric';
+  const rest = workout.kind === 'rest';
+  const exerciseCount = workout.exercises?.length ?? 0;
+  const preview = prescriptionPreview(workout.steps, units);
   return (
     <>
+      <span className="plans-session-meta">
+        <span>{rest ? 'Rest day' : sportSelectionLabel(workout)}</span>
+        {!rest && (
+          <span>
+            {workout.durationSeconds === null
+              ? 'Duration not set'
+              : duration(workout.durationSeconds)}
+          </span>
+        )}
+        {workout.distanceMeters !== null && <span>{distance(workout.distanceMeters, units)}</span>}
+        {workout.plannedElevationGainMeters != null && (
+          <span>
+            {Math.round(workout.plannedElevationGainMeters * (units === 'imperial' ? 3.28084 : 1))}{' '}
+            {units === 'imperial' ? 'ft' : 'm'} ascent
+          </span>
+        )}
+        {exerciseCount > 0 && (
+          <span>
+            {exerciseCount} {exerciseCount === 1 ? 'exercise' : 'exercises'}
+          </span>
+        )}
+      </span>
+      {(preview || workout.notes) && (
+        <span className="plans-session-preview">{preview || workout.notes}</span>
+      )}
+    </>
+  );
+}
+
+function PlanDetails({
+  plan,
+  onClose,
+  onEdit,
+}: {
+  plan: Plan;
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  const { data, request } = useWorkspace();
+  const confirm = useConfirm();
+  const action = useAction();
+  const [adding, setAdding] = useState(false);
+  const [workoutEdit, setWorkoutEdit] = useState<Workout | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const workouts = data.workouts.filter(
+    (workout) => workout.schedule.kind === 'plan' && workout.schedule.planId === plan.id,
+  );
+  const selected = workouts.find((workout) => workout.id === selectedId);
+  const weeks = planWeeks(workouts);
+  return (
+    <Modal
+      open
+      wide
+      className="plans-dialog"
+      title={plan.title}
+      onClose={onClose}
+      closeLabel="Close training plan"
+      focusHeading
+    >
+      <div className="plans-dialog-scroll">
+        <div className="plans-overview">
+          <PlanMeta plan={plan} workouts={workouts} />
+          <div className="plans-actions" role="group" aria-label="Plan actions">
+            <Button onClick={() => setAdding(true)}>
+              <Plus size={16} />
+              Add workout
+            </Button>
+            <Button variant="outline" onClick={onEdit}>
+              <Edit3 size={15} />
+              Edit plan
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={action.busy}
+              onClick={async () => {
+                if (
+                  await confirm(
+                    `Duplicate “${plan.title}”? The copy will be unscheduled and will not include completion history.`,
+                    'Duplicate plan',
+                  )
+                )
+                  void action.run(() =>
+                    mutate(request, [
+                      {
+                        action: 'plan.duplicate',
+                        id: plan.id,
+                        expectedRevision: plan.revision,
+                        values: { title: `${plan.title} (copy)`, startDate: null },
+                      },
+                    ]),
+                  );
+              }}
+            >
+              <Copy size={15} />
+              Duplicate
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={action.busy}
+              onClick={async () => {
+                if (
+                  await confirm(`Delete “${plan.title}” and its planned sessions?`, 'Delete plan')
+                )
+                  void action.run(
+                    () =>
+                      mutate(request, [
+                        { action: 'plan.delete', id: plan.id, expectedRevision: plan.revision },
+                      ]),
+                    onClose,
+                  );
+              }}
+            >
+              <Trash2 size={15} />
+              Delete
+            </Button>
+          </div>
+          <ErrorMessage error={action.error} />
+          {plan.description && (
+            <section className="plans-description" aria-label="Plan description">
+              <h3>About this plan</h3>
+              <p>{plan.description}</p>
+            </section>
+          )}
+        </div>
+        <div className="plans-schedule">
+          <div className="plans-schedule-heading">
+            <h3>Workouts</h3>
+            <span>Weeks from the plan’s first day</span>
+          </div>
+          {!weeks.length ? (
+            <div className="plans-empty">
+              <p>No workouts yet. Add the first session to start building this plan.</p>
+              <Button variant="outline" onClick={() => setAdding(true)}>
+                <Plus size={16} />
+                Add first workout
+              </Button>
+            </div>
+          ) : (
+            weeks.map(({ week, days }) => (
+              <section className="plans-week" key={week} aria-label={`Week ${week}`}>
+                <header className="plans-week-heading">
+                  <h4>Week {week}</h4>
+                  <span>
+                    {plan.startDate
+                      ? `${dateLabel(addDays(plan.startDate, (week - 1) * 7))} – ${dateLabel(addDays(plan.startDate, week * 7 - 1), { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      : `Days ${(week - 1) * 7 + 1}–${week * 7}`}
+                  </span>
+                  <DurationSummary workouts={days.flatMap(([, entries]) => entries)} />
+                </header>
+                {days.map(([day, entries]) => (
+                  <div className="plans-day" key={day}>
+                    <h5 className="plans-day-label">
+                      <span>Day {day}</span>
+                      {plan.startDate && (
+                        <span>
+                          {dateLabel(addDays(plan.startDate, day - 1), {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </span>
+                      )}
+                    </h5>
+                    <div className="plans-day-sessions">
+                      {entries.map((workout) => (
+                        <div className="plans-session" key={workout.id}>
+                          <Button
+                            variant="unstyled"
+                            className="plans-session-open"
+                            aria-label={`Open ${workout.title}`}
+                            onClick={() => setSelectedId(workout.id)}
+                          >
+                            {workout.kind === 'rest' ? (
+                              <Moon size={18} />
+                            ) : (
+                              <SportIcon sport={workout.sport} size={18} />
+                            )}
+                            <span className="plans-session-copy">
+                              <strong>{workout.title}</strong>
+                              <WorkoutSummary workout={workout} />
+                              {workout.completion && (
+                                <span className="plans-session-status">
+                                  {workout.completion.status}
+                                </span>
+                              )}
+                            </span>
+                            <ChevronRight size={16} className="plans-chevron" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="plans-edit-workout"
+                            aria-label={`Edit ${workout.title}`}
+                            onClick={() => setWorkoutEdit(workout)}
+                          >
+                            <Edit3 size={14} />
+                            <span>Edit</span>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            ))
+          )}
+        </div>
+      </div>
+      {selected && (
+        <WorkoutInspector
+          key={selected.id}
+          workout={selected}
+          onClose={() => setSelectedId(null)}
+          alwaysOverlay
+        />
+      )}
+      {adding && <WorkoutEditor defaultPlan={plan} onClose={() => setAdding(false)} />}
+      {workoutEdit && <WorkoutEditor workout={workoutEdit} onClose={() => setWorkoutEdit(null)} />}
+    </Modal>
+  );
+}
+
+export default function TrainingPage({ data }: PluginPageProps) {
+  const [editing, setEditing] = useState<Plan | 'new' | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = data.plans.find((plan) => plan.id === selectedId);
+  return (
+    <div className="plans-page">
       <PageHeader
-        eyebrow="STRUCTURE YOUR TRAINING"
         title="Training plans"
         description="Build a block, schedule it, and adjust as you go."
-        actions={<AddButton onClick={() => setEditing('new')}>Create plan</AddButton>}
+        actions={
+          <>
+            <TrainingHistory />
+            <AddButton onClick={() => setEditing('new')}>Create plan</AddButton>
+          </>
+        }
       />
-      <ErrorMessage error={action.error} />
       {!data.plans.length ? (
         <EmptyState
           icon={<Layers size={26} />}
           title="Start with a training block"
           action={
-            <Button variant="default" className="button primary" onClick={() => setEditing('new')}>
+            <Button onClick={() => setEditing('new')}>
               <Plus size={16} />
               Create your first plan
             </Button>
@@ -132,196 +395,56 @@ export default function TrainingPage({ data, request }: PluginPageProps) {
           Organize workouts into a plan. Set its start date whenever you’re ready.
         </EmptyState>
       ) : (
-        data.plans.map((plan) => {
-          const workouts = data.workouts
-            .filter((w) => w.schedule.kind === 'plan' && w.schedule.planId === plan.id)
-            .sort(
-              (a, b) =>
-                (a.schedule.kind === 'plan' ? a.schedule.day : 0) -
-                  (b.schedule.kind === 'plan' ? b.schedule.day : 0) || a.order - b.order,
-            );
-          return (
-            <section key={plan.id}>
-              <div className="plan-row">
-                <div className="plan-icon">
-                  <Layers size={21} />
-                </div>
-                <div className="plan-row-copy">
-                  <h3>{plan.title}</h3>
-                  {plan.description && (
-                    <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                      {plan.description}
-                    </p>
+        <section className="plans-list" aria-label="Training plans">
+          <div className="plans-list-heading">
+            <h2>Your plans</h2>
+            <span>
+              {data.plans.length} {data.plans.length === 1 ? 'plan' : 'plans'}
+            </span>
+          </div>
+          {data.plans.map((plan) => (
+            <Button
+              variant="unstyled"
+              className="plans-list-row"
+              key={plan.id}
+              aria-label={`Open ${plan.title}`}
+              onClick={() => setSelectedId(plan.id)}
+            >
+              <span className="plans-list-copy">
+                <strong>{plan.title}</strong>
+                {plan.description && (
+                  <span className="plans-list-description">{plan.description}</span>
+                )}
+                <PlanMeta
+                  plan={plan}
+                  workouts={data.workouts.filter(
+                    (workout) =>
+                      workout.schedule.kind === 'plan' && workout.schedule.planId === plan.id,
                   )}
-                  <div className="plan-row-meta">
-                    <span>
-                      {plan.startDate
-                        ? `Starts ${dateLabel(plan.startDate, { day: 'numeric', month: 'long', year: 'numeric' })}`
-                        : 'Unscheduled'}
-                    </span>
-                    <span>
-                      {workouts.filter((workout) => workout.kind !== 'rest').length} workouts
-                      {workouts.some((workout) => workout.kind === 'rest')
-                        ? ` · ${workouts.filter((workout) => workout.kind === 'rest').length} rest days`
-                        : ''}
-                    </span>
-                    <span>
-                      {duration(workouts.reduce((total, w) => total + (w.durationSeconds ?? 0), 0))}{' '}
-                      planned
-                    </span>
-                  </div>
-                </div>
-                <div className="row-action-group">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="button small"
-                    onClick={() => setAdding(plan)}
-                  >
-                    <Plus size={14} />
-                    Workout
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="icon-button"
-                    aria-label={`Edit ${plan.title}`}
-                    onClick={() => setEditing(plan)}
-                  >
-                    <Edit3 size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="icon-button"
-                    aria-label={`Duplicate ${plan.title}`}
-                    disabled={action.busy}
-                    onClick={() =>
-                      action.run(() =>
-                        mutate(request, [
-                          {
-                            action: 'plan.duplicate',
-                            id: plan.id,
-                            expectedRevision: plan.revision,
-                            values: { title: `${plan.title} (copy)`, startDate: null },
-                          },
-                        ]),
-                      )
-                    }
-                  >
-                    <Copy size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="icon-button"
-                    aria-label={`Delete ${plan.title}`}
-                    disabled={action.busy}
-                    onClick={async () => {
-                      if (await confirm(`Delete “${plan.title}” and its planned sessions?`))
-                        void action.run(() =>
-                          mutate(request, [
-                            { action: 'plan.delete', id: plan.id, expectedRevision: plan.revision },
-                          ]),
-                        );
-                    }}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </div>
-              {workouts.length > 0 && (
-                <div className="plan-workouts">
-                  {workouts.map((workout) => (
-                    <Button
-                      variant="unstyled"
-                      key={workout.id}
-                      className="plan-workout-row"
-                      style={{
-                        width: '100%',
-                        textAlign: 'left',
-                        background: 'none',
-                        borderTop: 0,
-                        borderLeft: 0,
-                        borderRight: 0,
-                      }}
-                      onClick={() => setWorkoutEdit(workout)}
-                    >
-                      <SportIcon sport={workout.sport} size={17} />
-                      <strong>{workout.title}</strong>
-                      <span>
-                        Day {workout.schedule.kind === 'plan' ? workout.schedule.day : '—'}
-                      </span>
-                      <span>
-                        {workout.kind === 'rest' ? 'Rest day' : duration(workout.durationSeconds)}
-                      </span>
-                      <Edit3 size={13} />
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </section>
-          );
-        })
+                />
+              </span>
+              <span className="plans-open-label">
+                View plan
+                <ChevronRight size={17} />
+              </span>
+            </Button>
+          ))}
+        </section>
       )}
-      <section className="section-block">
-        <div className="section-heading">
-          <h2>Recent changes</h2>
-          <span className="muted-text">Review and recover manual edits</span>
-        </div>
-        <ErrorMessage error={historyAction.error} />
-        {envelope.changes.length ? (
-          envelope.changes.slice(0, 10).map((change) => (
-            <div className="proposal-row" key={change.id}>
-              <div>
-                <strong>{change.summary || 'Training data updated'}</strong>
-                <p>
-                  {new Date(change.createdAt).toLocaleString('en-GB')} ·{' '}
-                  {change.changes?.length ?? 0} records
-                </p>
-              </div>
-              {change.undoneAt ? (
-                <Badge className="badge">Undone</Badge>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="button small"
-                  disabled={historyAction.busy}
-                  onClick={async () => {
-                    if (
-                      await confirm(
-                        'Undo this change? Later edits will be preserved if they conflict.',
-                      )
-                    )
-                      void historyAction.run(() =>
-                        request('training', 'undo', { id: change.id, idempotencyKey: requestId() }),
-                      );
-                  }}
-                >
-                  <RotateCcw size={14} />
-                  Undo
-                </Button>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="quiet-empty">Your training changes will appear here.</div>
-        )}
-      </section>
+      {selected && (
+        <PlanDetails
+          key={selected.id}
+          plan={selected}
+          onClose={() => setSelectedId(null)}
+          onEdit={() => setEditing(selected)}
+        />
+      )}
       {editing && (
         <PlanEditor
           plan={editing === 'new' ? undefined : editing}
           onClose={() => setEditing(null)}
         />
       )}
-      {adding && <WorkoutEditor defaultPlan={adding} onClose={() => setAdding(null)} />}
-      {workoutEdit && (
-        <WorkoutEditor
-          workout={data.workouts.find((w) => w.id === workoutEdit.id) ?? workoutEdit}
-          onClose={() => setWorkoutEdit(null)}
-        />
-      )}
-    </>
+    </div>
   );
 }

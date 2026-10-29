@@ -38,6 +38,22 @@ Wide-screen details remain a complementary panel beside the calendar. At 1050px 
 
 Weekly values retain Recorded / planned ordering; the legend is visible in the expanded metric band. Metric tooltips explain the same order while collapsed. Missing-data indicators and coverage details remain distinct from Partial completion status. The shorter two-level summary below supersedes the previous header labels and Week in review heading. These refinements change presentation and navigation only; contracts, persistence, training rules and permissions remain unchanged.
 
+### Training plan overview and review
+
+Requirement source: the owner's 2026-10-29 request to improve `/plans` with Impeccable, support multiple plans through dialogs, separate descriptions/actions, group workouts by week/day and open full read-only workout details with an explicit Edit action.
+
+The page lists compact plan summaries with title, a two-line description preview, start date or Unscheduled and workout/rest counts. As requested in the owner’s 2026-10-29 follow-up, aggregate duration is omitted from the plan overview and detail metadata. Opening a plan shows its full multiline description in a readable measure, a distinct action toolbar and its schedule in the shared dialog. The dialog becomes a bottom sheet on phones; its title and close action stay reachable while content scrolls. Empty plans offer Add first workout. Existing create, edit, duplicate, delete and Recent changes/undo remain available with the same revision checks. Duplicate and Delete each open the shared confirmation popup with an explicit Duplicate plan or Delete plan button; Cancel or Escape performs no mutation. Duplication explains that the copy is unscheduled and excludes completion history.
+
+Weeks are plan-relative seven-day blocks (days 1–7, 8–14, and so on), independent of calendar week preference. Only populated weeks/days appear, preserving the stored day and within-day order; scheduled plans also show derived dates. Rest entries are explicit and excluded from workout duration. Weekly duration summaries label unknown duration as missing; a partial sum says known and reports the number of workouts without duration. No totals are inferred from interval steps. Workout rows show sport/subgroup, known duration/distance/elevation, strength exercise count and a short interval or note preview. Units follow the athlete profile.
+
+Activating a workout opens the existing full inspector as a modal Sheet over the plan on desktop and phone. Viewing sends no mutation. Explicit Edit controls open the existing workout editor; inspector logging, linking and other actions remain available. Workout Duplicate and Delete also use the shared confirmation popup with explicitly named actions, matching the plan controls. Escape closes one layer, focus returns to the initiating control, and resizing preserves editor drafts. Failed saves retain their drafts and errors. This is a presentation change: training data, permissions, runtime contracts, composition and migrations stay unchanged. Activation uses the normal build/restart; rollback to the immediate predecessor needs only compatible code.
+
+### Recent training changes
+
+The owner’s 2026-10-29 follow-up moves history out of the plan list into a Recent changes button beside Create plan. It opens the shared side Sheet on desktop and a full-width, full-height Sheet on phones. History remains page-wide, newest first, using the workspace’s latest 50 entries with no new persistence or filtering. The header and close control stay visible while entries scroll; dismissal returns focus to the trigger.
+
+Entries use readable action/item titles, the athlete’s local timestamp and affected-item counts. View details expands affected plans/workouts and changed fields; scalar edits show before/after values, while nested prescriptions or completion settings are identified as updated. Workout notes use the established Workout description label; sport group/subgroup and planned elevation labels match proposal review. Created/deleted items show identifying schedule, sport and duration context. Revision-only parent changes are omitted from the presentation. Undo remains a separate action, confirms the whole change and uses the existing idempotent restoration/conflict service. Cancel/Escape writes nothing and preserves the Sheet; conflicts stay visible during the current review and successful reversals show Undone. Reopening Recent changes clears an earlier error without resetting a pending Undo. Empty history has an explicit empty state.
+
 ### Week-start preference
 
 Requirement source: the owner requested the legacy app's configurable week start, including Sunday for the USA, on 2026-10-25 in this chat. The implementation carries over its Automatic, Sunday and Monday choices. The legacy checkout remains unchanged.
@@ -84,12 +100,15 @@ The expanded summary stays inside the calendar and supports native keyboard acti
 
 | Situation | Expected result | Verification |
 | --- | --- | --- |
+| Review several plans and grouped workouts | Compact overview, full description, separate actions, ordered plan weeks/days, missing totals and unit-aware summaries | [Plan browser tests](../../tests/e2e/plans.spec.ts), [projection tests](../../tests/unit/plan-workouts.test.ts) |
+| Open plan/workout/editor layers on desktop and phone | Read-only inspection, explicit edits, focus restoration, draft-safe resizing, theme/width coverage and empty/failed states | Plan browser tests and [saved plan workflow](../../tests/e2e/workspace.spec.ts) |
 | Read a prescription and use phone details | Full grouped steps, unit-aware targets, focus containment/return, nested dismissal and draft-safe resizing | [Inspector browser tests](../../tests/e2e/workout-inspector.spec.ts) |
 | Create/complete then restart | Same saved prescription and actuals return | [Database tests](../../tests/integration/domain.test.ts), browser suite |
 | Invalid date, interval or partial reason | Whole request rejected, draft retained | [Domain tests](../../tests/unit/domain.test.ts), [contracts](../../tests/unit/contracts.test.ts) |
 | Two stale simultaneous moves | One commits; other conflicts without lost siblings | Database/domain tests |
 | Shift a plan with completion | Explicit history conflict; duplication remains available | Domain tests |
 | Link/unlink/manual/imported mixed data | Single linked count, no resurrected manual values | [Summary tests](../../tests/unit/summary.test.ts) |
+| Recent changes button, details and confirmation | Readable on-demand history, focus return, no viewing/cancel writes, visible conflict and successful Undone state; both themes and 320px phone | [Plan browser tests](../../tests/e2e/plans.spec.ts) |
 | Undo after a later affected edit | Whole undo rejected; later edit preserved | Database tests |
 | Undo an unlink after the activity was linked to another workout | Whole undo rejected with a 409 `ALREADY_LINKED`; the newer link stays | [Database tests](../../tests/integration/domain.test.ts) |
 | Undo an unlink with annotations or a corrected activity subgroup | Compatible link and annotations restored once; incompatible subgroup rejected without writes | Database tests |

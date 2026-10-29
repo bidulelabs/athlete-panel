@@ -331,6 +331,10 @@ test('a save finishing after a week change reloads the new week', async ({ page 
   await page.getByRole('button', { name: 'Open Short easy run', exact: true }).click();
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   await inspector.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  await page
+    .getByRole('alertdialog')
+    .getByRole('button', { name: 'Duplicate workout', exact: true })
+    .click();
   const nextWeekLoaded = page.waitForResponse((response) =>
     response.url().includes('/api/workspace?from=2030-01-14'),
   );

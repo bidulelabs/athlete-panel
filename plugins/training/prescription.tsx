@@ -37,6 +37,20 @@ function targetLabel(target: NonNullable<Interval['target']>, units: 'metric' | 
       ? `${value} bpm`
       : `RPE ${value} / 10`;
 }
+/** A short prescription cue; the inspector remains the complete source of detail. */
+export function prescriptionPreview(steps: WorkoutStep[], units: 'metric' | 'imperial') {
+  const repeat = steps.find((step) => step.kind === 'repeat');
+  const repeatedWork = repeat?.steps.find((step) => step.kind === 'work');
+  const work = repeatedWork ?? steps.find((step) => step.kind === 'work');
+  if (!work || work.kind === 'repeat')
+    return steps.length ? `${steps.length} session ${steps.length === 1 ? 'step' : 'steps'}` : '';
+  const length =
+    work.durationSeconds !== null
+      ? timeLabel(work.durationSeconds)
+      : distance(work.distanceMeters, units);
+  return `${repeat && repeatedWork ? `${repeat.times} × ` : ''}${length}${work.target ? ` · ${targetLabel(work.target, units)}` : ''}`;
+}
+
 function IntervalDetails({ step, units }: { step: Interval; units: 'metric' | 'imperial' }) {
   return (
     <li className="prescription-step">

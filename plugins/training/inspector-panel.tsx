@@ -8,13 +8,17 @@ export function InspectorPanel({
   children,
   onClose,
   deferResize = false,
+  alwaysOverlay = false,
 }: {
   children: ReactNode;
   onClose: () => void;
   deferResize?: boolean;
+  alwaysOverlay?: boolean;
 }) {
   const [overlay, setOverlay] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1050px)').matches,
+    () =>
+      alwaysOverlay ||
+      (typeof window !== 'undefined' && window.matchMedia('(max-width: 1050px)').matches),
   );
   const trigger = useRef<HTMLElement | null>(
     typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
@@ -40,12 +44,12 @@ export function InspectorPanel({
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1050px)');
     const sync = () => {
-      if (!deferResize) setOverlay(media.matches);
+      if (!deferResize) setOverlay(alwaysOverlay || media.matches);
     };
     sync();
     media.addEventListener('change', sync);
     return () => media.removeEventListener('change', sync);
-  }, [deferResize]);
+  }, [deferResize, alwaysOverlay]);
   useEffect(() => {
     if (!overlay && !deferResize) focusAction();
   }, [overlay]);

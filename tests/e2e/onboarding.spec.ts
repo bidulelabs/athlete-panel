@@ -33,6 +33,39 @@ async function login(page: Page) {
 }
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Welcome to Athlete Panel' });
 
+test('Escape closes onboarding after a backdrop click moves focus to body', async ({
+  page,
+}, info) => {
+  await login(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const welcome = dialog(page);
+  for (const theme of ['dark', 'light']) {
+    if (theme === 'light') {
+      await page.goto('/settings');
+      await page.getByRole('button', { name: 'Finish setup', exact: true }).click();
+    }
+    await page.evaluate((value) => {
+      document.documentElement.dataset.theme = value;
+    }, theme);
+    await expect(welcome.getByRole('heading', { name: /Step 1 of 3/ })).toBeFocused();
+    await page.locator('[data-slot="dialog-overlay"]').click({ position: { x: 2, y: 2 } });
+    await expect(welcome).toBeVisible();
+    await expect(page.locator('body')).toBeFocused();
+    await page.screenshot({
+      path: `.runtime/plans-review/onboarding-backdrop-${info.project.name}-${theme}.png`,
+      animations: 'disabled',
+    });
+    await page.keyboard.press('Escape');
+    await expect(welcome).not.toBeVisible();
+    await expect
+      .poll(
+        async () =>
+          (await sql`select value from host.settings where key='onboarding'`)[0].value.status,
+      )
+      .toBe('deferred');
+  }
+});
+
 test('new owner saves, reloads, skips Garmin and opens the calendar in both themes', async ({
   page,
 }, info) => {

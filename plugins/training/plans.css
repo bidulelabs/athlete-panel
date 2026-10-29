@@ -1,0 +1,322 @@
+/* Plan discovery stays compact; reading and session review happen in the shared dialog. */
+.plans-page .page-header,
+.plans-page .header-actions {
+  flex-wrap: wrap;
+}
+.plans-list-heading,
+.plans-schedule-heading,
+.plans-week-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.plans-list-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.plans-list-heading h2 {
+  font-size: 19px;
+}
+.plans-list-heading > span,
+.plans-schedule-heading > span,
+.plans-week-heading > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.plans-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 24px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+}
+.plans-list-row:hover,
+.plans-session-open:hover {
+  background: var(--hover);
+}
+.plans-list-copy,
+.plans-session-copy {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.plans-list-copy > strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+}
+.plans-list-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 70ch;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.plans-meta,
+.plans-session-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.plans-list-copy > .plans-meta {
+  margin-top: 12px;
+}
+.plans-open-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ui-modal.plans-dialog {
+  width: min(960px, calc(100vw - 48px));
+  overflow: hidden;
+}
+.plans-dialog .dialog-head {
+  align-items: center;
+}
+.plans-dialog .dialog-head button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.plans-dialog-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--faint) var(--surface);
+}
+.plans-overview,
+.plans-schedule {
+  padding: 24px;
+}
+.plans-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.plans-actions button,
+.plans-empty button {
+  min-height: 40px;
+}
+.plans-description {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.plans-description h3,
+.plans-schedule-heading h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.plans-description p {
+  max-width: 70ch;
+  margin-top: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.plans-schedule {
+  padding-top: 8px;
+}
+.plans-schedule-heading {
+  margin-bottom: 16px;
+}
+.plans-week + .plans-week {
+  margin-top: 24px;
+}
+.plans-week-heading {
+  padding: 12px;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.plans-week-heading h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.plans-week-heading > span:last-child:not(:nth-child(2)) {
+  margin-left: auto;
+}
+.plans-day {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  border-bottom: 1px solid var(--line);
+}
+.plans-day-label {
+  padding: 20px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.plans-day-label > span {
+  display: block;
+}
+.plans-day-label > span + span {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.plans-day-sessions {
+  min-width: 0;
+}
+.plans-session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plans-session + .plans-session {
+  border-top: 1px solid var(--line);
+}
+.plans-session-open {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 16px 12px;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+}
+.plans-session-open > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.plans-session-copy {
+  flex: 1;
+}
+.plans-session-copy strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.plans-session-meta {
+  gap: 4px 12px;
+  margin-top: 4px;
+}
+.plans-session-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.plans-session-status {
+  display: block;
+  width: fit-content;
+  margin-top: 6px;
+  color: var(--text);
+  text-transform: capitalize;
+  font-size: 12px;
+}
+.plans-session .plans-edit-workout[data-slot='button'] {
+  flex-shrink: 0;
+  min-height: 44px;
+  min-width: 44px;
+}
+.plans-empty {
+  padding: 24px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.plans-empty p {
+  margin-bottom: 16px;
+}
+@media (max-width: 600px) {
+  .plans-page .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .plans-page .header-actions button {
+    min-height: 44px;
+  }
+  .plans-list-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 0;
+  }
+  .ui-modal.plans-dialog {
+    --tw-translate-x: 0;
+    --tw-translate-y: 0;
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    translate: none;
+    border-radius: 12px 12px 0 0;
+  }
+  .plans-dialog .dialog-head,
+  .plans-overview {
+    padding: 16px;
+  }
+  .plans-dialog .dialog-head h2 {
+    font-size: 20px;
+  }
+  .plans-actions button,
+  .plans-empty button {
+    min-height: 44px;
+  }
+  .plans-schedule {
+    padding: 8px 16px max(24px, env(safe-area-inset-bottom));
+  }
+  .plans-week-heading {
+    gap: 4px 12px;
+  }
+  .plans-week-heading > span:last-child:not(:nth-child(2)) {
+    width: 100%;
+    margin-left: 0;
+  }
+  .plans-day {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .plans-day-label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 16px 0 0;
+  }
+  .plans-day-label > span + span {
+    margin: 0;
+  }
+  .plans-session-open {
+    gap: 8px;
+    padding: 12px 0 16px;
+  }
+  .plans-session-open > .plans-chevron,
+  .plans-edit-workout span {
+    display: none;
+  }
+  .plans-session {
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .plans-session .plans-edit-workout[data-slot='button'] {
+    margin-top: 4px;
+  }
+}

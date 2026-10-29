@@ -9,6 +9,10 @@ export const imageMetadataSchema = z
     hostedProtocol: z.literal(1),
     version: z.string().min(1).max(128),
     sourceDigest: digest,
+    commit: z
+      .string()
+      .regex(/^[a-f0-9]{40}$/)
+      .optional(),
     plugins: z.array(
       z
         .object({
@@ -36,6 +40,10 @@ export const releasedImageSchema = z
       .regex(/^[a-z0-9][a-z0-9._:/-]*@sha256:[a-f0-9]{64}$/)
       .nullable(),
     sourceDigest: digest,
+    commit: z
+      .string()
+      .regex(/^[a-f0-9]{40}$/)
+      .optional(),
     version: z.string().min(1).max(128),
     kind: z.enum(['registry', 'local', 'source']),
   })

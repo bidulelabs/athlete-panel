@@ -2,7 +2,9 @@ name: Verify application
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
+  workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
@@ -108,7 +110,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Fail when a job did not succeed
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
         run: exit 1
 
   publication-security:
@@ -132,23 +134,9 @@ jobs:
           docker run --rm -v "$PWD:/src:ro"
           aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
           fs --include-dev-deps --scanners vuln --severity HIGH,CRITICAL --exit-code 1 /src
-  container-rehearsal:
-    name: container-rehearsal (${{ matrix.rehearsal }})
+  container-build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - rehearsal: release
-            title: Rehearse clean installation, HTTPS, restart and recovery
-            command: python3 scripts/rehearse-release.py --image athlete-panel:release-check
-          - rehearsal: hosted
-            title: Rehearse guided VPS install, schema upgrade, resume and full recovery
-            command: python3 scripts/rehearse-hosted.py --image athlete-panel:release-check
-          - rehearsal: hosted-registry
-            title: Rehearse release bundle, registry upgrades and image recovery
-            command: python3 scripts/rehearse-hosted.py --image athlete-panel:release-check --registry
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -156,29 +144,102 @@ jobs:
       - name: Add synthetic private files to test image exclusions
         run: python3 scripts/packaging-fixtures.py create
       - name: Build and inspect build-stage candidate
-        if: matrix.rehearsal == 'release'
         run: |
-          docker build --target build -t athlete-panel:build-check .
+          docker build --platform linux/amd64 --build-arg ATHLETE_PANEL_COMMIT="$GITHUB_SHA" --target build -t athlete-panel:build-check .
           python3 scripts/packaging-fixtures.py verify --image athlete-panel:build-check
       - name: Build and inspect runtime candidate
         run: |
-          docker build -t athlete-panel:release-check .
+          docker build --platform linux/amd64 --build-arg ATHLETE_PANEL_COMMIT="$GITHUB_SHA" -t athlete-panel:release-check .
           python3 scripts/packaging-fixtures.py verify --image athlete-panel:release-check
+          python3 scripts/release-ci.py export --commit "$GITHUB_SHA"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-candidate
+          path: .runtime/release-candidate/
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+  container-rehearsal:
+    name: container-rehearsal (${{ matrix.rehearsal }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    needs: container-build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rehearsal: release
+            title: Rehearse clean installation, HTTPS, restart and recovery
+          - rehearsal: hosted
+            title: Rehearse guided VPS install, schema upgrade, resume and full recovery
+          - rehearsal: hosted-registry
+            title: Rehearse release bundle, registry upgrades and image recovery
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-candidate
+          path: .runtime/release-candidate
+      - name: Authenticate shared image identity and checksum
+        run: python3 scripts/release-ci.py verify --commit "$GITHUB_SHA"
       - name: ${{ matrix.title }}
-        run: ${{ matrix.command }}
+        env:
+          REHEARSAL: ${{ matrix.rehearsal }}
+        run: python3 scripts/release-ci.py rehearse --kind "$REHEARSAL" --commit "$GITHUB_SHA"
       - name: Scan container OS and installed dependencies locally
         if: matrix.rehearsal == 'release'
         run: |
-          docker save athlete-panel:release-check -o "$RUNNER_TEMP/athlete-panel-image.tar"
-          docker run --rm -v "$RUNNER_TEMP:/scan:ro" \
+          docker run --rm -v "$PWD/.runtime/release-candidate:/scan:ro" \
             aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
-            image --input /scan/athlete-panel-image.tar --scanners vuln --severity HIGH,CRITICAL --exit-code 1
+            image --input /scan/image.tar --scanners vuln --severity HIGH,CRITICAL --exit-code 1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: release-evidence-${{ matrix.rehearsal }}
+          path: .runtime/release-evidence/
+          if-no-files-found: error
   container-installation:
     if: always()
-    needs: container-rehearsal
+    needs: [container-build, container-rehearsal]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Fail when a job did not succeed
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
         run: exit 1
+
+  publish-release:
+    if: github.repository == 'bidulelabs/athlete-panel' && startsWith(github.ref, 'refs/tags/v') && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [verify, publication-security, container-installation, container-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: publish-${{ github.repository }}-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-candidate
+          path: .runtime/release-candidate
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-evidence-*
+          merge-multiple: true
+          path: .runtime/release-evidence
+      - name: Publish the verified artifact and immutable deployment bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          python3 scripts/release-ci.py publish --commit "$GITHUB_SHA" --repository bidulelabs/athlete-panel --tag "$RELEASE_TAG"

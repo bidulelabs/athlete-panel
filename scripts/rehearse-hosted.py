@@ -64,6 +64,7 @@ def copy_candidate(destination):
 def main():
     parser = argparse.ArgumentParser(description=__doc__);parser.add_argument('--image',help='Already built base image; retained after rehearsal')
     parser.add_argument('--registry',action='store_true',help='Exercise image pulls and the source-free bundle against a disposable loopback registry')
+    parser.add_argument('--report',type=Path,help='Write sanitized phase timings from this synthetic run')
     args=parser.parse_args()
     if args.registry and not args.image: parser.error('--registry requires --image')
     stage = Path(tempfile.mkdtemp(prefix='athlete-panel-hosted-rehearsal-'));stage.chmod(0o700)
@@ -71,6 +72,9 @@ def main():
     instances=[]; images=set(); password='synthetic-'+secrets.token_hex(16); registry=None; tags=[]
     try:
         instance=Hosted(stage/'operator',test={'port':free_port()});instances.append(instance)
+        if args.image:
+            info=json.loads(instance.run(['docker','image','inspect',args.image]).stdout)[0]
+            instance.test['platform']=info['Os']+'/'+info['Architecture']
         remote=None
         if args.registry:
             registry='athlete-panel-registry-test-'+secrets.token_hex(5); endpoint='localhost:'+str(free_port())
@@ -87,7 +91,7 @@ def main():
             with tarfile.open(bundle) as archive: archive.extractall(extracted,filter='data')
             descriptor=json.loads((extracted/'release.json').read_text());assert not (extracted/'Dockerfile').exists()
             spec=importlib.util.spec_from_file_location('bundled_hosted',extracted/'scripts/hosted.py');bundled=importlib.util.module_from_spec(spec);spec.loader.exec_module(bundled)
-            instance=bundled.Hosted(stage/'operator',test={'port':instance.test['port']});instances[-1]=instance
+            instance=bundled.Hosted(stage/'operator',test=dict(instance.test));instances[-1]=instance
             # Both modules use the same exception contract for the test assertions below.
             bundled.OperationError=OperationError
             remote=descriptor['image']
@@ -118,6 +122,13 @@ def main():
             "import {connection,closeDatabase} from './packages/host/src/db.ts'; import {encrypt} from './packages/host/src/crypto.ts'; const s=connection(); await s`insert into host.settings(key,value) values('hosted-rehearsal',${s.json(encrypt('synthetic-credential'))})`; await closeDatabase();"])
         instance.compose(base,['restart','db','web','worker']);instance.ready(base);persisted()
         initial=instance.backup();archive=backup/initial['file']
+        live_containers={service:instance.compose(base,['ps','-q',service]).stdout.strip() for service in ['db','caddy','web','worker']}
+        live_database=base['database']
+        instance.restore_test(archive)
+        assert instance.record['active']['database']==live_database
+        assert sql("select value from host.settings where key='maintenance'")=='false'
+        assert all(instance.compose(base,['ps','-q',service]).stdout.strip()==container for service,container in live_containers.items())
+        persisted()
         print('PASS: generated setup, secure login, persistence, verified backup and preserved credentials.',flush=True)
         if remote:
             assert base['registryRef']==remote and base['origin']['kind']=='registry'
@@ -167,7 +178,7 @@ def main():
         (candidate/'instance/composition.json').write_text(json.dumps(composition))
         candidate_remote=None
         if remote:
-            tag=instance.record['project']+':candidate';instance.run(['docker','build','-t',tag,str(candidate)],timeout=3600)
+            tag=instance.record['project']+':candidate';instance.run(['docker','build','--platform',instance.test['platform'],'-t',tag,str(candidate)],timeout=3600)
             candidate_remote=publish(tag,'v2')
         console=instance.console;interrupted=False
         def interrupted_console(release,service,script,*arguments,**kwargs):
@@ -186,7 +197,21 @@ def main():
         assert instance.pending['phase']=='apply-migrations'
         assert sql("select value from host.settings where key='maintenance'")=='true'
         assert sql('select count(*) from athlete.hosted_rehearsal')=='1'
-        instance.resume();upgraded=instance.record['active'];images.add(upgraded['image'])
+        await_backup=instance.await_backup
+        def fail_first_backup(_release): raise OperationError('Application deployed, backup failed: synthetic interruption.')
+        instance.await_backup=fail_first_backup
+        try:
+            try:instance.resume()
+            except OperationError as error:assert 'Application deployed, backup failed' in str(error)
+            else:raise RuntimeError('Expected post-activation backup failure.')
+        finally:instance.await_backup=await_backup
+        upgraded=instance.record['active'];images.add(upgraded['image'])
+        assert sql("select value from host.settings where key='maintenance'")=='false'
+        serving={service:instance.compose(upgraded,['ps','-q',service]).stdout.strip() for service in ['web','worker','db','caddy']}
+        instance.resume()
+        assert all(instance.compose(upgraded,['ps','-q',service]).stdout.strip()==container for service,container in serving.items())
+        print('PASS: backup-only resume after activation preserves serving application, database and ingress containers.',flush=True)
+        assert all(instance.compose(upgraded,['ps','-q',service]).stdout.strip()==live_containers[service] for service in ['db','caddy'])
         assert sql('select count(*) from athlete.hosted_rehearsal')=='1';persisted()
         assert any(plugin['id']=='owner-example' for plugin in upgraded['metadata']['plugins'])
         custom_archive=backup/instance.backup()['file']
@@ -215,7 +240,7 @@ def main():
 
         # Simulate another server: new project/volume and operator directory, same protected keys/archive.
         instance.compose(recovered,['--profile','backup','stop','backup'])
-        replacement=(bundled.Hosted if args.registry else Hosted)(stage/'replacement',test={'port':free_port()});instances.append(replacement)
+        replacement=(bundled.Hosted if args.registry else Hosted)(stage/'replacement',test={**instance.test,'port':free_port()});instances.append(replacement)
         shutil.copyfile(instance.state/'.env',replacement.state/'.env');(replacement.state/'.env').chmod(0o600)
         shutil.copytree(instance.state/'.secrets',replacement.state/'.secrets')
         replacement.record={**instance.record,'project':'athlete-panel-hosted-'+secrets.token_hex(5)};replacement.save()
@@ -243,6 +268,17 @@ def main():
         print('PASS: empty replacement cluster, recovered keys/source, HTTPS login, encrypted fixture and a new backup.',flush=True)
         print('LIMIT: remote mount checks use explicit synthetic storage. Real off-host transport and public DNS/CA renewal still require operator rehearsal.',flush=True)
     finally:
+        if args.report:
+            operations=[]
+            for instance in instances:
+                for path in sorted(instance.state.glob('completed-*.json')):
+                    record=json.loads(path.read_text())
+                    operations.append({key:record[key] for key in ['kind','startedAt','finishedAt','seconds','maintenanceSeconds','maintenanceStartedAt','reopenedAt','attempts'] if key in record})
+                    if record.get('rehearsal'):
+                        evidence=record['rehearsal']
+                        operations[-1]['rehearsal']={key:evidence[key] for key in ['state','seconds','phases','cleanup'] if key in evidence}
+            args.report.parent.mkdir(parents=True,exist_ok=True)
+            args.report.write_text(json.dumps(operations,indent=2)+'\n')
         for instance in reversed(instances):
             if not instance.record:continue
             pending=instance.pending or {}

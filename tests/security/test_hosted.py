@@ -57,6 +57,7 @@ class HostedSafety(unittest.TestCase):
             instance.record={'project':'athlete-panel-hosted-0123456789','domain':'training.example.com','database':'athlete_panel_test','backupDirectory':root+'/backups'}
             config=Path(root)/'.env'
             config.write_text('ATHLETE_PANEL_DOMAIN="training.example.com"\nPOSTGRES_PASSWORD="synthetic-admin"\nAPP_DATABASE_PASSWORD="synthetic-app"\n');config.chmod(0o600)
+            (Path(root)/'Caddyfile').write_text('synthetic ingress')
             template={'services':{name:{'environment':{},'image':'fixture'} for name in ['web','worker','admin','backup','recovery','db','caddy']}}
             template['services']['db']['image']='postgres:17-bookworm';template['services']['db']['healthcheck']={}
             release={'database':'athlete_panel_test','controls':root,'image':'sha256:'+'a'*64,'metadata':{'application':'athlete-panel','sourceDigest':'b'*64,'version':'0.1.0'}}
@@ -89,6 +90,10 @@ class HostedSafety(unittest.TestCase):
 
     def test_unknown_image_protocol_and_failed_download_are_actionable(self):
         with self.assertRaises(hosted.OperationError):hosted.valid_metadata({'application':'athlete-panel','hostedProtocol':2})
+        metadata={'application':'athlete-panel','hostedProtocol':1,'version':'0.1.0','sourceDigest':'a'*64,'plugins':[]}
+        self.assertEqual(hosted.valid_metadata(metadata),metadata)
+        for commit in [123,None,'short']:
+            with self.assertRaisesRegex(hosted.OperationError,'commit'):hosted.valid_metadata({**metadata,'commit':commit})
         with tempfile.TemporaryDirectory() as root:
             instance=hosted.Hosted(root)
             with patch.object(hosted.subprocess,'run',return_value=hosted.subprocess.CompletedProcess([],1,'','synthetic registry secret')):
@@ -129,7 +134,7 @@ class HostedSafety(unittest.TestCase):
             output=Path(root)/'release.tar.gz';reference='ghcr.io/example/app@sha256:'+'d'*64
             module.package_release(reference,output)
             with tarfile.open(output) as archive:
-                self.assertEqual(set(archive.getnames()),{'scripts/hosted.py','release.json','README.txt'})
+                self.assertEqual(set(archive.getnames()),{'scripts/hosted.py','scripts/hosted_rehearsal.py','release.json','README.txt'})
                 self.assertEqual(json.load(archive.extractfile('release.json'))['image'],reference)
             with self.assertRaises(ValueError):module.package_release(reference,output)
             with self.assertRaises(ValueError):module.package_release('ghcr.io/example/app:v1',Path(root)/'unsafe.tar.gz')

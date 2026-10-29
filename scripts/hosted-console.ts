@@ -4,10 +4,19 @@ import { checkSchema } from '../packages/host/src/schema';
 import { createBackup } from './backup';
 import { validateRetainedMigrations } from '../packages/host/src/migrations';
 import { readFile } from 'node:fs/promises';
+import { constants } from 'node:os';
 import { imageMetadataSchema } from './lib/release-data';
+import { verifyData } from './lib/verify-data';
 try {
   const command = process.argv[2];
-  if (command === 'inspect' && process.argv.length === 3) {
+  if (command === 'verify-data' && process.argv.length === 3) {
+    await verifyData();
+    console.log(JSON.stringify({ data: 'verified' }));
+  } else if (command === 'backup-status' && process.argv.length === 3) {
+    const rows =
+      await connection()`select key,value from host.settings where key in ('backupAttempt','lastBackup','backupNotification','worker')`;
+    console.log(JSON.stringify(Object.fromEntries(rows.map((row) => [row.key, row.value]))));
+  } else if (command === 'inspect' && process.argv.length === 3) {
     await checkSchema();
     const sql = connection();
     const [owner] = await sql`select exists(select 1 from host.owner) as present`;
@@ -42,17 +51,27 @@ try {
       console.log(JSON.stringify({ retainedMigrations: 'verified' }));
     }
   } else if (command === 'backup' && process.argv.length === 3) {
+    const controller = new AbortController();
+    const cancel = (signalName: NodeJS.Signals) => {
+      process.exitCode = 128 + constants.signals[signalName];
+      controller.abort();
+      setTimeout(() => process.exit(), 10_000).unref();
+    };
+    process.once('SIGINT', cancel);
+    process.once('SIGTERM', cancel);
     const result = await createBackup({
       databaseUrl: process.env.DATABASE_URL ?? '',
       keyFile: process.env.BACKUP_KEY_FILE ?? '',
       encryptionKey: process.env.ENCRYPTION_KEY ?? '',
       destination: process.env.BACKUP_DESTINATION ?? '',
+      signal: controller.signal,
     });
     console.log(
       JSON.stringify({
         file: result.file.split('/').at(-1),
         createdAt: result.metadata.createdAt,
         verified: true,
+        release: result.metadata.release,
       }),
     );
   } else throw new Error('Unknown hosted console command.');
@@ -60,7 +79,7 @@ try {
   console.error(
     'Hosted console check failed. Inspect database availability, installed schema, keys and registered backup storage.',
   );
-  process.exitCode = 1;
+  process.exitCode ??= 1;
 } finally {
   await closeDatabase();
 }

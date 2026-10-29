@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { imageMetadataSchema } from './lib/release-data';
 import { sourceDigest } from './lib/source-files';
 
-export async function releaseMetadata(root: string) {
+export async function releaseMetadata(root: string, commit = process.env.ATHLETE_PANEL_COMMIT) {
   const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
   const composition = JSON.parse(await readFile(join(root, 'instance/composition.json'), 'utf8'));
   const plugins = [];
@@ -27,6 +27,7 @@ export async function releaseMetadata(root: string) {
     hostedProtocol: 1,
     version: pkg.version,
     sourceDigest: await sourceDigest(root),
+    ...(commit ? { commit } : {}),
     plugins,
   });
 }

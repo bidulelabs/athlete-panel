@@ -72,6 +72,8 @@ Choose the workflow that fits your goal:
 | Goal                                      | Start here                                                                                                                              |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Run a maintained private server           | [Production Docker Compose installation](docs/development.md#private-server-installation): generated secrets, HTTPS, worker and backups |
+| Upgrade a managed private server          | [One-command deployment](docs/development.md#coordinated-upgrades-and-plugin-activation): tested image, restored-backup rehearsal, recovery point and readiness |
+| Test a backup without changing live data  | [Manual restore testing](docs/development.md#test-restoration-without-changing-the-live-installation), with separately retained recovery keys |
 | Try the application locally or contribute | The checkout workflow below; it runs a development server bound to your computer                                                        |
 | Update an existing local checkout         | [Local update and recovery](docs/development.md#updating-a-local-checkout); setup does not upgrade existing data                        |
 

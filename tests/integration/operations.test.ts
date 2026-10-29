@@ -244,13 +244,14 @@ describe('matched encrypted backup and isolated database restore', () => {
   });
 
   it('authenticates image identity and refuses a source snapshot that drifted from its image', async () => {
-    const built = await releaseMetadata(restoredSource);
+    const built = await releaseMetadata(restoredSource, 'c'.repeat(40));
     await writeFile(join(restoredSource, '.athlete-panel-release.json'), JSON.stringify(built));
     const identity = {
       imageId: 'sha256:' + 'a'.repeat(64),
       registryRef: 'ghcr.io/example/athlete-panel@sha256:' + 'b'.repeat(64),
       sourceDigest: built.sourceDigest,
       version: built.version,
+      commit: built.commit,
       kind: 'registry',
     };
     const previous = process.env.ATHLETE_PANEL_RELEASE_IDENTITY;
@@ -342,6 +343,61 @@ describe('matched encrypted backup and isolated database restore', () => {
     expect(remaining.filter((name) => /^athlete-panel-daily-/.test(name))).toHaveLength(9);
     expect(await pruneDailyBackups(destination)).toBe(0);
   });
+
+  it('serializes simultaneous backup creation and retention before publishing attempt status', async () => {
+    const destination = join(temp, 'simultaneous');
+    const before = (await source`select value from host.settings where key='backupAttempt'`)[0]
+      .value;
+    let unlock!: () => void;
+    let locked!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    const release = new Promise<void>((resolve) => {
+      unlock = resolve;
+    });
+    const holder = source.begin(async (tx) => {
+      await tx`select pg_advisory_xact_lock(736147003)`;
+      locked();
+      await release;
+    });
+    await ready;
+    const options = {
+      databaseUrl: sourceUrl,
+      keyFile,
+      encryptionKey,
+      destination,
+      root: resolve('.'),
+      kind: 'daily' as const,
+    };
+    const attempts = [createBackup(options), createBackup(options)];
+    try {
+      await vi.waitFor(async () => {
+        const [row] =
+          await admin`select count(*)::int as count from pg_locks where locktype='advisory' and objid=736147003 and not granted and database=(select oid from pg_database where datname=${sourceName})`;
+        expect(row.count).toBe(2);
+      });
+      expect(await stat(destination).catch(() => null)).toBeNull();
+      const observer = postgres(sourceUrl, { max: 1, onnotice: () => {} });
+      try {
+        expect(
+          (await observer`select value from host.settings where key='backupAttempt'`)[0].value,
+        ).toEqual(before);
+      } finally {
+        await observer.end();
+      }
+    } finally {
+      unlock();
+      await holder;
+      await Promise.all(attempts);
+    }
+    const names = await readdir(destination);
+    expect(names.filter((name) => name.endsWith('.fgr'))).toHaveLength(1);
+    expect(names.some((name) => name.endsWith('.partial'))).toBe(false);
+    expect(
+      (await source`select value from host.settings where key='backupAttempt'`)[0].value.state,
+    ).toBe('succeeded');
+  }, 120_000);
 
   const startBackup = async (
     caseName: string,

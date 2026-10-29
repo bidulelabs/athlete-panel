@@ -3,7 +3,8 @@ import { pathToFileURL } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { closeDatabase, connection } from '../packages/host/src/db';
 import { checkSchema } from '../packages/host/src/schema';
-import { createBackup, pruneDailyBackups } from './backup';
+import { createBackup } from './backup';
+import { backupHeartbeat } from './lib/backup-heartbeat';
 import { operationalHealth } from '../packages/ui/src/operational-status';
 
 export async function setMaintenance(enabled: boolean): Promise<void> {
@@ -35,6 +36,7 @@ async function backupLoop() {
   while (!controller.signal.aborted) {
     const nextRunAt = nextBackupTime(new Date(), hour).toISOString();
     await connection()`insert into host.settings(key,value) values('backupSchedule',${connection().json({ hourUtc: hour, nextRunAt })}) on conflict(key) do update set value=excluded.value`;
+    let outcome: 'success' | 'failure' = 'failure';
     try {
       const result = await createBackup({
         databaseUrl: process.env.DATABASE_URL ?? '',
@@ -44,7 +46,7 @@ async function backupLoop() {
         kind: 'daily',
         signal: controller.signal,
       });
-      await pruneDailyBackups(destination);
+      outcome = 'success';
       console.log(
         JSON.stringify({ event: 'backup_completed', createdAt: result.metadata.createdAt }),
       );
@@ -56,6 +58,13 @@ async function backupLoop() {
             'Inspect the database, separate keys and backup destination. No incomplete archive was retained.',
         }),
       );
+    }
+    const notification = await backupHeartbeat(outcome);
+    console.log(JSON.stringify({ event: 'backup_notification', state: notification }));
+    try {
+      await connection()`insert into host.settings(key,value) values('backupNotification',${connection().json({ state: notification, updatedAt: new Date().toISOString() })}) on conflict(key) do update set value=excluded.value`;
+    } catch {
+      console.error(JSON.stringify({ event: 'backup_notification_status_unavailable' }));
     }
     try {
       await sleep(nextBackupTime(new Date(), hour).getTime() - Date.now(), undefined, {

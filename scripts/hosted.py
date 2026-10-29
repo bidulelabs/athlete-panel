@@ -15,6 +15,7 @@ import ssl
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 import uuid
 from datetime import datetime, timezone
@@ -23,6 +24,12 @@ ROOT = Path(__file__).resolve().parents[1]
 REMOTE_FILESYSTEMS = {'nfs', 'nfs4', 'cifs', 'smb3', 'fuse.sshfs'}
 IMAGE_ID = re.compile(r'^sha256:[a-f0-9]{64}$')
 OPERATION_FORMAT = 2
+
+
+class NoHealthRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Readiness must come from the configured endpoint, never a redirect target.
+        return None
 
 
 def timestamp():
@@ -604,13 +611,20 @@ class Hosted:
                 if result.returncode == 0: break
                 time.sleep(1)
             context = ssl.create_default_context(cafile=str(certificate))
+        health = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context), NoHealthRedirects())
         for _ in range(60):
             try:
-                with urllib.request.urlopen(self.origin() + '/api/health', context=context, timeout=5) as response:
-                    if response.status == 200: break
+                with health.open(self.origin() + '/api/health', timeout=5) as response:
+                    if response.status == 200 and response.headers.get_content_type() == 'application/json':
+                        body = response.read(4097)
+                        if len(body) <= 4096:
+                            payload = json.loads(body)
+                            if isinstance(payload, dict) and payload.get('status') == 'ready': break
+            except urllib.error.HTTPError as error:
+                error.close()
             except (OSError, ValueError): pass
             time.sleep(2)
-        else: raise OperationError('HTTPS readiness failed. Check DNS, ports 80/443 and Caddy logs, then resume. Read status before choosing recovery.')
+        else: raise OperationError('HTTPS readiness failed: /api/health must return HTTP 200 JSON with status ready without redirects. Check DNS, ports 80/443 and Caddy logs, then resume. Read status before choosing recovery.')
         self.fresh_worker(release, after)
 
     def verify_data(self, release):

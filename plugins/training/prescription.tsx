@@ -42,7 +42,8 @@ export function prescriptionPreview(steps: WorkoutStep[], units: 'metric' | 'imp
   const repeat = steps.find((step) => step.kind === 'repeat');
   const repeatedWork = repeat?.steps.find((step) => step.kind === 'work');
   const work = repeatedWork ?? steps.find((step) => step.kind === 'work');
-  if (!work || work.kind === 'repeat') return steps.length ? `${steps.length} session steps` : '';
+  if (!work || work.kind === 'repeat')
+    return steps.length ? `${steps.length} session ${steps.length === 1 ? 'step' : 'steps'}` : '';
   const length =
     work.durationSeconds !== null
       ? timeLabel(work.durationSeconds)

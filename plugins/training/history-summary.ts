@@ -4,15 +4,16 @@ import { dateLabel, distance, duration } from '@athlete-panel/ui';
 const labels: Record<string, string> = {
   durationSeconds: 'Duration',
   distanceMeters: 'Distance',
-  plannedElevationGainMeters: 'Elevation gain',
+  plannedElevationGainMeters: 'Planned elevation gain',
   startDate: 'Start date',
   endDate: 'End date',
-  notes: 'Description',
+  notes: 'Notes',
   body: 'Note text',
   steps: 'Intervals',
   exercises: 'Strength exercises',
   order: 'Position in day',
-  sportSubgroup: 'Sport type',
+  sport: 'Sport group',
+  sportSubgroup: 'Sport subgroup',
   completion: 'Completion',
 };
 const readable = (key: string) =>
@@ -110,7 +111,7 @@ export function historyFields(change: EntityChange, units: 'metric' | 'imperial'
       : ['startDate', 'schedule', 'sport', 'durationSeconds'].includes(key),
   );
   const rows = keys.map((key) => ({
-    label: readable(key),
+    label: key === 'notes' && change.entity === 'workout' ? 'Workout description' : readable(key),
     before: valueText(before[key], key, units, plans),
     after: valueText(after[key], key, units, plans),
   }));

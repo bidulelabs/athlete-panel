@@ -150,7 +150,9 @@ export function TrainingHistory() {
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (!confirming()) setOpen(next);
+        if (confirming()) return;
+        if (next) action.setError(null);
+        setOpen(next);
       }}
     >
       <SheetTrigger asChild>

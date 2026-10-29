@@ -80,6 +80,7 @@ test('recent changes opens on demand with readable details in both themes', asyn
     );
     await expect(entry.locator('dl')).toContainText('45m');
     await expect(entry.locator('dl')).toContainText('After: 1h');
+    await expect(entry.locator('dt')).toContainText(['Duration', 'Workout description']);
     await expect(entry).toContainText('Extend the ride only if recovery feels good.');
     await expect(entry).not.toContainText('Revision');
     await noOverflow(page);
@@ -134,6 +135,10 @@ test('history undo confirms, preserves the sheet on cancel or conflict and marks
   await expect(undo).toBeFocused();
   expect(writes()).toBe(0);
   let attempts = 0;
+  let finishUndo!: () => void;
+  const pendingUndo = new Promise<void>((resolve) => {
+    finishUndo = resolve;
+  });
   await page.route('**/api/plugins/training/undo', async (route) => {
     attempts++;
     const body = route.request().postDataJSON();
@@ -149,6 +154,7 @@ test('history undo confirms, preserves the sheet on cancel or conflict and marks
           },
         },
       });
+    await pendingUndo;
     changes[0].undoneAt = '2030-10-29T12:00:00Z';
     await route.fulfill({ json: { id: crypto.randomUUID(), changes: [] } });
   });
@@ -159,8 +165,17 @@ test('history undo confirms, preserves the sheet on cancel or conflict and marks
   ).toBeInViewport();
   await expect(undo).toBeEnabled();
   await expect(sheet).toBeVisible();
+  await sheet.getByRole('button', { name: 'Close recent changes' }).click();
+  await trigger.click();
+  await expect(sheet.getByRole('alert')).toHaveCount(0);
   await undo.click();
   await confirmation.getByRole('button', { name: 'Undo change' }).click();
+  await expect(undo).toBeDisabled();
+  await sheet.getByRole('button', { name: 'Close recent changes' }).click();
+  await trigger.click();
+  await expect(undo).toBeDisabled();
+  await expect(sheet.getByRole('alert')).toHaveCount(0);
+  finishUndo();
   await expect(entry).toContainText('Undone');
   await expect(undo).toHaveCount(0);
   await expect(sheet).toBeVisible();
@@ -173,7 +188,12 @@ test('history undo confirms, preserves the sheet on cancel or conflict and marks
 test('multiple plans, readable descriptions and ordered weeks in both themes', async ({
   page,
 }, info) => {
-  const { writes, errors } = await preview(page);
+  const { data, writes, errors } = await preview(page);
+  data.workouts[0]!.steps = [
+    { kind: 'warmup', durationSeconds: 600, distanceMeters: null, target: null, notes: '' },
+  ];
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
   const trigger = page.getByRole('button', { name: 'Open Autumn endurance block', exact: true });
   const plan = page.getByRole('dialog', { name: 'Autumn endurance block', exact: true });
   for (const theme of ['dark', 'light']) {
@@ -197,6 +217,10 @@ test('multiple plans, readable descriptions and ordered weeks in both themes', a
     });
     await trigger.click();
     await expect(plan.getByRole('heading', { name: 'Autumn endurance block' })).toBeFocused();
+    await expect(plan.getByRole('button', { name: 'Open Easy endurance ride' })).toContainText(
+      '1 session step',
+    );
+    await expect(plan).not.toContainText('1 session steps');
     await expect(plan.getByRole('region', { name: 'Plan description' })).toContainText(
       'The first week establishes consistency.',
     );

@@ -222,9 +222,9 @@ class ExactImage(unittest.TestCase):
         self.assertIn('Network request failed', ci.command_diagnostic(['docker', 'push'], 'connection timed out', 1))
         self.assertIn('Unclassified failure', ci.command_diagnostic(['gh', 'release', 'upload'], 'sensitive unknown diagnostic', 1))
 
-    def candidate(self, root):
+    def candidate(self, root, version='1.0.0'):
         directory = Path(root); (directory / 'image.tar').write_bytes(b'synthetic image')
-        record = {'format': 1, 'commit': COMMIT, 'imageId': IMAGE, 'sha256': ci.checksum(directory / 'image.tar'), 'metadata': {'commit': COMMIT, 'version': '1.0.0', 'sourceDigest': 'c' * 64}}
+        record = {'format': 1, 'commit': COMMIT, 'imageId': IMAGE, 'sha256': ci.checksum(directory / 'image.tar'), 'metadata': {'commit': COMMIT, 'version': version, 'sourceDigest': 'c' * 64}}
         (directory / 'candidate.json').write_text(json.dumps(record)); return directory, record
 
     def test_corrupt_archive_fails_before_docker_load(self):
@@ -254,9 +254,18 @@ class ExactImage(unittest.TestCase):
             directory, record = self.candidate(root)
             for kind in ['release', 'hosted', 'hosted-registry']:
                 (directory / (kind + '.json')).write_text(json.dumps({'commit': COMMIT, 'imageId': IMAGE, 'result': 'succeeded'}))
-            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'run', return_value=COMMIT) as run, patch.object(ci, 'existing_release', return_value=None), patch.object(ci, 'remote_image', return_value={'Id': 'different'}):
+            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=False), patch.object(ci, 'run') as run, patch.object(ci, 'existing_release', return_value=None), patch.object(ci, 'remote_image', return_value={'Id': 'different'}):
                 with self.assertRaisesRegex(ValueError, 'different image'): ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
-                self.assertEqual(run.call_count, 1)
+                run.assert_not_called()
+
+    def test_rejected_release_tag_stops_before_remote_publication(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory, record = self.candidate(root)
+            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', side_effect=ValueError('Stable releases must reference main')) as tag, patch.object(ci, 'run') as run, patch.object(ci, 'existing_release') as release, patch.object(ci, 'remote_image') as registry:
+                with self.assertRaisesRegex(ValueError, 'must reference main'):
+                    ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
+                tag.assert_called_once_with('v1.0.0', COMMIT, '1.0.0')
+                run.assert_not_called(); release.assert_not_called(); registry.assert_not_called()
 
     def test_gates_and_publication_permissions_preserve_existing_ci_contract(self):
         workflow = (ROOT / '.github/workflows/verify.yml').read_text()
@@ -269,8 +278,14 @@ class ExactImage(unittest.TestCase):
         self.assertIn('project: [desktop, mobile]', workflow)
 
     def test_publication_retry_preserves_original_assets_and_never_rebuilds(self):
+        for version in ['1.0.0', '1.1.0-beta.1', '1.1.0-rc.1']:
+            with self.subTest(version=version): self.publication_retry(version)
+
+    def publication_retry(self, version):
         with tempfile.TemporaryDirectory() as root, patch.dict(sys.modules, {'hosted': hosted}):
-            directory, record = self.candidate(root)
+            directory, record = self.candidate(root, version)
+            prerelease = '-' in version
+            tag = 'v' + version
             for kind in ['release', 'hosted', 'hosted-registry']:
                 (directory / (kind + '.json')).write_text(json.dumps({'commit': COMMIT, 'imageId': IMAGE, 'result': 'succeeded', 'seconds': 1}))
             digest = 'ghcr.io/bidulelabs/athlete-panel@sha256:' + 'd' * 64
@@ -278,31 +293,53 @@ class ExactImage(unittest.TestCase):
             assets, commands = {}, []
             def run(args, **kwargs):
                 commands.append([str(arg) for arg in args])
-                if args[0] == 'git': return COMMIT
+                if args[:3] in [['gh', 'release', 'create'], ['gh', 'release', 'upload']]:
+                    for arg in args:
+                        if isinstance(arg, Path) and arg.name != 'notes.txt': assets[arg.name] = arg.read_bytes()
                 if args[:3] == ['gh', 'release', 'create']:
-                    for name in ['athlete-panel-deploy.tgz', 'athlete-panel-deploy.tgz.sha256', 'release-record.json', 'verification.json']:
-                        path = next(Path(arg) for arg in args if str(arg).endswith('/' + name))
-                        assets[name] = path.read_bytes()
+                    notes = Path(args[args.index('--notes-file') + 1]).read_text()
+                    self.assertEqual('separate instance' in notes, prerelease)
                 if args[:3] == ['gh', 'release', 'download']:
                     name = args[args.index('--pattern') + 1]
                     (Path(args[args.index('--dir') + 1]) / name).write_bytes(assets[name])
                 return ''
-            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'run', side_effect=run), patch.object(ci, 'read_metadata', return_value=record['metadata']), patch.object(ci, 'inspect', return_value=remote), patch.object(ci, 'existing_release', return_value=None) as release, patch.object(ci, 'remote_image', side_effect=[None, None, remote]) as registry:
-                ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
+            def assert_classification(command):
+                self.assertIn('--prerelease' if prerelease else '--prerelease=false', command)
+                self.assertEqual('--latest=false' in command, prerelease)
+                self.assertNotIn('--latest', command)
+                self.assertNotIn('--latest=true', command)
+            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=prerelease), patch.object(ci, 'run', side_effect=run), patch.object(ci, 'read_metadata', return_value=record['metadata']), patch.object(ci, 'inspect', return_value=remote), patch.object(ci, 'existing_release', return_value=None) as release, patch.object(ci, 'remote_image', side_effect=[None, None, remote]) as registry:
+                ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', tag, directory)
                 self.assertEqual(len(assets), 4)
                 self.assertFalse(any(command[:2] == ['docker', 'build'] for command in commands))
+                for operation in ['create', 'edit']:
+                    assert_classification(next(command for command in commands if command[:3] == ['gh', 'release', operation]))
                 commands.clear(); original = dict(assets)
-                release.return_value = {'isDraft': False, 'assets': [{'name': name} for name in assets]}
                 registry.side_effect = None; registry.return_value = remote
+                # Resume an incomplete, incorrectly classified draft without replacing its assets.
+                del assets['athlete-panel-deploy.tgz.sha256']
+                release.return_value = {'isDraft': True, 'isPrerelease': not prerelease, 'assets': [{'name': name} for name in assets]}
+                ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', tag, directory)
+                self.assertEqual(assets, original)
+                assert_classification(next(command for command in commands if command[:3] == ['gh', 'release', 'edit']))
+                self.assertFalse(any(command[:2] == ['docker', 'push'] or command[:3] == ['gh', 'release', 'create'] for command in commands))
+                commands.clear()
+                release.return_value = {'isDraft': False, 'isPrerelease': prerelease, 'assets': [{'name': name} for name in assets]}
                 # Fresh timing evidence must not overwrite the first successful report.
                 for path in directory.glob('hosted*.json'):
                     report = json.loads(path.read_text()); report['seconds'] = 2; path.write_text(json.dumps(report))
-                ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
+                ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', tag, directory)
                 self.assertEqual(assets, original)
                 self.assertFalse(any(command[:2] == ['docker', 'push'] or command[:3] in [['gh', 'release', 'upload'], ['gh', 'release', 'edit']] for command in commands))
+                commands.clear(); registry.reset_mock()
+                release.return_value['isPrerelease'] = not prerelease
+                with self.assertRaisesRegex(ValueError, 'classification differs'):
+                    ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', tag, directory)
+                registry.assert_not_called(); self.assertEqual(commands, [])
+                release.return_value['isPrerelease'] = prerelease
                 assets['athlete-panel-deploy.tgz'] = b'conflicting publication'
                 with self.assertRaisesRegex(ValueError, 'asset differs'):
-                    ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
+                    ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', tag, directory)
 
 
 if __name__ == '__main__': unittest.main()

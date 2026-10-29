@@ -22,7 +22,8 @@ def command_diagnostic(args, stderr='', code=None):
     operations = [('docker', 'push'), ('docker', 'pull'), ('docker', 'load'),
                   ('docker', 'image', 'inspect'), ('gh', 'release', 'upload'),
                   ('gh', 'release', 'download'), ('gh', 'release', 'create'),
-                  ('gh', 'release', 'edit'), ('gh', 'release', 'view'), ('git', 'rev-parse')]
+                  ('gh', 'release', 'edit'), ('gh', 'release', 'view'), ('git', 'rev-parse'),
+                  ('git', 'fetch'), ('git', 'merge-base')]
     operation = next((' '.join(parts) for parts in operations if words[:len(parts)] == list(parts)), 'Release command')
     detail = (stderr.decode(errors='replace') if isinstance(stderr, bytes) else stderr or '').lower()
     reasons = [
@@ -103,20 +104,37 @@ def remote_image(reference):
 
 
 def existing_release(repository, tag):
-    result = subprocess.run(['gh', 'release', 'view', tag, '--repo', repository, '--json', 'assets,isDraft,targetCommitish'], capture_output=True, text=True)
+    result = subprocess.run(['gh', 'release', 'view', tag, '--repo', repository, '--json', 'assets,isDraft,isPrerelease,targetCommitish'], capture_output=True, text=True)
     if result.returncode:
         if 'release not found' in result.stderr.lower(): return None
         raise ValueError(command_diagnostic(['gh', 'release', 'view'], result.stderr, result.returncode) + ' Existing releases were preserved.')
     return json.loads(result.stdout)
 
 
+def verify_release_tag(tag, commit, version):
+    if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?', tag) or tag[1:] != version:
+        raise ValueError('Release tag must match the package version.')
+    if run(['git', 'rev-parse', 'refs/tags/' + tag + '^{commit}'], cwd=ROOT) != commit:
+        raise ValueError('Tag no longer identifies the verified commit.')
+    prerelease = '-' in tag
+    if not prerelease:
+        # Refresh on every attempt; a stale tracking ref is not evidence of main membership.
+        # The GitHub tag ruleset is the permission boundary, not this versioned script.
+        run(['git', 'fetch', '--no-tags', 'origin', '+refs/heads/main:refs/remotes/origin/main'], cwd=ROOT, timeout=60)
+        command = ['git', 'merge-base', '--is-ancestor', commit, 'refs/remotes/origin/main']
+        result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
+        if result.returncode == 1:
+            raise ValueError('Stable releases must reference a commit on origin/main. Use a prerelease version to test a feature branch.')
+        if result.returncode:
+            raise ValueError(command_diagnostic(command, result.stderr, result.returncode))
+    return prerelease
+
+
 def publish(directory, commit, repository, tag, evidence_directory):
     if not re.fullmatch('[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository): raise ValueError('Invalid repository.')
     record = verify_image(directory, commit)
-    if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?', tag) or tag[1:] != record['metadata']['version']:
-        raise ValueError('Release tag must match the package version.')
-    if run(['git', 'rev-parse', tag + '^{commit}']) != commit:
-        raise ValueError('Tag no longer identifies the verified commit.')
+    prerelease = verify_release_tag(tag, commit, record['metadata']['version'])
+    release_flags = ['--prerelease', '--latest=false'] if prerelease else ['--prerelease=false']
     evidence = []
     for kind in ['release', 'hosted', 'hosted-registry']:
         entry = json.loads((evidence_directory / (kind + '.json')).read_text())
@@ -124,6 +142,8 @@ def publish(directory, commit, repository, tag, evidence_directory):
             raise ValueError('Missing or mismatched successful rehearsal evidence.')
         evidence.append(entry)
     release = existing_release(repository, tag)
+    if release and not release['isDraft'] and release['isPrerelease'] != prerelease:
+        raise ValueError('Published release classification differs from its tag; review it explicitly. Existing release was preserved.')
     repo = 'ghcr.io/' + repository.lower()
     references = [repo + ':' + tag, repo + ':sha-' + commit]
     existing = [remote_image(ref) for ref in references]
@@ -167,10 +187,12 @@ def publish(directory, commit, repository, tag, evidence_directory):
             if missing: run(['gh', 'release', 'upload', tag, '--repo', repository, *missing])
         else:
             notes = output / 'notes.txt'
-            notes.write_text(f'Tested Linux AMD64 release.\n\nCommit: {commit}\nImage: {digest}\n\nExtract the deployment bundle and run python3 scripts/hosted.py upgrade. Preserve your private operator state and recovery keys.\n')
+            warning = 'Prerelease: test on a separate instance with its own database, storage and synthetic data.\n\n' if prerelease else ''
+            notes.write_text(warning + f'Tested Linux AMD64 release.\n\nCommit: {commit}\nImage: {digest}\n\nExtract the deployment bundle and run python3 scripts/hosted.py upgrade. Preserve your private operator state and recovery keys.\n')
             run(['gh', 'release', 'create', tag, '--repo', repository, '--verify-tag', '--draft', '--title', tag,
-                 '--notes-file', notes, *(output / name for name in names)])
-        if not release or release['isDraft']: run(['gh', 'release', 'edit', tag, '--repo', repository, '--draft=false'])
+                 *release_flags, '--notes-file', notes, *(output / name for name in names)])
+        if not release or release['isDraft']:
+            run(['gh', 'release', 'edit', tag, '--repo', repository, '--draft=false', *release_flags])
     print('Published the tested image and matching deployment bundle: ' + digest)
 
 

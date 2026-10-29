@@ -398,6 +398,26 @@ The existing Verify application workflow builds a Linux AMD64 candidate once, wi
 
 After an authorized version tag such as `v0.1.0` is pushed, or manual dispatch selects that existing tag, all gates run before publication. The tag must match the package version and verified commit. Only the publication job receives package/release write access. It serializes the same release, loads the tested artifact without rebuilding, publishes version and `sha-FULL_COMMIT` tags to `ghcr.io/bidulelabs/athlete-panel`, pulls the resolved digest and verifies image/metadata identity. GitHub Release assets include `athlete-panel-deploy.tgz`, its SHA-256 checksum, `release-record.json` and sanitized `verification.json` with rehearsal timings. A retry preserves existing matching assets and refuses different contents; use a new version for changed contents. An interrupted draft can be completed. Published incomplete/conflicting releases require explicit investigation, not overwrite.
 
+Use temporary feature branches and versioned prereleases; a permanent `dev` branch is not required:
+
+| Version tag | Source and publication behavior |
+| --- | --- |
+| `v0.2.0-beta.1` (also `-rc.1` or another supported suffix) | May identify a feature-branch or main commit. Published as a GitHub prerelease, explicitly excluded from Latest. |
+| `v0.2.0` | Must identify a commit reachable from freshly fetched `origin/main`. Published as a normal stable release; GitHub selects Latest without forcing an older retry over a newer version. |
+
+Create the feature branch from main containing this release tooling and open a PR. Commit the root `package.json` version as `0.2.0-beta.1` before tagging that exact commit. An authorized releaser can then publish the example beta with:
+
+```sh
+git tag -a v0.2.0-beta.1 -m "Beta 0.2.0-beta.1"
+git push origin refs/tags/v0.2.0-beta.1
+```
+
+Pushing the tag starts the full CI pipeline and gated publication; do not manually publish an empty GitHub Release first. Install the resulting digest-pinned bundle only on an explicitly selected test instance with separate database, storage, keys and synthetic data. Each further beta needs a new committed package version and new tag, such as `0.2.0-beta.2`. When ready, change the package version to `0.2.0` in the reviewed PR, merge, and tag the resulting main commit `v0.2.0`. CI tests and publishes that stable commit independently. Publishing a beta or merging a PR does not deploy either instance automatically.
+
+Both channels use identical gates, image identity checks and immutable bundles. Every stable publication attempt refreshes main, including retries; an unavailable remote or failed ancestry check blocks publication. The CI checkout retains full history. An interrupted draft receives the correct prerelease/latest flags when completed. A published release whose prerelease classification conflicts with its tag is preserved and requires explicit investigation.
+
+Repository administrators must configure an active `v*` tag ruleset restricting creation, updates and deletion, with only authorized release maintainers/admins allowed to bypass it, and enable release immutability for future releases. The GitHub ruleset is the authorization boundary: the stable/main check is a mistake guard in versioned code and cannot authorize an untrusted workflow. Upload all assets to the draft before publication; immutable releases cannot have their tags or assets silently replaced. Keep registry digests available separately for recovery. Source files alone cannot activate these GitHub settings.
+
 Source and custom plugins remain in the image for matched backups. No application secret belongs in the build context. AMD64 is the current CI release architecture; custom images must match their server. Version labels are descriptive; the digest identifies the artifact. Source-only and older metadata without commit identity remain readable. Custom image builders may pass `--build-arg ATHLETE_PANEL_COMMIT=FULL_COMMIT` when it accurately identifies their reviewed source; retain source fingerprints regardless.
 
 After a **separately authorized** image publication to the chosen registry, capture its real immutable registry digest (not `docker image inspect`’s local image ID). Create the small bundle locally:

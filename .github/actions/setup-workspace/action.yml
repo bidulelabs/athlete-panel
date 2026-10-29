@@ -1,0 +1,20 @@
+name: Set up the workspace
+description: Install Node, pnpm, workspace dependencies and the PostgreSQL 17 client.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: '22'
+    - run: npm install --global pnpm@11.28.8
+      shell: bash
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+    - name: Install PostgreSQL 17 client from the official repository
+      shell: bash
+      run: |
+        sudo install -d /usr/share/postgresql-common/pgdg
+        sudo curl --fail -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' | sudo tee /etc/apt/sources.list.d/pgdg.list
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client-17

@@ -344,6 +344,42 @@ describe('matched encrypted backup and isolated database restore', () => {
     expect(await pruneDailyBackups(destination)).toBe(0);
   });
 
+  it('keeps an authenticated backup successful when retention fails and retries cleanup next time', async () => {
+    const destination = join(temp, 'retention-failure');
+    const { mkdir } = await import('node:fs/promises');
+    await mkdir(destination);
+    const blockers: string[] = [];
+    // A directory with an old archive name makes unlink fail on every platform.
+    for (let day = 1; day <= 10; day++) {
+      const name = `athlete-panel-daily-2020-01-${String(day).padStart(2, '0')}T03-00-00.000Z-${randomUUID()}.fgr`;
+      blockers.push(join(destination, name));
+      await mkdir(blockers.at(-1)!);
+    }
+    const options = {
+      databaseUrl: sourceUrl,
+      keyFile,
+      encryptionKey,
+      destination,
+      root: resolve('.'),
+      kind: 'daily' as const,
+    };
+    const result = await createBackup(options);
+    expect(result.retention).toBe('failed');
+    const verified = await verifyBackup(result.file, keyFile, encryptionKey);
+    await verified.cleanup();
+    expect(
+      (await source`select value from host.settings where key='backupAttempt'`)[0].value,
+    ).toMatchObject({ state: 'succeeded', retention: 'failed' });
+    expect(
+      (await source`select value from host.settings where key='lastBackup'`)[0].value.file,
+    ).toBe(result.file.split('/').at(-1));
+    for (const blocker of blockers) await rm(blocker, { recursive: true });
+    expect((await createBackup(options)).retention).toBe('succeeded');
+    expect(
+      (await source`select value from host.settings where key='backupAttempt'`)[0].value,
+    ).toMatchObject({ state: 'succeeded', retention: 'succeeded' });
+  }, 120_000);
+
   it('serializes simultaneous backup creation and retention before publishing attempt status', async () => {
     const destination = join(temp, 'simultaneous');
     const before = (await source`select value from host.settings where key='backupAttempt'`)[0]

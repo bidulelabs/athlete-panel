@@ -26,6 +26,85 @@ IMAGE = 'sha256:' + 'b' * 64
 
 
 class DeploymentRecovery(unittest.TestCase):
+    def test_unchanged_ingress_readiness_outside_an_operation_does_not_reload(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root)
+            ingress = Path(root) / 'Caddyfile'; ingress.write_text('working config')
+            instance.record = {'ingress': str(ingress)}
+            with patch.object(instance, 'console'), patch.object(instance, 'verify_data'), patch.object(instance, 'compose') as compose, patch.object(instance, 'running_health') as health:
+                instance.ready({'controls': root})
+                health.assert_called_once()
+                self.assertFalse(any('reload' in call.args[1] for call in compose.call_args_list))
+
+    def test_ingress_reload_survives_failure_and_restart_without_recreating_caddy(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root)
+            ingress = Path(root) / 'Caddyfile'; ingress.write_text('previous config')
+            controls = Path(root) / 'candidate'; controls.mkdir(); (controls / 'Caddyfile').write_text('candidate config')
+            candidate = {'controls': str(controls)}
+            instance.record = {'ingress': str(ingress)}
+            instance.begin('upgrade', candidate=candidate)
+            calls = []
+            def compose(_release, args, **kwargs):
+                calls.append(args)
+                if 'reload' in args and sum('reload' in call for call in calls) == 1:
+                    raise hosted.OperationError('synthetic reload failure')
+            with patch.object(instance, 'console'), patch.object(instance, 'verify_data'), patch.object(instance, 'compose', side_effect=compose), patch.object(instance, 'running_health') as health:
+                with self.assertRaises(hosted.OperationError): instance.ready(candidate)
+                health.assert_not_called()
+                self.assertEqual(ingress.read_text(), 'candidate config')
+                # Reload durable state, not the in-memory attempt that performed the write.
+                instance.pending = hosted.read_json(Path(root) / 'operation.json')
+                self.assertEqual(instance.pending['ingressReload']['state'], 'pending')
+                instance.ready(candidate)
+                self.assertEqual(sum('reload' in call for call in calls), 2)
+                self.assertEqual(instance.pending['ingressReload']['state'], 'applied')
+                instance.ready(candidate)
+                self.assertEqual(sum('reload' in call for call in calls), 2)
+                self.assertFalse(any('--force-recreate' in call or 'restart' in call for call in calls))
+
+    def test_invalid_ingress_never_overwrites_live_file(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root); instance.begin('upgrade')
+            ingress = Path(root) / 'Caddyfile'; ingress.write_text('working config')
+            controls = Path(root) / 'candidate'; controls.mkdir(); (controls / 'Caddyfile').write_text('invalid config')
+            instance.record = {'ingress': str(ingress)}
+            def compose(_release, args, **kwargs):
+                if 'validate' in args: raise hosted.OperationError('invalid candidate')
+            with patch.object(instance, 'console'), patch.object(instance, 'verify_data'), patch.object(instance, 'compose', side_effect=compose), patch.object(instance, 'running_health') as health:
+                with self.assertRaises(hosted.OperationError): instance.ready({'controls': str(controls)})
+                self.assertEqual(ingress.read_text(), 'working config'); health.assert_not_called()
+
+    def test_stalled_previous_worker_is_stopped_and_confirmed_before_snapshot(self):
+        for still_running in [False, True]:
+            with self.subTest(still_running=still_running), tempfile.TemporaryDirectory() as root:
+                instance = hosted.Hosted(root)
+                def compose(_release, args, **kwargs):
+                    if 'stop' in args: return Mock(stdout='')
+                    return Mock(stdout='worker' if compose_mock.call_count == 1 or still_running else '')
+                with patch.object(instance, 'compose', side_effect=compose) as compose_mock, patch.object(instance, 'fresh_worker', side_effect=hosted.WorkerHeartbeatTimeout('stale')):
+                    if still_running:
+                        with self.assertRaisesRegex(hosted.OperationError, 'still running'): instance.drain_work({})
+                    else: instance.drain_work({})
+                    self.assertEqual(compose_mock.call_args_list[1].args[1], ['stop', '--timeout', '30', 'worker'])
+
+    def test_worker_identity_errors_do_not_trigger_stop_fallback(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root)
+            with patch.object(instance, 'compose', return_value=Mock(stdout='worker')) as compose, patch.object(instance, 'fresh_worker', side_effect=hosted.OperationError('wrong image')):
+                with self.assertRaisesRegex(hosted.OperationError, 'wrong image'): instance.drain_work({})
+                compose.assert_called_once()
+
+    def test_verified_backup_with_retention_warning_completes_deployment(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root); candidate = {'image': IMAGE, 'backupRun': 'new'}
+            instance.begin('upgrade', backupStartedAt='2026-10-29T10:00:00.000Z')
+            latest = {'completedAt': '2026-10-29T11:00:00.000Z', 'verifiedAt': 'now', 'kind': 'daily', 'runId': 'new', 'imageId': IMAGE}
+            status = {'backupAttempt': {'startedAt': latest['completedAt'], 'runId': 'new', 'state': 'succeeded', 'retention': 'failed'}, 'lastBackup': latest}
+            with patch.object(instance, 'compose', return_value=Mock(stdout='container')), patch.object(instance, 'run', return_value=Mock(stdout=IMAGE)), patch.object(instance, 'backup_status', return_value=status):
+                instance.await_backup(candidate)
+                self.assertEqual(instance.pending['verifiedBackup'], latest)
+
     def test_lock_reloads_completed_operation_instead_of_using_stale_state(self):
         with tempfile.TemporaryDirectory() as root:
             first, later = hosted.Hosted(root), hosted.Hosted(root)
@@ -132,6 +211,17 @@ class DeploymentRecovery(unittest.TestCase):
 
 
 class ExactImage(unittest.TestCase):
+    def test_publication_diagnostics_identify_operation_without_remote_secrets(self):
+        for command in [['docker', 'push', 'private-registry/token'], ['gh', 'release', 'upload', 'v1.0.0', 'secret-path']]:
+            with self.subTest(command=command), patch.object(ci.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, command, stderr='permission denied https://private.invalid/secret-token password=private-value')):
+                with self.assertRaises(ValueError) as result: ci.run(command)
+                message = str(result.exception)
+                self.assertIn(' '.join(command[:2]), message)
+                self.assertIn('exit 1', message); self.assertIn('Access denied', message)
+                for secret in ['private', 'secret-token', 'password=', 'https://']: self.assertNotIn(secret, message)
+        self.assertIn('Network request failed', ci.command_diagnostic(['docker', 'push'], 'connection timed out', 1))
+        self.assertIn('Unclassified failure', ci.command_diagnostic(['gh', 'release', 'upload'], 'sensitive unknown diagnostic', 1))
+
     def candidate(self, root):
         directory = Path(root); (directory / 'image.tar').write_bytes(b'synthetic image')
         record = {'format': 1, 'commit': COMMIT, 'imageId': IMAGE, 'sha256': ci.checksum(directory / 'image.tar'), 'metadata': {'commit': COMMIT, 'version': '1.0.0', 'sourceDigest': 'c' * 64}}

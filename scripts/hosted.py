@@ -30,15 +30,21 @@ def timestamp():
 
 
 # Existing instance/domain validation works with older hosted-protocol-1 images too.
-DATA_CHECK = """import {connection,closeDatabase} from './packages/host/src/db.ts';
+DATA_CHECK = """import {existsSync} from 'node:fs';
+import {connection,closeDatabase} from './packages/host/src/db.ts';
 import {loadWorkspace} from './instance/services.ts';
 import {validateRetainedMigrations} from './packages/host/src/migrations.ts';
+try {
+if(existsSync('./scripts/lib/verify-data.ts')) {
+const {verifyData}=await import('./scripts/lib/verify-data.ts'); await verifyData();
+} else {
 await connection().begin('isolation level repeatable read read only',async tx=>{
 await validateRetainedMigrations(process.cwd(),await tx`select name,checksum from host.migrations`);
 await loadWorkspace(tx,undefined,{records:'all'});
 const [owner]=await tx`select count(*)::int as count from host.owner`;
 if(owner.count!==1)throw Error('Owner verification failed');});
-await closeDatabase();"""
+}
+} finally {await closeDatabase();}"""
 BACKUP_STATUS = "import {connection,closeDatabase} from './packages/host/src/db.ts'; const rows=await connection()`select key,value from host.settings where key in ('backupAttempt','lastBackup','backupNotification','worker')`; console.log(JSON.stringify(Object.fromEntries(rows.map(r=>[r.key,r.value])))); await closeDatabase();"
 
 
@@ -73,6 +79,10 @@ def valid_metadata(value):
 
 
 class OperationError(Exception):
+    pass
+
+
+class WorkerHeartbeatTimeout(OperationError):
     pass
 
 
@@ -515,7 +525,10 @@ class Hosted:
                     and latest.get('verifiedAt') and latest.get('kind') == 'daily'
                     and latest.get('runId', candidate['backupRun']) == candidate['backupRun']
                     and latest.get('imageId', candidate['image']) == candidate['image']):
-                self.pending['verifiedBackup'] = latest; self.checkpoint(); return
+                self.pending['verifiedBackup'] = latest; self.checkpoint()
+                if attempt.get('retention') == 'failed':
+                    print('Backup verified; retention cleanup failed. Inspect backup storage permissions and logs. The next daily run retries retention.', flush=True)
+                return
             time.sleep(5)
         raise OperationError('Application deployed, backup failed or did not complete in time. Normal use remains open. Inspect backup logs/storage, then resume to retry only the backup service.')
 
@@ -552,12 +565,25 @@ class Hosted:
         ingress = Path(self.record['ingress'])
         contents = (Path(release['controls']) / 'Caddyfile').read_bytes()
         changed = ingress.read_bytes() != contents
-        if changed:
+        digest = hashlib.sha256(contents).hexdigest()
+        reload_state = (self.pending or {}).get('ingressReload', {})
+        reload_needed = changed or reload_state.get('state') == 'pending'
+        if reload_needed:
+            if not self.pending:
+                raise OperationError('Changed ingress requires a recorded upgrade or recovery operation. Use upgrade or resume before activating it.')
+            # Persist intent before either validation or the live-file write. A successful
+            # reload can safely be repeated after losing its completion checkpoint.
+            self.pending['ingressReload'] = {'sha256': digest, 'state': 'pending'}; self.checkpoint()
+            self.compose(release, ['run', '--rm', '--no-deps', '-T', '--label', 'io.athlete-panel.operation=' + self.pending['id'],
+                                  '-v', str(Path(release['controls']) / 'Caddyfile') + ':/etc/caddy/candidate:ro',
+                                  'caddy', 'caddy', 'validate', '--config', '/etc/caddy/candidate', '--adapter', 'caddyfile'])
             # Preserve the inode of the bind-mounted file; only readiness activates candidate ingress.
             with ingress.open('wb') as output:
                 output.write(contents); output.flush(); os.fsync(output.fileno())
         self.compose(release, ['up', '-d', '--no-deps', 'caddy'], timeout=180)
-        if changed: self.compose(release, ['exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile'])
+        if reload_needed:
+            self.compose(release, ['exec', '-T', 'caddy', 'caddy', 'reload', '--config', '/etc/caddy/Caddyfile'])
+            self.pending['ingressReload'] = {'sha256': digest, 'state': 'applied'}; self.checkpoint()
         self.running_health(release, fresh_after)
 
     def verify_deployed(self, release):
@@ -612,13 +638,19 @@ class Hosted:
             worker = self.backup_status(release).get('worker') or {}
             if worker.get('lastSeen', '') >= after and worker.get('state') in (states or {'healthy', 'maintenance'}): return
             time.sleep(2)
-        raise OperationError('The selected worker has not reported a fresh healthy heartbeat. Inspect worker logs and resume.')
+        raise WorkerHeartbeatTimeout('The selected worker has not reported a fresh healthy heartbeat. Inspect worker logs and resume.')
 
     def drain_work(self, release):
         # Maintenance has drained serialized writes. Wait for any external job iteration
         # to finish too, before choosing the final snapshot. A stopped worker is drained.
         if self.compose(release, ['ps', '-q', 'worker']).stdout.strip():
-            self.fresh_worker(release, timestamp(), {'maintenance'})
+            try:
+                self.fresh_worker(release, timestamp(), {'maintenance'})
+            except WorkerHeartbeatTimeout:
+                print('Previous worker did not drain in time. Stopping it before the final recovery snapshot…', flush=True)
+                self.compose(release, ['stop', '--timeout', '30', 'worker'], timeout=60)
+                if self.compose(release, ['ps', '-q', 'worker']).stdout.strip():
+                    raise OperationError('Previous worker is still running. Keep maintenance enabled, stop the worker and resume; no final snapshot or migration was started.')
 
     def backup(self, release=None):
         if release is None and self.pending: raise OperationError('Resume the pending operation before creating another manual backup.')

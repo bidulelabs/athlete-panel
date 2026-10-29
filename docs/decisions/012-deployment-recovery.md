@@ -20,6 +20,8 @@ Keep the existing backup container as the only scheduler and observe its startup
 
 ## Consequences
 
+The PR review follow-up retains this design while making failure boundaries explicit: ingress reload intent survives the file write, stalled previous workers must be stopped before snapshotting, and retention errors do not invalidate a verified archive. Cancellation preserves local evidence without alerting as an unexpected failure. Current and legacy validation paths are both exercised; publication diagnostics classify failures without printing raw remote output. The owner authorized these six review fixes and excluded release-tag protection changes.
+
 - Expected benefits: shorter maintenance windows, explicit tested-image identity, fewer schedulers and fewer redundant archive reads.
 - Costs and risks: two pre-deployment snapshots and an isolated database consume time/disk/memory on the VPS. The real-data rehearsal is deliberate and must complete before maintenance. Local rehearsals do not prove disaster recovery or remote storage durability; separately recoverable keys and a second-machine exercise remain necessary.
 - Reconsider when: data volume makes a same-VPS rehearsal impractical, another supported CPU architecture is required, or operator evidence justifies automated periodic restore scheduling.

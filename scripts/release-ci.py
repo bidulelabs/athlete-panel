@@ -15,8 +15,35 @@ ROOT = Path(__file__).resolve().parents[1]
 IMAGE = 'athlete-panel:release-check'
 
 
+def command_diagnostic(args, stderr='', code=None):
+    # Never print arguments, URLs or arbitrary remote output in public Actions logs.
+    # Classify known failures into bounded, actionable messages instead.
+    words = [str(arg) for arg in args]
+    operations = [('docker', 'push'), ('docker', 'pull'), ('docker', 'load'),
+                  ('docker', 'image', 'inspect'), ('gh', 'release', 'upload'),
+                  ('gh', 'release', 'download'), ('gh', 'release', 'create'),
+                  ('gh', 'release', 'edit'), ('gh', 'release', 'view'), ('git', 'rev-parse')]
+    operation = next((' '.join(parts) for parts in operations if words[:len(parts)] == list(parts)), 'Release command')
+    detail = (stderr.decode(errors='replace') if isinstance(stderr, bytes) else stderr or '').lower()
+    reasons = [
+        (r'permission denied|denied|unauthorized|forbidden|authentication|status (?:401|403)|http (?:401|403)', 'Access denied; check registry/package and release permissions.'),
+        (r'rate limit|too many requests|429', 'Rate limit reached; retry after the service limit resets.'),
+        (r'no space left|disk quota', 'Insufficient disk space; check runner storage.'),
+        (r'timed? out|timeout|connection|network|no such host|resolve host|lookup', 'Network request failed; check connectivity and retry.'),
+        (r'certificate|tls|x509', 'TLS verification failed; check certificates and service availability.'),
+        (r'already exists|already_exists|422|conflict', 'Remote contents conflict; inspect existing assets before retrying.'),
+        (r'not found|does not exist|404', 'Required image, tag or asset was not found.'),
+    ]
+    reason = next((message for pattern, message in reasons if re.search(pattern, detail)),
+                  'Unclassified failure; inspect service availability and the selected artifact. Raw output withheld.')
+    return f'{operation} failed' + (f' (exit {code})' if isinstance(code, int) else '') + ': ' + reason
+
+
 def run(args, **kwargs):
-    return subprocess.run([str(arg) for arg in args], text=True, capture_output=True, check=True, **kwargs).stdout.strip()
+    try:
+        return subprocess.run([str(arg) for arg in args], text=True, capture_output=True, check=True, **kwargs).stdout.strip()
+    except subprocess.CalledProcessError as error:
+        raise ValueError(command_diagnostic(args, error.stderr, error.returncode)) from None
 
 
 def checksum(path):
@@ -71,7 +98,7 @@ def remote_image(reference):
     if result.returncode:
         # Authentication, timeout and rate limiting are not evidence of absence.
         if any(message in result.stderr.lower() for message in ['manifest unknown', 'name unknown', 'manifest not found']): return None
-        raise ValueError('Registry lookup failed; existing image tags were not replaced.')
+        raise ValueError(command_diagnostic(['docker', 'pull'], result.stderr, result.returncode) + ' Existing image tags were not replaced.')
     return inspect(reference)
 
 
@@ -79,7 +106,7 @@ def existing_release(repository, tag):
     result = subprocess.run(['gh', 'release', 'view', tag, '--repo', repository, '--json', 'assets,isDraft,targetCommitish'], capture_output=True, text=True)
     if result.returncode:
         if 'release not found' in result.stderr.lower(): return None
-        raise ValueError('Release lookup failed; existing releases were preserved.')
+        raise ValueError(command_diagnostic(['gh', 'release', 'view'], result.stderr, result.returncode) + ' Existing releases were preserved.')
     return json.loads(result.stdout)
 
 
@@ -183,6 +210,10 @@ def main():
             publish(args.directory, args.commit, args.repository, args.tag, args.evidence_directory)
     except ValueError as error:
         parser.exit(1, str(error) + '\nExisting release assets were preserved.\n')
+    except subprocess.CalledProcessError as error:
+        parser.exit(1, command_diagnostic(error.cmd, error.stderr, error.returncode) + '\nExisting release assets were preserved.\n')
+    except subprocess.TimeoutExpired as error:
+        parser.exit(1, command_diagnostic(error.cmd, 'timeout') + '\nExisting release assets were preserved.\n')
     except (OSError, KeyError, subprocess.SubprocessError):
         parser.exit(1, 'Release operation failed. Review candidate identity, checksums, tag/version, registry access and existing release assets. No existing release assets were overwritten.\n')
 

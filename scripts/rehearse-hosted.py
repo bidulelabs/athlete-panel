@@ -166,6 +166,7 @@ def main():
         finally:held.rename(marker)
 
         candidate=stage/'candidate';copy_candidate(candidate)
+        with (candidate/'Caddyfile').open('a') as ingress: ingress.write('\n# Synthetic candidate ingress revision\n')
         manifest=candidate/'plugins/athlete/manifest.json';metadata=json.loads(manifest.read_text())
         metadata['migrations'].append('migrations/990-hosted-rehearsal.sql');manifest.write_text(json.dumps(metadata,indent=2))
         (candidate/'plugins/athlete/migrations/990-hosted-rehearsal.sql').write_text('create table athlete.hosted_rehearsal (id integer primary key); insert into athlete.hosted_rehearsal values(1);\n')
@@ -197,6 +198,23 @@ def main():
         assert instance.pending['phase']=='apply-migrations'
         assert sql("select value from host.settings where key='maintenance'")=='true'
         assert sql('select count(*) from athlete.hosted_rehearsal')=='1'
+        # Interrupt after the live ingress file is written but before Caddy accepts it.
+        compose=instance.compose;reload_interrupted=False
+        def interrupted_reload(release,arguments,**kwargs):
+            nonlocal reload_interrupted
+            if 'reload' in arguments and not reload_interrupted:
+                reload_interrupted=True;raise OperationError('Synthetic interruption before Caddy reload.')
+            return compose(release,arguments,**kwargs)
+        instance.compose=interrupted_reload
+        try:
+            try:instance.resume()
+            except OperationError:
+                if not reload_interrupted:raise
+            else:raise RuntimeError('Expected interrupted ingress reload.')
+        finally:instance.compose=compose
+        assert instance.pending['ingressReload']['state']=='pending'
+        assert Path(instance.record['ingress']).read_bytes()==(Path(instance.pending['candidate']['controls'])/'Caddyfile').read_bytes()
+        assert sql("select value from host.settings where key='maintenance'")=='true'
         await_backup=instance.await_backup
         def fail_first_backup(_release): raise OperationError('Application deployed, backup failed: synthetic interruption.')
         instance.await_backup=fail_first_backup
@@ -206,6 +224,8 @@ def main():
             else:raise RuntimeError('Expected post-activation backup failure.')
         finally:instance.await_backup=await_backup
         upgraded=instance.record['active'];images.add(upgraded['image'])
+        assert instance.pending['ingressReload']['state']=='applied'
+        print('PASS: validated candidate ingress, interrupted reload and resumed activation preserve the Caddy container.',flush=True)
         assert sql("select value from host.settings where key='maintenance'")=='false'
         serving={service:instance.compose(upgraded,['ps','-q',service]).stdout.strip() for service in ['web','worker','db','caddy']}
         instance.resume()

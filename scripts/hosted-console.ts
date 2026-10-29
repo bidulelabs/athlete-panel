@@ -12,10 +12,6 @@ try {
   if (command === 'verify-data' && process.argv.length === 3) {
     await verifyData();
     console.log(JSON.stringify({ data: 'verified' }));
-  } else if (command === 'backup-status' && process.argv.length === 3) {
-    const rows =
-      await connection()`select key,value from host.settings where key in ('backupAttempt','lastBackup','backupNotification','worker')`;
-    console.log(JSON.stringify(Object.fromEntries(rows.map((row) => [row.key, row.value]))));
   } else if (command === 'inspect' && process.argv.length === 3) {
     await checkSchema();
     const sql = connection();

@@ -45,3 +45,22 @@ Framework validation covered required feature sections, acceptance scenarios, ca
 ## Operational limits
 
 No real publication, deployment, external heartbeat or owner-data access performed. Local container restore checks do not establish real NFS/SMB/SSHFS behavior, public DNS/CA renewal, remote retention, target VPS sizing or recovery after losing a physical server. Keep both application and backup encryption keys separately protected and perform a second-machine exercise. Actual GitHub permission/concurrency behavior and registry publication remain operational acceptance checks.
+
+## PR 54 review follow-up
+
+The owner authorized fixes for the six code/testing comments on [PR 54](https://github.com/bidulelabs/athlete-panel/pull/54), explicitly excluding release-tag protection. The changes preserve the existing deployment workflow and add:
+
+- Durable, validated ingress activation with retry after a failed/interrupted Caddy reload and no reload for unchanged ingress.
+- Bounded stopping and termination confirmation when the previous worker cannot drain; fresh candidate readiness remains required.
+- Independent authenticated-backup and retention outcomes, with visible retention warnings and alerts instead of repeated deployment backup attempts.
+- Cancellation-aware scheduled notifications, preserving backup cleanup and local failed-attempt evidence.
+- The shared validator for current images, exact-controller-payload integration tests for both current and legacy layouts, and removal of the unused duplicate `backup-status` console command.
+- Bounded publication diagnostics that identify the failed operation/exit code and classify the reason without printing raw arguments or remote stderr.
+
+Verification completed: `pnpm check` passed with 198 unit tests and 39 documentation files; all 128 integration tests and 46 Python tests passed. Web/worker and AMD64 runtime builds passed. All three container rehearsals (release, hosted source, hosted registry/bundle) passed. The hosted rehearsals interrupt ingress activation after the mounted file write and confirm successful resume with the same Caddy container, then exercise backup-only retry, matching-source/image recovery and an empty replacement cluster. Cancellation cleanup and a real retention unlink failure are covered by integration tests; scheduled alert suppression and sanitized command diagnostics have dedicated regressions.
+
+The first integration run passed 127 tests and failed the new legacy-layout fixture because it omitted TypeScript path configuration. Adding the actual configuration fixed the fixture; the full rerun passed. Initial hosted runs caught readiness outside a pending operation (restart verification); the controller now accepts unchanged ingress in that case and has a regression test. Both hosted reruns passed. These failures are not counted as successful verification.
+
+Reports are retained under `.runtime/review54-hosted.json` and `.runtime/review54-registry.json`; command logs use `/tmp/athlete-panel-review54-*`. Source/registry upgrades took 193.296/140.265 seconds with 61.003/60.070 seconds in maintenance, including the injected interruptions. Recovery took 52.655–123.840 seconds. These are synthetic local/emulated measurements, not VPS estimates. Temporary services/volumes and the dedicated test database were removed. Publication scanning found zero findings across 402 working-tree candidates; existing unchanged media retain their prior review status. Framework validation covered the updated feature acceptance scenarios, canonical runbook, architecture, ADR and local links. No browser UI changed in this follow-up; the prior browser evidence remains separate, and PR CI runs the complete workflow again after pushing.
+
+Release-tag rules/settings were left unchanged as requested. No real release publication, deployment or monitor activation was performed.

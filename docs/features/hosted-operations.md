@@ -23,6 +23,9 @@ On 2026-10-29 the owner explicitly approved implementation of the simplified dep
 - Backups authenticate a read-back before becoming completed archives. Managed storage requires the expected network filesystem and identity marker; a missing mount cannot silently become a local directory. Off-host recovery is not claimed merely from an archive or marker.
 - Recovery authenticates before changing the target, restores into a new database and source directory, selects the matching image or explicitly rebuilds authenticated source, restores grants and checks the restored application. The prior database is retained. Lost-server recovery uses separately recovered operator keys/state and the remote archive.
 - Resuming does not replay committed migrations or reset an existing owner. Ambiguous interrupted restore targets remain preserved and require a new recovery attempt rather than destructive guessing.
+- Candidate ingress is validated before replacing the live file. Reload intent is durably recorded before the write and retried after interruption until Caddy confirms it. A previous worker that cannot report a maintenance heartbeat within the bounded drain wait is stopped with a 30-second grace period; the final snapshot requires confirmed termination. Candidate-worker readiness still requires a fresh heartbeat.
+- A retention failure does not invalidate an authenticated completed backup or cause deployment to retry it. `backupAttempt.retention` records the separate result, logs explain the warning, and the next daily run retries cleanup under the same coordination lock. The scheduled monitor receives a failure signal for retention errors; deliberate SIGINT/SIGTERM cancellation sends no failure signal. Local cancellation status and plaintext cleanup remain intact.
+- Current images use the shared console data validator; older protocol-1 images retain a compatibility payload. Both paths are tested against invalid persisted data. Publication diagnostics identify the failing operation, exit code and a bounded failure category without exposing command arguments or raw remote output.
 
 ## Acceptance scenarios
 
@@ -47,6 +50,11 @@ On 2026-10-29 the owner explicitly approved implementation of the simplified dep
 | Restore test cleanup | No external ports or live volumes; only run-labelled resources removed | Controller and CI checks; hosted rehearsal |
 | Corrupt shared image, skipped job or conflicting published version | No successful release gate or silent replacement | Controller and CI checks |
 | Heartbeat unavailable or secret misconfigured | Bounded retries, sanitized local failure, no URL/response disclosure | [Heartbeat checks](../../tests/unit/backup-heartbeat.test.ts) |
+| Caddy validation/reload fails or controller stops after the live-file write | Invalid candidate leaves live file intact; pending reload retried before readiness completes | Controller and CI checks; hosted rehearsal |
+| Previous worker stalls during drain | Stop with bounded grace; confirm termination before final backup; never bypass candidate readiness | Controller and CI checks |
+| Daily retention fails after successful authenticated archive | Backup remains succeeded with separate retention warning; deployment completes and later daily run retries cleanup | Operations checks; controller checks |
+| Scheduler cancellation or genuine backup/retention error | Cancellation sends no false alarm; active failures still notify | [Scheduler checks](../../tests/unit/backup-loop.test.ts) |
+| Invalid data in a current or older image | The exact controller payload rejects missing owner, invalid domain records and altered migration checksums | [Data checks](../../tests/integration/deployment-data.test.ts) |
 
 ## Observed implementation
 

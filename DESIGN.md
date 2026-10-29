@@ -39,6 +39,12 @@ typography:
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
     fontSize: "14px"
     lineHeight: 1.5
+  plan-title:
+    fontSize: "16px"
+    fontWeight: 600
+  phone-dialog-title:
+    fontSize: "20px"
+    fontWeight: 600
   inspector-title:
     fontSize: "26px"
     fontWeight: 600
@@ -56,6 +62,7 @@ typography:
     fontSize: "12px"
     fontWeight: 500
 rounded:
+  sheet-top: "12px"
   workout: "5px"
   card: "6px"
   control: "7px"
@@ -159,6 +166,12 @@ The compact header stays attached to its week. Keep dates/This week, five icon/v
 ### Workout inspector and dialogs
 
 The inspector retains the selected session context and makes the next action easy to locate. Date, sport and prescribed totals lead to a prominent logging action. Read-only session steps retain repeat groups, time/distance lengths, targets and notes. On phones, detail content scrolls while close and logging controls remain reachable. Modal dialogs use a title, close action, Escape dismissal and focus restoration; overlay behavior must preserve coherent keyboard navigation.
+
+### Training plan review
+
+Use compact, full-width plan rows for discovery, with bounded description previews and wrapping metadata. A shared dialog contains the complete plan: a distinct action toolbar, plain multiline prose at 14px/1.7 with a 70ch maximum measure, and flat week/day groups. Week bands use the raised surface; dates occupy a small desktop rail and move above sessions on phones. Workout titles lead, factual summaries support, and Edit stays separate from inspection. Phone plan dialogs use a scrollable bottom sheet with a fixed title/close region and 44px controls. The existing workout Sheet can layer over a plan at every viewport; calendar inspector behavior remains responsive as before.
+
+Recent changes is a secondary header action. Use the shared right-side Sheet, full width on phones, with a persistent title/close region and a scrolling flat list. Each entry leads with its action and item name, followed by timestamp and count. Details expand in place; Undo sits separately and requires confirmation. Controls keep 44px touch targets and use the paired surface, text and border tokens.
 
 ### Navigation and motion
 

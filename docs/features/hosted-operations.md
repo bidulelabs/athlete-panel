@@ -25,6 +25,7 @@ Requirement source: the owner requested implementation of the five VPS installat
 | Fresh install with a registered destination | Generated private configuration, HTTPS login, persisted record, verified backup | [Hosted rehearsal](../../scripts/rehearse-hosted.py) |
 | Repeated installation or interrupted owner creation | No secret rotation/account reset; resume existing state | Hosted rehearsal; [controller checks](../../tests/security/test_hosted.py) |
 | Missing remote mount/marker | Fail before archive creation; previous successful backup retained | [Storage checks](../../tests/unit/backup-storage.test.ts); hosted rehearsal |
+| SIGINT or SIGTERM during a manual or scheduled backup | `pg_dump` stopped and awaited, attempt recorded as failed, unencrypted staging copy and partial archive deleted; the manual command exits with 128 + signal, forced after 10 s | [Operations tests](../../tests/integration/operations.test.ts) |
 | New declared migration | Existing data retained, new schema usable, old artifact rejected | Hosted rehearsal; [lifecycle checks](../../tests/integration/lifecycle.test.ts) |
 | Interruption immediately after migration commit | Resume safely; insert/DDL effects occur once | Hosted rehearsal |
 | Wrong keys/corrupt archive | Refuse before database replacement | [Operations checks](../../tests/integration/operations.test.ts); hosted rehearsal |

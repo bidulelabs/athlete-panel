@@ -1,10 +1,11 @@
 import { isolatedDatabaseUrl } from '../support/test-database';
+import { spawn } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { chmod, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import postgres from 'postgres';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { closeDatabase } from '../../packages/host/src/db';
 import { decrypt, encrypt } from '../../packages/host/src/crypto';
 import { migrate } from '../../packages/host/src/migrations';
@@ -340,6 +341,59 @@ describe('matched encrypted backup and isolated database restore', () => {
     expect(remaining.filter((name) => /^athlete-panel-daily-/.test(name))).toHaveLength(9);
     expect(await pruneDailyBackups(destination)).toBe(0);
   });
+
+  it.each([
+    { kind: 'manual', command: ['scripts/backup.ts'], exitCode: 143 },
+    { kind: 'daily', command: ['scripts/operations.ts', 'backup-loop'], exitCode: 0 },
+  ])(
+    'stops pg_dump, records a failed attempt and deletes the unencrypted dump on SIGTERM ($kind)',
+    async ({ kind, command, exitCode }) => {
+      const fakePgBinDirectory = join(temp, `${kind}-slow-pg-bin`);
+      const stagingTmpDirectory = join(temp, `${kind}-staging-tmp`);
+      const destination = join(temp, `${kind}-stopped-backups`);
+      const pidFile = join(temp, `${kind}-pg_dump.pid`);
+      await mkdir(fakePgBinDirectory, { recursive: true });
+      await mkdir(stagingTmpDirectory);
+      await writeFile(
+        join(fakePgBinDirectory, 'pg_dump'),
+        `#!/bin/sh\necho $$ > '${pidFile}'\nfor last; do :; done\necho synthetic-unencrypted-dump > "$last"\nexec sleep 30\n`,
+        { mode: 0o700 },
+      );
+      const child = spawn(process.execPath, ['--import', 'tsx', ...command], {
+        env: {
+          ...process.env,
+          DATABASE_URL: sourceUrl,
+          BACKUP_KEY_FILE: keyFile,
+          ENCRYPTION_KEY: encryptionKey,
+          BACKUP_DESTINATION: destination,
+          PG_BIN_DIR: fakePgBinDirectory,
+          TMPDIR: stagingTmpDirectory,
+        },
+        stdio: 'ignore',
+      });
+      const childExitCode = new Promise((done) => child.once('exit', (code) => done(code)));
+      const hasDumpFile = async () => {
+        for (const stage of await readdir(stagingTmpDirectory))
+          if (await stat(join(stagingTmpDirectory, stage, 'database.dump')).catch(() => null))
+            return true;
+        return false;
+      };
+      await vi.waitFor(async () => expect(await hasDumpFile()).toBe(true), { timeout: 20000 });
+      const pgDumpPid = Number(await readFile(pidFile, 'utf8'));
+      child.kill('SIGTERM');
+      expect(await childExitCode).toBe(exitCode);
+      expect(() => process.kill(pgDumpPid, 0)).toThrow();
+      expect(
+        (await readdir(stagingTmpDirectory)).filter((name) =>
+          name.startsWith('athlete-panel-backup-'),
+        ),
+      ).toEqual([]);
+      expect(await readdir(destination).catch(() => [])).toEqual([]);
+      const [attempt] = await source`select value from host.settings where key='backupAttempt'`;
+      expect(attempt.value.state).toBe('failed');
+    },
+    30000,
+  );
 
   it('schedules daily backups in UTC across date boundaries', () => {
     expect(nextBackupTime(new Date('2026-10-24T02:59:59Z')).toISOString()).toBe(

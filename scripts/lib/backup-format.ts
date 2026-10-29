@@ -25,6 +25,7 @@ export type BackupOptions = {
   kind?: 'manual' | 'daily';
   now?: Date;
   pgBinDirectory?: string;
+  signal?: AbortSignal;
 };
 
 export function decodeKey(value: string, purpose: string): Buffer {
@@ -64,25 +65,32 @@ export async function pgCommand(
   args: string[],
   databaseUrl: string,
   directory = process.env.PG_BIN_DIR,
+  signal?: AbortSignal,
 ): Promise<void> {
   await new Promise<void>((resolveResult, reject) => {
     const child = spawn(directory ? join(directory, program) : program, args, {
       env: databaseEnvironment(databaseUrl),
       stdio: ['ignore', 'ignore', 'pipe'],
+      signal,
     });
     child.stderr.resume();
-    child.on('error', () =>
-      reject(
-        new Error(
-          `${program} could not start. Install matching PostgreSQL client tools or set PG_BIN_DIR.`,
-        ),
-      ),
-    );
+    child.on('error', (error) => {
+      if (error.name !== 'AbortError')
+        reject(
+          new Error(
+            `${program} could not start. Install matching PostgreSQL client tools or set PG_BIN_DIR.`,
+          ),
+        );
+    });
     child.on('close', (code) =>
       code === 0
         ? resolveResult()
         : reject(
-            new Error(`${program} failed with exit code ${code}; the operation did not complete.`),
+            signal?.aborted
+              ? signal.reason
+              : new Error(
+                  `${program} failed with exit code ${code}; the operation did not complete.`,
+                ),
           ),
     );
   });

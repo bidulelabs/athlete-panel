@@ -14,7 +14,7 @@ import {
   stat,
   writeFile,
 } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { constants, tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -198,6 +198,7 @@ async function writeBackup(
         ],
         options.databaseUrl,
         options.pgBinDirectory,
+        options.signal,
       );
       return value;
     });
@@ -220,6 +221,7 @@ async function writeBackup(
       createGzip(),
       cipher,
       createWriteStream(partial, { flags: 'a', mode: 0o600 }),
+      { signal: options.signal },
     );
     await appendFile(partial, cipher.getAuthTag());
     const completeArchive = await open(partial, 'r');
@@ -233,6 +235,7 @@ async function writeBackup(
     const verified = await verifyBackup(partial, options.keyFile, options.encryptionKey);
     await verified.cleanup();
     const storage = await verifyStorage(options.destination);
+    options.signal?.throwIfAborted();
     await rename(partial, file);
     partial = null;
     const directory = await open(resolve(options.destination), 'r');
@@ -296,12 +299,24 @@ export async function pruneDailyBackups(destination: string): Promise<number> {
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   if (process.argv.slice(2).some((arg) => arg !== '--daily'))
     throw new Error('Usage: pnpm exec tsx scripts/backup.ts [--daily]');
+  const controller = new AbortController();
+  const cancel = (signalName: NodeJS.Signals) => {
+    process.exitCode = 128 + constants.signals[signalName];
+    controller.abort();
+    setTimeout(() => process.exit(), 10_000).unref();
+  };
+  process.once('SIGINT', cancel);
+  process.once('SIGTERM', cancel);
   const result = await createBackup({
     databaseUrl: process.env.DATABASE_URL ?? '',
     keyFile: process.env.BACKUP_KEY_FILE ?? '',
     encryptionKey: process.env.ENCRYPTION_KEY ?? '',
     destination: process.env.BACKUP_DESTINATION ?? 'backups',
     kind: process.argv.includes('--daily') ? 'daily' : 'manual',
+    signal: controller.signal,
+  }).catch((error: unknown) => {
+    if (controller.signal.aborted) process.exit();
+    throw error;
   });
   if (result.metadata.kind === 'daily')
     await pruneDailyBackups(resolve(process.env.BACKUP_DESTINATION ?? 'backups'));

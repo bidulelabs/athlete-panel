@@ -1,10 +1,12 @@
 import { isolatedDatabaseUrl } from '../support/test-database';
+import { spawn } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { chmod, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import postgres from 'postgres';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { closeDatabase } from '../../packages/host/src/db';
 import { decrypt, encrypt } from '../../packages/host/src/crypto';
 import { migrate } from '../../packages/host/src/migrations';
@@ -340,6 +342,174 @@ describe('matched encrypted backup and isolated database restore', () => {
     expect(remaining.filter((name) => /^athlete-panel-daily-/.test(name))).toHaveLength(9);
     expect(await pruneDailyBackups(destination)).toBe(0);
   });
+
+  const startBackup = async (
+    caseName: string,
+    command: string[],
+    pgDumpScript: string,
+    stallVerificationAt = '',
+    stallStagingRemoval = false,
+  ) => {
+    const fakePgBinDirectory = join(temp, `${caseName}-pg-bin`);
+    const stagingTmpDirectory = join(temp, `${caseName}-staging-tmp`);
+    const destination = join(temp, `${caseName}-backups`);
+    const verificationStartedFile = join(temp, `${caseName}-verification-started`);
+    const stallVerificationHook = join(temp, 'stall-verification.mjs');
+    await mkdir(fakePgBinDirectory, { recursive: true });
+    await mkdir(stagingTmpDirectory);
+    await writeFile(join(fakePgBinDirectory, 'pg_dump'), pgDumpScript, { mode: 0o700 });
+    await writeFile(
+      stallVerificationHook,
+      `import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
+import { basename } from 'node:path';
+import { PassThrough } from 'node:stream';
+const isArchive = (path) => String(path).endsWith('archive.stream');
+const started = () => fs.writeFileSync(process.env.VERIFICATION_STARTED_FILE, '');
+const { createReadStream } = fs;
+const { open, rm } = fsPromises;
+if (process.env.STALL_VERIFICATION_AT === 'read_archive')
+  fs.createReadStream = (path, options) => {
+    if (!isArchive(path)) return createReadStream(path, options);
+    started();
+    return new PassThrough();
+  };
+if (process.env.STALL_VERIFICATION_AT === 'open_archive')
+  fsPromises.open = async (path, ...rest) => {
+    if (isArchive(path)) {
+      started();
+      await new Promise((resolve) => setTimeout(resolve, 60000));
+    }
+    return open(path, ...rest);
+  };
+if (process.env.STALL_STAGING_REMOVAL === 'true')
+  fsPromises.rm = async (path, ...rest) => {
+    if (basename(String(path)).startsWith('athlete-panel-backup-'))
+      await new Promise((resolve) => setTimeout(resolve, 60000));
+    return rm(path, ...rest);
+  };
+syncBuiltinESMExports();
+`,
+    );
+    const child = spawn(
+      process.execPath,
+      ['--import', 'tsx', '--import', pathToFileURL(stallVerificationHook).href, ...command],
+      {
+        env: {
+          ...process.env,
+          DATABASE_URL: sourceUrl,
+          BACKUP_KEY_FILE: keyFile,
+          ENCRYPTION_KEY: encryptionKey,
+          BACKUP_DESTINATION: destination,
+          PG_BIN_DIR: fakePgBinDirectory,
+          TMPDIR: stagingTmpDirectory,
+          STALL_VERIFICATION_AT: stallVerificationAt,
+          STALL_STAGING_REMOVAL: String(stallStagingRemoval),
+          VERIFICATION_STARTED_FILE: verificationStartedFile,
+        },
+        stdio: 'ignore',
+      },
+    );
+    const childExitCode = new Promise((done) => child.once('exit', (code) => done(code)));
+    const leftoverFiles = async () => [
+      ...(await readdir(stagingTmpDirectory)).filter((name) => name.startsWith('athlete-panel-')),
+      ...(await readdir(destination).catch(() => [])),
+    ];
+    return { child, childExitCode, stagingTmpDirectory, verificationStartedFile, leftoverFiles };
+  };
+  const quickPgDumpScript =
+    '#!/bin/sh\nfor last; do :; done\necho synthetic-unencrypted-dump > "$last"\n';
+
+  it.each([
+    { kind: 'manual', command: ['scripts/backup.ts'], exitCode: 143 },
+    { kind: 'daily', command: ['scripts/operations.ts', 'backup-loop'], exitCode: 0 },
+  ])(
+    'stops pg_dump, records a failed attempt and deletes the unencrypted dump on SIGTERM ($kind)',
+    async ({ kind, command, exitCode }) => {
+      const pidFile = join(temp, `${kind}-pg_dump.pid`);
+      const backup = await startBackup(
+        `${kind}-pg-dump`,
+        command,
+        `#!/bin/sh\necho $$ > '${pidFile}'\nfor last; do :; done\necho synthetic-unencrypted-dump > "$last"\nexec sleep 30\n`,
+      );
+      const hasDumpFile = async () => {
+        for (const stage of await readdir(backup.stagingTmpDirectory))
+          if (
+            await stat(join(backup.stagingTmpDirectory, stage, 'database.dump')).catch(() => null)
+          )
+            return true;
+        return false;
+      };
+      await vi.waitFor(async () => expect(await hasDumpFile()).toBe(true), { timeout: 20000 });
+      const pgDumpPid = Number(await readFile(pidFile, 'utf8'));
+      backup.child.kill('SIGTERM');
+      expect(await backup.childExitCode).toBe(exitCode);
+      expect(() => process.kill(pgDumpPid, 0)).toThrow();
+      expect(await backup.leftoverFiles()).toEqual([]);
+      const [attempt] = await source`select value from host.settings where key='backupAttempt'`;
+      expect(attempt.value.state).toBe('failed');
+    },
+    30000,
+  );
+
+  it.each([
+    { kind: 'manual', command: ['scripts/backup.ts'], exitCode: 143 },
+    { kind: 'daily', command: ['scripts/operations.ts', 'backup-loop'], exitCode: 0 },
+  ])(
+    'stops verification, records a failed attempt and deletes both staging directories on SIGTERM ($kind)',
+    async ({ kind, command, exitCode }) => {
+      const backup = await startBackup(
+        `${kind}-verification`,
+        command,
+        quickPgDumpScript,
+        'read_archive',
+      );
+      await vi.waitFor(
+        async () => expect(await stat(backup.verificationStartedFile)).toBeTruthy(),
+        {
+          timeout: 20000,
+        },
+      );
+      backup.child.kill('SIGTERM');
+      expect(await backup.childExitCode).toBe(exitCode);
+      expect(await backup.leftoverFiles()).toEqual([]);
+      const [attempt] = await source`select value from host.settings where key='backupAttempt'`;
+      expect(attempt.value.state).toBe('failed');
+    },
+    30000,
+  );
+
+  it('deletes both staging directories when the manual backup is forced to exit after 10 s', async () => {
+    const backup = await startBackup(
+      'forced-exit',
+      ['scripts/backup.ts'],
+      quickPgDumpScript,
+      'open_archive',
+    );
+    await vi.waitFor(async () => expect(await stat(backup.verificationStartedFile)).toBeTruthy(), {
+      timeout: 20000,
+    });
+    backup.child.kill('SIGTERM');
+    expect(await backup.childExitCode).toBe(143);
+    expect(await backup.leftoverFiles()).toEqual([]);
+  }, 40000);
+
+  it('deletes both staging directories when the cancelled backup is forced to exit after 10 s during slow cleanup', async () => {
+    const backup = await startBackup(
+      'slow-cleanup',
+      ['scripts/backup.ts'],
+      quickPgDumpScript,
+      'read_archive',
+      true,
+    );
+    await vi.waitFor(async () => expect(await stat(backup.verificationStartedFile)).toBeTruthy(), {
+      timeout: 20000,
+    });
+    backup.child.kill('SIGTERM');
+    expect(await backup.childExitCode).toBe(143);
+    expect(await backup.leftoverFiles()).toEqual([]);
+  }, 40000);
 
   it('schedules daily backups in UTC across date boundaries', () => {
     expect(nextBackupTime(new Date('2026-10-24T02:59:59Z')).toISOString()).toBe(

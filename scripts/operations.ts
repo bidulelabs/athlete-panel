@@ -42,6 +42,7 @@ async function backupLoop() {
         encryptionKey: process.env.ENCRYPTION_KEY ?? '',
         destination,
         kind: 'daily',
+        signal: controller.signal,
       });
       await pruneDailyBackups(destination);
       console.log(

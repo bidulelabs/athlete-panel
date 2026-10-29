@@ -28,13 +28,14 @@ export type RestoreOptions = {
   pgBinDirectory?: string;
 };
 
-async function unpack(archive: string, destination: string): Promise<void> {
+async function unpack(archive: string, destination: string, signal?: AbortSignal): Promise<void> {
   const input = await open(archive, 'r');
   const length = (await input.stat()).size;
   let offset = 0;
   const seen = new Set<string>();
   try {
     while (offset < length) {
+      signal?.throwIfAborted();
       const bytes: number[] = [];
       while (offset < length) {
         const byte = Buffer.alloc(1);
@@ -85,6 +86,7 @@ async function unpack(archive: string, destination: string): Promise<void> {
             },
           }),
           createWriteStream(target, { flags: 'wx', mode: 0o600 }),
+          { signal },
         );
       else {
         const file = await open(target, 'wx', 0o600);
@@ -103,9 +105,11 @@ export async function verifyBackup(
   file: string,
   keyFile: string,
   encryptionKey: string,
+  stageParentDirectory = tmpdir(),
+  signal?: AbortSignal,
 ): Promise<{ stage: string; metadata: BackupMetadata; cleanup: () => Promise<void> }> {
   const key = await loadBackupKey(keyFile);
-  const stage = await mkdtemp(join(tmpdir(), 'athlete-panel-restore-'));
+  const stage = await mkdtemp(join(stageParentDirectory, 'athlete-panel-restore-'));
   await chmod(stage, 0o700);
   const cleanup = () => rm(stage, { recursive: true, force: true });
   try {
@@ -132,8 +136,10 @@ export async function verifyBackup(
         decipher,
         createGunzip(),
         createWriteStream(archive, { flags: 'wx', mode: 0o600 }),
+        { signal },
       );
     } catch {
+      signal?.throwIfAborted();
       throw new Error(
         'Backup authentication failed: wrong backup key, corruption or incomplete archive. Nothing was restored.',
       );
@@ -141,7 +147,7 @@ export async function verifyBackup(
     // Do not inspect/extract or touch the target database until the entire GCM tag authenticated.
     const extracted = join(stage, 'extracted');
     await mkdir(extracted, { mode: 0o700 });
-    await unpack(archive, extracted);
+    await unpack(archive, extracted, signal);
     const metadata = JSON.parse(
       await readFile(join(extracted, 'metadata.json'), 'utf8'),
     ) as BackupMetadata;

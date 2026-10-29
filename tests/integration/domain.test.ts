@@ -286,6 +286,129 @@ describe('transactional training and external-agent workflow', () => {
     expect((await loadWorkspace()).workouts[0].title).toBe('Later same-version edit');
   });
 
+  async function planWithTwoWorkouts() {
+    await save([
+      { action: 'plan.create', values: { id: id(1), title: 'Build', startDate: '2026-10-19' } },
+      {
+        action: 'workout.create',
+        values: workout({ schedule: { kind: 'plan', planId: id(1), day: 1 } }) as never,
+      },
+      {
+        action: 'workout.create',
+        values: workout({ id: id(3), schedule: { kind: 'plan', planId: id(1), day: 4 } }) as never,
+      },
+    ]);
+    return save([
+      { action: 'workout.update', id: id(2), expectedRevision: 1, values: { title: 'Recovery' } },
+    ]);
+  }
+
+  it('undoes an older workout edit after a later edit of another workout in the same plan', async () => {
+    const olderEdit = await planWithTwoWorkouts();
+    await save([
+      { action: 'workout.update', id: id(3), expectedRevision: 1, values: { title: 'Tempo' } },
+    ]);
+    await undoChange({ id: olderEdit.id, idempotencyKey: randomUUID() });
+    const { workouts } = await loadWorkspace();
+    expect(workouts.find((w) => w.id === id(2))?.title).toBe('Ride');
+    expect(workouts.find((w) => w.id === id(3))?.title).toBe('Tempo');
+  });
+
+  it('refuses to undo a workout edit after its plan start moved', async () => {
+    const olderEdit = await planWithTwoWorkouts();
+    await save([
+      {
+        action: 'plan.update',
+        id: id(1),
+        expectedRevision: 1,
+        values: { startDate: '2026-10-20' },
+      },
+    ]);
+    await expect(
+      undoChange({ id: olderEdit.id, idempotencyKey: randomUUID() }),
+    ).rejects.toMatchObject({ code: 'undo_conflict' });
+    expect((await loadWorkspace()).workouts.find((w) => w.id === id(2))?.title).toBe('Recovery');
+  });
+
+  it('restores a deleted workout on its day of the moved plan and records that date', async () => {
+    await planWithTwoWorkouts();
+    const deleted = await save([{ action: 'workout.delete', id: id(3), expectedRevision: 1 }]);
+    await save([
+      {
+        action: 'plan.update',
+        id: id(1),
+        expectedRevision: 1,
+        values: { startDate: '2026-10-20' },
+      },
+    ]);
+    const restored = await undoChange({ id: deleted.id, idempotencyKey: randomUUID() });
+    expect(restored.changes).toEqual([
+      expect.objectContaining({ id: id(3), afterEffectiveDate: '2026-10-23' }),
+    ]);
+  });
+
+  const inPlanDayTwo = { kind: 'plan', planId: id(1), day: 2 };
+  const shiftPlanStart = () =>
+    save([
+      {
+        action: 'plan.update',
+        id: id(1),
+        expectedRevision: 1,
+        values: { startDate: '2026-10-20' },
+      },
+    ]);
+  const laterPlanChanges: Record<string, () => Promise<{ id: string }>> = {
+    'its plan start move would shift a later workout': async () => {
+      await planWithTwoWorkouts();
+      const shifted = await shiftPlanStart();
+      await save([
+        {
+          action: 'workout.create',
+          values: workout({ id: id(4), schedule: inPlanDayTwo }) as never,
+        },
+      ]);
+      return shifted;
+    },
+    'its plan start move would shift a later note': async () => {
+      await planWithTwoWorkouts();
+      const shifted = await shiftPlanStart();
+      await save([
+        {
+          action: 'note.create',
+          values: { id: id(4), title: 'Travel', body: 'Train', schedule: inPlanDayTwo } as never,
+        },
+      ]);
+      return shifted;
+    },
+    'a workout was added to the plan it created': async () => {
+      const created = await save([
+        { action: 'plan.create', values: { id: id(1), title: 'Build', startDate: '2026-10-19' } },
+      ]);
+      await save([
+        { action: 'workout.create', values: workout({ schedule: inPlanDayTwo }) as never },
+      ]);
+      return created;
+    },
+    'the plan of the workout it deleted was deleted': async () => {
+      await planWithTwoWorkouts();
+      const deleted = await save([{ action: 'workout.delete', id: id(3), expectedRevision: 1 }]);
+      await save([{ action: 'plan.delete', id: id(1), expectedRevision: 1 }]);
+      return deleted;
+    },
+  };
+
+  it.each(Object.entries(laterPlanChanges))(
+    'refuses to undo a change when %s',
+    async (_, change) => {
+      const { id: changeId } = await change();
+      const before = await loadWorkspace();
+      await expect(
+        undoChange({ id: changeId, idempotencyKey: randomUUID() }),
+      ).rejects.toMatchObject({ code: 'undo_conflict', status: 409 });
+      expect(await loadWorkspace()).toEqual(before);
+    },
+  );
+
   it('does not restore an obsolete deletion when its tombstone revision has independently advanced', async () => {
     await save([{ action: 'workout.create', values: workout() as never }]);
     const deleted = await save([{ action: 'workout.delete', id: id(2), expectedRevision: 1 }]);

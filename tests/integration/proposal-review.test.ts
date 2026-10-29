@@ -205,6 +205,89 @@ it('detects a changed expanded diff even when a record revision was not bumped',
       'The resulting edits differ from the proposed changes. Request a replacement proposal.',
   });
 });
+const planId = '00000000-0000-4000-8000-000000000001';
+const mondayRunId = '00000000-0000-4000-8000-000000000003';
+const thursdayIntervalsId = '00000000-0000-4000-8000-000000000004';
+const shortenIntervals = {
+  action: 'workout.update',
+  id: thursdayIntervalsId,
+  expectedRevision: 1,
+  values: { durationSeconds: 3000 },
+};
+const renameMondayRun = {
+  action: 'workout.update',
+  id: mondayRunId,
+  expectedRevision: 1,
+  values: { title: 'Recovery run' },
+};
+const movePlanStart = {
+  action: 'plan.update',
+  id: planId,
+  expectedRevision: 1,
+  values: { startDate: '2026-10-20' },
+};
+async function planProposal(command: object) {
+  const createPlanWorkout = (day: number, id: string, title: string) => ({
+    action: 'workout.create',
+    values: { id, title, sport: 'running', schedule: { kind: 'plan', planId, day } },
+  });
+  await mutate({
+    idempotencyKey: randomUUID(),
+    commands: [
+      { action: 'plan.create', values: { id: planId, title: 'Build', startDate: '2026-10-19' } },
+      createPlanWorkout(1, mondayRunId, 'Easy run'),
+      createPlanWorkout(4, thursdayIntervalsId, 'Intervals'),
+    ],
+  });
+  const grant = await createGrant({ label: 'Plan test', from: '2026-10-19', to: '2026-10-25' });
+  const submitted = await submitProposal(grant.token, {
+    commands: [command],
+    summary: 'Plan change',
+    contextDigest: (await contextForToken(grant.token)).contextDigest,
+    idempotencyKey: randomUUID(),
+  });
+  return { id: submitted.id, digest: submitted.digest };
+}
+it('applies a proposal on one plan workout once the owner reviews an edit of another workout', async () => {
+  const input = await planProposal(shortenIntervals);
+  await mutate({ idempotencyKey: randomUUID(), commands: [renameMondayRun] });
+  const review = await reviewProposal(input);
+  expect(review.applicability).toBe('review-required');
+  expect(review.contextChanges.map((change) => change.id)).toEqual([mondayRunId]);
+  const key = randomUUID();
+  await expect(applyProposal({ ...input, idempotencyKey: key })).rejects.toMatchObject({
+    code: 'stale_context',
+  });
+  await applyProposal({
+    ...input,
+    idempotencyKey: key,
+    reviewedContextDigest: review.currentContextDigest,
+  });
+  const { workouts } = await loadWorkspace();
+  expect(workouts.find((w) => w.id === thursdayIntervalsId)?.durationSeconds).toBe(3000);
+  expect(workouts.find((w) => w.id === mondayRunId)?.title).toBe('Recovery run');
+});
+it.each([
+  [
+    'an owner edit of the proposed workout',
+    shortenIntervals,
+    { ...shortenIntervals, values: { title: 'Owner intervals' } },
+    'STALE_REVISION',
+  ],
+  ['an owner move of the plan start', shortenIntervals, movePlanStart, 'STALE_REVISION'],
+  [
+    'an owner edit of a workout the proposed plan move shifts',
+    movePlanStart,
+    renameMondayRun,
+    'proposal_changed',
+  ],
+])('still conflicts after %s', async (_, proposed, ownerCommand, code) => {
+  const input = await planProposal(proposed);
+  await mutate({ idempotencyKey: randomUUID(), commands: [ownerCommand] });
+  const review = await reviewProposal(input);
+  expect(review.applicability).toBe('conflict');
+  expect(review.conflicts[0]?.code).toBe(code);
+});
 it.each([false, true])('handles legacy context with changed=%s', async (changed) => {
   const { input, context } = await proposal();
   await connection()`update host.proposals set context=${connection().json({ scope: context.scope, digest: context.contextDigest })} where id=${input.id}`;

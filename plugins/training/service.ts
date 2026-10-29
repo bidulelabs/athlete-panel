@@ -10,7 +10,7 @@ import {
   findEntity,
   stateWithChanges,
 } from '../../instance/services';
-import { applyCommands, validateWorkspace } from './engine';
+import { applyCommands, effectiveDate, validateWorkspace } from './engine';
 
 export { idempotent } from '../../packages/host/src/idempotency';
 import { idempotent } from '../../packages/host/src/idempotency';
@@ -102,7 +102,28 @@ export async function undoChange(body: unknown) {
             : {}),
         });
       }
-      validateWorkspace(stateWithChanges(state, changes));
+      const restoredState = stateWithChanges(state, changes);
+      const currentDates = new Map(
+        [...state.workouts, ...state.notes].map((item) => [
+          item.id,
+          effectiveDate(item, state.plans),
+        ]),
+      );
+      for (const item of [...restoredState.workouts, ...restoredState.notes]) {
+        const { schedule } = item;
+        const date = effectiveDate(item, restoredState.plans);
+        const change = changes.find((candidate) => candidate.id === item.id);
+        assert(
+          (schedule.kind !== 'plan' ||
+            restoredState.plans.some((plan) => plan.id === schedule.planId)) &&
+            (change !== undefined || date === currentDates.get(item.id)),
+          'undo_conflict',
+          'A later change to its plan prevents restoring the whole change. No records were changed.',
+          409,
+        );
+        if (change) change.afterEffectiveDate = date;
+      }
+      validateWorkspace(restoredState);
       await persistChanges(changes, tx);
       const id = await audit(tx, changes, `Undo: ${entry.summary}`);
       await tx`update host.changes set undone_at=now(),undo_id=${id} where id=${input.id}`;

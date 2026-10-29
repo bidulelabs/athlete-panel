@@ -273,7 +273,7 @@ pnpm check
 pnpm build
 ```
 
-`pnpm check` covers generated-file drift, import boundaries, types, unit tests and documentation. Database integration and browser tests are separate: follow the [verification guide](docs/development.md#verification) to create isolated test storage. Never point tests or demo seeding at a personal instance. The [CI workflow](.github/workflows/verify.yml) defines checks for pushes and pull requests; its presence is not evidence of a successful hosted CI run.
+`pnpm check` covers generated-file drift, import boundaries, types, unit tests and documentation. Database integration and browser tests are separate: follow the [verification guide](docs/development.md#verification) to create isolated test storage. Never point tests or demo seeding at a personal instance. The [CI workflow](.github/workflows/verify.yml) defines checks for pushes to `main` and pull requests; its presence is not evidence of a successful hosted CI run.
 
 ## Roadmap and current limits
 

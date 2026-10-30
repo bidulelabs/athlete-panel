@@ -43,7 +43,7 @@ describe('owner operational feedback', () => {
         },
         now,
       ),
-    ).toMatchObject({ backupWarning: false });
+    ).toMatchObject({ backupWarning: false, backupInfo: null });
     const local = {
       ...recent,
       lastBackup: {
@@ -54,7 +54,10 @@ describe('owner operational feedback', () => {
     };
     expect(operationalHealth(local, now)).toMatchObject({
       backup: 'Local backup verified; off-server copy not configured',
-      backupWarning: true,
+      backupWarning: false,
+      backupInfo: expect.stringContaining(
+        'Local backups do not protect against losing this server.',
+      ),
     });
     expect(operationalHealth({ ...local, backupAttempt: { state: 'failed' } }, now).backup).toBe(
       'Last backup attempt failed',
@@ -76,6 +79,68 @@ describe('owner operational feedback', () => {
         now,
       ).backup,
     ).toBe('Backup may be stalled');
+  });
+  it.each([
+    {
+      name: 'failed',
+      input: { backupAttempt: { state: 'failed' } },
+      message: 'Last backup attempt failed',
+    },
+    {
+      name: 'stalled',
+      input: { backupAttempt: { state: 'running', startedAt: '2026-10-24T12:00:00Z' } },
+      message: 'Backup may be stalled',
+    },
+    { name: 'missing', input: { lastBackup: null }, message: 'Backups are not configured' },
+    {
+      name: 'first backup pending',
+      input: { lastBackup: null, backupSchedule: { nextRunAt: '2026-10-26T03:00:00Z' } },
+      message: 'Waiting for first successful backup',
+    },
+    {
+      name: 'overdue',
+      input: {
+        lastBackup: {
+          storage: 'local',
+          completedAt: '2026-10-23T03:00:00Z',
+          verifiedAt: '2026-10-23T03:00:00Z',
+        },
+      },
+      message: 'Backup is overdue',
+    },
+    {
+      name: 'unverified',
+      input: { lastBackup: { storage: 'local', completedAt: '2026-10-25T03:00:00Z' } },
+      message: 'Archive available; off-host protection not verified',
+    },
+  ])('keeps $name backups actionable even when local mode was healthy', ({ input, message }) => {
+    const healthy = {
+      lastBackup: {
+        storage: 'local',
+        completedAt: '2026-10-25T03:00:00Z',
+        verifiedAt: '2026-10-25T03:00:00Z',
+      },
+    };
+    expect(operationalHealth({ ...healthy, ...input }, now)).toMatchObject({
+      backup: message,
+      backupWarning: true,
+      backupInfo: null,
+    });
+  });
+  it('keeps an active backup informational until it stalls', () => {
+    expect(
+      operationalHealth(
+        {
+          lastBackup: {
+            storage: 'local',
+            completedAt: '2026-10-25T03:00:00Z',
+            verifiedAt: '2026-10-25T03:00:00Z',
+          },
+          backupAttempt: { state: 'running', startedAt: '2026-10-25T11:59:00Z' },
+        },
+        now,
+      ),
+    ).toMatchObject({ backup: 'Backup in progress', backupWarning: false, backupInfo: null });
   });
 });
 describe('complete, readable proposal review', () => {

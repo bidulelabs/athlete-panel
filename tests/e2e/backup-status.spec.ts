@@ -16,13 +16,14 @@ for (const theme of ['light', 'dark']) {
       await expect(
         page.getByRole('heading', { name: 'Training calendar', exact: true }),
       ).toBeVisible();
+      let failed = false;
       await page.route('**/api/workspace?*', async (route) => {
         const response = await route.fetch(),
           body = await response.json();
         const now = new Date().toISOString();
         body.operational = [
           { key: 'worker', value: { state: 'healthy', lastSeen: now } },
-          { key: 'backupAttempt', value: { state: 'succeeded' } },
+          { key: 'backupAttempt', value: { state: failed ? 'failed' : 'succeeded' } },
           { key: 'lastBackup', value: { completedAt: now, verifiedAt: now, storage } },
         ];
         await route.fulfill({ response, json: body });
@@ -36,13 +37,31 @@ for (const theme of ['light', 'dark']) {
       await expect(
         page.getByText(storage === 'local' ? remote : local, { exact: true }),
       ).toHaveCount(0);
-      if (storage === 'local')
-        await expect(
-          page.getByText('Local backups do not protect against losing this server.', {
-            exact: false,
-          }),
-        ).toBeVisible();
-      await page.screenshot({ path: info.outputPath('backup-protection.png'), fullPage: true });
+      const information = page.getByText(
+        'Local backups do not protect against losing this server.',
+        { exact: false },
+      );
+      const troubleshooting = page.getByText(
+        'Check the backup service, its logs, separate encryption key and configured destination.',
+        { exact: false },
+      );
+      await expect(troubleshooting).toHaveCount(0);
+      if (storage === 'local') {
+        await expect(information).toBeVisible();
+        await expect(information).not.toHaveAttribute('role', /alert|status/);
+      } else await expect(information).toHaveCount(0);
+      const status = page
+        .locator('.section-block')
+        .filter({ has: page.getByRole('heading', { name: 'Instance status', exact: true }) });
+      await status.screenshot({
+        path: info.outputPath('backup-protection.png'),
+        animations: 'disabled',
+      });
+      failed = true;
+      await page.reload();
+      await expect(page.getByText('Last backup attempt failed', { exact: true })).toBeVisible();
+      await expect(troubleshooting).toBeVisible();
+      await expect(information).toHaveCount(0);
     });
   }
 }

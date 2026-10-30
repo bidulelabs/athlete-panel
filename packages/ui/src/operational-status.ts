@@ -22,6 +22,7 @@ export function operationalHealth(input: unknown, now = Date.now()) {
         ? 'Worker is not responding'
         : 'Worker has not checked in';
   const attempt = values.backupAttempt;
+  const verifiedLocal = 'Local backup verified; off-server copy not configured';
   const backup =
     attempt?.state === 'failed'
       ? 'Last backup attempt failed'
@@ -38,14 +39,20 @@ export function operationalHealth(input: unknown, now = Date.now()) {
             : values.lastBackup.storage === 'remote-mount' && values.lastBackup.verifiedAt
               ? 'Verified backup on registered remote storage'
               : values.lastBackup.storage === 'local' && values.lastBackup.verifiedAt
-                ? 'Local backup verified; off-server copy not configured'
+                ? verifiedLocal
                 : 'Archive available; off-host protection not verified';
   return {
     worker,
     backup,
+    backupInfo:
+      backup === verifiedLocal
+        ? 'Local backups do not protect against losing this server. A successful backup still needs a restore rehearsal.'
+        : null,
     workerWarning: heartbeatAge > 90_000 || failed || degraded,
-    backupWarning: !['Verified backup on registered remote storage', 'Backup in progress'].includes(
-      backup,
-    ),
+    backupWarning: ![
+      'Verified backup on registered remote storage',
+      verifiedLocal,
+      'Backup in progress',
+    ].includes(backup),
   };
 }

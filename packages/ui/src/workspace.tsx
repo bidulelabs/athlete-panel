@@ -828,6 +828,7 @@ export function OperationalStatus() {
           <dd>{migrations.length ? `${migrations.length} applied migrations` : 'Not recorded'}</dd>
         </div>
       </dl>
+      {health.backupInfo && <p className="muted-text">{health.backupInfo}</p>}
       {health.workerWarning && (
         <Alert role="status" className="callout">
           The worker has stopped or failed. For local use, check the terminal running pnpm run
@@ -837,9 +838,8 @@ export function OperationalStatus() {
       )}
       {health.backupWarning && (
         <Alert role="status" className="callout">
-          Check the backup service, its logs, separate encryption key and configured destination.
-          Local backups do not protect against losing this server. A successful backup still needs a
-          restore rehearsal.
+          Check the backup service, its logs, separate encryption key and configured destination. A
+          successful backup still needs a restore rehearsal.
         </Alert>
       )}
       {values.backupSchedule?.nextRunAt && (

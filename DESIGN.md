@@ -177,6 +177,10 @@ Use compact, full-width plan rows for discovery, with bounded description previe
 
 Recent changes is a secondary header action. Use the shared right-side Sheet, full width on phones, with a persistent title/close region and a scrolling flat list. Each entry leads with its action and item name, followed by timestamp and count. Details expand in place; Undo sits separately and requires confirmation. Controls keep 44px touch targets and use the paired surface, text and border tokens.
 
+### Operational feedback
+
+A recent verified local backup is a healthy supported state. Keep its off-server limitation visible as plain supporting text, without warning styling or an alert role. Use the existing status/warning treatment for failed, missing, stalled, overdue or unverified backups. [Hosted operations](docs/features/hosted-operations.md) owns these state definitions.
+
 ### Navigation and motion
 
 Navigation combines Lucide icons and text, with orange for the active route. Use the same icon family throughout. State transitions remain short; the weekly reveal uses 180ms. Honor reduced motion while keeping the state change understandable.

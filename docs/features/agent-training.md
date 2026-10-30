@@ -18,7 +18,7 @@ The server validates and expands the entire batch before storing it. The UI pres
 
 Retries with the same idempotency key and content return the original result. Reusing a key for different content conflicts; a proposal cannot be applied twice with different keys. Audit snapshots and results commit with domain writes.
 
-Whole-batch undo checks every affected current entity against its recorded after-state. Any later edit rejects the whole undo, as does restoring a plan start that would move a workout or note added later. Edits of other records in the same plan do not block it. Deleted state remains recoverable; restored entities receive higher revisions and deleted UUIDs cannot be recycled. Undo is another audit event. It does not reverse provider synchronization, migrations or external actions.
+Whole-batch undo checks every affected current entity against its recorded after-state. Any later edit rejects the whole undo, as does a restore that would move a workout or note added later, leave one without its plan, or give a later workout's position in its day to a restored one. Edits of other records in the same plan do not block it. Deleted state remains recoverable; restored entities receive higher revisions and deleted UUIDs cannot be recycled. Undo is another audit event. It does not reverse provider synchronization, migrations or external actions.
 
 ### Adaptive coaching clarification
 

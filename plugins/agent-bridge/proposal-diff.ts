@@ -60,7 +60,7 @@ function valueText(
   if (value === '') return 'Empty';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (key === 'planId' && typeof value === 'string')
-    return plans[value] ? `${plans[value]} (${value})` : value;
+    return plans[value] ?? value;
   if (typeof value === 'number') {
     if (key.endsWith('Seconds')) {
       const hours = Math.floor(value / 3600),

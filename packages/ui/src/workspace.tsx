@@ -837,8 +837,9 @@ export function OperationalStatus() {
       )}
       {health.backupWarning && (
         <Alert role="status" className="callout">
-          Enable the backup service and check its logs, separate encryption key and off-host
-          destination. A successful backup still needs a restore rehearsal.
+          Check the backup service, its logs, separate encryption key and configured destination.
+          Local backups do not protect against losing this server. A successful backup still needs a
+          restore rehearsal.
         </Alert>
       )}
       {values.backupSchedule?.nextRunAt && (

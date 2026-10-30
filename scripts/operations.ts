@@ -26,7 +26,9 @@ export function nextBackupTime(now: Date, hourUtc = 3): Date {
 export async function backupLoop(signal: AbortSignal) {
   const destination = process.env.BACKUP_DESTINATION;
   if (!destination)
-    throw new Error('Scheduled backups require BACKUP_DESTINATION mounted to off-host storage.');
+    throw new Error(
+      'Scheduled backups require BACKUP_DESTINATION set to the local or remote backup directory.',
+    );
   const hour = Number(process.env.BACKUP_HOUR_UTC ?? 3);
   nextBackupTime(new Date(), hour);
   // An immediate first snapshot establishes whether the independent backup keys/storage work.

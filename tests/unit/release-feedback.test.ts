@@ -44,6 +44,22 @@ describe('owner operational feedback', () => {
         now,
       ),
     ).toMatchObject({ backupWarning: false });
+    const local = {
+      ...recent,
+      lastBackup: {
+        ...recent.lastBackup,
+        storage: 'local',
+        verifiedAt: recent.lastBackup.completedAt,
+      },
+    };
+    expect(operationalHealth(local, now)).toMatchObject({
+      backup: 'Local backup verified; off-server copy not configured',
+      backupWarning: true,
+    });
+    expect(operationalHealth({ ...local, backupAttempt: { state: 'failed' } }, now).backup).toBe(
+      'Last backup attempt failed',
+    );
+    expect(operationalHealth(local, now + 27 * 3600000).backup).toBe('Backup is overdue');
     expect(
       operationalHealth({ ...recent, worker: { ...recent.worker, state: 'maintenance' } }, now),
     ).toMatchObject({ worker: 'Paused for maintenance', workerWarning: false });

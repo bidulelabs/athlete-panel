@@ -2,6 +2,8 @@
 
 ## Record
 
+The remote-only adoption storage prerequisite is superseded by [ADR 014](014-optional-remote-backups.md), authorized on 2026-10-30. All other decisions below remain in force.
+
 Status: accepted.
 Recorded on: 2026-10-30.
 Status basis: the owner approved implementation of the updated Compose adoption/image-verification prompt and requested a new branch in this conversation. The scope is code, documentation and isolated synthetic verification; publication, real adoption/deployment and external service changes need separate authorization. No durable conversation URL is available; the [execution record](../plans/compose-adoption.md) preserves that scope.

@@ -107,6 +107,16 @@ def storage_marker(destination):
     return Path(destination) / '.athlete-panel-storage-id'
 
 
+def local_backup_directory(destination):
+    """Validate only; never recreate missing storage during upgrade/recovery."""
+    destination = Path(destination)
+    if destination.is_symlink() or not destination.is_dir():
+        raise OperationError('The local backup directory is unavailable. Restore its original path before retrying.')
+    info = destination.stat()
+    if info.st_uid != os.getuid() or info.st_mode & 0o077:
+        raise OperationError('Local backup storage must be owned by the controller account with mode 0700. Correct its permissions explicitly; existing files were preserved.')
+
+
 def private_directory(path):
     path = Path(path)
     path.mkdir(parents=True, mode=0o700, exist_ok=True)
@@ -281,15 +291,19 @@ class Hosted:
         if self.state.is_relative_to(destination.resolve()) or destination.resolve().is_relative_to(self.state):
             raise OperationError('Operator keys/state and archive storage must be separate directories, neither inside the other.')
         if destination.is_symlink() or not destination.is_dir(): raise OperationError('The registered backup directory is unavailable.')
-        policy = read_json(self.storage_policy())
-        if not policy: raise OperationError('Backup storage has not been registered.')
-        if not self.test:
-            filesystem, fingerprint = mount_identity(destination)
-            if filesystem not in REMOTE_FILESYSTEMS or fingerprint != policy['mountFingerprint']:
-                raise OperationError('The registered remote backup mount is absent or changed. Restore the mount before retrying.')
-        marker = storage_marker(destination)
-        if marker.is_symlink() or not marker.is_file() or marker.read_text().strip() != policy['id']:
-            raise OperationError('The registered backup storage identity is missing or changed.')
+        if self.backup_mode() == 'local':
+            if self.storage_policy().exists() or self.storage_policy().is_symlink(): raise OperationError('Local mode conflicts with a registered remote policy. Restore the recorded remote configuration; automatic downgrade is forbidden.')
+            local_backup_directory(destination)
+        else:
+            policy = read_json(self.storage_policy())
+            if not policy or policy.get('version') != 1: raise OperationError('Remote backup storage has not been registered.')
+            if not self.test:
+                filesystem, fingerprint = mount_identity(destination)
+                if filesystem not in REMOTE_FILESYSTEMS or fingerprint != policy.get('mountFingerprint'):
+                    raise OperationError('The registered remote backup mount is absent or changed. Restore the mount before retrying.')
+            marker = storage_marker(destination)
+            if marker.is_symlink() or not marker.is_file() or marker.read_text().strip() != policy['id']:
+                raise OperationError('The registered backup storage identity is missing or changed.')
         # No directory creation here: an absent mount must never fall back to local storage.
         probe = destination / ('.athlete-panel-write-' + uuid.uuid4().hex)
         try:
@@ -299,6 +313,8 @@ class Hosted:
         finally: probe.unlink(missing_ok=True)
 
     def register_storage(self):
+        if self.backup_mode() == 'local':
+            self.verify_storage(); return
         destination = Path(self.record['backupDirectory'])
         if destination.is_symlink() or not destination.is_dir(): raise OperationError('Create and mount the remote backup directory first.')
         if self.test: fingerprint = '0' * 64
@@ -504,9 +520,11 @@ class Hosted:
                 service['environment']['ATHLETE_PANEL_RELEASE_IDENTITY'] = json.dumps(self.release_identity(release))
         for name in ['backup', 'recovery']:
             service = config['services'][name]; service['user'] = f'{os.getuid()}:{os.getgid()}'; service.pop('cap_add', None)
-            service['environment']['BACKUP_STORAGE_POLICY'] = '/run/secrets/backup_storage'
-            service.setdefault('volumes', []).append({'type': 'bind', 'source': str(self.state / '.secrets' / 'backup-storage.json'), 'target': '/run/secrets/backup_storage', 'read_only': True, 'bind': {'create_host_path': False}})
-            for volume in service['volumes']:
+            service['environment']['BACKUP_STORAGE_MODE'] = self.backup_mode()
+            if self.backup_mode() == 'remote':
+                service['environment']['BACKUP_STORAGE_POLICY'] = '/run/secrets/backup_storage'
+                service.setdefault('volumes', []).append({'type': 'bind', 'source': str(self.storage_policy()), 'target': '/run/secrets/backup_storage', 'read_only': True, 'bind': {'create_host_path': False}})
+            for volume in service.get('volumes', []):
                 if volume['type'] == 'bind': volume.setdefault('bind', {})['create_host_path'] = False
         config['services']['backup']['environment']['ATHLETE_PANEL_BACKUP_RUN'] = release.get('backupRun', '')
         heartbeat = self.state / '.secrets' / 'backup-heartbeat.json'
@@ -566,7 +584,27 @@ class Hosted:
                 'APP_DATABASE_PASSWORD': unquote(runtime_url.password)}
 
     def backup_key(self): return Path(self.record.get('profile', {}).get('backupKey', self.state / '.secrets' / 'backup-key'))
-    def storage_policy(self): return Path(self.record.get('profile', {}).get('storagePolicy', self.state / '.secrets' / 'backup-storage.json'))
+    def storage_policy(self): return Path(self.record.get('profile', {}).get('storagePolicy') or self.state / '.secrets' / 'backup-storage.json')
+    def backup_mode(self):
+        # All older controller records required remote storage. Never infer local
+        # mode from a missing policy/mount in an existing installation.
+        mode = self.record.get('backupMode', 'remote')
+        if mode not in {'local', 'remote'}: raise OperationError('Invalid saved backup mode. Restore the original controller state.')
+        return mode
+
+    def backup_protection(self, status):
+        latest = status.get('lastBackup') or {}
+        attempt = status.get('backupAttempt') or {}
+        if attempt.get('state') in {'failed', 'running'}: return 'Backup ' + attempt['state'] + '; inspect status before relying on protection'
+        if not latest.get('verifiedAt'): return 'Backup verification pending'
+        try:
+            verified = datetime.fromisoformat(latest['verifiedAt'].replace('Z', '+00:00'))
+            if verified.tzinfo is None: return 'Backup verification pending'
+        except (ValueError, TypeError, AttributeError): return 'Backup verification pending'
+        if (datetime.now(timezone.utc) - verified).total_seconds() > 26 * 3600: return 'Backup is overdue; last verification is older than 26 hours'
+        if self.backup_mode() == 'local': return 'Local backup verified; off-server copy not configured'
+        if latest.get('storage') == 'remote-mount': return 'Verified backup on registered remote storage'
+        return 'Off-server protection not verified'
     def database_user(self): return self.configuration()['POSTGRES_USER']
 
     def image_matches(self, actual, release):
@@ -781,6 +819,8 @@ class Hosted:
         result = json.loads(self.console(release, 'backup', 'scripts/hosted-console.ts', 'backup'))
         if result.get('verified') is not True or Path(result.get('file', '')).name != result.get('file'):
             raise OperationError('Backup did not report a verified archive.')
+        result['backupMode'] = self.backup_mode()
+        result['protection'] = self.backup_protection({'lastBackup': {'verifiedAt': timestamp(), 'storage': 'isolated-test' if self.test else 'remote-mount'}})
         return result
 
     def verify_archive(self, archive, release=None):
@@ -791,7 +831,7 @@ class Hosted:
                               extra=['-v', str(archive.parent) + ':/selected:ro'])
         return json.loads(result)
 
-    def install(self, source, domain, backup_directory, password=None, image=None, image_ref=None, local_image=None):
+    def install(self, source, domain, backup_directory, password=None, image=None, image_ref=None, local_image=None, backup_mode=None):
         if self.pending: raise OperationError('Use resume to continue the pending installation.')
         if self.record and self.record.get('active'): raise OperationError('This installation is already configured. Use upgrade; passwords and keys were preserved.')
         if not re.fullmatch(r'(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}', domain): raise OperationError('Enter a DNS hostname without https:// or a port.')
@@ -800,12 +840,17 @@ class Hosted:
             raise OperationError('Keep private operator state separate from archive storage.')
         if any(char in str(destination) for char in ':,$\n\r'):
             raise OperationError('Use a backup directory without colon, comma, dollar sign or line breaks.')
+        mode = backup_mode or (self.backup_mode() if self.record else 'local')
+        if mode not in {'local', 'remote'}: raise OperationError('Choose local or remote backup mode.')
+        if mode == 'local' and not self.record:
+            destination.mkdir(mode=0o700, parents=True, exist_ok=True)
+            local_backup_directory(destination)
         if destination.is_symlink() or not destination.is_dir(): raise OperationError('Create and mount the remote backup directory first.')
         if not self.record and (storage_marker(destination).exists() or storage_marker(destination).is_symlink() or any(destination.glob('*.fgr'))):
             raise OperationError('Backup storage already contains an installation. Recover its operator state or choose an unused directory. No new keys were generated.')
-        if self.record and (self.record['domain'] != domain or self.record['backupDirectory'] != str(destination)):
+        if self.record and (self.record['domain'] != domain or self.record['backupDirectory'] != str(destination) or self.backup_mode() != mode):
             raise OperationError('An interrupted installation has different domain/storage settings. Preserve its state and use the original values.')
-        self.record = self.record or {'version': 1, 'project': 'athlete-panel-hosted-' + secrets.token_hex(5), 'domain': domain, 'backupDirectory': str(destination), 'database': 'athlete_panel_test' if self.test else 'athlete_panel', 'testOnly': bool(self.test)}
+        self.record = self.record or {'version': 1, 'project': 'athlete-panel-hosted-' + secrets.token_hex(5), 'domain': domain, 'backupDirectory': str(destination), 'backupMode': mode, 'database': 'athlete_panel_test' if self.test else 'athlete_panel', 'testOnly': bool(self.test)}
         self.save(); self.begin('install', source=str(Path(source).resolve()) if source else None,
                                suppliedImage=image if self.test else None, imageRef=image_ref, localImage=local_image)
         self.resume(password=password)
@@ -877,10 +922,13 @@ class Hosted:
                 entry_completed.remove('verify-scheduled-backup')
             if 'verify-scheduled-backup' in entry_completed:
                 self.verify_archive(Path(self.record['backupDirectory']) / self.pending['verifiedBackup']['file'], candidate)
-                self.finish(); print('Application ready; recorded backup authenticated.'); return
+                protection = self.backup_protection({'lastBackup': self.pending['verifiedBackup']})
+                self.finish(); print('Application ready; recorded backup authenticated.\n' + protection); return
             self.step('retry-scheduled-backups-' + str(len(self.pending['attempts'])), lambda: self.start_backups(candidate))
-            self.step('verify-scheduled-backup', lambda: self.await_backup(candidate)); self.finish()
-            print('Application ready; scheduled backup verified.'); return
+            self.step('verify-scheduled-backup', lambda: self.await_backup(candidate))
+            protection = self.backup_protection({'lastBackup': self.pending.get('verifiedBackup')})
+            self.finish()
+            print('Application ready; scheduled backup verified.\n' + protection); return
         if kind == 'install':
             self.step('register-backup-storage', self.register_storage)
             self.step('prepare-image', self.prepare_candidate)
@@ -966,9 +1014,10 @@ class Hosted:
         self.step('reopen-application', lambda: self.maintenance(candidate, False))
         self.step('start-scheduled-backups', lambda: self.start_backups(candidate))
         self.step('verify-scheduled-backup', lambda: self.await_backup(candidate))
+        protection = self.backup_protection({'lastBackup': self.pending.get('verifiedBackup')})
         self.finish()
         kit = 'this state directory and every referenced configuration/key file' if self.record.get('profile') else 'this state directory, especially .env and .secrets'
-        print('Ready: ' + self.origin() + '\nKeep a separate protected recovery copy of ' + kit + '. Remote storage verification is not a substitute for a second-machine restore rehearsal.', flush=True)
+        print('Ready: ' + self.origin() + '\n' + protection + '\nKeep a separate protected recovery copy of ' + kit + '. Local backups do not protect against losing this server; remote storage verification still requires a second-machine recovery exercise.', flush=True)
 
 
 def owner_password():
@@ -984,12 +1033,14 @@ def main():
     parser.add_argument('--state', type=Path, default=None, help='Private persistent operator state; use the same location for all releases')
     commands = parser.add_subparsers(dest='command', required=True)
     install = commands.add_parser('install'); install.add_argument('--domain', required=True); install.add_argument('--backup-directory', required=True)
+    install.add_argument('--backup-mode', choices=['local', 'remote'], help='New installations default to local; remote requires registered network storage')
     update = commands.add_parser('upgrade'); update.add_argument('--accept-custom-changes', action='store_true', help='Acknowledge replacing a custom build/publisher or intentionally removing plugins; retained migrations remain mandatory')
     adopt = commands.add_parser('adopt')
     adopt.add_argument('--project', required=True); adopt.add_argument('--project-directory', required=True)
     adopt.add_argument('--context', required=True); adopt.add_argument('--ingress', choices=['caddy', 'external'], required=True)
     adopt.add_argument('--compose-file', action='append', required=True); adopt.add_argument('--env-file', action='append', required=True)
     adopt.add_argument('--service', action='append', default=[], metavar='ROLE=NAME')
+    adopt.add_argument('--backup-mode', choices=['local', 'remote'], help='Assert the existing storage mode; remote policies are always preserved')
     confirmation = adopt.add_mutually_exclusive_group(required=True)
     confirmation.add_argument('--dry-run', action='store_true'); confirmation.add_argument('--confirm')
     reconcile = commands.add_parser('reconcile')
@@ -1036,20 +1087,24 @@ def main():
                 if not separator or role not in {*ROLES, 'caddy'} or role in roles: raise OperationError('Use each --service ROLE=NAME once for a documented role.')
                 roles[role] = name
             inputs = {'project': args.project, 'directory': args.project_directory, 'context': args.context, 'ingress': args.ingress, 'files': args.compose_file, 'envFiles': args.env_file, 'roles': roles}
+            if args.backup_mode: inputs['backupMode'] = args.backup_mode
             print(json.dumps(record_adoption(args.state, inputs, args.confirm), indent=2)); return 0
         instance = Hosted(args.state)
         instance.expected_commit = expected_commit
         instance.expected_identity = expected_identity
         if args.command == 'status':
             record = instance.record or {}
+            runtime = instance.runtime_status()
             print(json.dumps({'installed': bool(record.get('active')), 'origin': instance.origin() if record else None,
-                              'release': record.get('active'), 'pending': instance.pending, 'runtime': instance.runtime_status()}, indent=2))
+                              'release': record.get('active'), 'pending': instance.pending, 'runtime': runtime,
+                              'backupMode': instance.backup_mode() if record else None,
+                              'backupProtection': instance.backup_protection(runtime or {}) if record else None}, indent=2))
             return 0
         with instance.lock():
             if args.command == 'reconcile':
                 from hosted_adoption import reconcile
                 print(json.dumps(reconcile(instance, args.confirm), indent=2))
-            elif args.command == 'install': instance.install(domain=args.domain, backup_directory=args.backup_directory, **selected)
+            elif args.command == 'install': instance.install(domain=args.domain, backup_directory=args.backup_directory, backup_mode=args.backup_mode, **selected)
             elif args.command == 'upgrade': instance.upgrade(**selected, accept_custom_changes=args.accept_custom_changes)
             elif args.command == 'resume': instance.resume()
             elif args.command == 'cancel': instance.cancel()

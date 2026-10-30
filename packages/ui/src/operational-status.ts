@@ -37,7 +37,9 @@ export function operationalHealth(input: unknown, now = Date.now()) {
             ? 'Backup is overdue'
             : values.lastBackup.storage === 'remote-mount' && values.lastBackup.verifiedAt
               ? 'Verified backup on registered remote storage'
-              : 'Archive available; off-host protection not verified';
+              : values.lastBackup.storage === 'local' && values.lastBackup.verifiedAt
+                ? 'Local backup verified; off-server copy not configured'
+                : 'Archive available; off-host protection not verified';
   return {
     worker,
     backup,

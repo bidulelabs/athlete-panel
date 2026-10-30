@@ -23,6 +23,9 @@ helpers = importlib.util.module_from_spec(spec); spec.loader.exec_module(helpers
 
 
 def scenario(image, candidate, ingress, reports):
+    # Exercise legacy registered remote storage and unregistered local adoption
+    # in the existing two ingress scenarios, without adding another image build.
+    backup_mode = 'remote' if ingress == 'caddy' else 'local'
     stage = Path(tempfile.mkdtemp(prefix='athlete-panel-adoption-test-')); stage.chmod(0o700)
     project = 'athlete-panel-adoption-' + secrets.token_hex(5)
     port = helpers.free_port(); context = subprocess.check_output(['docker', 'context', 'show'], text=True).strip()
@@ -31,7 +34,8 @@ def scenario(image, candidate, ingress, reports):
     roles = {'web': 'dashboard', 'worker': 'jobs', 'db': 'postgres', 'backup': 'archives', 'admin': 'admin', 'recovery': 'recovery', 'caddy': 'gateway'}
     config_path = stage / 'manual.json'; env_path = stage / 'app.env'; backup = stage / 'backup'; backup.mkdir(mode=0o700)
     key = stage / 'backup-key'; key.write_text(base64.b64encode(secrets.token_bytes(32)).decode()); key.chmod(0o600)
-    marker = str(uuid.uuid4()); (backup / '.athlete-panel-storage-id').write_text(marker)
+    marker = str(uuid.uuid4())
+    if backup_mode == 'remote': (backup / '.athlete-panel-storage-id').write_text(marker)
     policy = stage / 'backup-storage.json'; write_json(policy, {'version': 1, 'id': marker, 'mountFingerprint': '0' * 64, 'testOnly': True})
     values = {'POSTGRES_USER': 'fixture_admin', 'POSTGRES_DB': 'adoption_test', 'POSTGRES_PASSWORD': secrets.token_hex(16),
               'APP_DATABASE_ROLE': 'fixture_app', 'APP_DATABASE_PASSWORD': secrets.token_hex(16), 'ENCRYPTION_KEY': base64.b64encode(secrets.token_bytes(32)).decode(),
@@ -59,8 +63,9 @@ def scenario(image, candidate, ingress, reports):
             if service.get('depends_on'): service['depends_on'] = {roles[name]: value for name, value in service['depends_on'].items()}
             service['networks'] = {'private': None}
         for role in ['backup', 'recovery']: config['services'][role]['user'] = f'{os.getuid()}:{os.getgid()}'
-        config['services']['backup']['environment']['BACKUP_STORAGE_POLICY'] = '/run/secrets/backup_storage'
-        config['services']['backup']['volumes'].append({'type': 'bind', 'source': str(policy), 'target': '/run/secrets/backup_storage', 'read_only': True})
+        if backup_mode == 'remote':
+            config['services']['backup']['environment']['BACKUP_STORAGE_POLICY'] = '/run/secrets/backup_storage'
+            config['services']['backup']['volumes'].append({'type': 'bind', 'source': str(policy), 'target': '/run/secrets/backup_storage', 'read_only': True})
         config['services']['caddy']['ports'] = [{'target': 443, 'published': str(port), 'host_ip': '127.0.0.1', 'protocol': 'tcp'}]
         for mount in config['services']['caddy']['volumes']:
             if mount['target'] == '/etc/caddy/Caddyfile': mount['source'] = str(caddyfile)
@@ -75,7 +80,7 @@ def scenario(image, candidate, ingress, reports):
         write_json(config_path, config)
         override = stage / 'override.json'; write_json(override, {'services': {roles['web']: {'labels': {'fixture': 'synthetic-adoption'}}}})
         prefix += ['-f', str(override)]
-        fixture.record = {'project': project, 'database': 'adoption_test', 'domain': 'localhost', 'backupDirectory': str(backup)}
+        fixture.record = {'project': project, 'database': 'adoption_test', 'domain': 'localhost', 'backupDirectory': str(backup), 'backupMode': backup_mode}
         def compose(release, args, **kwargs):
             args = [roles.get(word, word) for word in args]
             if proxy_prefix and 'gateway' in args: return fixture.run(proxy_prefix + args, **kwargs)
@@ -148,6 +153,9 @@ def scenario(image, candidate, ingress, reports):
         serving_ids = instance.compose(instance.pending['candidate'], ['ps', '-q', 'web', 'worker']).stdout
         instance = Hosted(state, test=test); instance.lock_root = stage
         with instance.lock(): instance.resume()
+        assert instance.backup_mode() == backup_mode
+        assert instance.backup_status(instance.record['active'])['lastBackup']['storage'] == ('local' if backup_mode == 'local' else 'isolated-test')
+        with instance.lock(): instance.restore_test()
         assert instance.compose(instance.record['active'], ['ps', '-q', 'web', 'worker']).stdout == serving_ids
         browser = helpers.Browser(instance); browser.request('/api/auth/login', {'password': password})
         assert persisted() == before_record
@@ -163,7 +171,7 @@ def scenario(image, candidate, ingress, reports):
         assert fixture.compose({}, ['exec', '-T', 'db', 'psql', '-U', 'fixture_admin', '-d', 'postgres', '-Atc', "select 1 from pg_database where datname='adoption_test'"]).stdout.strip() == '1'
         assert all(path.read_bytes() == content for path, content in files.items() if path != override)
         evidence.update(result='succeeded', preservedRecord=fingerprint(before_record), containerIdsUnchangedAtAdoption=True,
-                        missingBackupResumed=True, missingWebRecovered=True, postgresReference=config['services'][roles['db']]['image'],
+                        missingBackupResumed=True, missingWebRecovered=True, backupMode=backup_mode, restoreTest=True, postgresReference=config['services'][roles['db']]['image'],
                         cluster=instance.record['profile']['cluster'], restoredInitialRelease=True,
                         operations=[json.loads(path.read_text())['seconds'] for path in state.glob('completed-*.json')])
     finally:

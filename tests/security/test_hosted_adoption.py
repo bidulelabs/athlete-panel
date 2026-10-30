@@ -23,7 +23,7 @@ IDENTITY = {'format': 1, 'os': 'linux', 'architecture': 'amd64', 'variant': '', 
 
 
 class Fixture:
-    def __init__(self, root, ingress='external'):
+    def __init__(self, root, ingress='external', backup_mode='remote'):
         self.root = Path(root); self.commands = []
         self.database_version = '170006'; self.database_image = DB_IMAGE; self.cluster = '123456789'
         self.volume_created = 'original'
@@ -35,7 +35,7 @@ class Fixture:
         for name in ['compose.json', 'override.json', 'app.env', 'key', 'policy.json']:
             hosted.write_json(self.root / name, {})
         (self.root / 'key').write_text('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=')
-        self.storage = self.root / 'archives'; self.storage.mkdir()
+        self.storage = self.root / 'archives'; self.storage.mkdir(mode=0o700)
         (self.storage / '.athlete-panel-storage-id').write_text('synthetic-marker')
         hosted.write_json(self.root / 'policy.json', {'version': 1, 'id': 'synthetic-marker', 'testOnly': True})
         self.env = {'DATABASE_URL': 'postgresql://app:synthetic@postgres:5432/training_test', 'APP_ORIGIN': 'https://localhost:4567',
@@ -54,6 +54,11 @@ class Fixture:
             self.services[name]['volumes'] = [{'type': 'bind', 'source': str(self.storage), 'target': '/backups'},
                                               {'type': 'bind', 'source': root + '/key', 'target': '/run/secrets/key', 'read_only': True},
                                               {'type': 'bind', 'source': root + '/policy.json', 'target': '/run/secrets/policy', 'read_only': True}]
+        if backup_mode == 'local':
+            (self.storage / '.athlete-panel-storage-id').unlink()
+            for name in ['archives', 'recovery']:
+                self.services[name]['environment'].pop('BACKUP_STORAGE_POLICY', None)
+                self.services[name]['volumes'] = [volume for volume in self.services[name]['volumes'] if volume['source'] != root + '/policy.json']
         for service in self.services.values(): service['networks'] = {'custom': None}
         self.config = {'services': self.services, 'networks': {'custom': {'name': 'fixture-network'}}, 'volumes': {'data': {'name': 'retained-data'}}}
         self.containers = [{'Id': 'id-' + name, 'Image': DB_IMAGE if name == 'postgres' else IMAGE, 'State': {'Running': True},
@@ -108,9 +113,9 @@ class Adoption(unittest.TestCase):
         self.assertIn('outside the source', result.stderr); self.assertFalse(state.exists())
 
     def test_preview_and_confirmation_preserve_every_existing_file_and_container(self):
-        for ingress in ['caddy', 'external']:
-            with self.subTest(ingress=ingress), tempfile.TemporaryDirectory() as root:
-                fixture = Fixture(root, ingress); state = Path(root) / 'operator'
+        for ingress, mode in [('caddy', 'remote'), ('external', 'remote'), ('caddy', 'local'), ('external', 'local')]:
+            with self.subTest(ingress=ingress, mode=mode), tempfile.TemporaryDirectory() as root:
+                fixture = Fixture(root, ingress, mode); state = Path(root) / 'operator'
                 before = {str(path): path.read_bytes() for path in Path(root).rglob('*') if path.is_file()}
                 containers = copy.deepcopy(fixture.containers)
                 preview = adoption.adopt(state, fixture.inputs, execute=fixture.execute, test={'port': 4567})
@@ -120,12 +125,67 @@ class Adoption(unittest.TestCase):
                 self.assertTrue(result['adopted']); self.assertEqual(fixture.containers, containers)
                 self.assertTrue(all(Path(path).read_bytes() == data for path, data in before.items()))
                 record = hosted.read_json(state / 'installation.json')
+                self.assertEqual(record['backupMode'], mode)
+                instance = hosted.Hosted(state, test={'port':4567})
+                instance.verify_storage()
+                adoption.deployment(instance, record['active'])
+                deployed = hosted.read_json(state / 'deployment.json')
+                self.assertEqual(deployed['services']['archives']['environment']['BACKUP_STORAGE_MODE'], mode)
+                self.assertEqual('BACKUP_STORAGE_POLICY' in deployed['services']['archives']['environment'], mode == 'remote')
                 self.assertEqual(record['active']['metadata']['plugins'], fixture.metadata['plugins'])
                 self.assertEqual(record['profile']['cluster'], '123456789')
                 self.assertEqual((state / 'installation.json').stat().st_mode & 0o777, 0o600)
                 again = adoption.adopt(state, fixture.inputs, preview['confirmation'], fixture.execute, {'port': 4567}, root)
                 self.assertTrue(again['unchanged'])
                 self.assertFalse(any(any(word in command for word in ['up', 'run', 'stop', 'restart', 'migrate']) for command in fixture.commands))
+
+    def test_adoption_cannot_downgrade_remote_policy_or_infer_local_from_lost_policy(self):
+        with tempfile.TemporaryDirectory() as root:
+            fixture = Fixture(root)
+            fixture.inputs['backupMode'] = 'local'
+            with self.assertRaisesRegex(hosted.OperationError, 'conflicts'): adoption.inspect(fixture.inputs, fixture.execute, True)
+            fixture.inputs.pop('backupMode')
+            (Path(root) / 'policy.json').unlink()
+            with self.assertRaises(hosted.OperationError): adoption.inspect(fixture.inputs, fixture.execute, True)
+            for name in ['archives', 'recovery']:
+                fixture.services[name]['environment'].pop('BACKUP_STORAGE_POLICY', None)
+                fixture.services[name]['volumes'] = [v for v in fixture.services[name]['volumes'] if v['source'] != root + '/policy.json']
+            with self.assertRaisesRegex(hosted.OperationError, 'remote storage identity'): adoption.inspect(fixture.inputs, fixture.execute, True)
+
+    def test_local_adoption_rejects_public_directory_without_changing_permissions(self):
+        with tempfile.TemporaryDirectory() as root:
+            fixture = Fixture(root, backup_mode='local'); fixture.storage.chmod(0o755)
+            with self.assertRaisesRegex(hosted.OperationError, '0700'): adoption.inspect(fixture.inputs, fixture.execute, True)
+            self.assertEqual(fixture.storage.stat().st_mode & 0o777, 0o755)
+
+    def test_reconciliation_cannot_switch_backup_mode_or_destination(self):
+        for mode in ['local', 'remote']:
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as root:
+                fixture = Fixture(root, backup_mode=mode)
+                profile, _ = adoption.inspect(fixture.inputs, fixture.execute, True)
+                instance = hosted.Hosted(Path(root) / 'state', test={'port':4567})
+                instance.record = {'project': fixture.inputs['project'], 'profile': profile, 'backupMode': mode}
+                for field, replacement in [('backupMode', 'remote' if mode == 'local' else 'local'), ('backupDirectory', root + '/other'), ('storagePolicy', root + '/other-policy')]:
+                    changed = copy.deepcopy(profile); changed[field] = replacement
+                    with patch.object(adoption, 'inspect', return_value=(changed, {'confirmation': 'synthetic'})):
+                        with self.assertRaisesRegex(hosted.OperationError, 'cannot change backup'): adoption.reconcile(instance)
+                    self.assertEqual(instance.record['profile'], profile)
+
+    def test_reconcile_accepts_controller_mode_added_to_legacy_compose_but_rejects_downgrade(self):
+        with tempfile.TemporaryDirectory() as root:
+            fixture = Fixture(root)
+            fixture.services['archives']['environment']['BACKUP_STORAGE_MODE'] = ''
+            container = next(item for item in fixture.containers if item['Id'] == 'id-archives')
+            container['Config']['Env'].append('BACKUP_STORAGE_MODE=')
+            profile, _ = adoption.inspect(fixture.inputs, fixture.execute, True)
+            instance = hosted.Hosted(Path(root) / 'state', test={'port':4567})
+            instance.record = {'profile': profile, 'active': profile['release']}  # Legacy remote record.
+            adoption.inspect(fixture.inputs, fixture.execute, True, managed=instance)
+            container['Config']['Env'][-1] = 'BACKUP_STORAGE_MODE=remote'
+            adoption.inspect(fixture.inputs, fixture.execute, True, managed=instance)
+            container['Config']['Env'][-1] = 'BACKUP_STORAGE_MODE=local'
+            with self.assertRaisesRegex(hosted.OperationError, 'Running backup mode'):
+                adoption.inspect(fixture.inputs, fixture.execute, True, managed=instance)
 
     def test_stale_preview_rejected_before_state_and_duplicate_owner_rejected(self):
         with tempfile.TemporaryDirectory() as root:

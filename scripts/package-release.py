@@ -28,8 +28,12 @@ def package_release(image, output, commit=None, identity=None):
 Requires Linux, Docker Compose v2, Buildx and Python 3.10+. No host Node/pnpm or source build.
 Use only a bundle/image from a publisher you trust. Nothing here provisions DNS or remote storage.
 
-Fresh installation (configure DNS and mount dedicated off-host storage first):
-  python3 scripts/hosted.py install --domain training.example.com --backup-directory /mnt/offsite/athlete-panel
+Fresh installation (configure DNS first; private local backups are the default):
+  python3 scripts/hosted.py install --domain training.example.com --backup-directory "$HOME/athlete-panel-backups"
+For remote backups, mount dedicated NFS/SMB/SSHFS storage first, then use:
+  python3 scripts/hosted.py install --domain training.example.com --backup-mode remote --backup-directory /mnt/offsite/athlete-panel
+The chosen mode persists. Remote storage failure never falls back to local.
+Local backups are encrypted and verified, but do not protect against loss of the server.
 Upgrade an existing managed installation from the new bundle directory:
   python3 scripts/hosted.py upgrade
 Inspect/resume an interrupted operation:
@@ -43,7 +47,7 @@ Recover a selected snapshot into a NEW database (later changes are absent):
   python3 scripts/hosted.py recover --archive /mnt/offsite/athlete-panel/recorded.fgr --confirm-recovery
 
 Keep ~/.local/share/athlete-panel/hosted private and persistent across releases.
-Keep .env, .secrets/backup-key, .secrets/backup-storage.json and installation.json
+Keep .env, .secrets/backup-key, installation.json and (for remote mode) .secrets/backup-storage.json
 in a separately protected recovery kit. Archives cannot replace missing keys.
 Use the same --state PATH before each subcommand if using a custom state location.
 Do not run fresh installation over an older manual/local installation.

@@ -256,28 +256,45 @@ def inspect(inputs, execute=run, test=False, managed=None):
     backup = services['backup']; backup_env = backup['environment']
     destination = backup_env.get('BACKUP_DESTINATION', '/backups')
     storage = [volume for volume in backup.get('volumes', []) if volume['target'] == destination and volume['type'] == 'bind' and not volume.get('read_only')]
-    if len(storage) != 1: fail('Backups require an existing writable off-host bind mount, not an unverified named/local volume.')
+    if len(storage) != 1: fail('Backups require an existing writable bind directory; named backup volumes are unsupported.')
     storage = storage[0]['source']
     key = host_file(config, backup, backup_env.get('BACKUP_KEY_FILE'))
     if host_file(config, services['recovery'], services['recovery']['environment'].get('BACKUP_KEY_FILE')) != key:
         fail('Backup and recovery must reference the same separately recoverable backup key.')
-    policy_path = host_file(config, backup, backup_env.get('BACKUP_STORAGE_POLICY'))
-    policy = read_json(policy_path)
-    if not policy or policy.get('version') != 1 or bool(policy.get('testOnly')) != bool(test):
-        fail('Existing backup storage must have a registered remote-storage policy. Complete the documented storage setup separately; adoption never weakens or silently registers protection.')
-    facts[key] = file_fact(key, True); facts[policy_path] = file_fact(policy_path, True)
+    policy_path = host_file(config, backup, backup_env['BACKUP_STORAGE_POLICY']) if backup_env.get('BACKUP_STORAGE_POLICY') else None
+    mode = backup_env.get('BACKUP_STORAGE_MODE') or ('remote' if policy_path else 'local')
+    if mode not in {'local', 'remote'} or inputs.get('backupMode', mode) != mode:
+        fail('The requested backup mode conflicts with existing configuration. Adoption preserves the existing mode; it cannot convert storage.')
+    if policy_path and mode != 'remote': fail('A registered remote policy cannot be adopted as local storage. Restore the original remote configuration.')
+    recovery_env = services['recovery']['environment']
+    if recovery_env.get('BACKUP_STORAGE_MODE') and recovery_env['BACKUP_STORAGE_MODE'] != mode:
+        fail('Backup and recovery storage modes disagree. Reconcile their configuration before adoption.')
+    if recovery_env.get('BACKUP_STORAGE_POLICY') and host_file(config, services['recovery'], recovery_env['BACKUP_STORAGE_POLICY']) != policy_path:
+        fail('Backup and recovery storage policies disagree. Restore their matching configuration.')
+    facts[key] = file_fact(key, True)
+    if mode == 'remote':
+        policy = read_json(policy_path) if policy_path else None
+        if not policy or policy.get('version') != 1 or bool(policy.get('testOnly')) != bool(test):
+            fail('Remote mode requires the existing registered storage policy. Restore it; adoption never falls back to local storage.')
+        facts[policy_path] = file_fact(policy_path, True)
+        marker = Path(storage) / '.athlete-panel-storage-id'
+        if marker.is_symlink() or not marker.is_file() or marker.read_text().strip() != policy['id']:
+            fail('The backup storage identity marker is missing or changed.')
+        if not test:
+            filesystem, mount = mount_identity(storage)
+            if filesystem not in REMOTE_FILESYSTEMS or mount != policy['mountFingerprint']:
+                fail('The registered off-host backup mount is unavailable. Restore it before adoption.')
+    else:
+        from hosted import local_backup_directory
+        local_backup_directory(storage)
+        marker = Path(storage) / '.athlete-panel-storage-id'
+        if marker.exists() or marker.is_symlink():
+            fail('This directory has a remote storage identity but no policy. Restore its remote configuration before adoption; local fallback is forbidden.')
     try:
         encoded_key = Path(key).read_text().strip()
         decoded_key = base64.b64decode(encoded_key, validate=True)
         if len(decoded_key) != 32 or base64.b64encode(decoded_key).decode() != encoded_key: raise ValueError()
     except ValueError: fail('The backup key file is not a canonical base64 32-byte key. Recover the original protected key; adoption never generates a replacement.')
-    marker = Path(storage) / '.athlete-panel-storage-id'
-    if marker.is_symlink() or not marker.is_file() or marker.read_text().strip() != policy['id']:
-        fail('The backup storage identity marker is missing or changed.')
-    if not test:
-        filesystem, mount = mount_identity(storage)
-        if filesystem not in REMOTE_FILESYSTEMS or mount != policy['mountFingerprint']:
-            fail('The registered off-host backup mount is unavailable. Restore it before adoption.')
     # Inspect the selected project only. Never infer a project from a checkout name.
     ids = execute(docker(inputs['context'], 'ps', '-aq', '--filter', 'label=com.docker.compose.project=' + inputs['project'], '--filter', 'label=com.docker.compose.oneoff=False')).stdout.split()
     if not ids: fail('The selected Compose project has no existing containers; adoption never creates an instance.')
@@ -320,6 +337,13 @@ def inspect(inputs, execute=run, test=False, managed=None):
         if managed and role in APPLICATION:
             old = urlsplit(expected_env['DATABASE_URL'])
             expected_env['DATABASE_URL'] = urlunsplit(old._replace(path='/' + managed.record['active']['database']))
+            if role == 'backup':
+                # First adoption retains the running legacy environment. Later
+                # deployments explicitly pass the same recorded mode, including
+                # when the original Compose interpolation resolved to empty.
+                expected_env.pop('BACKUP_STORAGE_MODE', None)
+                if env.get('BACKUP_STORAGE_MODE') not in {None, '', managed.backup_mode()}:
+                    fail('Running backup mode differs from the controller profile. Restore the recorded mode before reconciliation.')
         if any(env.get(key) != value for key, value in expected_env.items() if key not in {'ATHLETE_PANEL_RELEASE_IDENTITY', 'ATHLETE_PANEL_BACKUP_RUN'}):
             fail('Resolved configuration disagrees with running service environment. Apply reviewed manual changes first, then preview reconciliation.')
     metadata = valid_metadata(json.loads(execute(docker(inputs['context'], 'exec', web['Id'], 'cat', '/app/.athlete-panel-release.json')).stdout))
@@ -346,12 +370,13 @@ def inspect(inputs, execute=run, test=False, managed=None):
                           'networks': sorted(item['NetworkSettings']['Networks'])} for name, item in actual.items()}
     profile = {'version': 1, 'inputs': inputs, 'daemon': daemon, 'roles': mappings, 'config': config, 'files': facts,
                'runtime': runtime_fact, 'volumes': volumes, 'networks': networks, 'cluster': cluster,
-               'backupKey': key, 'storagePolicy': policy_path, 'backupDirectory': storage,
+               'backupKey': key, 'storagePolicy': policy_path, 'backupDirectory': storage, 'backupMode': mode,
                'origin': environment['APP_ORIGIN'].rstrip('/'), 'database': runtime.path[1:], 'initialDatabase': db_env.get('POSTGRES_DB', admin.path[1:]),
                'release': {'image': image, 'identity': identity, 'registryRef': reference, 'metadata': metadata,
                            'origin': {'kind': 'registry' if reference else 'local', 'requested': reference or image}, 'database': runtime.path[1:]}}
     token = fingerprint(profile)
     preview = {'version': 1, 'project': inputs['project'], 'context': inputs['context'], 'services': mappings,
+               'backupMode': mode, 'backupProtection': 'Off-server copy not configured; archive verification occurs during backup' if mode == 'local' else 'Registered remote storage; archive verification occurs during backup',
                'ingress': inputs['ingress'], 'origin': profile['origin'], 'release': {'version': metadata['version'], 'commit': metadata.get('commit'), 'identity': identity},
                'database': profile['database'], 'managed': list(APPLICATION), 'preserved': ['database', 'storage', 'networks', 'ingress', 'configuration', 'keys'],
                'filesTracked': len(facts), 'confirmation': token,
@@ -407,7 +432,7 @@ def adopt(state, inputs, confirmation=None, execute=run, test=False, lock_root=N
             # Only this single atomic record commits adoption. No env/key/Compose
             # copies need to be committed in a second step.
             record = {'version': 2, 'project': inputs['project'], 'domain': urlsplit(profile['origin']).netloc,
-                      'database': profile['initialDatabase'], 'backupDirectory': profile['backupDirectory'], 'testOnly': bool(test),
+                      'database': profile['initialDatabase'], 'backupDirectory': profile['backupDirectory'], 'backupMode': profile['backupMode'], 'testOnly': bool(test),
                       'profile': profile, 'adoptionFingerprint': confirmation, 'ownershipDirectory': str(claim_directory),
                       'active': profile['release'], 'adoptedRelease': profile['release']}
             write_json(state / 'installation.json', record)
@@ -426,6 +451,7 @@ def deployment(instance, release):
         env = service['environment']; old = urlsplit(env['DATABASE_URL'])
         env['DATABASE_URL'] = urlunsplit(old._replace(path='/' + release['database']))
         env['ATHLETE_PANEL_RELEASE_IDENTITY'] = json.dumps(instance.release_identity(release))
+        if role in {'backup', 'recovery'}: env['BACKUP_STORAGE_MODE'] = instance.backup_mode()
         if role == 'backup': env['ATHLETE_PANEL_BACKUP_RUN'] = release.get('backupRun', '')
     for service in config['services'].values():
         for mount in service.get('volumes', []):
@@ -517,6 +543,8 @@ def reconcile(instance, confirmation=None):
     if instance.pending: fail('Finish or cancel the pending operation before reconciling configuration.')
     old = instance.record['profile']
     profile, preview = inspect(old['inputs'], test=bool(instance.test), managed=instance)
+    if profile['backupMode'] != instance.backup_mode() or profile['backupDirectory'] != old['backupDirectory'] or profile['storagePolicy'] != old.get('storagePolicy'):
+        fail('Reconciliation cannot change backup mode, destination or remote policy. Restore the recorded storage configuration; automatic downgrade is forbidden.')
     if profile['daemon'] != old['daemon'] or profile['cluster'] != old['cluster'] or profile['database'] != old['database']:
         fail('Reconciliation cannot replace the Docker host, database or cluster. Follow explicit recovery instead.')
     if profile['volumes'] != old['volumes'] or profile['networks'] != old['networks'] or profile['roles'] != old['roles']:

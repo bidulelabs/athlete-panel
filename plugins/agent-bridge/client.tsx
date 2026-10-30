@@ -26,6 +26,9 @@ import {
 } from 'lucide-react';
 import {
   dateLabel,
+  distance,
+  duration,
+  sportLabel,
   EmptyState,
   ErrorMessage,
   Modal,
@@ -42,6 +45,7 @@ import {
   type Entity,
 } from '@athlete-panel/contracts';
 import { proposalRows } from './proposal-diff';
+import { calendarDate, groupChangesByWeek, planTitlesById } from './proposal-weeks';
 import './review.css';
 import { ConnectAgentDialog, ConnectionApproval } from './connections-client';
 
@@ -266,7 +270,8 @@ function recordLabel(record: Entity | null): string | undefined {
   return undefined;
 }
 function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onClose: () => void }) {
-  const { request } = useWorkspace();
+  const { request, data } = useWorkspace();
+  const planTitles = planTitlesById(data.plans, proposal.changes);
   const action = useAction();
   const [acknowledged, setAcknowledged] = useState(false);
   const [idempotencyKey] = useState(requestId);
@@ -317,8 +322,9 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
     >
       <div className="dialog-body">
         <p>
-          Each affected record is shown below, including schedule and ordering changes. Deletions
-          remove the listed record. Apply saves this entire reviewed proposal together.
+          Each affected record is listed by week. Open a record to see every field before and after,
+          including schedule, intervals and ordering. Deletions remove the listed record. Apply
+          saves this entire reviewed proposal together.
         </p>
         <div className="form-inline" style={{ justifyContent: 'space-between', marginBottom: 17 }}>
           <Badge className="badge accent">{proposal.status}</Badge>
@@ -359,15 +365,19 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
               These facts changed after the agent prepared this proposal. Review them before
               deciding whether the proposed training still suits you.
             </p>
-            <ReviewChanges
-              changes={review.contextChanges}
-              caption="Context at submission and now"
-            />
+            {review.contextChanges.map((change, index) => (
+              <ReviewChange
+                change={change}
+                planTitles={planTitles}
+                caption="Context at submission and now"
+                key={index}
+              />
+            ))}
           </section>
         )}
         <section aria-label="Proposed edits">
           <h3>Proposed edits</h3>
-          <ReviewChanges changes={proposal.changes} caption="Proposed field changes" />
+          <ProposedEditsByWeek changes={proposal.changes} planTitles={planTitles} />
         </section>
         {canApply && (
           <label className="checkbox-row" style={{ marginTop: 22 }}>
@@ -433,68 +443,122 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
   );
 }
 
-function ReviewChanges({
+const weekdayDate = { weekday: 'short', day: 'numeric', month: 'short' } as const;
+
+function ProposedEditsByWeek({
   changes,
-  caption,
+  planTitles,
 }: {
   changes: ProposalSummary['changes'];
+  planTitles: Record<string, string>;
+}) {
+  const { weekStartsOn } = useWorkspace();
+  return groupChangesByWeek(changes, weekStartsOn).map((week) => {
+    const title = week.weekStart
+      ? `Week of ${dateLabel(week.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })}`
+      : 'Plans';
+    return (
+      <section className="proposal-week" aria-label={title} key={week.weekStart ?? 'undated'}>
+        <div className="proposal-week-heading">
+          <h4>{title}</h4>
+          <span>
+            {week.changes.length} change{week.changes.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        {week.changes.map((change) => (
+          <ReviewChange
+            change={change}
+            planTitles={planTitles}
+            caption="Proposed field changes"
+            key={`${change.entity}:${change.id}`}
+          />
+        ))}
+      </section>
+    );
+  });
+}
+
+function ReviewChange({
+  change,
+  planTitles,
+  caption,
+}: {
+  change: ProposalSummary['changes'][number];
+  planTitles: Record<string, string>;
   caption: string;
 }) {
   const { data } = useWorkspace();
+  const units = data.profile?.units ?? 'metric';
+  const record = change.after ?? change.before;
+  const date = calendarDate(change);
+  const dateChanged =
+    change.before && change.after && change.beforeEffectiveDate !== change.afterEffectiveDate;
+  const summaryFacts = [
+    date && dateLabel(date, weekdayDate),
+    dateChanged &&
+      `moved from ${change.beforeEffectiveDate ? dateLabel(change.beforeEffectiveDate) : 'unscheduled'}`,
+    record &&
+      'startDate' in record &&
+      record.startDate &&
+      `starts ${dateLabel(record.startDate, weekdayDate)}`,
+    record && 'kind' in record && record.kind === 'rest' && 'Rest day',
+    record && 'sport' in record && record.sport && sportLabel(record.sport),
+    record &&
+      'durationSeconds' in record &&
+      record.durationSeconds != null &&
+      duration(record.durationSeconds),
+    record &&
+      'distanceMeters' in record &&
+      record.distanceMeters != null &&
+      distance(record.distanceMeters, units),
+  ].filter(Boolean);
   return (
-    <>
-      {changes.map((change, index) => (
-        <div className="proposal-diff" key={index}>
-          <div className="proposal-diff-head">
-            <Badge className="badge">
-              {!change.before ? 'Create' : !change.after ? 'Delete' : 'Update'}
-            </Badge>
-            <span>{recordLabel(change.after) ?? recordLabel(change.before) ?? change.entity}</span>
+    <details className="proposal-diff">
+      <summary className="proposal-diff-summary">
+        <Badge className="badge">
+          {!change.before ? 'Create' : !change.after ? 'Delete' : 'Update'}
+        </Badge>{' '}
+        <span className="proposal-diff-title">{recordLabel(record) ?? change.entity}</span>{' '}
+        <span className="proposal-diff-facts">{summaryFacts.join(' · ')}</span>
+      </summary>
+      <Table className="review-fields">
+        <caption className="sr-only">{caption}</caption>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Field</TableHead>
+            <TableHead>Before</TableHead>
+            <TableHead>After</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {proposalRows(change, units, planTitles).map((row) => (
+            <TableRow key={row.field}>
+              <TableHead scope="row">{row.field}</TableHead>
+              <TableCell>
+                <span className="review-mobile-label">Before: </span>
+                {row.before}
+              </TableCell>
+              <TableCell>
+                <span className="review-mobile-label">After: </span>
+                {row.after}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <details className="review-technical">
+        <summary>Technical details (complete record)</summary>
+        <div className="diff-columns">
+          <div>
+            <small>BEFORE</small>
+            <pre>{JSON.stringify(change.before, null, 2)}</pre>
           </div>
-          <Table className="review-fields">
-            <caption className="sr-only">{caption}</caption>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Field</TableHead>
-                <TableHead>Before</TableHead>
-                <TableHead>After</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {proposalRows(
-                change,
-                data.profile?.units,
-                Object.fromEntries(data.plans.map((plan) => [plan.id, plan.title])),
-              ).map((row) => (
-                <TableRow key={row.field}>
-                  <TableHead scope="row">{row.field}</TableHead>
-                  <TableCell>
-                    <span className="review-mobile-label">Before: </span>
-                    {row.before}
-                  </TableCell>
-                  <TableCell>
-                    <span className="review-mobile-label">After: </span>
-                    {row.after}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <details className="review-technical">
-            <summary>Technical details (complete record)</summary>
-            <div className="diff-columns">
-              <div>
-                <small>BEFORE</small>
-                <pre>{JSON.stringify(change.before, null, 2)}</pre>
-              </div>
-              <div>
-                <small>AFTER</small>
-                <pre>{JSON.stringify(change.after, null, 2)}</pre>
-              </div>
-            </div>
-          </details>
+          <div>
+            <small>AFTER</small>
+            <pre>{JSON.stringify(change.after, null, 2)}</pre>
+          </div>
         </div>
-      ))}
-    </>
+      </details>
+    </details>
   );
 }

@@ -96,6 +96,10 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
       .getByRole('button', { name: 'Review', exact: true })
       .click();
     const dialog = page.getByRole('dialog');
+    await dialog
+      .getByRole('region', { name: 'Proposed edits' })
+      .getByText('Synthetic easy run', { exact: true })
+      .click();
     await expect(
       dialog
         .getByRole('region', { name: 'Proposed edits' })
@@ -167,6 +171,221 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
         idempotencyKey: randomUUID(),
         commands: [{ action: 'workout.delete', id, expectedRevision: saved.revision }],
       });
+  }
+});
+
+test('owner reviews a multi-week proposal one line per record, grouped by week', async ({
+  page,
+  request,
+}, info) => {
+  await page.goto('/login');
+  await page.getByLabel('Password', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  await page.route('**/api/workspace?*', async (route) => {
+    const response = await route.fetch(),
+      body = await response.json();
+    body.state.profile.weekStartsOnPreference = 'monday';
+    await route.fulfill({ response, json: body });
+  });
+  const origin = new URL(page.url()).origin,
+    tag = randomUUID().slice(0, 6),
+    summary = `Weekly review ${info.project.name} ${tag}`,
+    planTitle = `Synthetic base block ${tag}`,
+    [planId, intervalsId, longRunId, restId, noteId, movedId, removedId] = Array.from(
+      { length: 7 },
+      (): string => randomUUID(),
+    );
+  const owner = (operation: string, data: unknown) =>
+    page.request.post('/api/plugins/' + operation, { headers: { Origin: origin }, data });
+  const independentRun = (id: string, title: string, date: string) => ({
+    action: 'workout.create',
+    values: {
+      id,
+      title,
+      sport: 'running',
+      schedule: { kind: 'independent', date },
+      durationSeconds: 2400,
+    },
+  });
+  let grantId: string | undefined, proposalId: string | undefined;
+  try {
+    expect(
+      (
+        await owner('training/mutate', {
+          idempotencyKey: randomUUID(),
+          commands: [
+            independentRun(movedId, 'Synthetic moved run', '2027-03-02'),
+            independentRun(removedId, 'Synthetic removed run', '2027-03-04'),
+          ],
+        })
+      ).ok(),
+    ).toBe(true);
+    const { token, grant } = await (
+      await owner('agent-bridge/grant', {
+        label: 'Synthetic weekly reviewer',
+        from: '2027-03-01',
+        to: '2027-03-21',
+        includeNotes: true,
+      })
+    ).json();
+    grantId = grant.id;
+    const headers = { Authorization: `Bearer ${token}` };
+    const context = await (await request.get('/api/agent/context', { headers })).json();
+    const revision = (id: string) =>
+      context.context.workouts.find((value: { id: string }) => value.id === id).revision;
+    const interval = (kind: string, durationSeconds: number) => ({
+      kind,
+      durationSeconds,
+      distanceMeters: null,
+      target: null,
+      notes: '',
+    });
+    const proposed = await request.post('/api/agent/propose', {
+      headers,
+      data: {
+        contextDigest: context.contextDigest,
+        idempotencyKey: randomUUID(),
+        summary,
+        commands: [
+          {
+            action: 'plan.create',
+            values: { id: planId, title: planTitle, startDate: '2027-03-02' },
+          },
+          {
+            action: 'workout.create',
+            values: {
+              id: intervalsId,
+              title: 'Synthetic intervals',
+              sport: 'running',
+              schedule: { kind: 'plan', planId, day: 1 },
+              durationSeconds: 3600,
+              distanceMeters: 10000,
+              steps: [
+                interval('warmup', 900),
+                {
+                  kind: 'repeat',
+                  times: 5,
+                  steps: [interval('work', 180), interval('recovery', 120)],
+                },
+                interval('cooldown', 600),
+              ],
+            },
+          },
+          {
+            action: 'workout.create',
+            values: {
+              id: longRunId,
+              title: 'Synthetic long run',
+              sport: 'running',
+              schedule: { kind: 'plan', planId, day: 12 },
+              durationSeconds: 5400,
+            },
+          },
+          {
+            action: 'workout.create',
+            values: {
+              id: restId,
+              title: 'Synthetic rest',
+              kind: 'rest',
+              sport: null,
+              schedule: { kind: 'plan', planId, day: 4 },
+            },
+          },
+          {
+            action: 'note.create',
+            values: {
+              id: noteId,
+              title: 'Synthetic travel note',
+              body: 'Away for work.',
+              schedule: { kind: 'independent', date: '2027-03-11' },
+            },
+          },
+          {
+            action: 'workout.update',
+            id: movedId,
+            expectedRevision: revision(movedId),
+            values: { schedule: { kind: 'independent', date: '2027-03-10' } },
+          },
+          { action: 'workout.delete', id: removedId, expectedRevision: revision(removedId) },
+        ],
+      },
+    });
+    expect(proposed.ok()).toBe(true);
+    proposalId = (await proposed.json()).id;
+    if (info.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 740 });
+    await page.goto('/agent');
+    await page
+      .locator('.proposal-row')
+      .filter({ hasText: summary })
+      .getByRole('button', { name: 'Review', exact: true })
+      .click();
+    const edits = page.getByRole('dialog').getByRole('region', { name: 'Proposed edits' });
+    const week = (name: string) => edits.getByRole('region', { name, exact: true });
+    const line = (title: string) =>
+      edits.locator('details.proposal-diff').filter({
+        has: page.locator('summary.proposal-diff-summary').getByText(title, { exact: true }),
+      });
+    await expect(edits.getByRole('region')).toHaveCount(3);
+    await expect(edits.locator('details.proposal-diff')).toHaveCount(7);
+    await expect(week('Plans').locator('summary.proposal-diff-summary')).toHaveText([
+      `Create ${planTitle} starts Tue 2 Mar`,
+    ]);
+    await expect(week('Week of 1 Mar 2027').locator('summary.proposal-diff-summary')).toHaveText([
+      'Create Synthetic intervals Tue 2 Mar · Running · 1h · 10.0 km',
+      'Delete Synthetic removed run Thu 4 Mar · Running · 40m',
+      'Create Synthetic rest Fri 5 Mar · Rest day',
+    ]);
+    await expect(week('Week of 8 Mar 2027').locator('summary.proposal-diff-summary')).toHaveText([
+      'Update Synthetic moved run Wed 10 Mar · moved from 2 Mar · Running · 40m',
+      'Create Synthetic travel note Thu 11 Mar',
+      'Create Synthetic long run Sat 13 Mar · Running · 1h 30m',
+    ]);
+    for (const details of await edits.locator('details.proposal-diff').all())
+      await expect(details).not.toHaveAttribute('open');
+    const intervals = line('Synthetic intervals');
+    await expect(intervals.getByRole('table')).toBeHidden();
+    await intervals.locator('summary.proposal-diff-summary').click();
+    await expect(intervals.getByRole('row').filter({ hasText: 'Schedule · Plan' })).toContainText(
+      planTitle,
+    );
+    await expect(intervals.getByRole('table')).not.toContainText(planId!);
+    await expect(
+      intervals.getByRole('row').filter({ hasText: 'Intervals · Step 2 · Repetitions' }),
+    ).toContainText('5');
+    await expect(intervals.locator('.review-technical pre').first()).toBeHidden();
+    for (const theme of ['dark', 'light']) {
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+      }, theme);
+      await page.screenshot({
+        path: `.runtime/browser/proposal-weeks-${info.project.name}-${theme}.png`,
+        fullPage: true,
+        animations: 'disabled',
+      });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      expect(
+        await page
+          .getByRole('dialog')
+          .evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth),
+      ).toBe(true);
+    }
+  } finally {
+    if (proposalId) await owner('agent-bridge/reject', { id: proposalId });
+    if (grantId) await owner('agent-bridge/revoke', { id: grantId });
+    const state = await (
+      await page.request.get('/api/workspace?from=2027-03-01&to=2027-03-21')
+    ).json();
+    const commands = state.state.workouts
+      .filter((value: { id: string }) => [movedId, removedId].includes(value.id))
+      .map((value: { id: string; revision: number }) => ({
+        action: 'workout.delete',
+        id: value.id,
+        expectedRevision: value.revision,
+      }));
+    if (commands.length) await owner('training/mutate', { idempotencyKey: randomUUID(), commands });
   }
 });
 

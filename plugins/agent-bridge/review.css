@@ -68,3 +68,43 @@
     font-weight: 500;
   }
 }
+.proposal-week + .proposal-week {
+  margin-top: 20px;
+}
+.proposal-week-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.proposal-week-heading h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.proposal-week-heading span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.proposal-diff-summary {
+  padding: 0 12px;
+  cursor: pointer;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.proposal-diff[open] > .proposal-diff-summary {
+  margin-bottom: 8px;
+}
+.proposal-diff-title {
+  margin: 0 8px;
+  font-weight: 500;
+}
+.proposal-diff-facts {
+  color: var(--muted);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}

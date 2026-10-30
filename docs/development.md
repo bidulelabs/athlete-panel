@@ -225,7 +225,7 @@ Garmin routine tests use injectable transport and synthetic fixtures. An owner-a
 
 ## Private-server installation
 
-The recommended VPS path uses **Linux, Python 3.10+ and Docker Engine with Compose v2**. Node, pnpm and PostgreSQL client tools run inside the image. The primary path uses a reviewed, digest-pinned deployment bundle and prebuilt Linux image, a persistent server disk, a DNS hostname pointing to that server, and ports 80/443 available to Caddy. Arrange a mounted off-host backup directory dedicated to this installation first; supported filesystem checks cover NFS, SMB/CIFS and SSHFS. Provisioning the server, DNS and remote storage remains outside the application.
+The recommended VPS path uses **Linux, Python 3.10+ and Docker Engine with Compose v2 and Buildx**. Node, pnpm and PostgreSQL client tools run inside the image. The primary path uses a reviewed, digest-pinned deployment bundle and prebuilt Linux image, a persistent server disk, a DNS hostname pointing to that server, and ports 80/443 available to Caddy. Arrange a mounted off-host backup directory dedicated to this installation first; supported filesystem checks cover NFS, SMB/CIFS and SSHFS. Provisioning the server, DNS and remote storage remains outside the application.
 
 The release workflow targets `ghcr.io/bidulelabs/athlete-panel` and matching GitHub Release assets. Implementing the workflow does not mean a version has already been published: obtain an available image and matching bundle through that trusted release channel; see [release bundle preparation](#preparing-a-release-image-and-bundle). Do not substitute an arbitrary public image. From the extracted bundle directory:
 
@@ -274,9 +274,77 @@ docker compose --profile backup up -d backup
 
 The password file is temporary and mode 0600; remove it after bootstrap. The image contains web/worker builds, source for matched backups, runtime dependencies and PostgreSQL 17 client tools. Manual backups without a registered storage policy remain explicitly labelled as having unverified off-host protection.
 
+## Adopting an existing Compose installation
+
+Use this only for the [supported matrix](features/hosted-operations.md#initial-support-matrix). Read the release's controller guidance before changing controller versions; finish an existing operation with its original controller. Existing managed installations do not need adoption; their reserved `athlete-panel-hosted-*` project names require the original controller state and cannot be adopted into a second state directory. A local host-process setup is not a production Compose installation and cannot be adopted this way.
+
+Requirements: Linux, Python 3.10+, Docker Compose v2 and Buildx, access through an explicit local Unix Docker context, a working HTTPS installation, private file-backed credentials, backup/recovery containers explicitly using the controller account UID, and an already registered off-host backup mount/policy. Adoption does not create that policy, start a scheduler, change retention or silently accept local-only backups. Fix reported prerequisites using the existing manual operations procedure first; retain the old installation until the preview passes. Keep external ingress's client-IP overwrite contract and its own recovery configuration.
+
+Preview with explicit paths and ordered overrides (an empty mode-0600 environment file is valid when no interpolation is needed):
+
+```sh
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a adopt \
+  --context default --project training-a --project-directory /srv/training-a \
+  --compose-file /srv/training-a/compose.yml \
+  --compose-file /srv/training-a/production.yml \
+  --env-file /etc/training-a/app.env --ingress external \
+  --dry-run
+```
+
+Use `--ingress caddy` for an existing Caddy service. For nonstandard names add mappings such as `--service web=dashboard --service worker=jobs --service db=postgres --service backup=archives`; admin/recovery and optional caddy roles can also be mapped. No shell wrapper or environment script is executed. Compose parses the supplied configuration, and the controller inspects only the selected project. Unrelated services, replicas, custom entrypoints/source mounts, Compose include/extends graphs and external databases are blockers.
+
+Read the sanitized preview, then repeat the **same command**, replacing `--dry-run` with `--confirm FINGERPRINT`, using its exact confirmation value. Preview does not create controller state or change services. Confirmation revalidates the installation, saves its image archive and atomically records the private profile. It does not start/stop containers, migrate, bootstrap an owner, rotate credentials, edit Compose files or make backups. Allow disk space for temporary image export plus the retained original image. A stale preview fails and requires a new preview; interrupted saving can be retried with the same state path.
+
+Use the same state directory for later releases:
+
+```sh
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a upgrade --image ghcr.io/bidulelabs/athlete-panel@sha256:RELEASE_DIGEST
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a status
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a resume
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a restore-test
+```
+
+From a release bundle, omit `--image` to use that bundle's pinned image. Custom images/source use the same existing selectors and compatibility rules. An initially local/custom image requires the existing explicit acknowledgement before switching publishers or dropping plugins. Preparation still performs the mandatory full isolated restore rehearsal, followed by maintenance/draining and a second fresh recovery snapshot; adoption introduces no shortcut. Web/worker/backup update together. PostgreSQL and existing ingress containers stay in place. Adopted Caddy and external ingress retain operator-owned routing; update it explicitly when needed, rather than letting a candidate template replace it.
+
+Configuration drift blocks upgrades. Review the changed files and the saved private profile, resolve discrepancies with the running installation, then preview/confirm reconciliation:
+
+```sh
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a reconcile --dry-run
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a reconcile --confirm FINGERPRINT
+```
+
+Reconciliation requires the same daemon, cluster, storage/network identities, service mappings and keys. It never accepts a different running release or rotates credentials. It cannot be used during a pending deployment; restore the expected inputs, resume/cancel safely, then reconcile. Database/volume/key replacement requires explicit recovery, not a drift acknowledgement. Avoid manual application restarts/configuration changes while the controller owns a deployment. The original Compose files remain your configuration references; the controller's private rendered deployment model owns subsequent release/database selection.
+
+To roll back, select the recorded **final** pre-upgrade archive and recover it into a new database:
+
+```sh
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a recover \
+  --archive /mnt/offsite/training-a/RECORDED_FINAL_ARCHIVE.fgr --confirm-recovery
+```
+
+Recovery authenticates the archive and selects its matching image/source. The adoption record retains the original release, plugins and image archive so the first managed upgrade has a recovery target. The previous database remains available; recovery does not perform down migrations. Keep the original manual Compose/config files and all referenced secrets in a protected recovery kit, alongside the complete controller state (`installation.json`, `adopted-image.tar`, operation records) and the private project ownership directory recorded as `ownershipDirectory`. Application and backup encryption keys need separately recoverable copies; source/database archives exclude them. A replacement host needs explicitly restored infrastructure and ownership/configuration references; do not bypass endpoint/cluster checks by editing state. The advanced lost-server procedure remains necessary for an adopted topology on a different host.
+
+The host ownership claim lives under `/var/tmp/athlete-panel-controller-*`, keyed by Docker daemon and Compose project. Do not delete it to create a second controller. A missing or conflicting claim requires recovery of its original state/ownership record. Different Docker-capable accounts cannot independently adopt the same project; root/Docker administrators remain trusted. Do not run the old manual wrapper and the controller concurrently.
+
+Synthetic developer rehearsal (creates and removes its own projects only):
+
+```sh
+python3 scripts/rehearse-adoption.py --image athlete-panel:release-check --report .runtime/adoption-results.json
+```
+
+For a direct cross-store identity check, use the disposable Docker-in-Docker runner. It requires a reviewed local daemon image, a privileged test container, and spare image-export disk space; it never changes the host Docker backend or mounts its Docker socket/application storage. The guest has no network or published ports. It tests image transfer and legacy identity relationships, not a full second-machine application restore.
+
+```sh
+docker pull docker:29.9.2-dind
+python3 scripts/rehearse-image-stores.py --image athlete-panel:release-check \
+  --daemon-image docker:29.9.2-dind --report .runtime/image-store-results.json
+```
+
+The hosted CI rehearsal runs adoption against its downloaded tested image. See the [execution record](plans/compose-adoption.md) for actual backend coverage, timings and limitations.
+
 ## Backup policy and monitoring
 
-Backups contain a custom-format PostgreSQL dump, source/configuration including pinned plugins and personal plugin source, migration checksums and public deployment metadata. Managed image backups also authenticate the local image ID, portable registry digest when available, version and source fingerprint. A source snapshot that differs from the built image is refused. Existing archives without image identity remain readable. `.env` files, `.secrets`, dependency/build directories, Git history and existing backup archives are excluded. The source composition and applied migrations must match the installed database. Run backups from the current immutable release; staging a new composition into that checkout before backing it up will correctly fail this check.
+Backups contain a custom-format PostgreSQL dump, source/configuration including pinned plugins and personal plugin source, migration checksums and public deployment metadata. Managed image backups also authenticate the local image ID, portable registry digest when available, version and source fingerprint. New compatible images additionally record configuration/platform-manifest/index identity; old image metadata remains readable. Docker local IDs are engine-specific, so the controller verifies descriptor relationships rather than equating them with CI configuration digests. A source snapshot that differs from the built image is refused. Existing archives without image identity remain readable. `.env` files, `.secrets`, dependency/build directories, Git history and existing backup archives are excluded. The source composition and applied migrations must match the installed database. Run backups from the current immutable release; staging a new composition into that checkout before backing it up will correctly fail this check.
 
 The archive streams through gzip and AES-256-GCM with a fresh random nonce. An authenticated completion tag and per-file hashes protect integrity. The final destination is read back and authenticated before a partial archive is renamed to a successful `.fgr` file. Backup and application keys remain separate. The script coordinates with domain and migration locks while collecting the database/source snapshot; long backups can temporarily delay writes.
 
@@ -507,7 +575,7 @@ Use `resume` for checkpointed steps. If a restore was interrupted after creating
 
 ### Managed recovery after losing the VPS
 
-1. On the replacement Linux server, install Python 3 and Docker Compose and obtain a reviewed deployment bundle containing a compatible controller (or source release for advanced recovery). Mount the original remote backup directory at the recorded path and point the original domain at the replacement server. Public ports 80/443 must reach it.
+1. On the replacement Linux server, install Python 3, Docker Compose and Buildx, and obtain a reviewed deployment bundle containing a compatible controller (or source release for advanced recovery). Mount the original remote backup directory at the recorded path and point the original domain at the replacement server. Public ports 80/443 must reach it.
 2. Recover the protected operator kit into the chosen state location: `.env`, `.secrets/backup-key`, `.secrets/backup-storage.json` and `installation.json`. Use directories mode 0700, files mode 0600, owned by the account running the controller. Keep the recorded project/database identity. Do **not** run fresh installation or generate replacement keys.
 3. Run the same `recover --archive ... --confirm-recovery` command above. It starts a fresh PostgreSQL cluster when absent; old checkout paths are not required. Missing registry images are pulled by recorded digest. For custom/legacy images, supply compatible recovery tools and either load a saved image or use the archived-source rebuild fallback.
 4. Sign in, verify records and provider-credential availability, create a new record and verify a new backup. Confirm certificate renewal and retain independent recovery evidence. Only an actual second-server exercise establishes disaster recoverability.

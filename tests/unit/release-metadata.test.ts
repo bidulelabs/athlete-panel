@@ -113,4 +113,29 @@ describe('recovery source identity', () => {
     ).toThrow();
     expect(() => releasedImageSchema.parse({ ...identity, imageId: 'v1' })).toThrow();
   });
+  it('keeps legacy archives readable and validates new portable identity metadata', () => {
+    const legacy = {
+      imageId: 'sha256:' + 'a'.repeat(64),
+      registryRef: null,
+      sourceDigest: 'b'.repeat(64),
+      version: '0.1.0',
+      kind: 'local',
+    };
+    const identity = {
+      format: 1,
+      os: 'linux',
+      architecture: 'amd64',
+      variant: '',
+      configDigest: 'sha256:' + 'c'.repeat(64),
+      manifestDigest: 'sha256:' + 'd'.repeat(64),
+    };
+    expect(releasedImageSchema.parse(legacy)).toEqual(legacy);
+    expect(releasedImageSchema.parse({ ...legacy, identity })).toEqual({ ...legacy, identity });
+    expect(() =>
+      releasedImageSchema.parse({ ...legacy, identity: { ...identity, format: 99 } }),
+    ).toThrow();
+    expect(() =>
+      releasedImageSchema.parse({ ...legacy, identity: { ...identity, configDigest: 'tag' } }),
+    ).toThrow();
+  });
 });

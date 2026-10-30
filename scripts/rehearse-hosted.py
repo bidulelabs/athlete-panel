@@ -265,13 +265,17 @@ def main():
         shutil.copytree(instance.state/'.secrets',replacement.state/'.secrets')
         replacement.record={**instance.record,'project':'athlete-panel-hosted-'+secrets.token_hex(5)};replacement.save()
         if args.registry:
-            original_run=replacement.run;pulled=[]
+            original_run=replacement.run;pulled=[];available=set()
             def cold_run(arguments,**kwargs):
                 if arguments[:2]==['docker','build']:raise RuntimeError('Image recovery unexpectedly built source.')
-                if arguments[:3]==['docker','image','inspect'] and arguments[-1] in [base['image'],upgraded['image']]:
+                if arguments[:3]==['docker','image','inspect'] and arguments[-1] in [base['image'],upgraded['image']] and arguments[-1] not in available:
                     import subprocess
                     return subprocess.CompletedProcess(arguments,1,'','synthetic missing local image')
-                if arguments[:2]==['docker','pull']:pulled.append(arguments[-1])
+                if arguments[:2]==['docker','pull']:
+                    pulled.append(arguments[-1])
+                    result=original_run(arguments,**kwargs)
+                    available.add(json.loads(original_run(['docker','image','inspect',arguments[-1]]).stdout)[0]['Id'])
+                    return result
                 return original_run(arguments,**kwargs)
             replacement.run=cold_run
         replacement.recover(custom_archive if args.registry else archive,image=None if args.registry else args.image or base['image']);images.add(replacement.record['active']['image'])

@@ -210,6 +210,9 @@ class DeploymentRecovery(unittest.TestCase):
                 run.assert_not_called()
 
 
+IDENTITY = {'format': 1, 'os': 'linux', 'architecture': 'amd64', 'variant': '', 'configDigest': IMAGE}
+
+
 class ExactImage(unittest.TestCase):
     def test_publication_diagnostics_identify_operation_without_remote_secrets(self):
         for command in [['docker', 'push', 'private-registry/token'], ['gh', 'release', 'upload', 'v1.0.0', 'secret-path']]:
@@ -238,12 +241,29 @@ class ExactImage(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             directory, record = self.candidate(root)
             info = {'Id': IMAGE, 'Os': 'linux', 'Architecture': 'amd64'}
-            with patch.object(ci, 'run'), patch.object(ci, 'inspect', return_value=info), patch.object(ci, 'read_metadata', return_value=record['metadata']):
+            with patch.object(ci, 'run'), patch.object(ci, 'inspect', return_value=info), patch.object(ci, 'read_metadata', return_value=record['metadata']), patch.object(ci.image_identity, 'identify', return_value=IDENTITY) as identify:
                 self.assertEqual(ci.verify_image(directory, COMMIT), record)
-                for field, wrong in [('Id', 'other'), ('Architecture', 'arm64')]:
+                for field, wrong in [('Architecture', 'arm64')]:
                     with patch.object(ci, 'inspect', return_value={**info, field: wrong}):
                         with self.assertRaises(ValueError): ci.verify_image(directory, COMMIT)
+                identify.return_value = {**IDENTITY, 'configDigest': 'sha256:' + 'e' * 64}
+                with self.assertRaises(ValueError): ci.verify_image(directory, COMMIT)
                 with self.assertRaises(ValueError): ci.verify_image(directory, 'c' * 40)
+
+    def test_portable_publication_requires_matching_identity_and_both_adoption_modes(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory, record = self.candidate(root)
+            record.update(format=2, identity=IDENTITY)
+            for kind in ['release', 'hosted', 'hosted-registry']:
+                (directory / (kind + '.json')).write_text(json.dumps({'commit': COMMIT, 'imageId': 'different-local-engine-id',
+                    'identity': IDENTITY, 'result': 'succeeded', 'adoption': [{'ingress': 'caddy', 'result': 'succeeded'}]}))
+            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=False), patch.object(ci, 'existing_release') as release:
+                with self.assertRaisesRegex(ValueError, 'adoption/upgrade/recovery'): ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
+                release.assert_not_called()
+                path = directory / 'release.json'; value = json.loads(path.read_text())
+                value['identity'] = {**IDENTITY, 'configDigest': 'sha256:' + 'e' * 64}; path.write_text(json.dumps(value))
+                with self.assertRaisesRegex(ValueError, 'configDigest'): ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
+                release.assert_not_called()
 
     def test_registry_auth_failure_is_not_treated_as_missing_tag(self):
         with patch.object(ci.subprocess, 'run', return_value=subprocess.CompletedProcess([], 1, '', 'unauthorized: token not found')):
@@ -254,8 +274,8 @@ class ExactImage(unittest.TestCase):
             directory, record = self.candidate(root)
             for kind in ['release', 'hosted', 'hosted-registry']:
                 (directory / (kind + '.json')).write_text(json.dumps({'commit': COMMIT, 'imageId': IMAGE, 'result': 'succeeded'}))
-            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=False), patch.object(ci, 'run') as run, patch.object(ci, 'existing_release', return_value=None), patch.object(ci, 'remote_image', return_value={'Id': 'different'}):
-                with self.assertRaisesRegex(ValueError, 'different image'): ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
+            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=False), patch.object(ci, 'run') as run, patch.object(ci, 'existing_release', return_value=None), patch.object(ci, 'remote_image', return_value={'Id': 'different', 'RepoDigests': ['ghcr.io/bidulelabs/athlete-panel@sha256:' + 'd' * 64]}), patch.object(ci, 'inspect', return_value={'Id': IMAGE}), patch.object(ci.image_identity, 'identify', return_value={**IDENTITY, 'configDigest': 'sha256:' + 'e' * 64}):
+                with self.assertRaisesRegex(ValueError, 'cannot be linked'): ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
                 run.assert_not_called()
 
     def test_rejected_release_tag_stops_before_remote_publication(self):
@@ -308,7 +328,7 @@ class ExactImage(unittest.TestCase):
                 self.assertEqual('--latest=false' in command, prerelease)
                 self.assertNotIn('--latest', command)
                 self.assertNotIn('--latest=true', command)
-            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=prerelease), patch.object(ci, 'run', side_effect=run), patch.object(ci, 'read_metadata', return_value=record['metadata']), patch.object(ci, 'inspect', return_value=remote), patch.object(ci, 'existing_release', return_value=None) as release, patch.object(ci, 'remote_image', side_effect=[None, None, remote]) as registry:
+            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=prerelease), patch.object(ci, 'run', side_effect=run), patch.object(ci, 'read_metadata', return_value=record['metadata']), patch.object(ci, 'inspect', return_value=remote), patch.object(ci, 'existing_release', return_value=None) as release, patch.object(ci, 'remote_image', side_effect=[None, None, remote]) as registry, patch.object(ci.image_identity, 'identify', return_value=IDENTITY):
                 ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', tag, directory)
                 self.assertEqual(len(assets), 4)
                 self.assertFalse(any(command[:2] == ['docker', 'build'] for command in commands))

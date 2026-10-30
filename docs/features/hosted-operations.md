@@ -4,7 +4,7 @@
 
 Give a single owner a predictable installation, update and recovery workflow without host Node/pnpm, manual database URLs or knowledge of migration commands. Reuse Docker Compose, private PostgreSQL, Caddy and existing backup/domain protections.
 
-Outside scope: provisioning a VPS/DNS/remote storage, executing a real publication or private-server deployment during implementation, unattended upgrades, automatic monthly restore scheduling, automatic deletion of old data, PostgreSQL major-version upgrades, and automatic adoption of existing local/manual deployments.
+Outside scope: provisioning a VPS/DNS/remote storage, executing a real publication or private-server deployment during implementation, unattended upgrades, automatic monthly restore scheduling, automatic deletion of old data, PostgreSQL major-version upgrades, and adoption of arbitrary or unsupported Compose topologies.
 
 ## Intended behavior
 
@@ -31,10 +31,39 @@ The same day, the owner authorized GitHub release-tag protection and immutabilit
 - A retention failure does not invalidate an authenticated completed backup or cause deployment to retry it. `backupAttempt.retention` records the separate result, logs explain the warning, and the next daily run retries cleanup under the same coordination lock. The scheduled monitor receives a failure signal for retention errors; deliberate SIGINT/SIGTERM cancellation sends no failure signal. Local cancellation status and plaintext cleanup remain intact.
 - Current images use the shared console data validator; older protocol-1 images retain a compatibility payload. Both paths are tested against invalid persisted data. Publication diagnostics identify the failing operation, exit code and a bounded failure category without exposing command arguments or raw remote output.
 
+## Explicit adoption and portable identity
+
+On 2026-10-30 the owner approved explicit adoption of supported manual Compose installations and portable Docker image verification. See [ADR 013](../decisions/013-compose-adoption-and-image-identity.md) and its [execution record](../plans/compose-adoption.md).
+
+Adoption preview is read-only: inspect explicitly supplied project/context, ordered Compose overrides, environment files and service mappings; show a sanitized confirmation fingerprint. Confirmed adoption revalidates the same facts and writes private controller state only. It never restarts services, creates another instance, migrates, bootstraps an owner, rotates credentials, rewrites Compose inputs or changes backup protection. Retain the original image in a checksummed private archive, its source/plugin metadata, database/volume/network identities and configuration/key references. Write the versioned profile atomically; interrupted creation can be retried with the same state directory.
+
+A local daemon/project ownership claim outside arbitrary state directories prevents duplicate controllers; a nonblocking lock coordinates operations. Revalidate referenced files, the effective model and runtime before upgrading. Changed customizations require explicit reconciliation, with a fresh preview/confirmation; database, key, volume, network and mapping replacements are blockers. Reconciliation never selects a different running release. The first adopted upgrade follows the full existing rehearsal, preparation snapshot, drained final snapshot, migrations/grants, public/fresh-worker readiness and matching scheduled backup sequence. Recovery restores a new database and retains the prior database, including recovery to the initially adopted release.
+
+### Initial support matrix
+
+| Area | Supported | Blocker / operator action |
+| --- | --- | --- |
+| Host | Linux, Python 3.10+, Docker Compose v2 and Buildx; explicit local Unix Docker context | Run on the Docker host; remote/SSH/TCP contexts and Swarm are unsupported |
+| Database | One private PostgreSQL 17 service; one named volume or existing bind at `/var/lib/postgresql/data`; distinct admin/runtime users | External DBs, exposed database ports, major upgrades, extra data mounts and custom DB launch commands require a separate procedure |
+| Services | Exactly one web, worker and existing backup-loop scheduler; admin/recovery console roles; backup/recovery explicitly use the controller UID; explicit role-to-name mapping | Flatten wrappers, replicas and unrelated services into a reviewed supported layout before adoption |
+| Ingress | Existing Caddy service or externally owned HTTPS proxy; secure cookies and trusted client-IP header contract | Operator must establish HTTPS/header correctness; adoption does not change proxy configuration; preserve its separate recovery copy |
+| Storage | Existing named volumes, bind storage, custom Docker networks; registered off-host backup policy and marker | Missing mounts/keys/policy fail; local/named-volume backups are not silently promoted to off-host protection |
+| Secrets | Resolved environment values, explicit private env files, file-backed Compose secrets and `/run/secrets` binds | External secret managers and executable env/wrapper sources are unsupported; keep protected recovery copies |
+| Custom code | Protocol-1 image containing plugins, source and retained migrations | Source mounts and custom entrypoints are unsupported; build trusted code into the image first |
+| Compose inputs | Explicit ordered files/overrides and env-file paths; resolved model and referenced files tracked | `include`/`extends` indirection is outside this matrix; provide reviewed flattened inputs |
+| Reconciliation | Same daemon/cluster/storage/mappings/keys; reviewed configuration matching running services | Restore original identities or use explicit recovery; no automatic replacement or credential rotation |
+
+Registry index, platform manifest, configuration digest and local Docker ID are separate values. Exact-image verification proves their relationship and the selected platform; labels alone are insufficient. New artifact/bundle descriptors and authenticated backup metadata carry portable identity. Existing descriptors and archives remain readable; unknown legacy identifiers require proof, an original retained image or explicit authenticated-source rebuilding. Published releases are never rewritten to make a mismatch disappear.
+
 ## Acceptance scenarios
 
 | Situation or input | Expected observable result | Verification |
 | --- | --- | --- |
+| Supported manual project, nonstandard names and either ingress mode | Preview/adoption preserve files, records and container IDs; same upgrade/recovery sequence | [Adoption unit checks](../../tests/security/test_hosted_adoption.py); [isolated rehearsal](../../scripts/rehearse-adoption.py) |
+| Stale preview, competing state directory or interrupted commit | No silent ownership replacement; fresh confirmation or safe retry | Adoption unit checks |
+| Changed config/keys/storage/runtime | Stop before maintenance; explicit reconciliation or recovery explanation | Adoption unit checks; isolated rehearsal |
+| Classic versus containerd IDs and index selection | Accept proven relationships, reject wrong configuration/platform/descriptor; legacy metadata readable | [Identity checks](../../tests/security/test_image_identity.py); release/controller checks |
+| First adopted upgrade fails after SQL commit | Resume without losing records; recover initial adopted release into new DB, retain original DB | Isolated rehearsal |
 | Fresh install with a registered destination | Generated private configuration, HTTPS login, persisted record, verified backup | [Hosted rehearsal](../../scripts/rehearse-hosted.py) |
 | Repeated installation or interrupted owner creation | No secret rotation/account reset; resume existing state | Hosted rehearsal; [controller checks](../../tests/security/test_hosted.py) |
 | Missing remote mount/marker | Fail before archive creation; previous successful backup retained | [Storage checks](../../tests/unit/backup-storage.test.ts); hosted rehearsal |
@@ -70,7 +99,7 @@ The [controller](../../scripts/hosted.py) uses Python's standard library and Doc
 
 The shared [isolated runner](../../scripts/hosted_rehearsal.py) restores the selected authenticated archive, uses retained migration checks and existing instance/domain validators, and verifies health plus a newly recorded paused worker. No public API or training validation rules are added to host infrastructure. Operation format 2 stores phase intent, attempt results, timings and recovery/image references; status reads it without taking the operation lock. Completed and failed records remain in private operator state.
 
-Image installation resolves a version/digest once and records the local ID and portable registry digest before activation. Source installation still builds an immutable local image. Resume uses the pinned identity, not a moved tag. Build-time metadata owns the source fingerprint and composition; backups authenticate that identity and reject source drift. Local source-only backups are also supported; recovering them builds their authenticated source and requires valid image metadata before activation. Rendered Compose state is private. Existing manual deployments retain their advanced runbooks; managed setup does not attach to them or migrate their data automatically. The user must include reviewed personal-plugin source and retained migration files in a custom candidate image. Changing a custom/older build to a registry image, changing repository, or dropping enabled plugins needs explicit acknowledgement before maintenance. The acknowledgement never bypasses retained migrations.
+Image installation resolves a version/digest once and records the local ID and portable registry digest before activation. Source installation still builds an immutable local image. Resume uses the pinned identity, not a moved tag. Build-time metadata owns the source fingerprint and composition; backups authenticate that identity and reject source drift. Local source-only backups are also supported; recovering them builds their authenticated source and requires valid image metadata before activation. Rendered Compose state is private. Existing manual deployments retain their advanced runbooks and may explicitly adopt a supported layout. Fresh installation never attaches to them automatically. The user must include reviewed personal-plugin source and retained migration files in a custom candidate image. Changing a custom/older build to a registry image, changing repository, or dropping enabled plugins needs explicit acknowledgement before maintenance. The acknowledgement never bypasses retained migrations.
 
 ## Constraints and verification limits
 
@@ -80,7 +109,7 @@ Owner passwords use versioned scrypt parameters (N=65536, r=8, p=2; 16-byte salt
 
 Hosted images must declare application `athlete-panel` and hosted protocol 1 in `.athlete-panel-release.json`. Missing or unrelated metadata is rejected before activation. Backup storage uses `.athlete-panel-storage-id`; archives use the `ATHLETE-PANEL-BACKUP-1` envelope, and unsupported envelopes fail verification before any database restore. Daily retention only prunes recognized `athlete-panel-daily-` archives.
 
-The primary hosted environment is Linux with Docker Compose and Python 3.10+. Remote filesystem verification supports NFS/NFS4, CIFS/SMB3 and SSHFS. An explicit synthetic policy is available to the imported rehearsal only and is additionally restricted by a loopback origin and `_test` database in the container guard. There is no public CLI bypass for hosted remote-storage verification.
+The primary hosted environment is Linux with Docker Compose, Buildx and Python 3.10+. Remote filesystem verification supports NFS/NFS4, CIFS/SMB3 and SSHFS. An explicit synthetic policy is available to the imported rehearsal only and is additionally restricted by a loopback origin and `_test` database in the container guard. There is no public CLI bypass for hosted remote-storage verification.
 
 Public DNS/CA renewal, actual remote filesystem behavior, remote retention and restore after losing a physical server require operator acceptance. Source rebuilds still depend on available base images/package registries; retained local images and registry digests reduce rebuild dependence but do not replace a disaster rehearsal. No official registry/bundle is published by this implementation. Finish pending older-controller operations with their original controller before upgrading tooling. PostgreSQL major upgrades and automatic data cleanup are excluded.
 

@@ -134,7 +134,7 @@ class HostedSafety(unittest.TestCase):
             output=Path(root)/'release.tar.gz';reference='ghcr.io/example/app@sha256:'+'d'*64
             module.package_release(reference,output)
             with tarfile.open(output) as archive:
-                self.assertEqual(set(archive.getnames()),{'scripts/hosted.py','scripts/hosted_rehearsal.py','release.json','README.txt'})
+                self.assertEqual(set(archive.getnames()),{'scripts/hosted.py','scripts/hosted_rehearsal.py','scripts/image_identity.py','scripts/hosted_adoption.py','release.json','README.txt'})
                 self.assertEqual(json.load(archive.extractfile('release.json'))['image'],reference)
             with self.assertRaises(ValueError):module.package_release(reference,output)
             with self.assertRaises(ValueError):module.package_release('ghcr.io/example/app:v1',Path(root)/'unsafe.tar.gz')

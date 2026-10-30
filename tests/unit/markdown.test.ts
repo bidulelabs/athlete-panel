@@ -132,4 +132,39 @@ describe('read-only training Markdown', () => {
     expect(render(text)).toContain(text);
     expect(render('one\ntwo\n\nthree')).toContain('one<br/>\ntwo');
   });
+
+  it.each([
+    ['nested quotes', '>'.repeat(2000)],
+    ['quotes within the shorter field limit', '>'.repeat(3999)],
+    ['nested lists', '- '.repeat(1900) + 'nested text'],
+    ['GFM parser recursion', '- '.repeat(4000) + 'nested text'],
+    ['multiline nesting', Array.from({ length: 100 }, (_, i) => '>'.repeat(i + 1)).join('\n')],
+  ])('falls back to readable source for %s on the server and in excerpts', (_name, source) => {
+    expect(source.length).toBeLessThanOrEqual(20000);
+    const html = render(source);
+    expect(html).toContain('class="ui-markdown-fallback"');
+    expect(html).toContain(source.replaceAll('>', '&gt;'));
+    expect(html).not.toMatch(/<(?:blockquote|ul|ol)\b/);
+    expect(markdownToPlainText(source)).toBe(source.replace(/\s+/gu, ' ').trim());
+  });
+
+  it('keeps fallback HTML, images and links inert while preserving line breaks', () => {
+    const source =
+      '>'.repeat(2000) +
+      '\n<img src="https://example.com/tracker" onerror="alert(1)">\n' +
+      '![image](https://example.com/image.png)\n[unsafe](javascript:alert%281%29)';
+    const html = render(source);
+    expect(html).toContain('\n&lt;img');
+    expect(html).toContain('![image]');
+    expect(html).not.toMatch(/<(?:img|a|script|input)\b/);
+    expect(markdownToPlainText(source)).toBe(source.replace(/\s+/gu, ' ').trim());
+  });
+
+  it('still formats ordinary nested lists, quotes and inline content', () => {
+    const source = '> Quote\n> - First\n>   - **Nested** item';
+    const html = render(source);
+    expect(html).not.toContain('ui-markdown-fallback');
+    expect(html).toContain('<strong>Nested</strong>');
+    expect(markdownToPlainText(source)).toBe('Quote First Nested item');
+  });
 });

@@ -10,6 +10,9 @@
 .ui-markdown :where(p, ul, ol, blockquote, pre, .ui-markdown-scroll, hr) {
   margin: 0 0 12px;
 }
+.ui-markdown-fallback {
+  white-space: pre-wrap;
+}
 .ui-markdown :where(h4, h5, h6) {
   margin: 20px 0 8px;
   font-size: 14px;

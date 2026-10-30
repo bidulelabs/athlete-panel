@@ -25,6 +25,8 @@ The weekly summary's two independent disclosures and factual metrics are specifi
 
 The owner-approved 2026-10-30 Markdown refinement adds `MarkdownContent({ source, className? })` and `markdownToPlainText(source)` to the public `@athlete-panel/ui` exports. The shared UI package owns the browser-safe renderer, parser-derived excerpts, URL policy and scoped theme typography; Training, Athlete and Calendar own field selection and composition. The component uses pinned `react-markdown`, `remark-gfm` and `remark-breaks` dependencies, with `unified`/`remark-parse` for excerpts. No rich-text editor or preview interaction is introduced. See [field scope and safety behavior](training-workspace.md#markdown-descriptions-and-notes).
 
+The same package owns Markdown failure isolation: caught parsing/excerpt errors, an iterative 64-level tree preflight before recursive rendering, escaped plain-source fallbacks, and a field-local client error boundary reset by source changes. The preflight runs for server and client rendering; a React boundary alone cannot protect server rendering. Fallback typography preserves line breaks and wraps long source text. No plugin needs a separate recovery implementation or a new public API.
+
 ## Acceptance scenarios
 
 | Situation or input | Expected observable result | Verification approach or reference |

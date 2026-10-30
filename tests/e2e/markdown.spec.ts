@@ -331,3 +331,98 @@ test('context editors save and reopen exact source, including both injury fields
     await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
   }
 });
+
+for (const theme of ['dark', 'light']) {
+  test(`deeply nested notes remain readable, editable and deletable in ${theme} theme`, async ({
+    page,
+  }, info) => {
+    test.setTimeout(120000);
+    const errors: string[] = [];
+    const images: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('request', (request) => {
+      if (request.url().startsWith('https://example.com')) images.push(request.url());
+    });
+    await page.route('https://example.com/**', (route) => route.abort());
+    await page.clock.setFixedTime(new Date('2030-10-29T12:00:00Z'));
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    if (info.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 740 });
+    await login(page);
+    const date = '2030-10-29';
+    for (const [kind, nested] of [
+      ['quotes', '>'.repeat(4002)],
+      ['lists', '- '.repeat(1900) + 'nested text'],
+    ]) {
+      const title = `Deep ${kind} ${theme} ${info.project.name} ${Date.now()}`;
+      const source =
+        nested +
+        '\n<img src="https://example.com/tracker" onerror="alert(1)">\n' +
+        '![image](https://example.com/image.png)\n[unsafe](javascript:alert%281%29)';
+      await page.goto('/settings');
+      await page.getByRole('tab', { name: 'Notes', exact: true }).click();
+      await page.getByRole('button', { name: 'Add note', exact: true }).first().click();
+      const editor = page.getByRole('dialog');
+      await editor.getByLabel('Title', { exact: true }).fill(title);
+      await editor.getByRole('textbox', { name: 'Note', exact: true }).fill(source);
+      await editor.getByLabel('Scheduled date', { exact: true }).fill(date);
+      await editor.getByRole('button', { name: 'Add note', exact: true }).click();
+      await expect(editor).not.toBeVisible();
+      await page.reload();
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+      }, theme);
+      await page.getByRole('tab', { name: 'Notes', exact: true }).click();
+      const record = page.locator('.context-record').filter({ hasText: title });
+      await expect(record.locator('.ui-markdown-fallback')).toHaveText(source);
+      await expect(record.locator('.ui-markdown a, .ui-markdown img')).toHaveCount(0);
+      await noOverflow(page);
+      await record.getByRole('button', { name: 'Edit note', exact: true }).click();
+      await expect(editor.getByRole('textbox', { name: 'Note', exact: true })).toHaveValue(source);
+      await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+
+      await page.goto('/calendar');
+      await page.getByLabel('Go to date').fill(date);
+      await page.reload();
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+      }, theme);
+      const card = page.getByRole('button', { name: `Open note ${title}`, exact: true });
+      await expect(card).toContainText(nested.trim());
+      await expect(card.locator('a, input, img')).toHaveCount(0);
+      await noOverflow(page);
+      await card.click();
+      const detail = page.getByRole('dialog', { name: title, exact: true });
+      await expect(detail.locator('.ui-markdown-fallback')).toHaveText(source);
+      await noOverflow(page);
+      await page.screenshot({
+        path: `.runtime/markdown/deep-${kind}-${info.project.name}-${theme}.png`,
+      });
+      await detail.getByRole('button', { name: 'Edit', exact: true }).click();
+      await expect(editor.getByRole('textbox', { name: 'Note', exact: true })).toHaveValue(source);
+      await editor.getByRole('textbox', { name: 'Note', exact: true }).fill('**Recovered note**');
+      await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
+      await expect(editor).not.toBeVisible();
+      await card.click();
+      await expect(detail.locator('.ui-markdown strong')).toHaveText('Recovered note');
+      await expect(detail.locator('.ui-markdown-fallback')).toHaveCount(0);
+      // Restore the problematic source and delete it directly, without a manual data repair.
+      await detail.getByRole('button', { name: 'Edit', exact: true }).click();
+      await editor.getByRole('textbox', { name: 'Note', exact: true }).fill(source);
+      await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
+      await expect(editor).not.toBeVisible();
+      await card.click();
+      await expect(detail.locator('.ui-markdown-fallback')).toHaveText(source);
+      await detail.getByRole('button', { name: 'Delete', exact: true }).click();
+      await page
+        .getByRole('alertdialog')
+        .getByRole('button', { name: 'Confirm delete', exact: true })
+        .click();
+      await expect(detail).not.toBeVisible();
+      await expect(card).toHaveCount(0);
+      await page.reload();
+      await expect(card).toHaveCount(0);
+    }
+    expect(errors).toEqual([]);
+    expect(images).toEqual([]);
+  });
+}

@@ -1,10 +1,33 @@
 'use client';
 
-import { useId } from 'react';
+import { Component, useId, useMemo, type ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
-import { markdownUrl } from './markdown';
+import { canRenderMarkdown, markdownUrl } from './markdown';
+
+function MarkdownFallback({ source }: { source: string }) {
+  return <div className="ui-markdown-fallback">{source}</div>;
+}
+
+class MarkdownBoundary extends Component<
+  { source: string; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? (
+      <MarkdownFallback source={this.props.source} />
+    ) : (
+      this.props.children
+    );
+  }
+}
 
 function markdownComponents(prefix: string): Components {
   return {
@@ -65,16 +88,23 @@ export function MarkdownContent({
 }) {
   const id = useId();
   const prefix = `markdown-${id}-`;
+  const canRender = useMemo(() => canRenderMarkdown(source), [source]);
   return (
     <div className={`ui-markdown ${className}`}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}
-        remarkRehypeOptions={{ clobberPrefix: prefix }}
-        urlTransform={markdownUrl}
-        components={markdownComponents(prefix)}
-      >
-        {source}
-      </ReactMarkdown>
+      {canRender ? (
+        <MarkdownBoundary key={source} source={source}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkBreaks]}
+            remarkRehypeOptions={{ clobberPrefix: prefix }}
+            urlTransform={markdownUrl}
+            components={markdownComponents(prefix)}
+          >
+            {source}
+          </ReactMarkdown>
+        </MarkdownBoundary>
+      ) : (
+        <MarkdownFallback source={source} />
+      )}
     </div>
   );
 }

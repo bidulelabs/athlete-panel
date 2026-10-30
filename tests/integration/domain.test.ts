@@ -395,17 +395,64 @@ describe('transactional training and external-agent workflow', () => {
       await save([{ action: 'plan.delete', id: id(1), expectedRevision: 1 }]);
       return deleted;
     },
+    'a later workout took the position freed by the deletion': async () => {
+      const deleted = await deleteFirstOfTwoOnDayTwo();
+      await save([
+        {
+          action: 'workout.create',
+          values: workout({ id: id(5), schedule: inPlanDayTwo, order: 2 }) as never,
+        },
+      ]);
+      return deleted;
+    },
   };
+
+  async function deleteFirstOfTwoOnDayTwo() {
+    await save([
+      { action: 'plan.create', values: { id: id(1), title: 'Build', startDate: '2026-10-19' } },
+      { action: 'workout.create', values: workout({ schedule: inPlanDayTwo, order: 1 }) as never },
+      {
+        action: 'workout.create',
+        values: workout({ id: id(3), schedule: inPlanDayTwo, order: 2 }) as never,
+      },
+    ]);
+    return save([{ action: 'workout.delete', id: id(2), expectedRevision: 1 }]);
+  }
+
+  it('restores a deleted workout to its position when a later workout was added on another day', async () => {
+    const deleted = await deleteFirstOfTwoOnDayTwo();
+    await save([
+      {
+        action: 'workout.create',
+        values: workout({
+          id: id(5),
+          schedule: { kind: 'plan', planId: id(1), day: 3 },
+          order: 2,
+        }) as never,
+      },
+    ]);
+    await undoChange({ id: deleted.id, idempotencyKey: randomUUID() });
+    const orders = (await loadWorkspace()).workouts.map((w) => [w.id, w.order]);
+    expect(orders).toEqual(
+      expect.arrayContaining([
+        [id(2), 1],
+        [id(3), 2],
+        [id(5), 1],
+      ]),
+    );
+  });
 
   it.each(Object.entries(laterPlanChanges))(
     'refuses to undo a change when %s',
     async (_, change) => {
       const { id: changeId } = await change();
       const before = await loadWorkspace();
+      const auditBefore = await connection()`select * from host.changes order by id`;
       await expect(
         undoChange({ id: changeId, idempotencyKey: randomUUID() }),
       ).rejects.toMatchObject({ code: 'undo_conflict', status: 409 });
       expect(await loadWorkspace()).toEqual(before);
+      expect(await connection()`select * from host.changes order by id`).toEqual(auditBefore);
     },
   );
 

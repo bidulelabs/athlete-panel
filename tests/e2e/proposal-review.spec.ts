@@ -185,15 +185,16 @@ test('owner reviews a multi-week proposal one line per record, grouped by week',
   await page.route('**/api/workspace?*', async (route) => {
     const response = await route.fetch(),
       body = await response.json();
-    if (body.state.profile) body.state.profile.weekStartsOnPreference = 'monday';
+    body.state.profile.weekStartsOnPreference = 'monday';
     await route.fulfill({ response, json: body });
   });
   const origin = new URL(page.url()).origin,
     tag = randomUUID().slice(0, 6),
     summary = `Weekly review ${info.project.name} ${tag}`,
     planTitle = `Synthetic base block ${tag}`,
-    [planId, intervalsId, longRunId, movedId, removedId] = Array.from({ length: 5 }, (): string =>
-      randomUUID(),
+    [planId, intervalsId, longRunId, restId, noteId, movedId, removedId] = Array.from(
+      { length: 7 },
+      (): string => randomUUID(),
     );
   const owner = (operation: string, data: unknown) =>
     page.request.post('/api/plugins/' + operation, { headers: { Origin: origin }, data });
@@ -207,27 +208,28 @@ test('owner reviews a multi-week proposal one line per record, grouped by week',
       durationSeconds: 2400,
     },
   });
-  expect(
-    (
-      await owner('training/mutate', {
-        idempotencyKey: randomUUID(),
-        commands: [
-          independentRun(movedId, 'Synthetic moved run', '2027-03-02'),
-          independentRun(removedId, 'Synthetic removed run', '2027-03-04'),
-        ],
-      })
-    ).ok(),
-  ).toBe(true);
-  const { token, grant } = await (
-    await owner('agent-bridge/grant', {
-      label: 'Synthetic weekly reviewer',
-      from: '2027-03-01',
-      to: '2027-03-21',
-      includeNotes: true,
-    })
-  ).json();
-  let proposalId: string | undefined;
+  let grantId: string | undefined, proposalId: string | undefined;
   try {
+    expect(
+      (
+        await owner('training/mutate', {
+          idempotencyKey: randomUUID(),
+          commands: [
+            independentRun(movedId, 'Synthetic moved run', '2027-03-02'),
+            independentRun(removedId, 'Synthetic removed run', '2027-03-04'),
+          ],
+        })
+      ).ok(),
+    ).toBe(true);
+    const { token, grant } = await (
+      await owner('agent-bridge/grant', {
+        label: 'Synthetic weekly reviewer',
+        from: '2027-03-01',
+        to: '2027-03-21',
+        includeNotes: true,
+      })
+    ).json();
+    grantId = grant.id;
     const headers = { Authorization: `Bearer ${token}` };
     const context = await (await request.get('/api/agent/context', { headers })).json();
     const revision = (id: string) =>
@@ -281,6 +283,25 @@ test('owner reviews a multi-week proposal one line per record, grouped by week',
             },
           },
           {
+            action: 'workout.create',
+            values: {
+              id: restId,
+              title: 'Synthetic rest',
+              kind: 'rest',
+              sport: null,
+              schedule: { kind: 'plan', planId, day: 4 },
+            },
+          },
+          {
+            action: 'note.create',
+            values: {
+              id: noteId,
+              title: 'Synthetic travel note',
+              body: 'Away for work.',
+              schedule: { kind: 'independent', date: '2027-03-11' },
+            },
+          },
+          {
             action: 'workout.update',
             id: movedId,
             expectedRevision: revision(movedId),
@@ -303,26 +324,28 @@ test('owner reviews a multi-week proposal one line per record, grouped by week',
     const week = (name: string) => edits.getByRole('region', { name, exact: true });
     const line = (title: string) =>
       edits.locator('details.proposal-diff').filter({
-        has: page.locator('summary.proposal-diff-head').getByText(title, { exact: true }),
+        has: page.locator('summary.proposal-diff-summary').getByText(title, { exact: true }),
       });
     await expect(edits.getByRole('region')).toHaveCount(3);
-    await expect(edits.locator('details.proposal-diff')).toHaveCount(5);
-    await expect(
-      week('Plans and undated changes').locator('summary.proposal-diff-head'),
-    ).toHaveText([new RegExp(`Create${planTitle}starts Tue 2 Mar$`)]);
-    await expect(week('Week of 1 Mar 2027').locator('summary.proposal-diff-head')).toHaveText([
-      /CreateSynthetic intervalsTue 2 Mar · Running · 1h · 10\.0 km/,
-      /DeleteSynthetic removed runThu 4 Mar · Running · 40m/,
+    await expect(edits.locator('details.proposal-diff')).toHaveCount(7);
+    await expect(week('Plans').locator('summary.proposal-diff-summary')).toHaveText([
+      `Create ${planTitle} starts Tue 2 Mar`,
     ]);
-    await expect(week('Week of 8 Mar 2027').locator('summary.proposal-diff-head')).toHaveText([
-      /UpdateSynthetic moved runWed 10 Mar · moved from 2 Mar · Running · 40m/,
-      /CreateSynthetic long runSat 13 Mar · Running · 1h 30m/,
+    await expect(week('Week of 1 Mar 2027').locator('summary.proposal-diff-summary')).toHaveText([
+      'Create Synthetic intervals Tue 2 Mar · Running · 1h · 10.0 km',
+      'Delete Synthetic removed run Thu 4 Mar · Running · 40m',
+      'Create Synthetic rest Fri 5 Mar · Rest day',
+    ]);
+    await expect(week('Week of 8 Mar 2027').locator('summary.proposal-diff-summary')).toHaveText([
+      'Update Synthetic moved run Wed 10 Mar · moved from 2 Mar · Running · 40m',
+      'Create Synthetic travel note Thu 11 Mar',
+      'Create Synthetic long run Sat 13 Mar · Running · 1h 30m',
     ]);
     for (const details of await edits.locator('details.proposal-diff').all())
       await expect(details).not.toHaveAttribute('open');
     const intervals = line('Synthetic intervals');
     await expect(intervals.getByRole('table')).toBeHidden();
-    await intervals.locator('summary.proposal-diff-head').click();
+    await intervals.locator('summary.proposal-diff-summary').click();
     await expect(intervals.getByRole('row').filter({ hasText: 'Schedule · Plan' })).toContainText(
       planTitle,
     );
@@ -351,7 +374,7 @@ test('owner reviews a multi-week proposal one line per record, grouped by week',
     }
   } finally {
     if (proposalId) await owner('agent-bridge/reject', { id: proposalId });
-    await owner('agent-bridge/revoke', { id: grant.id });
+    if (grantId) await owner('agent-bridge/revoke', { id: grantId });
     const state = await (
       await page.request.get('/api/workspace?from=2027-03-01&to=2027-03-21')
     ).json();

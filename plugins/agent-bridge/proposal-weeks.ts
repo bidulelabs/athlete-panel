@@ -2,25 +2,26 @@ import type { EntityChange } from '@athlete-panel/contracts';
 import { startOfWeek, type WeekStartsOn } from '../../packages/ui/src/calendar-dates';
 
 export const calendarDate = (change: EntityChange) =>
-  (change.after ? change.afterEffectiveDate : change.beforeEffectiveDate) ?? null;
+  change.afterEffectiveDate ?? change.beforeEffectiveDate ?? null;
 
-export function proposalWeeks<Change extends EntityChange>(
+export function groupChangesByWeek<Change extends EntityChange>(
   changes: readonly Change[],
   weekStartsOn: WeekStartsOn,
 ) {
   const weeks = new Map<string | null, Change[]>();
-  const byDate = [...changes].sort((a, b) =>
+  const changesByDate = [...changes].sort((a, b) =>
     (calendarDate(a) ?? '').localeCompare(calendarDate(b) ?? ''),
   );
-  for (const change of byDate) {
+  for (const change of changesByDate) {
     const date = calendarDate(change);
     const weekStart = date && startOfWeek(date, weekStartsOn);
-    weeks.set(weekStart, [...(weeks.get(weekStart) ?? []), change]);
+    if (!weeks.has(weekStart)) weeks.set(weekStart, []);
+    weeks.get(weekStart)!.push(change);
   }
   return [...weeks].map(([weekStart, weekChanges]) => ({ weekStart, changes: weekChanges }));
 }
 
-export function planTitles(
+export function planTitlesById(
   plans: readonly { id: string; title: string }[],
   changes: readonly EntityChange[],
 ): Record<string, string> {

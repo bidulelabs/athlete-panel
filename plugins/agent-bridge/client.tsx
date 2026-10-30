@@ -45,7 +45,7 @@ import {
   type Entity,
 } from '@athlete-panel/contracts';
 import { proposalRows } from './proposal-diff';
-import { calendarDate, planTitles, proposalWeeks } from './proposal-weeks';
+import { calendarDate, groupChangesByWeek, planTitlesById } from './proposal-weeks';
 import './review.css';
 import { ConnectAgentDialog, ConnectionApproval } from './connections-client';
 
@@ -271,7 +271,7 @@ function recordLabel(record: Entity | null): string | undefined {
 }
 function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onClose: () => void }) {
   const { request, data } = useWorkspace();
-  const contextPlans = planTitles(data.plans, []);
+  const planTitles = planTitlesById(data.plans, proposal.changes);
   const action = useAction();
   const [acknowledged, setAcknowledged] = useState(false);
   const [idempotencyKey] = useState(requestId);
@@ -368,7 +368,7 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
             {review.contextChanges.map((change, index) => (
               <ReviewChange
                 change={change}
-                plans={contextPlans}
+                planTitles={planTitles}
                 caption="Context at submission and now"
                 key={index}
               />
@@ -377,7 +377,7 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
         )}
         <section aria-label="Proposed edits">
           <h3>Proposed edits</h3>
-          <ProposedEdits changes={proposal.changes} />
+          <ProposedEditsByWeek changes={proposal.changes} planTitles={planTitles} />
         </section>
         {canApply && (
           <label className="checkbox-row" style={{ marginTop: 22 }}>
@@ -443,13 +443,20 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
   );
 }
 
-function ProposedEdits({ changes }: { changes: ProposalSummary['changes'] }) {
-  const { data, weekStartsOn } = useWorkspace();
-  const plans = planTitles(data.plans, changes);
-  return proposalWeeks(changes, weekStartsOn).map((week) => {
+const weekdayDate = { weekday: 'short', day: 'numeric', month: 'short' } as const;
+
+function ProposedEditsByWeek({
+  changes,
+  planTitles,
+}: {
+  changes: ProposalSummary['changes'];
+  planTitles: Record<string, string>;
+}) {
+  const { weekStartsOn } = useWorkspace();
+  return groupChangesByWeek(changes, weekStartsOn).map((week) => {
     const title = week.weekStart
       ? `Week of ${dateLabel(week.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })}`
-      : 'Plans and undated changes';
+      : 'Plans';
     return (
       <section className="proposal-week" aria-label={title} key={week.weekStart ?? 'undated'}>
         <div className="proposal-week-heading">
@@ -461,7 +468,7 @@ function ProposedEdits({ changes }: { changes: ProposalSummary['changes'] }) {
         {week.changes.map((change) => (
           <ReviewChange
             change={change}
-            plans={plans}
+            planTitles={planTitles}
             caption="Proposed field changes"
             key={`${change.entity}:${change.id}`}
           />
@@ -473,29 +480,27 @@ function ProposedEdits({ changes }: { changes: ProposalSummary['changes'] }) {
 
 function ReviewChange({
   change,
-  plans,
+  planTitles,
   caption,
 }: {
   change: ProposalSummary['changes'][number];
-  plans: Record<string, string>;
+  planTitles: Record<string, string>;
   caption: string;
 }) {
   const { data } = useWorkspace();
   const units = data.profile?.units ?? 'metric';
   const record = change.after ?? change.before;
   const date = calendarDate(change);
-  const moved =
+  const dateChanged =
     change.before && change.after && change.beforeEffectiveDate !== change.afterEffectiveDate;
-  const facts = [
-    date
-      ? dateLabel(date, { weekday: 'short', day: 'numeric', month: 'short' })
-      : moved && 'Unscheduled',
-    moved &&
+  const summaryFacts = [
+    date && dateLabel(date, weekdayDate),
+    dateChanged &&
       `moved from ${change.beforeEffectiveDate ? dateLabel(change.beforeEffectiveDate) : 'unscheduled'}`,
     record &&
       'startDate' in record &&
       record.startDate &&
-      `starts ${dateLabel(record.startDate, { weekday: 'short', day: 'numeric', month: 'short' })}`,
+      `starts ${dateLabel(record.startDate, weekdayDate)}`,
     record && 'kind' in record && record.kind === 'rest' && 'Rest day',
     record && 'sport' in record && record.sport && sportLabel(record.sport),
     record &&
@@ -509,12 +514,12 @@ function ReviewChange({
   ].filter(Boolean);
   return (
     <details className="proposal-diff">
-      <summary className="proposal-diff-head">
+      <summary className="proposal-diff-summary">
         <Badge className="badge">
           {!change.before ? 'Create' : !change.after ? 'Delete' : 'Update'}
-        </Badge>
-        <span className="proposal-diff-title">{recordLabel(record) ?? change.entity}</span>
-        <span className="proposal-diff-facts">{facts.join(' · ')}</span>
+        </Badge>{' '}
+        <span className="proposal-diff-title">{recordLabel(record) ?? change.entity}</span>{' '}
+        <span className="proposal-diff-facts">{summaryFacts.join(' · ')}</span>
       </summary>
       <Table className="review-fields">
         <caption className="sr-only">{caption}</caption>
@@ -526,7 +531,7 @@ function ReviewChange({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {proposalRows(change, units, plans).map((row) => (
+          {proposalRows(change, units, planTitles).map((row) => (
             <TableRow key={row.field}>
               <TableHead scope="row">{row.field}</TableHead>
               <TableCell>

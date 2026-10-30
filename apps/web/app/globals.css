@@ -1359,13 +1359,6 @@ svg {
   border-bottom: 1px solid var(--line);
   font-size: 12px;
 }
-.proposal-diff-head {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-weight: 500;
-  margin-bottom: 8px;
-}
 .proposal-diff pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

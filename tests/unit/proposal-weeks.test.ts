@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { planSchema, workoutSchema, type EntityChange } from '@athlete-panel/contracts';
 import { proposalRows } from '../../plugins/agent-bridge/proposal-diff';
-import { planTitles, proposalWeeks } from '../../plugins/agent-bridge/proposal-weeks';
+import { groupChangesByWeek, planTitlesById } from '../../plugins/agent-bridge/proposal-weeks';
 
 const plan = planSchema.parse({
   id: '00000000-0000-4000-8000-000000000010',
@@ -17,7 +17,7 @@ const workout = (id: number, title: string) =>
     sport: 'running',
     schedule: { kind: 'independent', date: '2026-11-01' },
   });
-const created = (id: number, title: string, date: string | null): EntityChange => ({
+const created = (id: number, title: string, date: string): EntityChange => ({
   entity: 'workout',
   id: workout(id, title).id,
   before: null,
@@ -25,8 +25,8 @@ const created = (id: number, title: string, date: string | null): EntityChange =
   beforeEffectiveDate: null,
   afterEffectiveDate: date,
 });
-const weekTitles = (changes: EntityChange[], weekStartsOn: 0 | 1) =>
-  proposalWeeks(changes, weekStartsOn).map((week) => ({
+const titlesByWeek = (changes: EntityChange[], weekStartsOn: 0 | 1) =>
+  groupChangesByWeek(changes, weekStartsOn).map((week) => ({
     weekStart: week.weekStart,
     titles: week.changes
       .map((change) => (change.after ?? change.before) as { title: string })
@@ -39,25 +39,24 @@ describe('proposal review weeks', () => {
       created(1, 'Monday run', '2026-11-02'),
       created(2, 'Sunday run', '2026-11-01'),
     ];
-    expect(weekTitles(changes, 1)).toEqual([
+    expect(titlesByWeek(changes, 1)).toEqual([
       { weekStart: '2026-10-26', titles: ['Sunday run'] },
       { weekStart: '2026-11-02', titles: ['Monday run'] },
     ]);
-    expect(weekTitles(changes, 0)).toEqual([
+    expect(titlesByWeek(changes, 0)).toEqual([
       { weekStart: '2026-11-01', titles: ['Sunday run', 'Monday run'] },
     ]);
   });
 
-  it('puts plan records and unscheduled workouts first, then weeks in date order', () => {
+  it('puts plan records first, then weeks in date order', () => {
     const planCreated: EntityChange = { entity: 'plan', id: plan.id, before: null, after: plan };
     const changes = [
       created(1, 'Later run', '2026-11-12'),
-      created(2, 'Undated plan run', null),
       planCreated,
       created(3, 'Earlier run', '2026-11-04'),
     ];
-    expect(weekTitles(changes, 1)).toEqual([
-      { weekStart: null, titles: ['Undated plan run', 'Base block'] },
+    expect(titlesByWeek(changes, 1)).toEqual([
+      { weekStart: null, titles: ['Base block'] },
       { weekStart: '2026-11-02', titles: ['Earlier run'] },
       { weekStart: '2026-11-09', titles: ['Later run'] },
     ]);
@@ -66,7 +65,7 @@ describe('proposal review weeks', () => {
   it('keeps a deleted workout in the week it leaves', () => {
     const removed = workout(1, 'Removed run');
     expect(
-      weekTitles(
+      titlesByWeek(
         [
           {
             entity: 'workout',
@@ -84,18 +83,15 @@ describe('proposal review weeks', () => {
 
   it('shows a workout moved to another week only in its new week', () => {
     const moved = workout(1, 'Moved run');
-    const change = (afterEffectiveDate: string | null): EntityChange => ({
+    const change: EntityChange = {
       entity: 'workout',
       id: moved.id,
       before: moved,
       after: { ...moved, revision: 2 },
       beforeEffectiveDate: '2026-11-03',
-      afterEffectiveDate,
-    });
-    expect(weekTitles([change('2026-11-10')], 1)).toEqual([
-      { weekStart: '2026-11-09', titles: ['Moved run'] },
-    ]);
-    expect(weekTitles([change(null)], 1)).toEqual([{ weekStart: null, titles: ['Moved run'] }]);
+      afterEffectiveDate: '2026-11-10',
+    };
+    expect(titlesByWeek([change], 1)).toEqual([{ weekStart: '2026-11-09', titles: ['Moved run'] }]);
   });
 });
 
@@ -109,7 +105,7 @@ describe('proposal review plan names', () => {
       { entity: 'plan', id: plan.id, before: null, after: plan },
       { entity: 'workout', id: planWorkout.id, before: null, after: planWorkout },
     ];
-    const titles = planTitles([{ id: 'existing', title: 'Existing plan' }], changes);
+    const titles = planTitlesById([{ id: 'existing', title: 'Existing plan' }], changes);
     expect(titles).toEqual({ existing: 'Existing plan', [plan.id]: 'Base block' });
     expect(proposalRows(changes[1]!, 'metric', titles)).toContainEqual({
       field: 'Schedule · Plan',

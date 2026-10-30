@@ -24,7 +24,11 @@ import {
   scheduleRecent,
   pause,
 } from '../../plugins/garmin/service';
-import { createSyncCursor, type GarminSyncCursor } from '../../plugins/garmin/sync';
+import {
+  createSyncCursor,
+  currentGarminDate,
+  type GarminSyncCursor,
+} from '../../plugins/garmin/sync';
 import { GARMIN_HEALTH_HISTORY_START } from '../../plugins/garmin/history-policy';
 import { GARMIN_ORIGIN, GARMIN_TOKEN_PATH } from '../../plugins/garmin/transport';
 
@@ -63,6 +67,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
   let tokenFailure: number | null;
   let nextFailure: { status: number; headers?: HeadersInit } | null;
   let blockActivity: (() => Promise<Response>) | null;
+  let emptyHistoricalIdentity: boolean;
   let fetcher: ReturnType<typeof vi.fn>;
   const originalEncryption = process.env.ENCRYPTION_KEY;
 
@@ -80,6 +85,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     tokenFailure = null;
     nextFailure = null;
     blockActivity = null;
+    emptyHistoricalIdentity = false;
     fetcher = vi.fn(async (input: URL | string, init: RequestInit) => {
       const url = new URL(input);
       // Fail closed: every request is intercepted, no fallback to the network exists.
@@ -103,8 +109,11 @@ describe('durable Garmin worker with synthetic Personal API', () => {
       }
       if (url.pathname.includes('dailySleepSummaries')) return response(sleepRows);
       if (url.pathname.includes('/dailysummaries')) return response({ data: [] });
-      if (url.pathname.includes('/hrv/'))
+      if (url.pathname.includes('/hrv/')) {
+        if (emptyHistoricalIdentity && url.pathname.endsWith('/2019-03-20'))
+          return response({ hrvSummaries: [] });
         return response({ userProfilePk: '555', hrvSummaries: [] });
+      }
       return response([]);
     });
     vi.stubGlobal('fetch', fetcher);
@@ -383,6 +392,59 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     });
     expect(state.workouts[0].revision).toBe(2);
   });
+
+  it.each(['activities', 'health', 'both'] as const)(
+    'rejects unbounded %s refreshes before changing recovery state or queuing work',
+    async (scope) => {
+      await bootstrap();
+      const jobs = await connection()`select * from host.jobs order by id`;
+      const scans = await connection()`select * from garmin.scan_state order by stream`;
+      for (const dates of [{}, { from: day }])
+        await expect(sync({ mode: 'full', scope, ...dates })).rejects.toMatchObject({
+          code: 'invalid_range',
+        });
+      expect(await connection()`select * from host.jobs order by id`).toEqual(jobs);
+      expect(await connection()`select * from garmin.scan_state order by stream`).toEqual(scans);
+    },
+  );
+
+  it.each([{ stream: 'sleep' }, { scope: 'health' }])(
+    'uses current health for old-period identity and credential re-verification: %j',
+    async (selection) => {
+      await bootstrap();
+      await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null`;
+      emptyHistoricalIdentity = true;
+      const requested = await sync({
+        mode: 'full',
+        from: '2019-03-01',
+        to: '2019-03-20',
+        ...selection,
+      });
+      fetcher.mockClear();
+      const first = await takeStep();
+      expect(first.saved.id).toBe(requested.id);
+      expect(first.saved.payload.cursor).toMatchObject({
+        phase: 'recent-health',
+        today: '2019-03-20',
+      });
+      await connection()`update host.settings set value=value || ${connection().json({ generation: randomUUID() })} where key='garmin'`;
+      const second = await takeStep();
+      expect(second.saved.error).toBeNull();
+      expect(second.saved.payload.cursor.today).toBe('2019-03-20');
+      const paths = fetcher.mock.calls.map(([url]) => new URL(String(url)));
+      expect(paths.some((url) => url.pathname.includes('/activities/'))).toBe(false);
+      const probes = paths.filter((url) => url.pathname.includes('/hrv/'));
+      expect(probes).toHaveLength(2);
+      expect(probes.every((url) => url.pathname.endsWith('/' + currentGarminDate()))).toBe(true);
+      expect(
+        paths.some(
+          (url) =>
+            url.pathname.includes('dailySleepSummaries') &&
+            url.searchParams.get('endDate') === '2019-03-20',
+        ),
+      ).toBe(true);
+    },
+  );
 
   it.each(['activities', 'health', 'both'] as const)(
     'resumes matching %s refreshes, rejects conflicting scope and limits credential re-verification',

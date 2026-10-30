@@ -67,6 +67,15 @@
   padding: 10px 14px;
   gap: 8px;
 }
+.request-recovery {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 8px;
+}
+.request-recovery [data-slot='button'] {
+  min-height: 44px;
+}
 [data-slot='button'][data-size='sm'] {
   min-height: 32px;
   height: auto;

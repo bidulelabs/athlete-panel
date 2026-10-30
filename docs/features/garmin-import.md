@@ -82,6 +82,8 @@ Body Battery is a daily latest-observed level, not a recovery recommendation. Nu
 
 Account identity comes from documented numeric `ownerId` or `userProfilePk`/`userProfilePK`, never mutable display names or unverified JWT claims. Identity discovery probes the newest activity and then recent daily/HRV records. If none exposes an ID, importing stops with an explicit identity-unavailable error. Replacing credentials cannot change a previously bound account. The host must check credential generation again when committing a step so an in-flight job from a removed/replaced key cannot write.
 
+Health identity probes use the 28 days ending on the actual current calendar date in the checkpoint's athlete timezone, independently of the requested import range. This also applies when a replaced credential generation is reverified before resuming a saved checkpoint. An old empty period can therefore be refreshed or retried using recent health identity, without fetching activities, widening the imported range or bypassing account binding. Explicit scopes require both range dates and full-import mode; rejected unbounded scopes enqueue no work and leave recovery state unchanged.
+
 The HTTP client permits only these read endpoints and the token exchange on a fixed HTTPS origin, refuses redirects, paces requests, propagates cancellation and bounds request time. Errors exclude raw responses, tokens and provider request details. Secret cache callbacks are server-only. A plugin is trusted application code; its manifest is not an isolation boundary.
 
 ## Verification and release details

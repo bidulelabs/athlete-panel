@@ -28,6 +28,60 @@ const activity = (id: string) => ({
   duration: 60,
 });
 const reader = (payload: unknown) => ({ get: async () => payload });
+
+it.each([{ targetStream: 'sleep' as const }, { scope: 'health' as const }])(
+  'verifies old health imports against recent health without changing their bounds: %j',
+  async (selection) => {
+    const initial = createSyncCursor({
+      today: '2019-03-20',
+      earliestHealthDate: '2019-03-01',
+      activityFrom: '2019-03-01',
+      accountId: '555',
+      timeZone: 'Europe/Paris',
+      ...selection,
+    });
+    // It is already October 30 in the athlete's timezone, but still October 29 UTC.
+    const now = new Date('2026-10-29T23:30:00Z');
+    const get = vi.fn(async (path: string, query?: Record<string, unknown>) => {
+      if (path.includes('/activities/')) throw new Error('Health imports must stay health-only');
+      if (path.includes('dailysummaries')) return { data: [] };
+      if (path.includes('/hrv/'))
+        return path.endsWith('/2026-10-03/2026-10-30')
+          ? { userProfilePk: '555', hrvSummaries: [] }
+          : { hrvSummaries: [] };
+      expect(query?.endDate).toBe('2019-03-20');
+      return [];
+    });
+    const identity = await runSyncStep(initial, { get }, now);
+    expect(identity.nextCursor).toMatchObject({
+      accountId: '555',
+      phase: 'recent-health',
+      today: initial.today,
+      earliestHealthDate: initial.earliestHealthDate,
+      activityFrom: initial.activityFrom,
+    });
+    expect(get.mock.calls[0]).toEqual([
+      '/usersummary-service/v2/dailysummaries',
+      { startDate: '2026-10-03', endDate: '2026-10-30' },
+    ]);
+    const data = await runSyncStep(identity.nextCursor, { get }, now);
+    expect(data.coverage).toMatchObject({ stream: 'sleep', to: '2019-03-20', status: 'no-data' });
+    expect(data.activities).toEqual([]);
+    expect(data.healthRecords).toEqual([]);
+    await expect(
+      runSyncStep(
+        initial,
+        {
+          get: async (path) =>
+            path.includes('dailysummaries')
+              ? { data: [{ userProfilePk: '999' }] }
+              : { hrvSummaries: [] },
+        },
+        now,
+      ),
+    ).rejects.toMatchObject({ code: 'account_mismatch' });
+  },
+);
 it('imports valid neighbours and advances by the raw page size through rejected rows', async () => {
   const first = await runSyncStep(
     cursor('activities'),

@@ -13,17 +13,10 @@ async function settings(page: Page) {
     .getByRole('link', { name: 'Settings', exact: true })
     .click();
 }
-test('retrying a workspace reload preserves an old draft revision and offers explicit recovery', async ({
+test('a stale save offers a reload without a preceding read failure and preserves the draft revision', async ({
   page,
 }) => {
   await login(page);
-  await page.route(
-    '**/api/workspace?**',
-    (route) => route.fulfill({ status: 503, json: { error: 'Synthetic reload outage' } }),
-    { times: 1 },
-  );
-  await page.getByRole('button', { name: 'Next week', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeVisible();
   await settings(page);
   await page.getByLabel('Training goals').fill('My unsaved draft');
   const origin = new URL(page.url()).origin;
@@ -45,7 +38,9 @@ test('retrying a workspace reload preserves an old draft revision and offers exp
     },
   });
   expect(result.ok()).toBeTruthy();
-  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Try again', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Reload saved data', exact: true }).click();
   await expect(page.getByText('This profile changed elsewhere.', { exact: false })).toBeVisible();
   await expect(page.getByLabel('Training goals')).toHaveValue('My unsaved draft');
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
@@ -60,6 +55,69 @@ test('retrying a workspace reload preserves an old draft revision and offers exp
   await page.getByRole('button', { name: 'Save profile' }).click();
   await expect(page.getByText('Profile saved.', { exact: true })).toBeVisible();
 });
+
+for (const theme of ['dark', 'light']) {
+  test(`an uncertain save reloads inside its open dialog without resubmitting (${theme})`, async ({
+    page,
+  }, info) => {
+    await login(page);
+    await page.evaluate((value) => {
+      document.documentElement.dataset.theme = value;
+    }, theme);
+    const title = `Uncertain save ${theme} ${info.project.name} ${Date.now()}`;
+    await page.getByRole('button', { name: 'Add workout', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Workout title').fill(title);
+    await dialog.getByLabel('Workout description').fill('Preserve this draft through recovery.');
+    let writes = 0;
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && request.url().includes('/api/plugins/')) writes++;
+    });
+    await page.route(
+      '**/api/plugins/training/mutate',
+      async (route) => {
+        const saved = await route.fetch();
+        expect(saved.ok()).toBe(true);
+        await route.fulfill({
+          status: 502,
+          contentType: 'text/html',
+          body: '<html>Gateway timeout</html>',
+        });
+      },
+      { times: 1 },
+    );
+    await dialog.getByRole('button', { name: 'Add workout', exact: true }).click();
+    await expect(dialog.locator('.error-message')).toContainText('The change may have been saved', {
+      ignoreCase: true,
+    });
+    const reload = dialog.getByRole('button', { name: 'Reload saved data', exact: true });
+    expect((await reload.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.route(
+      '**/api/workspace?**',
+      (route) => route.fulfill({ status: 503, json: { error: 'Synthetic reload outage' } }),
+      { times: 1 },
+    );
+    await reload.click();
+    await expect(dialog.getByRole('status')).toContainText('Saved data could not reload');
+    await dialog.locator('.error-message').screenshot({
+      path: `.runtime/pr56-review/recovery-${theme}-${info.project.name}.png`,
+      animations: 'disabled',
+    });
+    await reload.focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog.getByRole('status')).toContainText('Saved data reloaded');
+    await expect(dialog.getByLabel('Workout title')).toHaveValue(title);
+    await expect(dialog.getByLabel('Workout description')).toHaveValue(
+      'Preserve this draft through recovery.',
+    );
+    expect(writes).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(page.getByRole('button', { name: `Open ${title}`, exact: true })).toHaveCount(1);
+  });
+}
 test('failed date navigation retains last loaded dates and can retry', async ({ page }) => {
   await login(page);
   let imports = 0;

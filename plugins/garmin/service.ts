@@ -32,6 +32,7 @@ import {
   parseSyncCursor,
   syncScope,
   importsStream,
+  currentGarminDate as today,
 } from './sync';
 import { assertAccountBinding, streamMetrics, type HealthStream } from './normalize';
 import { automaticHealthHistoryStart } from './history-policy';
@@ -69,14 +70,6 @@ export async function getConfiguration(
 }
 async function saveConfig(tx: Transaction, config: Configuration) {
   await tx`insert into host.settings(key,value) values('garmin',${tx.json(config)}) on conflict(key) do update set value=excluded.value`;
-}
-function today(timeZone = 'UTC') {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
 }
 export async function configure(body: unknown) {
   const input = z
@@ -480,7 +473,11 @@ export async function runGarminJob(job: Job) {
     cursor = await resumeActivityScan(connection() as unknown as Transaction, cursor);
     if (job.payload.generation !== config.generation && cursor.phase !== 'identity') {
       coverageCursor = { ...cursor, phase: 'identity' };
-      const identity = await getAccountIdentity(clientFor(config), cursor.today, syncScope(cursor));
+      const identity = await getAccountIdentity(
+        clientFor(config),
+        today(cursor.timeZone),
+        syncScope(cursor),
+      );
       assertAccountBinding(config.accountId, [identity]);
       cursor = { ...cursor, accountId: identity };
       reverifiedIdentity = true;

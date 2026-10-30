@@ -21,6 +21,8 @@ The workout inspector stays alongside the calendar above 1050px and becomes a Sh
 
 The workspace shell opens directly into each page's content, without a repeated "Private training workspace" label, its divider or an always-visible Refresh button. Desktop navigation and the phone's brand, navigation and theme bar remain available. Saved data still reloads after successful mutations and through existing page polling/date navigation. Workspace load failures retain **Try again**, the last loaded data when available, and any unsaved drafts; retrying reloads stored workspace data without starting a Garmin import. Provider imports are explicit Garmin-page actions.
 
+Stale-save responses and uncertain saves (network failure or an unreadable response) offer **Reload saved data** inside the owning form's error message, including modal editors. The action only reads the workspace, preserves the open draft and its original revision, and never repeats the mutation. It is disabled while loading and reports success or a retryable read failure in the same form. Reloading does not dismiss the original save error or imply that an uncertain save succeeded; the owner reviews the stored result before saving again.
+
 The weekly summary's two independent disclosures and factual metrics are specified in [training workspace](training-workspace.md#richer-weekly-summaries).
 
 ### Shared Markdown rendering

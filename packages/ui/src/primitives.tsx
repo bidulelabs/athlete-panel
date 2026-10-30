@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState, type RefObject, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type RefObject, type ReactNode } from 'react';
 import {
   X,
   AlertCircle,
@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from './compone
 import { Field as ShadcnField, FieldLabel, FieldDescription } from './components/field';
 import { Alert, AlertDescription } from './components/alert';
 import { startOfWeek } from './calendar-dates';
+import { ReloadableRequestError } from './request-error';
 export { addDays, localDate } from './calendar-dates';
 
 export function PageHeader({
@@ -196,11 +197,44 @@ export function Field({
   );
 }
 
-export function ErrorMessage({ error }: { error: string | null | undefined }) {
+function RequestRecovery({ error }: { error: ReloadableRequestError }) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => setMessage(null), [error]);
+  async function reload() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      await error.reload();
+      setMessage('Saved data reloaded. Review it before saving again.');
+    } catch {
+      setMessage('Saved data could not reload. Your draft is still here. Try reloading again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="request-recovery">
+      <Button type="button" variant="outline" disabled={busy} onClick={() => void reload()}>
+        {busy ? 'Reloading saved data…' : 'Reload saved data'}
+      </Button>
+      {message && <p role="status">{message}</p>}
+    </div>
+  );
+}
+
+export function ErrorMessage({
+  error,
+}: {
+  error: string | ReloadableRequestError | null | undefined;
+}) {
   return error ? (
     <Alert variant="destructive" className="error-message">
       <AlertCircle size={17} />
-      <AlertDescription>{error}</AlertDescription>
+      <AlertDescription>
+        {error instanceof ReloadableRequestError ? error.message : error}
+        {error instanceof ReloadableRequestError && <RequestRecovery error={error} />}
+      </AlertDescription>
     </Alert>
   ) : null;
 }
@@ -224,7 +258,7 @@ export function SubmitButton({
 
 export function useAction() {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | ReloadableRequestError | null>(null);
   async function run(action: () => Promise<unknown>, done?: () => void) {
     if (busy) return;
     setBusy(true);
@@ -233,7 +267,13 @@ export function useAction() {
       await action();
       done?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setError(
+        err instanceof ReloadableRequestError
+          ? err
+          : err instanceof Error
+            ? err.message
+            : 'Something went wrong. Please try again.',
+      );
     } finally {
       setBusy(false);
     }

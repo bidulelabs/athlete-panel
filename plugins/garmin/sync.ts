@@ -112,6 +112,15 @@ export type GarminSyncStep = {
 };
 export const ACTIVITY_PAGE_SIZE = 99;
 
+export function currentGarminDate(timeZone = 'UTC', now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
 export function addDays(date: string, days: number): string {
   if (!dayKey(date))
     throw new GarminError('invalid_configuration', 'Sync dates must be valid calendar dates.');
@@ -352,6 +361,7 @@ export async function getAccountIdentity(
 export async function runSyncStep(
   cursor: GarminSyncCursor,
   client: GarminReader,
+  now = new Date(),
 ): Promise<GarminSyncStep> {
   const coverageIdentity = requestCoverageIdentity(cursor);
   const next = { ...cursor, unavailableStreams: [...cursor.unavailableStreams] };
@@ -377,7 +387,11 @@ export async function runSyncStep(
     return result;
   }
   if (cursor.phase === 'identity') {
-    const identity = await getAccountIdentity(client, cursor.today, syncScope(cursor));
+    const identity = await getAccountIdentity(
+      client,
+      currentGarminDate(cursor.timeZone, now),
+      syncScope(cursor),
+    );
     result.accountId = next.accountId = assertAccountBinding(cursor.accountId, [identity]);
     next.phase = syncScope(cursor) === 'health' ? 'recent-health' : 'recent-activities';
     if (cursor.targetStream && cursor.targetStream !== 'activities')

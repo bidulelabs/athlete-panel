@@ -42,6 +42,7 @@ This addition defines agent instructions, not a server-enforced questionnaire, n
 | New relevant injury/import | Fresh owner review required; further changes conflict; mutation conflicts require replacement | [Review cases](../../tests/integration/proposal-review.test.ts), [browser cases](../../tests/e2e/proposal-review.spec.ts) |
 | Expired access / seven-day deadline / revoked grant | Access expiry preserves owner application; proposal expiry and revocation block it | Review cases |
 | Legacy proposal / excluded notes | Matching legacy context remains usable; changed context requires replacement; snapshots preserve exclusions | Review cases |
+| Multi-week proposal with a new plan, a move across weeks and a deletion | Edits grouped by week, one collapsed line per record, plan shown by title, no horizontal overflow at 320px | [Week grouping](../../tests/unit/proposal-weeks.test.ts), browser cases |
 | Same payload/key retry | Same committed result | Database cases |
 | Later edit before undo | Entire undo conflicts | Database cases |
 | Out-of-scope duplication | Proposal denied before stored review | Database cases |
@@ -82,4 +83,4 @@ Deploy web and checkout together after the additive [connection migration](../..
 
 ### Readable review
 
-The owner sees field-by-field before/after values with duration/distance units, interval targets, note text, schedule and derived calendar dates. Reordering and deletion effects remain visible. Identity/revision metadata and full original records are available under expandable technical details. Rendering does not change the stored proposal digest, freshness validation, permissions or whole-batch apply/undo. Unknown fields remain visible rather than being silently omitted.
+Proposed edits are grouped by calendar week, starting on the profile's first day of the week, as requested in [issue 39](https://github.com/bidulelabs/athlete-panel/issues/39); plan records and changes without a calendar date come first. Each record has one line with its action, date, title, sport, duration and distance. A workout moved to another week appears in its new week with its previous date; a deletion stays in the week it leaves. Opening a record shows field-by-field before/after values with duration/distance units, interval targets, note text, schedule and derived calendar dates. Plans appear by title, including a plan created by the same proposal. Reordering and deletion effects remain visible. Identity/revision metadata and full original records are available under expandable technical details. Rendering does not change the stored proposal digest, freshness validation, permissions or whole-batch apply/undo. Unknown fields remain visible rather than being silently omitted.

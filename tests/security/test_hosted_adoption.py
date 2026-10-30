@@ -4,6 +4,7 @@ import copy
 import io
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -218,6 +219,88 @@ class Adoption(unittest.TestCase):
             with adoption.project_lock('daemon', 'project', root + '/one', claim=True, root=root):
                 with self.assertRaisesRegex(hosted.OperationError, 'Another controller'):
                     with adoption.project_lock('daemon', 'project', root + '/two', claim=True, root=root): pass
+
+    def test_permanent_claim_survives_legacy_cleanup_and_rejects_duplicate_owners(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / 'state'
+            name = 'athlete-panel-controller-' + adoption.fingerprint({'daemon': 'daemon', 'project': 'project'})
+            legacy = hosted.private_directory(Path(root) / 'legacy' / name)
+            owner = {'version': 1, 'state': str(state.resolve()), 'daemon': 'daemon', 'project': 'project'}
+            hosted.write_json(legacy / 'owner.json', owner)
+            original = (legacy / 'owner.json').read_bytes()
+            with adoption.project_lock('daemon', 'project', state, root=root) as permanent:
+                self.assertEqual(hosted.read_json(permanent / 'owner.json'), owner)
+                self.assertEqual((legacy / 'owner.json').read_bytes(), original)
+                with self.assertRaisesRegex(hosted.OperationError, 'Another controller'):
+                    with adoption.claim_lock(legacy): pass
+            shutil.rmtree(legacy)  # Synthetic tmpfiles cleanup; durable ownership remains.
+            with adoption.project_lock('daemon', 'project', state, root=root): pass
+            with self.assertRaisesRegex(hosted.OperationError, 'another controller state'):
+                with adoption.project_lock('daemon', 'project', Path(root) / 'second', claim=True, root=root): pass
+
+    def test_missing_claim_does_not_silently_reclaim_an_adopted_project(self):
+        with tempfile.TemporaryDirectory() as root:
+            with adoption.project_lock('daemon', 'project', root + '/state', claim=True, root=root) as directory: pass
+            shutil.rmtree(directory)
+            with self.assertRaisesRegex(hosted.OperationError, 'ownership record is missing'):
+                with adoption.project_lock('daemon', 'project', root + '/state', root=root): pass
+            self.assertFalse((directory / 'owner.json').exists())
+
+    def test_conflicting_legacy_owner_does_not_reserve_the_migration_target(self):
+        with tempfile.TemporaryDirectory() as root:
+            name = 'athlete-panel-controller-' + adoption.fingerprint({'daemon': 'daemon', 'project': 'project'})
+            legacy = hosted.private_directory(Path(root) / 'legacy' / name)
+            hosted.write_json(legacy / 'owner.json', {'version': 1, 'state': 'other-owner', 'daemon': 'daemon', 'project': 'project'})
+            with self.assertRaisesRegex(hosted.OperationError, 'another controller state'):
+                with adoption.project_lock('daemon', 'project', root + '/state', claim=True, root=root): pass
+            self.assertFalse((Path(root) / name).exists())
+
+    def test_conflicting_legacy_claim_blocks_adoption_even_with_a_permanent_claim(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / 'state'
+            with adoption.project_lock('daemon', 'project', state, claim=True, root=root) as directory: pass
+            legacy = hosted.private_directory(Path(root) / 'legacy' / directory.name)
+            hosted.write_json(legacy / 'owner.json', {'version': 1, 'state': 'different', 'daemon': 'daemon', 'project': 'project'})
+            with self.assertRaisesRegex(hosted.OperationError, 'another controller state'):
+                with adoption.project_lock('daemon', 'project', state, root=root): pass
+
+    def test_interrupted_migration_retries_without_replacing_ownership(self):
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / 'state'
+            name = 'athlete-panel-controller-' + adoption.fingerprint({'daemon': 'daemon', 'project': 'project'})
+            legacy = hosted.private_directory(Path(root) / 'legacy' / name)
+            owner = {'version': 1, 'state': str(state.resolve()), 'daemon': 'daemon', 'project': 'project'}
+            hosted.write_json(legacy / 'owner.json', owner)
+            real_write = hosted.write_json
+            def crash(path, value):
+                real_write(path, value)
+                raise InterruptedError('synthetic interruption after durable claim')
+            with patch.object(hosted, 'write_json', side_effect=crash):
+                with self.assertRaises(InterruptedError):
+                    with adoption.project_lock('daemon', 'project', state, root=root): pass
+            with adoption.project_lock('daemon', 'project', state, root=root) as directory:
+                self.assertEqual(hosted.read_json(directory / 'owner.json'), owner)
+
+    def test_controller_refreshes_recovery_reference_after_legacy_migration(self):
+        with tempfile.TemporaryDirectory() as root:
+            fixture = Fixture(root); state = Path(root) / 'state'
+            preview = adoption.adopt(state, fixture.inputs, execute=fixture.execute, test=True)
+            adoption.adopt(state, fixture.inputs, preview['confirmation'], fixture.execute, True, root)
+            instance = hosted.Hosted(state, test=True); instance.lock_root = root
+            directory = Path(instance.record['ownershipDirectory'])
+            legacy = Path(root) / 'legacy' / directory.name; legacy.parent.mkdir()
+            directory.rename(legacy)
+            instance.record['ownershipDirectory'] = str(legacy); instance.save()
+            with instance.lock(): pass
+            self.assertEqual(hosted.read_json(state / 'installation.json')['ownershipDirectory'], str(directory))
+            self.assertTrue((legacy / 'owner.json').is_file())
+
+    def test_missing_system_registry_has_actionable_setup_without_temporary_fallback(self):
+        self.assertEqual(str(adoption.OWNERSHIP_ROOT), '/var/lib/athlete-panel/controllers')
+        with tempfile.TemporaryDirectory() as root, patch.object(adoption, 'OWNERSHIP_ROOT', Path(root) / 'missing'), patch.object(adoption.os, 'geteuid', return_value=12345):
+            with self.assertRaisesRegex(hosted.OperationError, 'sudo install -d.*1777'):
+                adoption.ownership_root()
+            self.assertFalse((Path(root) / 'missing').exists())
 
     def test_unsupported_layouts_do_not_create_state_or_expose_values(self):
         mutations = [lambda f: f.inputs.update(project='athlete-panel-hosted-0123456789'),

@@ -13,6 +13,36 @@ hosted = importlib.util.module_from_spec(spec); spec.loader.exec_module(hosted)
 
 
 class HostedSafety(unittest.TestCase):
+    def test_image_comparison_preserves_prerequisite_errors_instead_of_claiming_mismatch(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root)
+            release = {'image': 'sha256:' + 'a' * 64, 'registryRef': 'registry.example/app@sha256:' + 'b' * 64}
+            with patch.object(hosted.image_identity, 'identify', side_effect=hosted.image_identity.ImagePrerequisiteError('Docker Buildx is required')):
+                with self.assertRaisesRegex(ValueError, 'Buildx'): instance.image_matches('sha256:' + 'c' * 64, release)
+            with patch.object(hosted.image_identity, 'identify', side_effect=hosted.image_identity.ImageIdentityError('mismatch')):
+                self.assertFalse(instance.image_matches('sha256:' + 'c' * 64, release))
+
+    def test_docker_readiness_does_not_require_buildx_for_local_resume_or_recovery(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root)
+            calls = []
+            def run(args, **kwargs):
+                calls.append(args)
+                if 'buildx' in args: raise AssertionError('Local readiness must not require Buildx')
+                return hosted.subprocess.CompletedProcess(args, 0, '', '')
+            with patch.object(instance, 'run', side_effect=run): instance.docker_ready()
+            self.assertEqual(calls, [['docker', 'info'], ['docker', 'compose', 'version']])
+
+    def test_source_build_reports_missing_buildx_before_starting_build(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(Path(root) / 'state')
+            source = Path(root) / 'source'; source.mkdir(); (source / 'Dockerfile').write_text('FROM scratch\n')
+            instance.record = {'project': 'synthetic'}; instance.begin('upgrade')
+            with patch.object(instance, 'run', side_effect=hosted.OperationError('synthetic private output')) as run:
+                with self.assertRaisesRegex(ValueError, 'Docker Buildx.*Install'): instance.prepare_image(source)
+                self.assertEqual(run.call_args.args[0], ['docker', 'buildx', 'version'])
+                self.assertEqual(run.call_count, 1)
+
     def test_saved_operator_state_is_reused_and_invalid_projects_are_refused(self):
         with tempfile.TemporaryDirectory() as home:
             state = Path(home)/'.local/share/athlete-panel/hosted'

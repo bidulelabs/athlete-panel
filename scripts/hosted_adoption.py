@@ -3,7 +3,7 @@
 Inspection never invokes compose up/run, shell wrappers, migrations or backups.
 The saved effective model is private and keeps the operator's service topology.
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 import copy
 import base64
 import fcntl
@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 from urllib.parse import urlsplit, urlunsplit, unquote
 
@@ -19,6 +20,8 @@ import image_identity
 
 ROLES = ('web', 'worker', 'db', 'admin', 'recovery', 'backup')
 APPLICATION = ('web', 'worker', 'admin', 'recovery', 'backup')
+OWNERSHIP_ROOT = Path('/var/lib/athlete-panel/controllers')
+LEGACY_OWNERSHIP_ROOT = Path('/var/tmp')
 
 
 def fail(message):
@@ -67,6 +70,45 @@ def endpoint(context, execute=run, test=False):
 
 
 @contextmanager
+def claim_lock(directory):
+    from hosted import private_directory
+    directory = private_directory(directory)
+    fd = os.open(directory / 'lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+            fail('The project lock must be a private regular file owned by the controller account.')
+        try: fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError: fail('Another controller is operating on this Docker project. Wait for it to finish.')
+        yield directory
+    finally: os.close(fd)
+
+
+def ownership_root():
+    """A root-owned sticky directory lets different accounts share one namespace."""
+    setup = ('Permanent project ownership storage is unavailable. Ask the server administrator to run: '
+             'sudo install -d -o root -g root -m 1777 /var/lib/athlete-panel/controllers. '
+             'Do not remove existing ownership records.')
+    # A sticky child cannot protect claims if another account controls its parent.
+    for parent in OWNERSHIP_ROOT.parents:
+        if parent.exists():
+            info = parent.lstat()
+            if parent.is_symlink() or info.st_uid != 0 or info.st_mode & 0o022:
+                fail(setup)
+    if not OWNERSHIP_ROOT.exists() and os.geteuid() == 0:
+        OWNERSHIP_ROOT.parent.mkdir(parents=True, mode=0o755, exist_ok=True)
+        try: OWNERSHIP_ROOT.mkdir(mode=0o1777)
+        except FileExistsError: pass
+        else: OWNERSHIP_ROOT.chmod(0o1777)  # mkdir's mode is subject to the caller's umask.
+    if OWNERSHIP_ROOT.exists():
+        info = OWNERSHIP_ROOT.lstat()
+        if (OWNERSHIP_ROOT.resolve() == OWNERSHIP_ROOT and stat.S_ISDIR(info.st_mode)
+                and info.st_uid == 0 and stat.S_IMODE(info.st_mode) == 0o1777):
+            return OWNERSHIP_ROOT
+    fail(setup)
+
+
+@contextmanager
 def project_lock(daemon, project, state, *, claim=False, root=None):
     """One ownership record for every local daemon/project, independent of --state.
 
@@ -74,21 +116,32 @@ def project_lock(daemon, project, state, *, claim=False, root=None):
     them to establish a second controller. Docker/root administrators can of
     course deliberately remove these records; they are not a security sandbox.
     """
-    from hosted import private_directory, read_json, write_json
+    from hosted import read_json, write_json
     key = fingerprint({'daemon': daemon, 'project': project})
-    directory = private_directory(Path(root or '/var/tmp') / ('athlete-panel-controller-' + key))
-    fd = os.open(directory / 'lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-    try:
-        try: fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError: fail('Another controller is operating on this Docker project. Wait for it to finish.')
+    name = 'athlete-panel-controller-' + key
+    directory = (Path(root) if root is not None else ownership_root()) / name
+    legacy = (Path(root) / 'legacy' if root is not None else LEGACY_OWNERSHIP_ROOT) / name
+    expected = {'version': 1, 'state': str(Path(state).resolve()), 'daemon': daemon, 'project': project}
+    with ExitStack() as locks:
+        legacy_owner = None
+        if legacy.exists() or legacy.is_symlink():
+            # Validate legacy ownership before reserving a permanent directory:
+            # another account must not leave a conflicting empty migration target.
+            locks.enter_context(claim_lock(legacy))
+            legacy_owner = read_json(legacy / 'owner.json')
+            if legacy_owner is not None and legacy_owner != expected:
+                fail('This Docker project already belongs to another controller state directory. Use its original --state; do not adopt it again.')
+        directory = locks.enter_context(claim_lock(directory))
         owner = read_json(directory / 'owner.json')
-        expected = {'version': 1, 'state': str(Path(state).resolve()), 'daemon': daemon, 'project': project}
-        if owner and owner != expected:
+        if owner is not None and owner != expected:
             fail('This Docker project already belongs to another controller state directory. Use its original --state; do not adopt it again.')
-        if claim and not owner: write_json(directory / 'owner.json', expected)
-        if not claim and not owner: fail('The project ownership record is missing. Restore it from the recovery kit before operating this adopted installation.')
+        if owner is None:
+            if not claim and legacy_owner is None:
+                fail('The project ownership record is missing. Restore it from the recovery kit before operating this adopted installation.')
+            # Keep the old record/lock intact and held throughout the operation.
+            # A crash before updating installation.json can safely retry this copy.
+            write_json(directory / 'owner.json', expected)
         yield directory
-    finally: os.close(fd)
 
 
 def file_fact(path, private=False):

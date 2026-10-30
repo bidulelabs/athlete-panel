@@ -68,7 +68,9 @@ def scenario(image, candidate, ingress, reports):
             config['services']['backup']['volumes'].append({'type': 'bind', 'source': str(policy), 'target': '/run/secrets/backup_storage', 'read_only': True})
         config['services']['caddy']['ports'] = [{'target': 443, 'published': str(port), 'host_ip': '127.0.0.1', 'protocol': 'tcp'}]
         for mount in config['services']['caddy']['volumes']:
-            if mount['target'] == '/etc/caddy/Caddyfile': mount['source'] = str(caddyfile)
+            if mount['target'] == '/etc/caddy/Caddyfile':
+                mount['source'] = str(caddyfile)
+                mount['bind'] = {'create_host_path': False}
         config['networks'] = {'private': {'name': project + '-private', 'internal': True}, 'ingress': {'name': project + '-ingress'}}
         config['services']['caddy']['networks']['ingress'] = None
         config['services'] = {roles[name]: service for name, service in config['services'].items()}

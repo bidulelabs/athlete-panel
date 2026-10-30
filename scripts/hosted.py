@@ -215,7 +215,10 @@ class Hosted:
             if not project_locked and self.record and self.record.get('profile'):
                 from hosted_adoption import project_lock
                 profile = self.record['profile']
-                with project_lock(profile['daemon']['id'], self.record['project'], self.state, root=getattr(self, 'lock_root', None)):
+                with project_lock(profile['daemon']['id'], self.record['project'], self.state, root=getattr(self, 'lock_root', None)) as directory:
+                    if self.record.get('ownershipDirectory') != str(directory):
+                        self.record['ownershipDirectory'] = str(directory)
+                        self.save()
                     yield
             else: yield
         finally: os.close(fd)
@@ -284,7 +287,6 @@ class Hosted:
     def docker_ready(self):
         self.run(['docker', 'info'], timeout=30)
         self.run(['docker', 'compose', 'version'], timeout=30)
-        self.run(['docker', 'buildx', 'version'], timeout=30)
 
     def verify_storage(self):
         destination = Path(self.record['backupDirectory'])
@@ -353,6 +355,7 @@ class Hosted:
                 source = Path(source or ROOT).resolve()
                 if self.state.is_relative_to(source): raise OperationError('Candidate source must not contain the private hosted state directory.')
                 if not (source / 'Dockerfile').is_file(): raise OperationError('Choose --image, --local-image or a source directory containing Dockerfile.')
+                image_identity.require_buildx(self.run)
                 image = f"{self.record['project']}:{self.pending['id']}-{key}"
                 build_args = ['--build-arg', 'ATHLETE_PANEL_COMMIT=' + expected['commit']] if expected and expected.get('commit') else []
                 self.run(['docker', 'build', *platform, *build_args, '-t', image, str(source)], timeout=3600)
@@ -614,6 +617,7 @@ class Hosted:
             identity = image_identity.identify(actual, self.run, release.get('registryRef'))
             image_identity.verify(identity, release.get('identity'), release['image'])
             return True
+        except image_identity.ImagePrerequisiteError: raise
         except (ValueError, OperationError): return False
 
     def release_identity(self, release):

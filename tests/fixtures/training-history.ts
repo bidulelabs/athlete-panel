@@ -22,7 +22,7 @@ export function trainingHistoryFixture(): AuditEntry[] {
             ...workout,
             revision: 2,
             durationSeconds: 3600,
-            notes: 'Keep this conversational.\n\nExtend the ride only if recovery feels good.',
+            notes: 'Keep this conversational.\n\n**Extend** the ride only if recovery feels good.',
           },
         },
         { entity: 'plan', id: plan.id, before: plan, after: { ...plan, revision: 2 } },

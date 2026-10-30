@@ -1,0 +1,125 @@
+.ui-markdown {
+  min-width: 0;
+  max-width: 70ch;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.ui-markdown :where(p, ul, ol, blockquote, pre, .ui-markdown-scroll, hr) {
+  margin: 0 0 12px;
+}
+.ui-markdown-fallback {
+  white-space: pre-wrap;
+}
+.ui-markdown :where(h4, h5, h6) {
+  margin: 20px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+.ui-markdown .ui-markdown-heading-1 {
+  font-size: 16px;
+}
+.ui-markdown .ui-markdown-heading-2 {
+  font-size: 15px;
+}
+.ui-markdown > :first-child {
+  margin-top: 0;
+}
+.ui-markdown > :last-child,
+.ui-markdown :where(li, blockquote) > :last-child {
+  margin-bottom: 0;
+}
+.ui-markdown :where(ul, ol) {
+  padding-left: 24px;
+}
+.ui-markdown ul {
+  list-style: disc;
+}
+.ui-markdown ol {
+  list-style: decimal;
+}
+.ui-markdown li + li {
+  margin-top: 4px;
+}
+.ui-markdown li > :where(ul, ol) {
+  margin: 4px 0 0;
+}
+.ui-markdown .contains-task-list {
+  list-style: none;
+}
+.ui-markdown .task-list-item input {
+  margin: 0 8px 0 -20px;
+  accent-color: var(--accent-ink);
+}
+.ui-markdown a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ui-markdown a:hover {
+  text-decoration-thickness: 2px;
+}
+.ui-markdown :where(a, pre, .ui-markdown-scroll):focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 3px;
+}
+.ui-markdown blockquote {
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+}
+.ui-markdown code {
+  padding: 2px 4px;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  font-size: 0.9em;
+}
+.ui-markdown pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.ui-markdown pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.ui-markdown-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.ui-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.ui-markdown :where(th, td) {
+  min-width: 100px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+.ui-markdown th {
+  background: var(--surface-raised);
+  font-weight: 600;
+}
+.ui-markdown hr,
+.ui-markdown .footnotes {
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.ui-markdown .footnotes {
+  margin-top: 16px;
+  padding-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}

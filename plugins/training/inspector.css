@@ -14,7 +14,8 @@
   margin-bottom: 18px;
 }
 .inspector-frame .inspector-subtitle,
-.inspector-frame .inspector-section p {
+.inspector-frame .inspector-section > p,
+.inspector-frame .prescription-step p {
   font-size: 13px;
 }
 .inspector-frame .inspector-section h3 {
@@ -80,6 +81,13 @@
 }
 .inspector-frame .prescription-note {
   margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.prescription-step p {
+  color: var(--muted);
+  line-height: 1.7;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
@@ -158,9 +166,13 @@
 .exercise-editor legend {
   font-weight: 600;
 }
-.inspector-section p {
+.inspector-section > p {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.completion-notes {
+  margin-top: 13px;
 }
 
 .inspector-section > .text-button {

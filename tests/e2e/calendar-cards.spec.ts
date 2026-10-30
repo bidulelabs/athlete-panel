@@ -120,7 +120,7 @@ test('notes, events and dated constraints open full details under either week st
 }) => {
   const { fixture, mutations } = await preview(page);
   await page.getByRole('button', { name: 'Open note Travel day', exact: true }).click();
-  await expect(dialog(page).locator('.calendar-detail-prose')).toHaveText(fixture.notes[0].body);
+  await expect(dialog(page).locator('.ui-markdown')).toHaveText(fixture.notes[0].body);
   await expect(dialog(page).locator('b')).toHaveCount(0);
   await expect(dialog(page).getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
   await close(page);
@@ -129,7 +129,7 @@ test('notes, events and dated constraints open full details under either week st
   await close(page);
   await page.getByRole('button', { name: 'Open event Coastal 10 km', exact: true }).click();
   await expect(metric(page, 'Event type')).toContainText('Race');
-  await expect(dialog(page).locator('.calendar-detail-prose')).toHaveText(fixture.events[0].notes);
+  await expect(dialog(page).locator('.ui-markdown')).toHaveText(fixture.events[0].notes);
   await close(page);
   const knee = page.getByRole('button', { name: 'Open injury Left knee', exact: true });
   await expect(knee).toHaveCount(4);
@@ -261,9 +261,7 @@ test('context cards use existing edit, confirmed delete and retry flows', async 
     await dialog(page).getByRole('button', { name: 'Save changes' }).click();
     await expect(dialog(page)).not.toBeVisible();
     await page.getByRole('button', { name: `Open note ${title}`, exact: true }).click();
-    await expect(dialog(page).locator('.calendar-detail-prose')).toHaveText(
-      'Updated note.\nSecond line.',
-    );
+    await expect(dialog(page).locator('.ui-markdown')).toHaveText('Updated note.\nSecond line.');
     await dialog(page).getByRole('button', { name: 'Delete', exact: true }).click();
     await page
       .getByRole('alertdialog')

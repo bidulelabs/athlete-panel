@@ -169,7 +169,7 @@ The inspector retains the selected session context and makes the next action eas
 
 ### Training plan review
 
-Use compact, full-width plan rows for discovery, with bounded description previews and wrapping metadata. A shared dialog contains the complete plan: a distinct action toolbar, plain multiline prose at 14px/1.7 with a 70ch maximum measure, and flat week/day groups. Week bands use the raised surface; dates occupy a small desktop rail and move above sessions on phones. Workout titles lead, factual summaries support, and Edit stays separate from inspection. Phone plan dialogs use a scrollable bottom sheet with a fixed title/close region and 44px controls. The existing workout Sheet can layer over a plan at every viewport; calendar inspector behavior remains responsive as before.
+Use compact, full-width plan rows for discovery, with bounded description previews and wrapping metadata. A shared dialog contains the complete plan: a distinct action toolbar, rendered Markdown at 14px/1.7 with a 70ch maximum measure, and flat week/day groups. Week bands use the raised surface; dates occupy a small desktop rail and move above sessions on phones. Workout titles lead, factual summaries support, and Edit stays separate from inspection. Phone plan dialogs use a scrollable bottom sheet with a fixed title/close region and 44px controls. The existing workout Sheet can layer over a plan at every viewport; calendar inspector behavior remains responsive as before.
 
 Recent changes is a secondary header action. Use the shared right-side Sheet, full width on phones, with a persistent title/close region and a scrolling flat list. Each entry leads with its action and item name, followed by timestamp and count. Details expand in place; Undo sits separately and requires confirmation. Controls keep 44px touch targets and use the paired surface, text and border tokens.
 
@@ -198,3 +198,11 @@ Navigation combines Lucide icons and text, with orange for the active route. Use
 ### Shared controls
 
 Use Radix-backed shadcn source exported by `@athlete-panel/ui`. `packages/ui` owns control styles and `--ui-` semantic mappings; `data-theme` remains the theme switch. Use shared Dialog/AlertDialog/Sheet for modal interaction, Native Select and native date fields for those form behaviors, and one shared Tooltip provider. Preserve the orange/graphite palette, compact spacing and restrained dividers. Plugin CSS owns domain layout, prescriptions and charts. Do not add global button/input styles that override shared components. See [shared UI](docs/features/shared-ui.md).
+
+### Markdown content
+
+Supported narrative fields use shared read-only Markdown typography at 14px/1.7 and a 70ch maximum measure. Content headings stay below page/dialog and field headings, with restrained 16/15/14px sizes. Lists retain visible markers, links use underlined accent ink with focus rings, and quotes use a thin divider. Code and tables scroll within their own keyboard-focusable regions. Footnotes and disabled task-list checkboxes remain legible in both themes. Plugin prose selectors target their own direct children so they do not override shared Markdown.
+
+Editors retain the existing textarea and Save actions with a “Markdown supported” hint; no toolbar or preview button is added. Compact clickable cards show plain-text excerpts. Full descriptions and additional injury notes remain separate readable sections. [Training behavior](docs/features/training-workspace.md#markdown-descriptions-and-notes) owns field scope, storage and safety rules.
+
+Markdown that cannot be processed safely falls back to the source in the same typography, with preserved line breaks and wrapping long text. Keep surrounding edit/delete actions available; do not replace the page with an error or show the source as an unwrapped code block.

@@ -11,6 +11,8 @@ import {
   ErrorMessage,
   Field,
   Input,
+  MarkdownContent,
+  markdownToPlainText,
   Modal,
   PageHeader,
   requestId,
@@ -85,7 +87,7 @@ function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
         <Field label="Start date" hint="Leave blank to build an unscheduled plan.">
           <Input name="startDate" type="date" defaultValue={plan?.startDate ?? ''} />
         </Field>
-        <Field label="Description">
+        <Field label="Description" hint="Markdown supported">
           <Textarea
             name="description"
             maxLength={20000}
@@ -167,7 +169,9 @@ function WorkoutSummary({ workout }: { workout: Workout }) {
         )}
       </span>
       {(preview || workout.notes) && (
-        <span className="plans-session-preview">{preview || workout.notes}</span>
+        <span className="plans-session-preview">
+          {preview || markdownToPlainText(workout.notes)}
+        </span>
       )}
     </>
   );
@@ -264,7 +268,7 @@ function PlanDetails({
           {plan.description && (
             <section className="plans-description" aria-label="Plan description">
               <h3>About this plan</h3>
-              <p>{plan.description}</p>
+              <MarkdownContent source={plan.description} />
             </section>
           )}
         </div>
@@ -413,7 +417,9 @@ export default function TrainingPage({ data }: PluginPageProps) {
               <span className="plans-list-copy">
                 <strong>{plan.title}</strong>
                 {plan.description && (
-                  <span className="plans-list-description">{plan.description}</span>
+                  <span className="plans-list-description">
+                    {markdownToPlainText(plan.description)}
+                  </span>
                 )}
                 <PlanMeta
                   plan={plan}

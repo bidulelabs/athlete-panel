@@ -42,6 +42,12 @@ def scenario(image, candidate, ingress, reports):
     try:
         rendered = fixture.run(['docker', 'compose', '-p', project, '-f', str(ROOT / 'compose.yml'), '--env-file', str(env_path), '--profile', '*', 'config', '--format', 'json'])
         config = json.loads(rendered.stdout)
+        if ingress == 'external':
+            reference = config['services']['db']['image']
+            if fixture.run(['docker', 'image', 'inspect', reference], check=False).returncode:
+                fixture.run(['docker', 'pull', reference])
+            database_image = json.loads(fixture.run(['docker', 'image', 'inspect', reference]).stdout)[0]
+            config['services']['db']['image'] = next(ref for ref in database_image['RepoDigests'] if ref.startswith('postgres@'))
         selected = json.loads(fixture.run(['docker', 'image', 'inspect', image]).stdout)[0]['Id']
         caddyfile = stage / 'Caddyfile'
         caddyfile.write_text('localhost {\n tls internal\n reverse_proxy dashboard:3000 {\n header_up X-Athlete-Panel-Client-IP {remote_host}\n }\n}\n')
@@ -127,12 +133,28 @@ def scenario(image, candidate, ingress, reports):
         assert instance.pending['backup']['file'] != instance.pending['preparationBackup']['file']
         recovery_point = backup / instance.pending['backup']['file']
         instance = Hosted(state, test=test); instance.lock_root = stage
+        real_step = instance.step
+        def missing_backup(name, action):
+            if name == 'start-scheduled-backups':
+                instance.compose(instance.pending['candidate'], ['--profile', 'backup', 'rm', '-s', '-f', 'backup'])
+                raise RuntimeError('Synthetic missing backup after reopening')
+            return real_step(name, action)
+        instance.step = missing_backup
+        with instance.lock():
+            try: instance.resume()
+            except RuntimeError: pass
+            else: raise AssertionError('Expected missing-backup interruption')
+        assert 'reopen-application' in instance.pending['completed']
+        serving_ids = instance.compose(instance.pending['candidate'], ['ps', '-q', 'web', 'worker']).stdout
+        instance = Hosted(state, test=test); instance.lock_root = stage
         with instance.lock(): instance.resume()
+        assert instance.compose(instance.record['active'], ['ps', '-q', 'web', 'worker']).stdout == serving_ids
         browser = helpers.Browser(instance); browser.request('/api/auth/login', {'password': password})
         assert persisted() == before_record
         assert instance.compose(instance.record['active'], ['exec', '-T', 'db', 'psql', '-U', 'fixture_admin', '-d', 'adoption_test', '-Atc', 'select count(*) from athlete.adoption_rehearsal']).stdout.strip() == '1'
         for name in [roles['db']] + ([roles['caddy']] if ingress == 'caddy' else []):
             assert instance.record['profile']['runtime'][name]['id'] == original_runtime[name]['id']
+        instance.compose(instance.record['active'], ['rm', '-s', '-f', 'web'])
         with instance.lock(): instance.recover(recovery_point)
         browser = helpers.Browser(instance); browser.request('/api/auth/login', {'password': password})
         assert persisted() == before_record
@@ -141,6 +163,7 @@ def scenario(image, candidate, ingress, reports):
         assert fixture.compose({}, ['exec', '-T', 'db', 'psql', '-U', 'fixture_admin', '-d', 'postgres', '-Atc', "select 1 from pg_database where datname='adoption_test'"]).stdout.strip() == '1'
         assert all(path.read_bytes() == content for path, content in files.items() if path != override)
         evidence.update(result='succeeded', preservedRecord=fingerprint(before_record), containerIdsUnchangedAtAdoption=True,
+                        missingBackupResumed=True, missingWebRecovered=True, postgresReference=config['services'][roles['db']]['image'],
                         cluster=instance.record['profile']['cluster'], restoredInitialRelease=True,
                         operations=[json.loads(path.read_text())['seconds'] for path in state.glob('completed-*.json')])
     finally:

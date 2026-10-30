@@ -280,6 +280,8 @@ Use this only for the [supported matrix](features/hosted-operations.md#initial-s
 
 Requirements: Linux, Python 3.10+, Docker Compose v2 and Buildx, access through an explicit local Unix Docker context, a working HTTPS installation, private file-backed credentials, backup/recovery containers explicitly using the controller account UID, and an already registered off-host backup mount/policy. Adoption does not create that policy, start a scheduler, change retention or silently accept local-only backups. Fix reported prerequisites using the existing manual operations procedure first; retain the old installation until the preview passes. Keep external ingress's client-IP overwrite contract and its own recovery configuration.
 
+The database may use an official `postgres:17…` tag or `postgres@sha256:…` digest, including the `docker.io/library/postgres` spelling. Adoption checks the running server's actual major version and verifies that the configured image resolves to the existing database image; digest references also receive the shared descriptor/content verification. Subsequent controller Compose commands retain that inspected database image. A moved tag or different major version is a blocker, not permission to update PostgreSQL during adoption.
+
 Preview with explicit paths and ordered overrides (an empty mode-0600 environment file is valid when no interpolation is needed):
 
 ```sh
@@ -305,6 +307,8 @@ python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a restore-test
 ```
 
 From a release bundle, omit `--image` to use that bundle's pinned image. Custom images/source use the same existing selectors and compatibility rules. An initially local/custom image requires the existing explicit acknowledgement before switching publishers or dropping plugins. Preparation still performs the mandatory full isolated restore rehearsal, followed by maintenance/draining and a second fresh recovery snapshot; adoption introduces no shortcut. Web/worker/backup update together. PostgreSQL and existing ingress containers stay in place. Adopted Caddy and external ingress retain operator-owned routing; update it explicitly when needed, rather than letting a candidate template replace it.
+
+If the backup container disappears after reopening, `resume` recreates only backup and waits for a new verified startup backup. If web/worker containers are missing, an upgrade can recreate them after its final recovery snapshot, or use explicit `recover` below. Missing application containers do not block recovery to a selected archive. Database/ingress containers, recorded volumes/networks, configuration/keys and off-host backup storage must still match; these protections are never bypassed to repair an application container.
 
 Configuration drift blocks upgrades. Review the changed files and the saved private profile, resolve discrepancies with the running installation, then preview/confirm reconciliation:
 

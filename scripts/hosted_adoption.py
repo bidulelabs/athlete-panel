@@ -144,6 +144,25 @@ def database_url(value, db_service):
     return parsed
 
 
+def postgres_reference(service):
+    reference = service.get('image', '')
+    if (not re.fullmatch(r'(?:docker.io/)?(?:library/)?postgres(?::17(?:[.-][\w.-]+)?)?(?:@sha256:[a-f0-9]{64})?', reference)
+            or reference in {'postgres', 'library/postgres', 'docker.io/postgres', 'docker.io/library/postgres'} or service.get('ports')):
+        fail('Only a private in-project PostgreSQL 17 service is supported. Use an official postgres:17 tag or postgres@sha256 digest; major upgrades/exposed database ports require a separate reviewed procedure.')
+    return reference
+
+
+def postgres_version(execute, container, user, database):
+    version = execute(['docker', 'exec', container, 'psql', '-U', user, '-d', database, '-Atc', 'show server_version_num']).stdout.strip()
+    if not version.isdigit() or not 170000 <= int(version) < 180000:
+        fail('The running database must be PostgreSQL 17. A different major version requires a separate reviewed procedure.')
+
+
+def volume_fact(info):
+    return {'name': info['Name'], 'driver': info['Driver'], 'mountpoint': info['Mountpoint'],
+            'created': info.get('CreatedAt'), 'options': info.get('Options')}
+
+
 def inspect(inputs, execute=run, test=False, managed=None):
     """Return private evidence and a separately sanitized public preview."""
     from hosted import valid_metadata, read_json, mount_identity, REMOTE_FILESYSTEMS, registry_repository
@@ -195,8 +214,7 @@ def inspect(inputs, execute=run, test=False, managed=None):
                 if path.is_symlink() or not path.exists(): fail('A bind mount is missing or a symlink. Restore it before adoption.')
                 if path.is_file(): facts[str(path)] = file_fact(path, role in APPLICATION)
     db = services['db']
-    if not re.fullmatch(r'(?:docker.io/library/)?postgres:17(?:[-.@].*)?', db.get('image', '')) or db.get('ports'):
-        fail('Only a private in-project PostgreSQL 17 service is supported. Major upgrades/exposed database ports require a separate reviewed procedure.')
+    db_reference = postgres_reference(db)
     mounts = [item for item in db.get('volumes', []) if item['target'] == '/var/lib/postgresql/data']
     if len(mounts) != 1 or len(db.get('volumes', [])) != 1 or db.get('command'):
         fail('PostgreSQL requires one existing data mount at /var/lib/postgresql/data and its standard command.')
@@ -280,6 +298,16 @@ def inspect(inputs, execute=run, test=False, managed=None):
     if managed and not managed.image_matches(image, managed.record['active']): fail('Reconciliation cannot select a different running release. Use explicit recovery or restore the controller-selected image.')
     if any(actual[mappings[role]]['Image'] != image for role in ['worker', 'backup']): fail('Web, worker and backup must run the same release before adoption.')
     execute_docker = lambda args: execute(docker(inputs['context'], *args[1:]))
+    database_container = actual[mappings['db']]
+    selected_db = json.loads(execute_docker(['docker', 'image', 'inspect', db_reference]).stdout)[0]
+    # Both IDs come from the same daemon/store. A tag or digest must resolve to
+    # the image actually used by the existing database, not a proposed update.
+    if selected_db['Id'] != database_container['Image'] or selected_db.get('Os') != 'linux':
+        fail('The selected PostgreSQL image differs from the running database. Restore its matching reference before adoption; adoption never updates PostgreSQL.')
+    postgres_version(execute_docker, database_container['Id'], unquote(admin.username), admin.path[1:])
+    if '@' in db_reference:
+        reference = 'docker.io/library/postgres@' + db_reference.split('@', 1)[1]
+        image_identity.identify(database_container['Image'], execute_docker, reference)
     image_info = json.loads(execute_docker(['docker', 'image', 'inspect', image]).stdout)[0]
     for role in APPLICATION:
         selected = json.loads(execute_docker(['docker', 'image', 'inspect', services[role]['image']]).stdout)[0]
@@ -307,7 +335,7 @@ def inspect(inputs, execute=run, test=False, managed=None):
     volumes, networks = {}, {}
     for name, volume in config.get('volumes', {}).items():
         info = json.loads(execute(docker(inputs['context'], 'volume', 'inspect', volume['name'])).stdout)[0]
-        volumes[name] = {'name': info['Name'], 'driver': info['Driver'], 'mountpoint': info['Mountpoint'], 'created': info.get('CreatedAt'), 'options': info.get('Options')}
+        volumes[name] = volume_fact(info)
     for name, network in config.get('networks', {}).items():
         info = json.loads(execute(docker(inputs['context'], 'network', 'inspect', network['name'])).stdout)[0]
         networks[name] = {'name': info['Name'], 'id': info['Id'], 'internal': info['Internal']}
@@ -390,6 +418,8 @@ def deployment(instance, release):
     """Preserve the adopted topology; change only the shared release/database selection."""
     from hosted import write_json
     profile = instance.record['profile']; config = copy.deepcopy(profile['config'])
+    db_name = profile['roles']['db']
+    config['services'][db_name].update(image=profile['runtime'][db_name]['image'], pull_policy='never')
     for role in APPLICATION:
         service = config['services'][profile['roles'][role]]
         service['image'] = release['image']; service.pop('build', None); service['pull_policy'] = 'never'
@@ -397,6 +427,9 @@ def deployment(instance, release):
         env['DATABASE_URL'] = urlunsplit(old._replace(path='/' + release['database']))
         env['ATHLETE_PANEL_RELEASE_IDENTITY'] = json.dumps(instance.release_identity(release))
         if role == 'backup': env['ATHLETE_PANEL_BACKUP_RUN'] = release.get('backupRun', '')
+    for service in config['services'].values():
+        for mount in service.get('volumes', []):
+            if mount['type'] == 'bind': mount.setdefault('bind', {})['create_host_path'] = False
     # Use already inspected storage/network identities, never Compose's path/name defaults.
     for kind in ['volumes', 'networks']:
         for name, existing in profile[kind].items(): config[kind][name] = {'external': True, 'name': existing['name']}
@@ -409,24 +442,46 @@ def validate_files(profile):
     if changed: fail('Referenced configuration files changed. Run reconcile --dry-run, review the changes and explicitly confirm reconciliation before upgrading.')
 
 
-def guard(instance, *, files_only=False):
+def recreatable_roles(pending):
+    if not pending: return set()
+    completed = set(pending['completed'])
+    if pending['kind'] not in {'upgrade', 'recover'}: return set()
+    if 'reopen-application' in completed: return {'backup'}
+    if pending['kind'] == 'recover' or 'verify-pre-upgrade-backup' in completed:
+        return {'web', 'worker', 'backup'}
+    return set()
+
+
+def guard(instance):
     """Never accept drift automatically, including after an interrupted deployment."""
     profile = instance.record['profile']; validate_files(profile)
     rendered = json.loads(run(project_command(profile['inputs']) + ['config', '--format', 'json']).stdout)
     if rendered != profile['config']: fail('The effective Compose model changed. Preview and confirm reconciliation before continuing.')
     current = endpoint(profile['inputs']['context'], run, bool(instance.test))
     if current != profile['daemon']: fail('Docker endpoint identity changed. Restore the original context or follow the replacement-host recovery runbook.')
+    missing = set(); allowed = recreatable_roles(instance.pending)
+    for service in profile['config']['services'].values():
+        for mount in service.get('volumes', []):
+            if mount['type'] == 'bind' and (Path(mount['source']).is_symlink() or not Path(mount['source']).exists()):
+                fail('A recorded bind mount is missing or changed. Restore its storage before continuing.')
+    for expected in profile['volumes'].values():
+        actual = json.loads(instance.run(['docker', 'volume', 'inspect', expected['name']]).stdout)[0]
+        if volume_fact(actual) != expected: fail('A persistent Docker volume changed. Restore its recorded identity before continuing.')
+    instance.verify_storage()
     for role in ['web', 'worker', 'backup', 'db'] + (['caddy'] if 'caddy' in profile['roles'] else []):
         name = profile['roles'][role]
         ids = instance.run(['docker', 'ps', '-aq', '--filter', 'label=com.docker.compose.project=' + instance.record['project'],
                             '--filter', 'label=com.docker.compose.service=' + name, '--filter', 'label=com.docker.compose.oneoff=False']).stdout.split()
-        if len(ids) != 1: fail('A mapped container is missing or replicated. Reconcile the installation before upgrading.')
+        if not ids and role in allowed:
+            missing.add(role); continue
+        if len(ids) != 1: fail('A mapped container is missing or replicated. This operation stage cannot recreate it; restore the expected installation or use explicit recovery.')
         item = json.loads(instance.run(['docker', 'inspect', ids[0]]).stdout)[0]
         expected = profile['runtime'][name]
         if sorted(item['Mounts'], key=lambda mount: mount['Destination']) != expected['mounts'] or sorted(item['NetworkSettings']['Networks']) != expected['networks']:
             fail('Running service mounts or networks changed. Reconcile before upgrading.')
         if role in {'db', 'caddy'}:
             if item['Id'] != expected['id'] or sorted(item['Mounts'], key=lambda mount: mount['Destination']) != expected['mounts']: fail('Database/ingress containers or mounts changed. Reconcile before upgrading.')
+            if item['Image'] != expected['image']: fail('Database/ingress image changed. Restore its recorded identity before continuing.')
         elif not instance.pending:
             if item['Id'] != expected['id'] or not instance.image_matches(item['Image'], instance.record['active']): fail('Running application containers changed outside the controller. Reconcile before upgrading.')
         else:
@@ -438,9 +493,11 @@ def guard(instance, *, files_only=False):
         actual = json.loads(instance.run(['docker', 'network', 'inspect', expected['name']]).stdout)[0]
         if actual['Id'] != expected['id']: fail('A Docker network was replaced. Reconcile its recorded identity before upgrading.')
     db_name = profile['roles']['db']; db_id = profile['runtime'][db_name]['id']
+    postgres_version(instance.run, db_id, instance.database_user(), instance.record['database'])
     cluster = instance.run(['docker', 'exec', db_id, 'psql', '-U', instance.database_user(), '-d', instance.record['database'], '-Atc',
                             'select system_identifier from pg_control_system()']).stdout.strip()
     if cluster != profile['cluster']: fail('The PostgreSQL cluster identity changed. Restore the intended database or follow explicit recovery.')
+    return missing
 
 
 def refresh_runtime(instance):

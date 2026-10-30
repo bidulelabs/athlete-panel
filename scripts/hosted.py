@@ -588,7 +588,8 @@ class Hosted:
     def adoption_guard(self):
         if self.record and self.record.get('profile'):
             from hosted_adoption import guard
-            guard(self, files_only=bool(self.pending))
+            return guard(self)
+        return set()
 
     def console(self, release, service, script, *args, data=None, extra=None):
         labels = ['--label', 'io.athlete-panel.operation=' + self.pending['id']] if self.pending else []
@@ -858,7 +859,7 @@ class Hosted:
         if not self.pending: raise OperationError('No pending operation. Use status to see the installed release.')
         if self.pending.get('format') != OPERATION_FORMAT:
             raise OperationError('Finish this pending operation with the controller that started it before upgrading controller versions.')
-        self.adoption_guard()
+        missing = self.adoption_guard()
         self.docker_ready(); self.reconcile_commands(); kind = self.pending['kind']
         entry_completed = set(self.pending['completed'])
         if kind == 'restore-test':
@@ -869,6 +870,11 @@ class Hosted:
             # The application is already serving. Never re-enter maintenance or replay migration.
             candidate = self.pending['candidate']
             self.verify_deployed(candidate)
+            if 'backup' in missing and 'verify-scheduled-backup' in entry_completed:
+                # A prior successful archive does not prove the scheduler still
+                # exists. Recreate it and require a fresh matching attempt.
+                self.pending['completed'].remove('verify-scheduled-backup'); self.checkpoint()
+                entry_completed.remove('verify-scheduled-backup')
             if 'verify-scheduled-backup' in entry_completed:
                 self.verify_archive(Path(self.record['backupDirectory']) / self.pending['verifiedBackup']['file'], candidate)
                 self.finish(); print('Application ready; recorded backup authenticated.'); return

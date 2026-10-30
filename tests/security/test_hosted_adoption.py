@@ -18,12 +18,15 @@ import hosted_adoption as adoption
 import image_identity
 
 IMAGE = 'sha256:' + 'a' * 64
+DB_IMAGE = 'sha256:' + 'b' * 64
 IDENTITY = {'format': 1, 'os': 'linux', 'architecture': 'amd64', 'variant': '', 'configDigest': IMAGE}
 
 
 class Fixture:
     def __init__(self, root, ingress='external'):
         self.root = Path(root); self.commands = []
+        self.database_version = '170006'; self.database_image = DB_IMAGE; self.cluster = '123456789'
+        self.volume_created = 'original'
         self.inputs = {'project': 'training-a', 'directory': root, 'context': 'fixture', 'ingress': ingress,
                        'files': [root + '/compose.json', root + '/override.json'], 'envFiles': [root + '/app.env'],
                        'roles': {'web': 'ui', 'worker': 'jobs', 'db': 'postgres', 'backup': 'archives'}}
@@ -53,7 +56,7 @@ class Fixture:
                                               {'type': 'bind', 'source': root + '/policy.json', 'target': '/run/secrets/policy', 'read_only': True}]
         for service in self.services.values(): service['networks'] = {'custom': None}
         self.config = {'services': self.services, 'networks': {'custom': {'name': 'fixture-network'}}, 'volumes': {'data': {'name': 'retained-data'}}}
-        self.containers = [{'Id': 'id-' + name, 'Image': IMAGE, 'State': {'Running': True},
+        self.containers = [{'Id': 'id-' + name, 'Image': DB_IMAGE if name == 'postgres' else IMAGE, 'State': {'Running': True},
                             'Config': {'Labels': {'com.docker.compose.service': name, 'com.docker.compose.config-hash': 'hash-' + name},
                                        'Env': [key + '=' + value for key, value in service['environment'].items()]},
                             'Mounts': [{'Type': item['type'], 'Source': item['source'], 'Name': 'retained-data' if item['type'] == 'volume' else None, 'Destination': item['target'], 'RW': not item.get('read_only', False)} for item in service.get('volumes', [])], 'NetworkSettings': {'Networks': {'fixture-network': {}}}}
@@ -68,13 +71,19 @@ class Fixture:
         elif command[0] == 'compose':
             if '--hash' in command: return subprocess.CompletedProcess(args, 0, '\n'.join(name + ' hash-' + name for name in self.services), '')
             result = self.config
-        elif command[0] == 'ps': return subprocess.CompletedProcess(args, 0, ' '.join(item['Id'] for item in self.containers), '')
-        elif command[0] == 'inspect': result = self.containers
-        elif command[:2] == ['image', 'inspect']: result = [{'Id': IMAGE, 'Os': 'linux', 'Architecture': 'amd64', 'RepoDigests': []}]
-        elif command[:2] == ['volume', 'inspect']: result = [{'Name': 'retained-data', 'Driver': 'local', 'Mountpoint': '/retained', 'CreatedAt': 'original'}]
+        elif command[0] == 'ps':
+            selected = self.containers
+            for arg in command:
+                if arg.startswith('label=com.docker.compose.service='):
+                    selected = [item for item in selected if item['Config']['Labels']['com.docker.compose.service'] == arg.rsplit('=', 1)[1]]
+                elif arg.startswith('label=io.athlete-panel.operation='): selected = []
+            return subprocess.CompletedProcess(args, 0, ' '.join(item['Id'] for item in selected), '')
+        elif command[0] == 'inspect': result = [item for item in self.containers if item['Id'] in command[1:]]
+        elif command[:2] == ['image', 'inspect']: result = [{'Id': self.database_image if 'postgres' in command[2] else IMAGE, 'Os': 'linux', 'Architecture': 'amd64', 'RepoDigests': []}]
+        elif command[:2] == ['volume', 'inspect']: result = [{'Name': 'retained-data', 'Driver': 'local', 'Mountpoint': '/retained', 'CreatedAt': self.volume_created}]
         elif command[:2] == ['network', 'inspect']: result = [{'Name': 'fixture-network', 'Id': 'network-original', 'Internal': True}]
         elif command[0] == 'exec' and 'cat' in command: result = self.metadata
-        elif command[0] == 'exec' and 'psql' in command: return subprocess.CompletedProcess(args, 0, '123456789', '')
+        elif command[0] == 'exec' and 'psql' in command: return subprocess.CompletedProcess(args, 0, self.database_version if command[-1] == 'show server_version_num' else self.cluster, '')
         elif command[0] == 'save':
             Path(command[command.index('-o') + 1]).write_bytes(b'synthetic retained image')
             return subprocess.CompletedProcess(args, 0, '', '')
@@ -224,13 +233,114 @@ class Adoption(unittest.TestCase):
             release = {**profile['release'], 'image': 'sha256:' + 'd' * 64, 'database': 'recovered_test'}
             adoption.deployment(instance, release)
             config = hosted.read_json(instance.state / 'deployment.json')
-            for name in ['postgres', 'caddy']: self.assertEqual(config['services'][name], fixture.services[name])
+            self.assertEqual(config['services']['caddy'], fixture.services['caddy'])
+            self.assertEqual(config['services']['postgres'], {**fixture.services['postgres'], 'image': DB_IMAGE, 'pull_policy': 'never'})
             for role in adoption.APPLICATION:
                 name = fixture.roles[role]; service = config['services'][name]
-                self.assertEqual(service.get('volumes'), fixture.services[name].get('volumes'))
+                expected_mounts = copy.deepcopy(fixture.services[name].get('volumes'))
+                for mount in expected_mounts or []:
+                    if mount['type'] == 'bind': mount['bind'] = {'create_host_path': False}
+                self.assertEqual(service.get('volumes'), expected_mounts)
                 self.assertEqual(service['environment']['ENCRYPTION_KEY'], fixture.env['ENCRYPTION_KEY'])
                 self.assertTrue(service['environment']['DATABASE_URL'].endswith('/recovered_test'))
             self.assertEqual(config['volumes']['data'], {'external': True, 'name': 'retained-data'})
+
+    def test_postgres_tag_and_digest_require_running_major_and_matching_image(self):
+        for reference in ['postgres:17', 'postgres:17-bookworm', 'postgres:17.6',
+                          'postgres@' + DB_IMAGE, 'postgres:17@' + DB_IMAGE, 'docker.io/library/postgres@' + DB_IMAGE]:
+            with self.subTest(reference=reference), tempfile.TemporaryDirectory() as root:
+                fixture = Fixture(root); fixture.services['postgres']['image'] = reference
+                with patch.object(image_identity, 'identify', return_value=IDENTITY) as identify:
+                    profile, _ = adoption.inspect(fixture.inputs, fixture.execute, True)
+                    self.assertEqual(profile['runtime']['postgres']['image'], DB_IMAGE)
+                    if '@' in reference:
+                        self.assertEqual(identify.call_args_list[0].args[2], 'docker.io/library/postgres@' + DB_IMAGE)
+                for version in ['160009', '180001', 'invalid']:
+                    fixture.database_version = version
+                    with self.assertRaisesRegex(hosted.OperationError, 'running database must be PostgreSQL 17'):
+                        adoption.inspect(fixture.inputs, fixture.execute, True)
+                fixture.database_version = '170006'; fixture.database_image = IMAGE
+                with self.assertRaisesRegex(hosted.OperationError, 'image differs'):
+                    adoption.inspect(fixture.inputs, fixture.execute, True)
+
+    def test_postgres_digest_proof_failure_is_not_ignored(self):
+        with tempfile.TemporaryDirectory() as root:
+            fixture = Fixture(root); fixture.services['postgres']['image'] = 'postgres@' + DB_IMAGE
+            with patch.object(image_identity, 'identify', side_effect=image_identity.ImageIdentityError('Registry manifest configuration differs')):
+                with self.assertRaises(image_identity.ImageIdentityError): adoption.inspect(fixture.inputs, fixture.execute, True)
+
+    def controller(self, fixture):
+        profile, _ = adoption.inspect(fixture.inputs, fixture.execute, True)
+        instance = hosted.Hosted(fixture.root / 'state', test={'port': 4567})
+        instance.record = {'version': 2, 'project': fixture.inputs['project'], 'profile': profile, 'testOnly': True,
+                           'active': copy.deepcopy(profile['release']), 'database': 'training_test', 'backupDirectory': str(fixture.storage)}
+        self.stack.enter_context(patch.object(adoption, 'run', side_effect=fixture.execute))
+        self.stack.enter_context(patch.object(instance, 'run', side_effect=fixture.execute))
+        self.stack.enter_context(patch.object(instance, 'image_matches', side_effect=lambda image, release: image == release['image']))
+        return instance
+
+    def test_missing_backup_resume_recreates_only_backup_and_verifies_new_attempt(self):
+        for already_verified in [False, True]:
+            with self.subTest(already_verified=already_verified), tempfile.TemporaryDirectory() as root:
+                fixture = Fixture(root); instance = self.controller(fixture)
+                original = copy.deepcopy(fixture.containers)
+                backup = next(item for item in fixture.containers if item['Id'] == 'id-archives')
+                fixture.containers.remove(backup)
+                instance.begin('upgrade', previous=instance.record['active'], candidate=copy.deepcopy(instance.record['active']))
+                instance.pending['completed'] = ['reopen-application'] + (['verify-scheduled-backup'] if already_verified else [])
+                def compose(release, args):
+                    self.assertEqual(args, ['--profile', 'backup', 'up', '-d', '--no-deps', 'backup'])
+                    backup['Id'] = 'new-backup'; fixture.containers.append(backup)
+                def verified(release): instance.pending['verifiedBackup'] = {'file': 'new.fgr'}
+                with patch.object(instance, 'docker_ready'), patch.object(instance, 'verify_deployed') as ready, patch.object(instance, 'maintenance') as maintenance, patch.object(instance, 'console') as console, patch.object(instance, 'compose', side_effect=compose) as created, patch.object(instance, 'await_backup', side_effect=verified) as verify:
+                    instance.resume()
+                    created.assert_called_once(); verify.assert_called_once(); ready.assert_called_once()
+                    maintenance.assert_not_called(); console.assert_not_called()
+                self.assertIsNone(instance.pending)
+                self.assertEqual(instance.record['profile']['runtime']['archives']['id'], 'new-backup')
+                self.assertEqual([c for c in fixture.containers if c is not backup], [c for c in original if c['Id'] != 'id-archives'])
+
+    def test_missing_web_allows_explicit_recovery_to_reach_archive_preparation(self):
+        with tempfile.TemporaryDirectory() as root:
+            fixture = Fixture(root); instance = self.controller(fixture)
+            fixture.containers = [c for c in fixture.containers if c['Id'] != 'id-ui']
+            with patch.object(instance, 'docker_ready'), patch.object(instance, 'recovery_tools', side_effect=RuntimeError('reached recovery preparation')) as prepare:
+                with self.assertRaisesRegex(RuntimeError, 'reached recovery preparation'):
+                    instance.recover(fixture.root / 'synthetic.fgr')
+                prepare.assert_called_once()
+
+    def test_missing_roles_are_allowed_only_when_the_stage_can_recreate_them(self):
+        stages = [(None, [], set()), ('restore-test', [], set()), ('upgrade', [], set()),
+                  ('upgrade', ['verify-pre-upgrade-backup'], {'web', 'worker', 'backup'}),
+                  ('recover', [], {'web', 'worker', 'backup'}),
+                  ('upgrade', ['reopen-application'], {'backup'}), ('recover', ['reopen-application'], {'backup'})]
+        for kind, completed, allowed in stages:
+            for role in ['web', 'worker', 'backup', 'db', 'caddy']:
+                with self.subTest(kind=kind, completed=completed, role=role), tempfile.TemporaryDirectory() as root:
+                    fixture = Fixture(root, 'caddy'); instance = self.controller(fixture)
+                    instance.pending = {'kind': kind, 'completed': completed} if kind else None
+                    fixture.containers = [c for c in fixture.containers if c['Config']['Labels']['com.docker.compose.service'] != fixture.roles[role]]
+                    if role in allowed: self.assertEqual(adoption.guard(instance), {role})
+                    else:
+                        with self.assertRaisesRegex(hosted.OperationError, 'mapped container'): adoption.guard(instance)
+
+    def test_missing_container_does_not_bypass_persistent_state_or_runtime_guards(self):
+        mutations = [lambda f: setattr(f, 'cluster', '999'), lambda f: setattr(f, 'volume_created', 'replacement'),
+                     lambda f: setattr(f, 'database_version', '180001'),
+                     lambda f: (f.storage / '.athlete-panel-storage-id').write_text('replacement'),
+                     lambda f: Path(f.inputs['files'][0]).write_text('changed'),
+                     lambda f: (f.root / 'key').write_text('changed'),
+                     lambda f: f.containers.append(copy.deepcopy(f.containers[0])),
+                     lambda f: f.containers[0].update(Image='sha256:' + 'e' * 64),
+                     lambda f: f.containers[0]['NetworkSettings'].update(Networks={'unexpected': {}}),
+                     lambda f: next(c for c in f.containers if c['Id'] == 'id-postgres')['Mounts'][0].update(Name='replacement')]
+        for mutation in mutations:
+            with tempfile.TemporaryDirectory() as root:
+                fixture = Fixture(root); instance = self.controller(fixture)
+                instance.pending = {'kind': 'recover', 'completed': []}
+                fixture.containers = [c for c in fixture.containers if c['Id'] != 'id-archives']
+                mutation(fixture)
+                with self.assertRaises(hosted.OperationError): adoption.guard(instance)
 
 
 if __name__ == '__main__': unittest.main()

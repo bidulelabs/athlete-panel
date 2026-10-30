@@ -56,7 +56,6 @@ import {
   Menu,
   Moon,
   Plug,
-  RefreshCw,
   Settings2,
   ShieldCheck,
   Sun,
@@ -445,21 +444,6 @@ export function WorkspaceApp({
       )}
 
       <main className="workspace-main">
-        <div className="workspace-topline">
-          <span>
-            <span className="status-dot" />
-            Private training workspace
-          </span>
-          <Button
-            variant="link"
-            className="text-button"
-            onClick={() => void refresh()}
-            disabled={refreshing}
-          >
-            <RefreshCw size={13} className={refreshing ? 'spin' : ''} />
-            {refreshing ? 'Refreshing' : 'Refresh'}
-          </Button>
-        </div>
         {error && (
           <div className="page-error">
             {refreshNotice && (
@@ -475,7 +459,12 @@ export function WorkspaceApp({
                 {dateLabel(loadedRange.to)}.
               </p>
             )}
-            <Button variant="link" className="text-button" onClick={() => void refresh()}>
+            <Button
+              variant="link"
+              className="text-button"
+              disabled={refreshing}
+              onClick={() => void refresh()}
+            >
               Try again
             </Button>
           </div>

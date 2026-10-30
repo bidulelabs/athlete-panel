@@ -13,8 +13,17 @@ async function settings(page: Page) {
     .getByRole('link', { name: 'Settings', exact: true })
     .click();
 }
-test('refresh preserves an old draft revision and offers explicit recovery', async ({ page }) => {
+test('retrying a workspace reload preserves an old draft revision and offers explicit recovery', async ({
+  page,
+}) => {
   await login(page);
+  await page.route(
+    '**/api/workspace?**',
+    (route) => route.fulfill({ status: 503, json: { error: 'Synthetic reload outage' } }),
+    { times: 1 },
+  );
+  await page.getByRole('button', { name: 'Next week', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Try again', exact: true })).toBeVisible();
   await settings(page);
   await page.getByLabel('Training goals').fill('My unsaved draft');
   const origin = new URL(page.url()).origin;
@@ -36,7 +45,7 @@ test('refresh preserves an old draft revision and offers explicit recovery', asy
     },
   });
   expect(result.ok()).toBeTruthy();
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.getByRole('button', { name: 'Try again', exact: true }).click();
   await expect(page.getByText('This profile changed elsewhere.', { exact: false })).toBeVisible();
   await expect(page.getByLabel('Training goals')).toHaveValue('My unsaved draft');
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
@@ -53,6 +62,11 @@ test('refresh preserves an old draft revision and offers explicit recovery', asy
 });
 test('failed date navigation retains last loaded dates and can retry', async ({ page }) => {
   await login(page);
+  let imports = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes('/api/plugins/garmin/')) imports++;
+  });
+  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toHaveCount(0);
   const before = await page.getByLabel('Go to date').inputValue();
   await page.route('**/api/workspace?**', (route) =>
     route.fulfill({
@@ -67,6 +81,7 @@ test('failed date navigation retains last loaded dates and can retry', async ({ 
   await page.unroute('**/api/workspace?**');
   await page.getByRole('button', { name: 'Try again', exact: true }).click();
   await expect(page.getByLabel('Go to date')).not.toHaveValue(before);
+  expect(imports).toBe(0);
 });
 test('successful mutation with failed refresh is clearly reported without losing the saved edit', async ({
   page,

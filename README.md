@@ -170,7 +170,7 @@ The server exchanges the key for a short-lived bearer token and obtains a new to
 | Sleep         | Total duration, Deep/Light/REM/Awake durations and sleep score                                 |
 | Daily health  | Resting heart rate, overnight HRV, steps, stress and Body Battery                              |
 
-With automatic synchronization enabled, the worker schedules a recent import about every hour and refreshes the latest seven days to catch corrections. History imports are duplicate-safe and resumable. Activity pagination has no application start-date cutoff; health scans use an internal January 1, 2000 boundary and continue through empty windows. Long scans can take time, especially under rate limits.
+With automatic synchronization enabled, the worker schedules a recent import about every hour and refreshes the latest seven days to catch corrections. Initial history imports and recovery of unscanned periods are duplicate-safe and resumable. Already scanned older history is not rescanned automatically. Corrections or late uploads affecting previously scanned dates older than seven days require **Refresh date range**, with **Activities**, **Health** or **Both** (the default). Activity-only refresh does not fetch health data. Activity pagination has no application start-date cutoff; health scans use an internal January 1, 2000 boundary and continue through empty windows. Long scans can take time, especially under rate limits.
 
 **Coverage depends on Garmin, the account and the device.** Completing traversal does not prove that every historical record or metric was available. Missing values, unsupported streams and failures are surfaced. Disconnecting removes credentials and stops sync while retaining imported history.
 

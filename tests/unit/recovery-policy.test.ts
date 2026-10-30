@@ -4,7 +4,6 @@ import {
   nextGap,
   healthBucket,
   windowCursor,
-  nextReconciliation,
   type RecoveryContext,
 } from '../../plugins/garmin/recovery-policy';
 const context: RecoveryContext = {
@@ -34,27 +33,24 @@ it('keeps initial traversal ranges pending rather than rescanning them as catch-
   expect(nextGap('sleep', context, [], [{ from: '2000-01-01', to: '2026-10-20' }])).toBeNull();
   expect(nextGap('activities', context, [])).toEqual({ from: '0001-01-01', to: '2026-10-20' });
 });
-it('walks stable historical buckets to the existing floor and restarts a cycle only after reaching it', () => {
-  const floor = '2026-01-01',
-    local = { ...context, earliestDate: floor };
-  let cursor = windowCursor('sleep', healthBucket(floor, '2026-03-03'), local);
-  const windows = [];
-  for (;;) {
-    windows.push({ from: cursor.earliestHealthDate, to: cursor.today });
-    const next = nextReconciliation(cursor, { ...cursor, phase: 'done' }, local);
-    if (!next) break;
-    cursor = next;
+it('does not revisit completed history, including empty scans and adjacent coverage', () => {
+  for (const stream of ['activities', 'sleep'] as const) {
+    const floor = stream === 'activities' ? '0001-01-01' : context.earliestDate;
+    expect(
+      nextGap(stream, context, [
+        { stream, from: floor, to: '2026-10-01' },
+        { stream, from: '2026-10-02', to: context.today },
+      ]),
+    ).toBeNull();
   }
-  expect(windows).toEqual([
-    { from: '2026-02-26', to: '2026-03-03' },
-    { from: '2026-01-29', to: '2026-02-25' },
-    { from: floor, to: '2026-01-28' },
-  ]);
-});
-it('keeps the complete activity traversal bound and page position until exhaustion', () => {
-  const cursor = windowCursor('activities', { from: '0001-01-01', to: '2026-10-20' }, context);
-  expect(cursor.activityFrom).toBeUndefined();
-  const next = { ...cursor, activityOffset: 99 };
-  expect(nextReconciliation(cursor, next, { ...context, today: '2026-11-03' })).toEqual(next);
-  expect(nextReconciliation(cursor, { ...next, phase: 'done' }, context)).toBeNull();
+  expect(
+    windowCursor('activities', { from: '0001-01-01', to: '2026-10-20' }, context).activityFrom,
+  ).toBeUndefined();
+  expect(
+    windowCursor('activities', { from: '0001-01-01', to: '1999-12-31' }, context),
+  ).toMatchObject({
+    today: '1999-12-31',
+    earliestHealthDate: '1999-12-31',
+    targetStream: 'activities',
+  });
 });

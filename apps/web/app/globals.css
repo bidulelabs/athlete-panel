@@ -263,21 +263,6 @@ svg {
   width: calc(100% - 218px);
   padding: 0 32px 42px;
 }
-.workspace-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 55px;
-  border-bottom: 1px solid var(--line);
-  color: var(--faint);
-  font-size: 10px;
-  letter-spacing: 0.2px;
-}
-.workspace-topline > span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
 .status-dot {
   display: inline-block;
   width: 6px;
@@ -1834,10 +1819,6 @@ svg {
     margin-left: 0;
     width: 100%;
     padding: 0 18px 30px;
-  }
-  .workspace-topline {
-    height: 40px;
-    font-size: 9px;
   }
   .page-header {
     padding: 23px 0;

@@ -3,7 +3,6 @@ import { HEALTH_STREAMS } from './normalize';
 import { addDays, createSyncCursor, type GarminSyncCursor } from './sync';
 
 export const RECOVERY_STREAMS: ImportStream[] = ['activities', ...HEALTH_STREAMS];
-export const RECONCILE_INTERVAL = 300_000;
 export type DateRange = { from: string; to: string };
 export type SuccessfulRange = DateRange & { stream: string };
 export type RecoveryContext = {
@@ -49,7 +48,9 @@ export function windowCursor(
     earliestHealthDate:
       stream === 'activities'
         ? range.from === '0001-01-01'
-          ? context.earliestDate
+          ? context.earliestDate < range.to
+            ? context.earliestDate
+            : range.to
           : range.from
         : range.from,
     ...(stream === 'activities' && range.from !== '0001-01-01' ? { activityFrom: range.from } : {}),
@@ -62,20 +63,6 @@ export function windowCursor(
   cursor.healthStreamIndex = stream === 'activities' ? 0 : HEALTH_STREAMS.indexOf(stream);
   return cursor;
 }
-export function nextReconciliation(
-  cursor: GarminSyncCursor,
-  next: GarminSyncCursor,
-  context: RecoveryContext,
-): GarminSyncCursor | null {
-  if (cursor.targetStream === 'activities') return next.phase === 'done' ? null : next;
-  if (!cursor.targetStream || cursor.earliestHealthDate <= context.earliestDate) return null;
-  return windowCursor(
-    cursor.targetStream,
-    healthBucket(context.earliestDate, addDays(cursor.earliestHealthDate, -1)),
-    context,
-  );
-}
-
 export function nextGap(
   stream: ImportStream,
   context: RecoveryContext,

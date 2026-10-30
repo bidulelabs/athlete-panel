@@ -96,7 +96,7 @@ test('recent changes opens on demand with readable details in both themes', asyn
   await page.setViewportSize({ width: 320, height: 740 });
   changes[0].changes.find((change) => change.entity === 'workout')!.after!.title =
     'A long workout title '.repeat(12);
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.reload();
   await trigger.click();
   await sheet.getByRole('button', { name: 'View details' }).first().click();
   await noOverflow(page);
@@ -107,7 +107,7 @@ test('recent changes opens on demand with readable details in both themes', asyn
   }
   await sheet.getByRole('button', { name: 'Close recent changes' }).click();
   changes.splice(0);
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.reload();
   await trigger.click();
   await expect(sheet).toContainText('No changes yet');
   await expect(sheet.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0);
@@ -192,8 +192,8 @@ test('multiple plans, readable descriptions and ordered weeks in both themes', a
   data.workouts[0]!.steps = [
     { kind: 'warmup', durationSeconds: 600, distanceMeters: null, target: null, notes: '' },
   ];
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+  await page.reload();
+  await expect(page.locator('.page-content')).toBeVisible();
   const trigger = page.getByRole('button', { name: 'Open Autumn endurance block', exact: true });
   const plan = page.getByRole('dialog', { name: 'Autumn endurance block', exact: true });
   for (const theme of ['dark', 'light']) {
@@ -273,8 +273,8 @@ test('workout opens full inspector, nested edit and logging preserve focus and d
 }, info) => {
   const { data, writes, errors } = await preview(page);
   data.profile!.units = 'imperial';
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+  await page.reload();
+  await expect(page.locator('.page-content')).toBeVisible();
   await page.getByRole('button', { name: 'Open Autumn endurance block' }).click();
   const plan = page.getByRole('dialog', { name: 'Autumn endurance block', exact: true });
   const row = plan.getByRole('button', { name: 'Open Threshold intervals', exact: true });
@@ -437,8 +437,8 @@ test('long content, narrow layouts and empty plans remain usable', async ({ page
   data.plans[0]!.title = title;
   data.plans[0]!.description = 'Keep the effort conversational.\n\n'.repeat(100);
   data.workouts[0]!.title = 'Long workout abcdefghijklmnopqrstuvwxyz0123456789';
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+  await page.reload();
+  await expect(page.locator('.page-content')).toBeVisible();
   await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
   const plan = page.getByRole('dialog', { name: title, exact: true });
   for (const width of info.project.name === 'mobile' ? [320, 390, 768] : [1060, 1280, 1440]) {
@@ -458,7 +458,7 @@ test('long content, narrow layouts and empty plans remain usable', async ({ page
   await page.keyboard.press('Escape');
   data.plans = [];
   data.workouts = [];
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.reload();
   await expect(page.getByRole('button', { name: 'Create your first plan' })).toBeVisible();
   expect(writes()).toBe(0);
   expect(errors).toEqual([]);

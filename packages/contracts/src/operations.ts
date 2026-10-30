@@ -4,7 +4,7 @@ import {
   proposalReviewSchema,
 } from './proposal-review';
 import { z } from 'zod';
-import { importStreamSchema } from './import-recovery';
+import { importScopeSchema, importStreamSchema } from './import-recovery';
 import {
   commandsSchema,
   dateSchema,
@@ -55,6 +55,7 @@ export const operationContracts = {
           from: dateSchema.nullable().optional(),
           to: dateSchema.optional(),
           stream: importStreamSchema.optional(),
+          scope: importScopeSchema.optional(),
         })
         .strict(),
       z.object({ id: z.uuid(), status: z.string() }),

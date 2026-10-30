@@ -117,3 +117,9 @@ Both full adoption scenarios passed: registered remote backups/bundled Caddy in 
 Initial Caddy fixture runs exposed Docker Desktop reporting an auto-created file bind through its internal `/host_mnt` path. Targeted diagnostics isolated the mismatch to that fixture's Caddyfile source. Its existing file bind now explicitly disables host-path creation, matching the controller's deployment behavior; repeated preview passed with strict mount equality afterward. The full scenarios above passed without relaxing production guards. Temporary diagnostic probes, including one deliberately missing the migration fixture, are not counted as acceptance runs.
 
 Documentation validation passed for 43 files; framework review covered durable ownership, legacy migration, prerequisite messages, canonical commands and evidence limits. Synthetic services, databases, volumes and private fixture state were removed. UI/browser tests were not repeated because this follow-up changes only controller tooling and documentation; classic-store application recovery and physical-server loss remain outside this run's evidence. No production deployment or release publication was performed.
+
+## Prepare version 0.2.0
+
+On 2026-10-30 the owner requested a version bump and branch push. The root package version advances from 0.1.0 to 0.2.0 for the added deployment and backup capabilities. Release metadata reads this authoritative version; independent workspace/plugin versions and the dependency lockfile are unchanged.
+
+Verification: six release-metadata unit tests and eight release-tag policy tests passed. Calling the existing metadata generator in ESM mode confirmed version 0.2.0; the initial CommonJS evaluation command was incompatible with its top-level await and was corrected. No tag, image publication or deployment is part of this preparation. Stable publication follows merge to main and an explicitly authorized v0.2.0 tag.

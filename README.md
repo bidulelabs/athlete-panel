@@ -116,7 +116,9 @@ These commands target macOS/Linux terminals; Windows users need WSL2 with Docker
 
 ### Hosting on your server
 
-The recommended VPS workflow uses a **prebuilt release image** with a small deployment bundle. Your server needs **Linux, Python 3.10+ and Docker Compose**, a domain and mounted off-host backup storage. No application checkout, Node, pnpm or build is required on the server.
+The recommended VPS workflow uses a **prebuilt release image** with a small deployment bundle. Your server needs **Linux, Python 3.10+ and Docker Compose/Buildx**, a domain and mounted off-host backup storage. No application checkout, Node, pnpm or build is required on the server.
+
+Existing manual Compose installations can use the explicit [adoption preview and confirmation](docs/development.md#adopting-an-existing-compose-installation) when they fit the documented support matrix. Adoption records their configuration without restarting services; subsequent upgrades use the shared deployment/recovery sequence.
 
 **Release availability:** this repository implements the workflow; no official image or downloadable release bundle has been published yet. Use a trusted image/bundle supplied by the maintainer, or the [custom/source build path](docs/development.md#custom-images-and-source-upgrades). From an extracted release bundle:
 

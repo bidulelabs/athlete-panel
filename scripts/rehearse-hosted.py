@@ -99,7 +99,8 @@ def main():
         # Hosted coordination uses its host flock and exclusive secret writes, not container PIDs.
         (instance.state/'.runtime').mkdir(mode=0o700)
         stale=instance.state/'.runtime/local-command.lock';stale.write_text('1');stale.chmod(0o600)
-        instance.install(None if remote else ROOT,'training.example.com',backup,password=password,image=None if remote else args.image,image_ref=remote)
+        instance.install(None if remote else ROOT,'training.example.com',backup,password=password,image=None if remote else args.image,image_ref=remote,backup_mode='remote' if args.registry else None)
+        assert instance.backup_mode() == ('remote' if args.registry else 'local')
         base=instance.record['active'];images.add(base['image'])
         configuration=(instance.state/'.env').read_bytes();key=(instance.state/'.secrets/backup-key').read_bytes()
         try:instance.install(ROOT,'training.example.com',backup,password='must-never-replace')
@@ -154,16 +155,21 @@ def main():
             finally:sql("update host.settings set value='"+original_composition.replace("'","''")+"'::jsonb where key='composition'")
             print('PASS: source-free bundle, immutable pull identity, authenticated image backup and custom/plugin guards before downtime.',flush=True)
 
-        # Missing mount identity must fail before creating a new archive.
+        # Remote identity loss and unsafe local permissions must both fail before
+        # a new archive; neither error may select a different storage mode.
         instance.compose(base,['--profile','backup','stop','backup'])
-        marker=backup/'.athlete-panel-storage-id';held=backup/'.held-identity';marker.rename(held)
+        marker=backup/'.athlete-panel-storage-id';held=backup/'.held-identity'
+        if instance.backup_mode() == 'remote': marker.rename(held)
+        else: backup.chmod(0o755)
         before=set(backup.glob('*.fgr'))
         try:
             try:instance.backup()
             except OperationError:pass
             else:raise RuntimeError('Missing storage identity was accepted.')
             assert set(backup.glob('*.fgr'))==before
-        finally:held.rename(marker)
+        finally:
+            if instance.backup_mode() == 'remote': held.rename(marker)
+            else: backup.chmod(0o700)
 
         candidate=stage/'candidate';copy_candidate(candidate)
         with (candidate/'Caddyfile').open('a') as ingress: ingress.write('\n# Synthetic candidate ingress revision\n')
@@ -265,13 +271,17 @@ def main():
         shutil.copytree(instance.state/'.secrets',replacement.state/'.secrets')
         replacement.record={**instance.record,'project':'athlete-panel-hosted-'+secrets.token_hex(5)};replacement.save()
         if args.registry:
-            original_run=replacement.run;pulled=[]
+            original_run=replacement.run;pulled=[];available=set()
             def cold_run(arguments,**kwargs):
                 if arguments[:2]==['docker','build']:raise RuntimeError('Image recovery unexpectedly built source.')
-                if arguments[:3]==['docker','image','inspect'] and arguments[-1] in [base['image'],upgraded['image']]:
+                if arguments[:3]==['docker','image','inspect'] and arguments[-1] in [base['image'],upgraded['image']] and arguments[-1] not in available:
                     import subprocess
                     return subprocess.CompletedProcess(arguments,1,'','synthetic missing local image')
-                if arguments[:2]==['docker','pull']:pulled.append(arguments[-1])
+                if arguments[:2]==['docker','pull']:
+                    pulled.append(arguments[-1])
+                    result=original_run(arguments,**kwargs)
+                    available.add(json.loads(original_run(['docker','image','inspect',arguments[-1]]).stdout)[0]['Id'])
+                    return result
                 return original_run(arguments,**kwargs)
             replacement.run=cold_run
         replacement.recover(custom_archive if args.registry else archive,image=None if args.registry else args.image or base['image']);images.add(replacement.record['active']['image'])

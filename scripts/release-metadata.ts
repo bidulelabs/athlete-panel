@@ -25,6 +25,7 @@ export async function releaseMetadata(root: string, commit = process.env.ATHLETE
   return imageMetadataSchema.parse({
     application: 'athlete-panel',
     hostedProtocol: 1,
+    imageIdentityVersion: 1,
     version: pkg.version,
     sourceDigest: await sourceDigest(root),
     ...(commit ? { commit } : {}),

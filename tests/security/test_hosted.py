@@ -13,6 +13,36 @@ hosted = importlib.util.module_from_spec(spec); spec.loader.exec_module(hosted)
 
 
 class HostedSafety(unittest.TestCase):
+    def test_image_comparison_preserves_prerequisite_errors_instead_of_claiming_mismatch(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root)
+            release = {'image': 'sha256:' + 'a' * 64, 'registryRef': 'registry.example/app@sha256:' + 'b' * 64}
+            with patch.object(hosted.image_identity, 'identify', side_effect=hosted.image_identity.ImagePrerequisiteError('Docker Buildx is required')):
+                with self.assertRaisesRegex(ValueError, 'Buildx'): instance.image_matches('sha256:' + 'c' * 64, release)
+            with patch.object(hosted.image_identity, 'identify', side_effect=hosted.image_identity.ImageIdentityError('mismatch')):
+                self.assertFalse(instance.image_matches('sha256:' + 'c' * 64, release))
+
+    def test_docker_readiness_does_not_require_buildx_for_local_resume_or_recovery(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root)
+            calls = []
+            def run(args, **kwargs):
+                calls.append(args)
+                if 'buildx' in args: raise AssertionError('Local readiness must not require Buildx')
+                return hosted.subprocess.CompletedProcess(args, 0, '', '')
+            with patch.object(instance, 'run', side_effect=run): instance.docker_ready()
+            self.assertEqual(calls, [['docker', 'info'], ['docker', 'compose', 'version']])
+
+    def test_source_build_reports_missing_buildx_before_starting_build(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(Path(root) / 'state')
+            source = Path(root) / 'source'; source.mkdir(); (source / 'Dockerfile').write_text('FROM scratch\n')
+            instance.record = {'project': 'synthetic'}; instance.begin('upgrade')
+            with patch.object(instance, 'run', side_effect=hosted.OperationError('synthetic private output')) as run:
+                with self.assertRaisesRegex(ValueError, 'Docker Buildx.*Install'): instance.prepare_image(source)
+                self.assertEqual(run.call_args.args[0], ['docker', 'buildx', 'version'])
+                self.assertEqual(run.call_count, 1)
+
     def test_saved_operator_state_is_reused_and_invalid_projects_are_refused(self):
         with tempfile.TemporaryDirectory() as home:
             state = Path(home)/'.local/share/athlete-panel/hosted'
@@ -134,7 +164,7 @@ class HostedSafety(unittest.TestCase):
             output=Path(root)/'release.tar.gz';reference='ghcr.io/example/app@sha256:'+'d'*64
             module.package_release(reference,output)
             with tarfile.open(output) as archive:
-                self.assertEqual(set(archive.getnames()),{'scripts/hosted.py','scripts/hosted_rehearsal.py','release.json','README.txt'})
+                self.assertEqual(set(archive.getnames()),{'scripts/hosted.py','scripts/hosted_rehearsal.py','scripts/image_identity.py','scripts/hosted_adoption.py','release.json','README.txt'})
                 self.assertEqual(json.load(archive.extractfile('release.json'))['image'],reference)
             with self.assertRaises(ValueError):module.package_release(reference,output)
             with self.assertRaises(ValueError):module.package_release('ghcr.io/example/app:v1',Path(root)/'unsafe.tar.gz')
@@ -182,6 +212,78 @@ class HostedSafety(unittest.TestCase):
             with one.lock():
                 with self.assertRaises(hosted.OperationError):
                     with two.lock(): pass
+
+    def test_new_install_defaults_local_and_persists_mode_without_touching_remote_setup(self):
+        with tempfile.TemporaryDirectory() as root:
+            destination = Path(root) / 'local-backups'
+            instance = hosted.Hosted(Path(root) / 'state')
+            with patch.object(instance, 'resume'):
+                instance.install(None, 'training.example.com', destination)
+            self.assertEqual(destination.stat().st_mode & 0o777, 0o700)
+            resumed = hosted.Hosted(instance.state)
+            self.assertEqual(resumed.backup_mode(), 'local')
+            with patch.object(hosted, 'mount_identity', side_effect=AssertionError('No remote mount needed')):
+                resumed.register_storage(); resumed.verify_storage()
+            self.assertFalse(resumed.storage_policy().exists())
+            self.assertFalse(hosted.storage_marker(destination).exists())
+            destination.rmdir()
+            with self.assertRaisesRegex(hosted.OperationError, 'unavailable'): resumed.verify_storage()
+            self.assertFalse(destination.exists())
+
+    def test_local_requires_private_directory_and_cannot_override_existing_remote_policy(self):
+        with tempfile.TemporaryDirectory() as root:
+            destination = Path(root) / 'backups'; destination.mkdir(mode=0o700)
+            instance = hosted.Hosted(Path(root) / 'state')
+            instance.record = {'backupDirectory': str(destination), 'backupMode': 'local'}
+            instance.verify_storage()
+            destination.chmod(0o755)
+            with self.assertRaisesRegex(hosted.OperationError, '0700'): instance.verify_storage()
+            destination.chmod(0o700)
+            hosted.private_directory(instance.storage_policy().parent)
+            hosted.write_json(instance.storage_policy(), {'version': 1, 'id': 'existing-remote'})
+            with self.assertRaisesRegex(hosted.OperationError, 'conflicts'): instance.verify_storage()
+
+    def test_legacy_records_keep_remote_mode_and_missing_mount_never_falls_back(self):
+        with tempfile.TemporaryDirectory() as root:
+            destination = Path(root) / 'backups'; destination.mkdir(mode=0o700)
+            instance = hosted.Hosted(Path(root) / 'state')
+            instance.record = {'backupDirectory': str(destination)}
+            self.assertEqual(instance.backup_mode(), 'remote')
+            hosted.private_directory(instance.storage_policy().parent)
+            hosted.write_json(instance.storage_policy(), {'version': 1, 'id': 'remote-id', 'mountFingerprint': 'a' * 64})
+            hosted.storage_marker(destination).write_text('remote-id')
+            with patch.object(hosted, 'mount_identity', return_value=('nfs4', 'a' * 64)):
+                instance.verify_storage()
+            before = set(destination.iterdir())
+            with patch.object(hosted, 'mount_identity', return_value=('ext4', 'b' * 64)):
+                with self.assertRaisesRegex(hosted.OperationError, 'absent or changed'): instance.verify_storage()
+            self.assertEqual(set(destination.iterdir()), before)
+            self.assertEqual(instance.backup_mode(), 'remote')
+
+    def test_remote_install_is_explicit_and_never_creates_a_missing_destination(self):
+        with tempfile.TemporaryDirectory() as root:
+            destination = Path(root) / 'remote'
+            instance = hosted.Hosted(Path(root) / 'state', test={'port':4443})
+            with self.assertRaisesRegex(hosted.OperationError, 'mount'): instance.install(None, 'training.example.com', destination, backup_mode='remote')
+            self.assertFalse(destination.exists()); self.assertIsNone(instance.record)
+            destination.mkdir(mode=0o700)
+            with patch.object(instance, 'resume'): instance.install(None, 'training.example.com', destination, backup_mode='remote')
+            instance.register_storage()
+            self.assertEqual(hosted.Hosted(instance.state, test={'port':4443}).backup_mode(), 'remote')
+
+    def test_status_distinguishes_local_remote_legacy_and_failed_or_overdue_backups(self):
+        with tempfile.TemporaryDirectory() as root:
+            instance = hosted.Hosted(root)
+            instance.record = {'backupMode': 'local'}
+            status = {'lastBackup': {'verifiedAt': hosted.timestamp(), 'storage': 'unverified'}}
+            self.assertEqual(instance.backup_protection(status), 'Local backup verified; off-server copy not configured')
+            self.assertIn('failed', instance.backup_protection({**status, 'backupAttempt': {'state': 'failed'}}))
+            self.assertIn('overdue', instance.backup_protection({'lastBackup': {'verifiedAt': '2020-01-01T00:00:00Z'}}))
+            self.assertEqual(instance.backup_protection({'lastBackup': {'verifiedAt': 'invalid'}}), 'Backup verification pending')
+            instance.record = {}  # Legacy remote record never inherits the local default.
+            self.assertEqual(instance.backup_protection(status), 'Off-server protection not verified')
+            status['lastBackup']['storage'] = 'remote-mount'
+            self.assertEqual(instance.backup_protection(status), 'Verified backup on registered remote storage')
 
     def test_cancel_refuses_an_ambiguous_maintenance_transition(self):
         with tempfile.TemporaryDirectory() as root:

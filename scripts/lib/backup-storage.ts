@@ -40,7 +40,27 @@ export function storageMount(destination: string, mountInfo: string) {
 export async function verifyStorage(
   destination: string,
   policyFile = process.env.BACKUP_STORAGE_POLICY,
-): Promise<'remote-mount' | 'unverified' | 'isolated-test'> {
+  mode = process.env.BACKUP_STORAGE_MODE,
+): Promise<'local' | 'remote-mount' | 'unverified' | 'isolated-test'> {
+  if (mode && mode !== 'local' && mode !== 'remote')
+    throw new Error('Invalid backup storage mode. Choose local or remote.');
+  if (mode === 'local') {
+    if (policyFile)
+      throw new Error(
+        'Local mode conflicts with a registered remote policy; fallback is forbidden.',
+      );
+    const directory = await lstat(destination);
+    if (
+      !directory.isDirectory() ||
+      directory.isSymbolicLink() ||
+      directory.mode & 0o077 ||
+      (process.getuid && directory.uid !== process.getuid())
+    )
+      throw new Error('Local backup storage must be an existing owner-only directory (0700).');
+    return 'local';
+  }
+  if (mode === 'remote' && !policyFile)
+    throw new Error('Remote backup storage requires its registered policy; fallback is forbidden.');
   if (!policyFile) return 'unverified'; // Advanced/local backups remain possible, explicitly unverified.
   const policy = JSON.parse(await readFile(policyFile, 'utf8')) as StoragePolicy;
   if (

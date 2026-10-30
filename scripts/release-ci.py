@@ -11,6 +11,9 @@ import sys
 import tempfile
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import image_identity
+
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE = 'athlete-panel:release-check'
 
@@ -75,19 +78,24 @@ def export_image(directory, commit):
     if info['Os'] != 'linux' or info['Architecture'] != 'amd64': raise ValueError('Release images must be Linux AMD64.')
     if metadata.get('commit') != commit: raise ValueError('Built commit differs from checkout.')
     run(['docker', 'save', '-o', target, IMAGE])
-    record = {'format': 1, 'commit': commit, 'imageId': info['Id'], 'metadata': metadata, 'sha256': checksum(target)}
+    identity = image_identity.identify(IMAGE, run, archive=target)
+    # Tested content is config + ordered rootfs, independent of registry envelope.
+    identity = {key: value for key, value in identity.items() if key not in {'manifestDigest', 'indexDigest'}}
+    record = {'format': 2, 'commit': commit, 'imageId': info['Id'], 'identity': identity, 'metadata': metadata, 'sha256': checksum(target)}
     (directory / 'candidate.json').write_text(json.dumps(record, indent=2) + '\n')
     return record
 
 
 def verify_image(directory, commit):
     record = json.loads((directory / 'candidate.json').read_text())
-    if record.get('format') != 1 or record.get('commit') != commit:
+    if record.get('format') not in {1, 2} or record.get('commit') != commit:
         raise ValueError('Candidate belongs to a different commit or artifact format.')
     if checksum(directory / 'image.tar') != record['sha256']: raise ValueError('Image archive checksum mismatch.')
     run(['docker', 'load', '-i', directory / 'image.tar'])
     info = inspect(IMAGE)
-    if info['Id'] != record['imageId'] or info['Os'] != 'linux' or info['Architecture'] != 'amd64':
+    identity = image_identity.identify(IMAGE, run, archive=directory / 'image.tar')
+    image_identity.verify(identity, record.get('identity'), record['imageId'])
+    if info['Os'] != 'linux' or info['Architecture'] != 'amd64':
         raise ValueError('Loaded image identity/platform differs from the tested candidate.')
     if read_metadata(IMAGE) != record['metadata'] or record['metadata'].get('commit') != commit:
         raise ValueError('Loaded release metadata differs from the tested candidate.')
@@ -138,8 +146,16 @@ def publish(directory, commit, repository, tag, evidence_directory):
     evidence = []
     for kind in ['release', 'hosted', 'hosted-registry']:
         entry = json.loads((evidence_directory / (kind + '.json')).read_text())
-        if entry.get('commit') != commit or entry.get('imageId') != record['imageId'] or entry.get('result') != 'succeeded':
+        if entry.get('commit') != commit or entry.get('result') != 'succeeded':
             raise ValueError('Missing or mismatched successful rehearsal evidence.')
+        if entry.get('identity'):
+            image_identity.verify(entry['identity'], record.get('identity'), record['imageId'])
+        elif record.get('identity') or entry.get('imageId') != record['imageId']:
+            raise ValueError('Missing or mismatched successful rehearsal image identity.')
+        if record.get('format') == 2 and kind == 'hosted':
+            adopted = entry.get('adoption', [])
+            if {value.get('ingress') for value in adopted if value.get('result') == 'succeeded'} != {'caddy', 'external'}:
+                raise ValueError('Successful adoption/upgrade/recovery evidence is missing.')
         evidence.append(entry)
     release = existing_release(repository, tag)
     if release and not release['isDraft'] and release['isPrerelease'] != prerelease:
@@ -147,25 +163,30 @@ def publish(directory, commit, repository, tag, evidence_directory):
     repo = 'ghcr.io/' + repository.lower()
     references = [repo + ':' + tag, repo + ':sha-' + commit]
     existing = [remote_image(ref) for ref in references]
-    for info in existing:
-        if info and info['Id'] != record['imageId']:
-            raise ValueError('Published version/commit already points to different image contents; nothing was overwritten.')
+    tested_id = inspect(IMAGE)['Id']
+    for ref, info in zip(references, existing):
+        if info:
+            pinned = next(value for value in info['RepoDigests'] if value.startswith(repo + '@sha256:'))
+            actual = image_identity.identify(ref, run, pinned)
+            image_identity.verify(actual, record.get('identity'), record['imageId'])
     # Loading a remote tag may retag local names; always publish by the verified immutable ID.
     for ref, info in zip(references, existing):
         if info is None:
-            run(['docker', 'tag', record['imageId'], ref]); run(['docker', 'push', ref])
+            run(['docker', 'tag', tested_id, ref]); run(['docker', 'push', ref])
     resolved = remote_image(references[0])
     digest = next(value for value in resolved['RepoDigests'] if value.startswith(repo + '@sha256:'))
     run(['docker', 'pull', digest])
-    if inspect(digest)['Id'] != record['imageId'] or read_metadata(digest) != record['metadata']:
+    published_identity = image_identity.identify(digest, run, digest)
+    image_identity.verify(published_identity, record.get('identity'), record['imageId'])
+    if read_metadata(digest) != record['metadata']:
         raise ValueError('Published digest differs from the verified image; release bundle was not published.')
     with tempfile.TemporaryDirectory() as folder:
         output = Path(folder)
         spec = importlib.util.spec_from_file_location('package_release', ROOT / 'scripts/package-release.py')
         packager = importlib.util.module_from_spec(spec); spec.loader.exec_module(packager)
         bundle = output / 'athlete-panel-deploy.tgz'
-        packager.package_release(digest, bundle, commit)
-        identity = {'format': 1, 'commit': commit, 'image': digest, 'imageId': record['imageId'],
+        packager.package_release(digest, bundle, commit, published_identity)
+        identity = {'format': 2, 'commit': commit, 'image': digest, 'imageId': record['imageId'], 'identity': published_identity,
                     'sourceDigest': record['metadata']['sourceDigest'], 'bundleSha256': checksum(bundle)}
         (output / 'release-record.json').write_text(json.dumps(identity, indent=2) + '\n')
         (output / 'verification.json').write_text(json.dumps({'release': identity, 'rehearsals': evidence}, indent=2) + '\n')
@@ -204,9 +225,14 @@ def rehearse(kind, commit, output):
     if kind != 'release': command += ['--report', str(phases)]
     started = time.monotonic()
     result = subprocess.run(command)
-    output.write_text(json.dumps({'scenario': kind, 'commit': commit, 'imageId': inspect(IMAGE)['Id'],
+    adoption = []
+    if kind == 'hosted' and result.returncode == 0:
+        adoption_path = output.with_name('adoption-phases.json')
+        result = subprocess.run([sys.executable, 'scripts/rehearse-adoption.py', '--image', IMAGE, '--report', str(adoption_path)])
+        if adoption_path.exists(): adoption = json.loads(adoption_path.read_text())
+    output.write_text(json.dumps({'scenario': kind, 'commit': commit, 'imageId': inspect(IMAGE)['Id'], 'identity': image_identity.identify(IMAGE, run),
                                  'seconds': round(time.monotonic() - started, 3),
-                                 'operations': json.loads(phases.read_text()) if phases.exists() else [],
+                                 'operations': json.loads(phases.read_text()) if phases.exists() else [], 'adoption': adoption,
                                  'result': 'succeeded' if result.returncode == 0 else 'failed'}, indent=2) + '\n')
     if result.returncode: raise ValueError('Container rehearsal failed.')
 

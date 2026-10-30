@@ -7,6 +7,7 @@ export const imageMetadataSchema = z
   .object({
     application: z.literal('athlete-panel'),
     hostedProtocol: z.literal(1),
+    imageIdentityVersion: z.literal(1).optional(),
     version: z.string().min(1).max(128),
     sourceDigest: digest,
     commit: z
@@ -31,10 +32,30 @@ export async function readImageMetadata(root: string) {
   return imageMetadataSchema.parse(JSON.parse(contents));
 }
 
-/** Registry digest and local image ID are different identities; retain both. */
+/** Portable content identity; the local Docker identifier is recorded separately. */
+export const portableImageIdentitySchema = z
+  .object({
+    format: z.literal(1),
+    os: z.literal('linux'),
+    architecture: z.string().min(1),
+    variant: z.string(),
+    configDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+    manifestDigest: z
+      .string()
+      .regex(/^sha256:[a-f0-9]{64}$/)
+      .optional(),
+    indexDigest: z
+      .string()
+      .regex(/^sha256:[a-f0-9]{64}$/)
+      .optional(),
+  })
+  .strict();
+
+/** Older authenticated archives without portable identity remain readable. */
 export const releasedImageSchema = z
   .object({
     imageId: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+    identity: portableImageIdentitySchema.optional(),
     registryRef: z
       .string()
       .regex(/^[a-z0-9][a-z0-9._:/-]*@sha256:[a-f0-9]{64}$/)

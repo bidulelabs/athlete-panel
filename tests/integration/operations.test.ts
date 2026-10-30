@@ -128,6 +128,49 @@ describe('matched encrypted backup and isolated database restore', () => {
     });
   }, 120_000);
 
+  it('verifies encrypted local archives and refuses unavailable remote storage without publishing a backup', async () => {
+    const destination = join(temp, 'explicit-local');
+    await mkdir(destination, { mode: 0o700 });
+    const mode = process.env.BACKUP_STORAGE_MODE,
+      policy = process.env.BACKUP_STORAGE_POLICY;
+    const options = {
+      databaseUrl: sourceUrl,
+      keyFile,
+      encryptionKey,
+      destination,
+      root: resolve('.'),
+    };
+    try {
+      delete process.env.BACKUP_STORAGE_POLICY;
+      process.env.BACKUP_STORAGE_MODE = 'local';
+      const backup = await createBackup(options);
+      const verified = await verifyBackup(backup.file, keyFile, encryptionKey);
+      await verified.cleanup();
+      const [last] = await source`select value from host.settings where key='lastBackup'`;
+      expect(last.value).toMatchObject({ storage: 'local', verifiedAt: expect.any(String) });
+      expect(
+        (await readFile(backup.file)).includes(Buffer.from('synthetic-private-operations-fixture')),
+      ).toBe(false);
+      const before = await readdir(destination);
+      process.env.BACKUP_STORAGE_MODE = 'remote';
+      await expect(createBackup(options)).rejects.toThrow('requires');
+      process.env.BACKUP_STORAGE_POLICY = join(temp, 'missing-remote-policy');
+      await expect(createBackup(options)).rejects.toThrow();
+      expect(await readdir(destination)).toEqual(before);
+      expect(
+        (await source`select value from host.settings where key='lastBackup'`)[0].value,
+      ).toEqual(last.value);
+      expect(
+        (await source`select value from host.settings where key='backupAttempt'`)[0].value.state,
+      ).toBe('failed');
+    } finally {
+      if (mode === undefined) delete process.env.BACKUP_STORAGE_MODE;
+      else process.env.BACKUP_STORAGE_MODE = mode;
+      if (policy === undefined) delete process.env.BACKUP_STORAGE_POLICY;
+      else process.env.BACKUP_STORAGE_POLICY = policy;
+    }
+  }, 120_000);
+
   it('rejects unsupported, truncated and corrupted backup envelopes', async () => {
     const bytes = await readFile(file);
     expect(bytes.subarray(0, BACKUP_MAGIC.length)).toEqual(BACKUP_MAGIC);

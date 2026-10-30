@@ -35,6 +35,7 @@ set +a
 | `PG_BIN_DIR` | Optional directory containing matching PostgreSQL client binaries for host operations/tests. |
 | `TEST_DATABASE_URL` | Explicit local database whose name ends in `_test`; operations tests never fall back to `DATABASE_URL`. The role needs permission to create/drop its isolated temporary test databases. |
 | `PLAYWRIGHT_BASE_URL`, `E2E_PASSWORD` | Running loopback synthetic instance and its owner password for browser tests. |
+| `ATHLETE_PANEL_IMAGE_TMPDIR` | Optional existing absolute disk-backed directory for private temporary image exports; default `/var/tmp`, independent of `TMPDIR`. Linux memory filesystems are rejected. Allow the inspected image size plus at least 64 MiB overhead; concurrent writes/multi-platform exports can require more. Temporary exports are removed after success, errors or handled interruption. |
 | `ATHLETE_PANEL_AGENT_CONFIG` | Optional protected CLI configuration path; otherwise `~/.config/athlete-panel/agent.json`. |
 
 Generate independent keys using Node's `crypto.randomBytes(32).toString('base64')`. A protected backup key file can be created without displaying its contents:
@@ -225,19 +226,27 @@ Garmin routine tests use injectable transport and synthetic fixtures. An owner-a
 
 ## Private-server installation
 
-The recommended VPS path uses **Linux, Python 3.10+ and Docker Engine with Compose v2**. Node, pnpm and PostgreSQL client tools run inside the image. The primary path uses a reviewed, digest-pinned deployment bundle and prebuilt Linux image, a persistent server disk, a DNS hostname pointing to that server, and ports 80/443 available to Caddy. Arrange a mounted off-host backup directory dedicated to this installation first; supported filesystem checks cover NFS, SMB/CIFS and SSHFS. Provisioning the server, DNS and remote storage remains outside the application.
+The recommended VPS path uses **Linux, Python 3.10+ and Docker Engine with Compose v2 and Buildx**. Node, pnpm and PostgreSQL client tools run inside the image. The primary path uses a reviewed, digest-pinned deployment bundle and prebuilt Linux image, a persistent server disk, a DNS hostname pointing to that server, and ports 80/443 available to Caddy. New installations default to **local backups** in a dedicated private server directory; no network-storage setup is required. Optional **remote backups** require an existing NFS, SMB/CIFS or SSHFS mount. Provisioning the server, DNS and remote storage remains outside the application.
 
 The release workflow targets `ghcr.io/bidulelabs/athlete-panel` and matching GitHub Release assets. Implementing the workflow does not mean a version has already been published: obtain an available image and matching bundle through that trusted release channel; see [release bundle preparation](#preparing-a-release-image-and-bundle). Do not substitute an arbitrary public image. From the extracted bundle directory:
 
 ```sh
-python3 scripts/hosted.py install --domain training.example.com --backup-directory /mnt/offsite/athlete_panel
+python3 scripts/hosted.py install --domain training.example.com --backup-directory "$HOME/athlete-panel-backups"
 ```
 
-Choose and confirm the owner login password when prompted. The prompt does not echo or save it. The controller registers the remote storage identity, pulls the bundle’s immutable image digest, generates independent database passwords/application/backup keys, starts PostgreSQL, applies migrations, creates the owner, starts web/worker/Caddy and verifies HTTPS, saved data and fresh worker readiness. It reopens writes, starts the daily backup service and waits for its first authenticated backup. A bundle contains the controller and isolated-rehearsal helper, a pinned image descriptor and brief instructions. Download/extract it for review; there is no download-and-execute installer. Python only coordinates Docker and private checkpoints; application tools run inside containers.
+Choose and confirm the owner login password when prompted. The prompt does not echo or save it. The controller creates the local destination with mode 0700 (or validates an existing private directory), pulls the bundle’s immutable image digest, generates independent database passwords/application/backup keys, starts PostgreSQL, applies migrations, creates the owner, starts web/worker/Caddy and verifies HTTPS, saved data and fresh worker readiness. It reopens writes, starts the daily backup service and waits for its first authenticated backup. A bundle contains the controller and isolated-rehearsal helper, a pinned image descriptor and brief instructions. Download/extract it for review; there is no download-and-execute installer. Python only coordinates Docker and private checkpoints; application tools run inside containers.
+
+Use `--backup-mode local` to state the default explicitly. The directory must belong to the controller account, be private (0700), and be separate from the controller state directory. Choose a destination outside source checkouts. Existing directories, keys and archives are never reset or made private automatically. For off-server storage, mount a dedicated destination first, then install with:
+
+```sh
+python3 scripts/hosted.py install --domain training.example.com --backup-mode remote --backup-directory /mnt/offsite/athlete_panel
+```
+
+Remote mode registers the mount fingerprint and storage marker. An absent/changed mount, policy or marker blocks operations; it never becomes local storage. The selected mode and path persist in `installation.json` across upgrades, resume, recovery and restore tests. Older controller records without a mode remain remote. There is no automatic mode conversion, and `reconcile` cannot change it.
 
 Private operator state lives in `~/.local/share/athlete-panel/hosted` with mode 0700 and private files. Use `--state /absolute/private/directory` **before** the subcommand to choose another location, consistently for all commands. State contains generated `.env`, `.secrets`, the installed image/database identity, private rendered Compose configuration and operation checkpoints. It is separate from source checkouts; the controller never reads the checkout's `.env`. Keep the state directory outside the repository and backup destination.
 
-Save a separate protected recovery kit containing `.env`, `.secrets/backup-key`, `.secrets/backup-storage.json` and `installation.json`. Keep this kit in a password manager or independently encrypted private store, separate from `.fgr` archives. It contains credentials. Keep pending `operation.json` too when preserving an interrupted operation. The controller cannot replace lost encryption keys.
+Save a separate protected recovery kit containing `.env`, `.secrets/backup-key`, `installation.json` and `.secrets/backup-storage.json` when using remote mode. Keep this kit in a password manager or independently encrypted private store, separate from `.fgr` archives and independently recoverable after losing the VPS. It contains credentials. Keep pending `operation.json` too when preserving an interrupted operation. The controller cannot replace lost encryption keys. Local archives alone do not survive loss of the server; arrange an independent protected copy if that recovery guarantee is needed.
 
 Repeating install never resets an installed owner or regenerates existing secrets. After interruption:
 
@@ -274,9 +283,97 @@ docker compose --profile backup up -d backup
 
 The password file is temporary and mode 0600; remove it after bootstrap. The image contains web/worker builds, source for matched backups, runtime dependencies and PostgreSQL 17 client tools. Manual backups without a registered storage policy remain explicitly labelled as having unverified off-host protection.
 
+## Adopting an existing Compose installation
+
+Use this only for the [supported matrix](features/hosted-operations.md#initial-support-matrix). Read the release's controller guidance before changing controller versions; finish an existing operation with its original controller. Existing managed installations do not need adoption; their reserved `athlete-panel-hosted-*` project names require the original controller state and cannot be adopted into a second state directory. A local host-process setup is not a production Compose installation and cannot be adopted this way.
+
+Requirements: Linux, Python 3.10+, Docker Compose v2 (plus Buildx for registry image verification), access through an explicit local Unix Docker context, a working HTTPS installation, private file-backed credentials, backup/recovery containers explicitly using the controller account UID, and an existing backup bind directory. Local directories must be private (0700, controller-owned); remote storage must already have its registered mount/policy. Preview explicitly reports the mode. Adoption does not create a remote policy, start a scheduler, change retention or downgrade remote protection. Fix reported prerequisites using the existing manual operations procedure first; retain the old installation until the preview passes. Keep external ingress's client-IP overwrite contract and its own recovery configuration.
+
+The database may use an official `postgres:17…` tag or `postgres@sha256:…` digest, including the `docker.io/library/postgres` spelling. Adoption checks the running server's actual major version and verifies that the configured image resolves to the existing database image; digest references also receive the shared descriptor/content verification. Subsequent controller Compose commands retain that inspected database image. A moved tag or different major version is a blocker, not permission to update PostgreSQL during adoption.
+
+Preview with explicit paths and ordered overrides (an empty mode-0600 environment file is valid when no interpolation is needed):
+
+```sh
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a adopt \
+  --context default --project training-a --project-directory /srv/training-a \
+  --compose-file /srv/training-a/compose.yml \
+  --compose-file /srv/training-a/production.yml \
+  --env-file /etc/training-a/app.env --ingress external \
+  --dry-run
+```
+
+Use `--ingress caddy` for an existing Caddy service. For nonstandard names add mappings such as `--service web=dashboard --service worker=jobs --service db=postgres --service backup=archives`; admin/recovery and optional caddy roles can also be mapped. No shell wrapper or environment script is executed. Compose parses the supplied configuration, and the controller inspects only the selected project. Unrelated services, replicas, custom entrypoints/source mounts, Compose include/extends graphs and external databases are blockers.
+
+Read the sanitized preview, then repeat the **same command**, replacing `--dry-run` with `--confirm FINGERPRINT`, using its exact confirmation value. Preview does not create controller state or change services. Confirmation revalidates the installation, saves its image archive and atomically records the private profile. It does not start/stop containers, migrate, bootstrap an owner, rotate credentials, edit Compose files or make backups. Allow disk space for temporary image export plus the retained original image. A stale preview fails and requires a new preview; interrupted saving can be retried with the same state path.
+
+Use the same state directory for later releases:
+
+```sh
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a upgrade --image ghcr.io/bidulelabs/athlete-panel@sha256:RELEASE_DIGEST
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a status
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a resume
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a restore-test
+```
+
+From a release bundle, omit `--image` to use that bundle's pinned image. Custom images/source use the same existing selectors and compatibility rules. An initially local/custom image requires the existing explicit acknowledgement before switching publishers or dropping plugins. Preparation still performs the mandatory full isolated restore rehearsal, followed by maintenance/draining and a second fresh recovery snapshot; adoption introduces no shortcut. Web/worker/backup update together. PostgreSQL and existing ingress containers stay in place. Adopted Caddy and external ingress retain operator-owned routing; update it explicitly when needed, rather than letting a candidate template replace it.
+
+If the backup container disappears after reopening, `resume` recreates only backup and waits for a new verified startup backup. If web/worker containers are missing, an upgrade can recreate them after its final recovery snapshot, or use explicit `recover` below. Missing application containers do not block recovery to a selected archive. Database/ingress containers, recorded volumes/networks, configuration/keys and the configured backup storage must still match; these protections are never bypassed to repair an application container.
+
+Configuration drift blocks upgrades. Review the changed files and the saved private profile, resolve discrepancies with the running installation, then preview/confirm reconciliation:
+
+```sh
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a reconcile --dry-run
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a reconcile --confirm FINGERPRINT
+```
+
+Reconciliation requires the same daemon, cluster, storage/network identities, service mappings and keys. It never accepts a different running release or rotates credentials. It cannot be used during a pending deployment; restore the expected inputs, resume/cancel safely, then reconcile. Database/volume/key replacement requires explicit recovery, not a drift acknowledgement. Avoid manual application restarts/configuration changes while the controller owns a deployment. The original Compose files remain your configuration references; the controller's private rendered deployment model owns subsequent release/database selection.
+
+To roll back, select the recorded **final** pre-upgrade archive and recover it into a new database:
+
+```sh
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a recover \
+  --archive /mnt/offsite/training-a/RECORDED_FINAL_ARCHIVE.fgr --confirm-recovery
+```
+
+Recovery authenticates the archive and selects its matching image/source. The adoption record retains the original release, plugins and image archive so the first managed upgrade has a recovery target. The previous database remains available; recovery does not perform down migrations. Keep the original manual Compose/config files and all referenced secrets in a protected recovery kit, alongside the complete controller state (`installation.json`, `adopted-image.tar`, operation records) and the private project ownership directory recorded as `ownershipDirectory`. Application and backup encryption keys need separately recoverable copies; source/database archives exclude them. A replacement host needs explicitly restored infrastructure and ownership/configuration references; do not bypass endpoint/cluster checks by editing state. The advanced lost-server procedure remains necessary for an adopted topology on a different host.
+
+The permanent host ownership claim lives under `/var/lib/athlete-panel/controllers/athlete-panel-controller-*`, keyed by Docker daemon and Compose project. It must remain outside temporary-file cleanup. The shared parent belongs to root with mode 1777; each claim is private (0700) and belongs to its controller account. Root creates the parent automatically when needed. Before confirming adoption as a non-root Docker-capable user, ask the server administrator to prepare it once:
+
+```sh
+sudo install -d -o root -g root -m 1777 /var/lib/athlete-panel/controllers
+```
+
+The controller validates the parent and its ancestors; it never falls back to a temporary ownership directory. Existing `/var/tmp/athlete-panel-controller-*` records migrate on the next locked operation: lock both locations, verify matching ownership, atomically copy the claim and refresh `ownershipDirectory` in installation state. Keep the legacy record; conflicting records or another active controller block migration. An interruption can retry without re-adoption. If cleanup already removed the legacy record and no permanent claim exists, restore its original record from the recovery kit first. Never invent a replacement claim or delete one to create a second controller. Use the updated bundle for subsequent operations and retire older controllers/manual wrappers; do not run them concurrently. Different Docker-capable accounts cannot independently adopt the same project; root/Docker administrators remain trusted.
+
+Image verification exports to a fresh private directory on disk, independent of a RAM-backed `/tmp` or `TMPDIR`. Set `ATHLETE_PANEL_IMAGE_TMPDIR` if `/var/tmp` is unsuitable. A capacity check precedes export; insufficient-space/export errors name the image-verification step, with command output withheld. Existing image archives are verified directly without an extra export. Repeated adoption inspections still revalidate live image identity; enough disk space and export time remain necessary.
+
+Docker and Compose are checked on every operation. Buildx is checked when inspecting registry descriptors (including a digest-pinned adopted PostgreSQL image) or building source, with a specific installation/retry message if unavailable. Recovery using a retained local image/archive does not require Buildx when its path needs neither registry verification nor rebuilding. Do not remove registry checks to work around a missing plugin; install the Buildx package supplied with your Docker installation and resume.
+
+Synthetic developer rehearsal (creates and removes its own projects only):
+
+```sh
+python3 scripts/rehearse-adoption.py --image athlete-panel:release-check --report .runtime/adoption-results.json
+```
+
+For a direct cross-store identity check, use the disposable Docker-in-Docker runner. It requires a reviewed local daemon image, a privileged test container, and spare image-export disk space; it never changes the host Docker backend or mounts its Docker socket/application storage. The guest has no network or published ports. It tests image transfer and legacy identity relationships, not a full second-machine application restore.
+
+```sh
+docker pull docker:29.9.2-dind
+python3 scripts/rehearse-image-stores.py --image athlete-panel:release-check \
+  --daemon-image docker:29.9.2-dind --report .runtime/image-store-results.json
+```
+
+The hosted CI rehearsal runs adoption against its downloaded tested image. See the [execution record](plans/compose-adoption.md) for actual backend coverage, timings and limitations.
+
 ## Backup policy and monitoring
 
-Backups contain a custom-format PostgreSQL dump, source/configuration including pinned plugins and personal plugin source, migration checksums and public deployment metadata. Managed image backups also authenticate the local image ID, portable registry digest when available, version and source fingerprint. A source snapshot that differs from the built image is refused. Existing archives without image identity remain readable. `.env` files, `.secrets`, dependency/build directories, Git history and existing backup archives are excluded. The source composition and applied migrations must match the installed database. Run backups from the current immutable release; staging a new composition into that checkout before backing it up will correctly fail this check.
+Both modes use the same encrypted archive format, authenticated read-back, seven-daily/four-weekly retention, sole daily backup scheduler and optional heartbeat notifications. Both require the complete restore rehearsal before upgrades and a fresh recovery snapshot after draining writes. `backup`, `restore-test` and `recover --archive … --confirm-recovery` use the saved mode and existing keys; select an archive from your configured directory. Neither recovery nor resume recreates a missing storage directory.
+
+The owner’s operational status and `hosted.py status` distinguish **“Local backup verified; off-server copy not configured”** from **“Verified backup on registered remote storage”**. Failed, pending or overdue backups are reported separately. Verification describes the last completed archive, not an ongoing storage availability guarantee. Old images continue to produce authenticated local archives using their existing unregistered-storage path: the new controller validates the private directory and reports local protection, while the old image’s UI may still say “Archive available; off-host protection not verified”. Upgrading to the current image adds the precise local wording. Remote policies are passed unchanged to old images; no compatibility path removes them.
+
+For a manual Compose installation, adoption infers remote mode from its existing `BACKUP_STORAGE_POLICY`, and local mode when no policy/mode is configured and its backup bind directory is private. Optional `adopt --backup-mode local` or `--backup-mode remote` asserts the existing mode; it cannot override it. A marker left without its remote policy is a blocker, not permission to fall back. Preview shows the mode before confirmation; recording adoption writes only controller state. Until the next controller upgrade, the unchanged running backup service can retain its earlier UI status wording; use `hosted.py status` for the recorded protection mode. Existing backup/recovery UIDs, key files, destinations and retention settings remain prerequisites. Named backup volumes remain unsupported. Mode conversion and automated off-server copying are outside this workflow.
+
+Backups contain a custom-format PostgreSQL dump, source/configuration including pinned plugins and personal plugin source, migration checksums and public deployment metadata. Managed image backups also authenticate the local image ID, portable registry digest when available, version and source fingerprint. New compatible images additionally record configuration/platform-manifest/index identity; old image metadata remains readable. Docker local IDs are engine-specific, so the controller verifies descriptor relationships rather than equating them with CI configuration digests. A source snapshot that differs from the built image is refused. Existing archives without image identity remain readable. `.env` files, `.secrets`, dependency/build directories, Git history and existing backup archives are excluded. The source composition and applied migrations must match the installed database. Run backups from the current immutable release; staging a new composition into that checkout before backing it up will correctly fail this check.
 
 The archive streams through gzip and AES-256-GCM with a fresh random nonce. An authenticated completion tag and per-file hashes protect integrity. The final destination is read back and authenticated before a partial archive is renamed to a successful `.fgr` file. Backup and application keys remain separate. The script coordinates with domain and migration locks while collecting the database/source snapshot; long backups can temporarily delay writes.
 
@@ -293,7 +390,7 @@ python3 scripts/hosted.py backup
 python3 scripts/hosted.py verify-backup --archive /mnt/offsite/athlete-panel/recorded-archive.fgr
 ```
 
-The hosted controller checks the registered remote filesystem and its identity marker. Scheduled backups repeat these checks inside the container, before and after writing. An absent mount/marker fails instead of creating a local replacement folder. Fresh installation refuses a directory containing another installation’s marker or archives, preventing accidental key replacement or cross-instance retention. A marker alone is insufficient: the filesystem type and source fingerprint must match the registered network mount. Deliberately replacing storage requires a reviewed re-registration; never copy the marker onto a local folder to suppress a failure. Read-back verifies archive integrity, not remote-provider durability, deletion resistance or successful recovery after losing the VPS.
+In remote mode, the hosted controller checks the registered remote filesystem and its identity marker. Scheduled backups repeat these checks inside the container, before and after writing. An absent mount/marker fails instead of creating a local replacement folder. Local mode checks its private directory instead. Fresh installation refuses a directory containing another installation’s marker or archives, preventing accidental key replacement or cross-instance retention. A marker alone is insufficient for remote protection: the filesystem type and source fingerprint must match the registered network mount. Deliberately replacing storage requires a separate reviewed procedure; never copy the marker onto a local folder to suppress a failure. Read-back verifies archive integrity, not remote-provider durability, deletion resistance or successful recovery after losing the VPS.
 
 Advanced manual installations can create a pre-upgrade backup using the installed image:
 
@@ -507,8 +604,8 @@ Use `resume` for checkpointed steps. If a restore was interrupted after creating
 
 ### Managed recovery after losing the VPS
 
-1. On the replacement Linux server, install Python 3 and Docker Compose and obtain a reviewed deployment bundle containing a compatible controller (or source release for advanced recovery). Mount the original remote backup directory at the recorded path and point the original domain at the replacement server. Public ports 80/443 must reach it.
-2. Recover the protected operator kit into the chosen state location: `.env`, `.secrets/backup-key`, `.secrets/backup-storage.json` and `installation.json`. Use directories mode 0700, files mode 0600, owned by the account running the controller. Keep the recorded project/database identity. Do **not** run fresh installation or generate replacement keys.
+1. On the replacement Linux server, install Python 3, Docker Compose and Buildx, and obtain a reviewed deployment bundle containing a compatible controller (or source release for advanced recovery). For remote mode, mount the original remote backup directory at the recorded path. For local mode, recover an independently preserved archive into the recorded private directory (0700, controller-owned); this is possible only if a copy survived outside the lost server. Point the original domain at the replacement server. Public ports 80/443 must reach it.
+2. Recover the protected operator kit into the chosen state location: `.env`, `.secrets/backup-key`, `installation.json` and, for remote mode, `.secrets/backup-storage.json`. Use directories mode 0700, files mode 0600, owned by the account running the controller. Keep the recorded project/database identity and backup mode. Do **not** run fresh installation or generate replacement keys.
 3. Run the same `recover --archive ... --confirm-recovery` command above. It starts a fresh PostgreSQL cluster when absent; old checkout paths are not required. Missing registry images are pulled by recorded digest. For custom/legacy images, supply compatible recovery tools and either load a saved image or use the archived-source rebuild fallback.
 4. Sign in, verify records and provider-credential availability, create a new record and verify a new backup. Confirm certificate renewal and retain independent recovery evidence. Only an actual second-server exercise establishes disaster recoverability.
 
@@ -558,7 +655,7 @@ For an existing installation, take a verified pre-change backup, stop applicatio
 
 The continuously running worker schedules a Garmin recent import about once per hour while connected and unpaused, refreshing the latest seven days. It checks eligibility approximately every 30 seconds between job steps. This is an interval from the latest recent job’s creation, not a fixed clock-hour appointment. Ongoing jobs, provider backoff and maintenance can delay execution. Initial history and genuinely unscanned periods remain eligible for automatic import; already scanned older history is not revisited periodically. Corrections or late uploads affecting previously scanned dates older than seven days require **Refresh date range**, selecting **Activities**, **Health** or **Both**. Outstanding reconciliation jobs are retired through existing job cancellation protections, retaining their checkpoints and diagnostics. A scheduler code change requires restarting the local worker or rebuilding/redeploying the hosted image; no database migration is needed for an interval change.
 
-Plugins → Instance status refreshes every 30 seconds; Settings also provides an Instance status and recovery section. A heartbeat older than 90 seconds is marked unavailable. A failed scheduling/job iteration persists a sanitized failure state and count; only a successful iteration clears it. Raw exception messages are not stored. Worker health checks fail for both stale and failed states. Backup status distinguishes not configured, in progress, failed, potentially stalled (over one hour), recent and overdue (over 26 hours). Failure status never includes keys, raw database errors or private paths. If the database itself is unavailable, status cannot be persisted; inspect container logs too. A recorded next-run time is the configured schedule, not proof the scheduler is still alive. An archive without verified registered remote storage is explicitly labelled as unverified off-host protection; it is not a green backup-protection result.
+Plugins → Instance status refreshes every 30 seconds; Settings also provides an Instance status and recovery section. A heartbeat older than 90 seconds is marked unavailable. A failed scheduling/job iteration persists a sanitized failure state and count; only a successful iteration clears it. Raw exception messages are not stored. Worker health checks fail for both stale and failed states. Backup status distinguishes not configured, in progress, failed, potentially stalled (over one hour), recent and overdue (over 26 hours). A recent verified local backup is healthy, with neutral supporting text explaining that no off-server copy is configured and server loss remains unprotected. Failed, missing, stalled, overdue or unverified backups show troubleshooting advice; a previous successful local backup does not hide a newer problem. Failure status never includes keys, raw database errors or private paths. If the database itself is unavailable, status cannot be persisted; inspect container logs too. A recorded next-run time is the configured schedule, not proof the scheduler is still alive. Verified remote protection requires registered remote storage; an archive with unknown or unverified storage is labelled as unverified off-host protection.
 
 Garmin shows a saved key as waiting for verification until a successful account-bound import. Key replacement requires new verification. Import activity shows the current stream/date window and retry time; coverage reports totals across all windows. The Garmin page provides pages of 50 windows, filters for failed/unavailable periods, and a date-range refresh action with Activities / Health / Both (default Both); the embedded workspace snapshot remains capped. A verified account with failed/unavailable history is explicitly marked as needing attention. The active job is selected independently of recent job-list limits. Missing days/measurements are explicit. It does not invent a percentage or guarantee Garmin retains all historical data.
 
@@ -570,7 +667,7 @@ Run `python3 scripts/rehearse-release.py` for an isolated container rehearsal. P
 python3 scripts/rehearse-hosted.py
 ```
 
-The harness runs the actual controller in private temporary state with unique Compose projects/volumes, generated synthetic credentials and loopback HTTPS using Caddy’s local CA. It never loads the owner configuration. It exercises installation, repeat-install preservation, restart persistence, missing-storage rejection, a real forward migration, interruption immediately after commit and resume, old-artifact rejection, matched-source restoration with login/new saves/backups, and a replacement empty cluster with independently copied keys. Supply `--image <local-tag>` to reuse a built base image; it is retained. Synthetic storage is available only through the imported test harness, never a public CLI flag. The container guard also requires loopback origin and a `_test` database for that fixture. This is not an actual NFS/SMB/SSHFS or physical second-server test.
+The harness runs the actual controller in private temporary state with unique Compose projects/volumes, generated synthetic credentials and loopback HTTPS using Caddy’s local CA. It never loads the owner configuration. It exercises installation, repeat-install preservation, restart persistence, missing-storage rejection, a real forward migration, interruption immediately after commit and resume, old-artifact rejection, matched-source restoration with login/new saves/backups, and a replacement empty cluster with independently copied keys. Supply `--image <local-tag>` to reuse a built base image; it is retained. The ordinary managed rehearsal uses local mode; its `--registry` variant retains synthetic remote mode. The adoption rehearsal covers remote/Caddy and local/external ingress, including manual restore tests and recovery to the initially adopted image. Synthetic remote storage is available only through the imported test harness, never a public CLI flag. The container guard also requires loopback origin and a `_test` database for that fixture. This is not an actual NFS/SMB/SSHFS or physical second-server test.
 
 ## Shared UI component maintenance
 

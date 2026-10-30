@@ -56,12 +56,12 @@ def rehearse(instance, archive, candidate=None):
 
     try:
         tools = candidate or instance.pending['previous']
-        values = parse_configuration(instance.state / '.env')
+        values = instance.configuration()
         admin_password, app_password = secrets.token_hex(32), secrets.token_hex(32)
         database = 'athlete_panel_rehearsal_test'
         labels = {'io.athlete-panel.rehearsal': identity}
         target = private_directory(directory / 'restored')
-        key = instance.state / '.secrets' / 'backup-key'
+        key = instance.backup_key()
         def bind(source, destination, readonly=True):
             return {'type': 'bind', 'source': str(source), 'target': destination,
                     'read_only': readonly, 'bind': {'create_host_path': False}}

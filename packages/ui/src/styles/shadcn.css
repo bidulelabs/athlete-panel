@@ -1,5 +1,6 @@
 /* shadcn/ui 4.22.1, radix-nova. Adapted to Athlete Panel's paired notebook themes. */
 @import 'tw-animate-css';
+@import './markdown.css';
 @source "../components";
 @source "../*.tsx";
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

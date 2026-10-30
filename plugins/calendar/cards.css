@@ -135,7 +135,7 @@
   margin-top: 24px;
   padding-top: 20px;
 }
-.calendar-detail-notes h3,
+.calendar-detail-notes > h3,
 .calendar-activity-link h3 {
   font-size: 13px;
   margin-bottom: 10px;

@@ -55,7 +55,7 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
             action: 'workout.update',
             id,
             expectedRevision: workout.revision,
-            values: { durationSeconds: 2700, notes: 'Keep an easy conversational effort.' },
+            values: { durationSeconds: 2700, notes: '**Keep** an easy conversational effort.' },
           },
         ],
       },
@@ -113,7 +113,7 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
         .getByRole('region', { name: 'Proposed edits' })
         .getByRole('row')
         .filter({ hasText: 'Workout description' }),
-    ).toContainText('Keep an easy conversational effort.');
+    ).toContainText('**Keep** an easy conversational effort.');
     await expect(dialog.locator('.review-technical pre').first()).not.toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Apply reviewed changes' })).toBeDisabled();
     await expect(

@@ -91,7 +91,7 @@ export function ContextEditor({
         )}
         {kind === 'note' && (
           <>
-            <Field label="Note">
+            <Field label="Note" hint="Markdown supported">
               <Textarea name="body" maxLength={20000} rows={4} defaultValue={record?.body ?? ''} />
             </Field>
             <ScheduleFields schedule={schedule} onChange={setSchedule} plans={data.plans} />
@@ -116,7 +116,7 @@ export function ContextEditor({
                 </NativeSelect>
               </Field>
             </div>
-            <Field label="Notes">
+            <Field label="Notes" hint="Markdown supported">
               <Textarea name="notes" rows={3} maxLength={4000} defaultValue={record?.notes ?? ''} />
             </Field>
           </>
@@ -133,7 +133,7 @@ export function ContextEditor({
                 defaultValue={record?.bodyPart ?? ''}
               />
             </Field>
-            <Field label="Constraint or description">
+            <Field label="Constraint or description" hint="Markdown supported">
               <Textarea
                 name="description"
                 maxLength={4000}
@@ -162,7 +162,7 @@ export function ContextEditor({
                 <option value="severe">Severe</option>
               </NativeSelect>
             </Field>
-            <Field label="Additional notes">
+            <Field label="Additional notes" hint="Markdown supported">
               <Textarea name="notes" maxLength={4000} rows={2} defaultValue={record?.notes ?? ''} />
             </Field>
           </>

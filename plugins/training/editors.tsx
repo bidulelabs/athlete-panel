@@ -25,6 +25,7 @@ import {
   Field,
   Input,
   localDate,
+  MarkdownContent,
   Modal,
   NativeSelect,
   requestId,
@@ -588,7 +589,7 @@ export function WorkoutEditor({
             <ExerciseEditor exercises={exercises} onChange={setExercises} imperial={imperial} />
           </>
         )}
-        <Field label="Workout description">
+        <Field label="Workout description" hint="Markdown supported">
           <Textarea
             name="notes"
             rows={3}
@@ -762,7 +763,7 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
             }
           />
         </Field>
-        <Field label="Completion notes">
+        <Field label="Completion notes" hint="Markdown supported">
           <Textarea
             name="completionNotes"
             rows={3}
@@ -885,7 +886,7 @@ export function WorkoutInspector({
         {workout.notes && (
           <div className="inspector-section">
             <h3>Workout description</h3>
-            <p>{workout.notes}</p>
+            <MarkdownContent source={workout.notes} />
           </div>
         )}
         {!isRest(workout) && (
@@ -920,7 +921,7 @@ export function WorkoutInspector({
                   <p style={{ marginTop: 13, whiteSpace: 'pre-wrap' }}>{completion.reason}</p>
                 )}
                 {completion.notes && (
-                  <p style={{ marginTop: 13, whiteSpace: 'pre-wrap' }}>{completion.notes}</p>
+                  <MarkdownContent className="completion-notes" source={completion.notes} />
                 )}
                 {completion.activityId && (
                   <dl className="inspector-details">

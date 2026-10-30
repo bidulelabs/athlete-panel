@@ -119,18 +119,13 @@
   padding-top: 24px;
   border-top: 1px solid var(--line);
 }
-.plans-description h3,
+.plans-description > h3,
 .plans-schedule-heading h3 {
   font-size: 15px;
   font-weight: 600;
 }
-.plans-description p {
-  max-width: 70ch;
+.plans-description > .ui-markdown {
   margin-top: 12px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 14px;
-  line-height: 1.7;
 }
 .plans-schedule {
   padding-top: 8px;

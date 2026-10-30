@@ -81,7 +81,7 @@ test('recent changes opens on demand with readable details in both themes', asyn
     await expect(entry.locator('dl')).toContainText('45m');
     await expect(entry.locator('dl')).toContainText('After: 1h');
     await expect(entry.locator('dt')).toContainText(['Duration', 'Workout description']);
-    await expect(entry).toContainText('Extend the ride only if recovery feels good.');
+    await expect(entry).toContainText('**Extend** the ride only if recovery feels good.');
     await expect(entry).not.toContainText('Revision');
     await noOverflow(page);
     await page.screenshot({

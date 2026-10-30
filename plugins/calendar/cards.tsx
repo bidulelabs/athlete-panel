@@ -25,6 +25,8 @@ import {
   duration,
   ErrorMessage,
   Modal,
+  MarkdownContent,
+  markdownToPlainText,
   SportIcon,
   sportLabel,
   useAction,
@@ -127,7 +129,7 @@ export function ContextCard({ item, onClick }: { item: ContextItem; onClick: () 
           {item.record.endDate ? `until ${dateLabel(item.record.endDate)}` : 'Ongoing'}
         </span>
       )}
-      {preview && <span className="calendar-fact-excerpt">{preview}</span>}
+      {preview && <span className="calendar-fact-excerpt">{markdownToPlainText(preview)}</span>}
     </CalendarCard>
   );
 }
@@ -350,11 +352,11 @@ export function ContextDetails({
           </>
         )}
       </dl>
-      <div className="calendar-detail-prose">{body || 'No additional details.'}</div>
+      <MarkdownContent source={body || 'No additional details.'} />
       {item.kind === 'injury' && item.record.notes && (
         <section className="calendar-detail-notes">
           <h3>Additional notes</h3>
-          <p className="calendar-detail-prose">{item.record.notes}</p>
+          <MarkdownContent source={item.record.notes} />
         </section>
       )}
       <ErrorMessage error={action.error} />

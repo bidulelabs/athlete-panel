@@ -21,10 +21,15 @@ The workout inspector stays alongside the calendar above 1050px and becomes a Sh
 
 The weekly summary's two independent disclosures and factual metrics are specified in [training workspace](training-workspace.md#richer-weekly-summaries).
 
+### Shared Markdown rendering
+
+The owner-approved 2026-10-30 Markdown refinement adds `MarkdownContent({ source, className? })` and `markdownToPlainText(source)` to the public `@athlete-panel/ui` exports. The shared UI package owns the browser-safe renderer, parser-derived excerpts, URL policy and scoped theme typography; Training, Athlete and Calendar own field selection and composition. The component uses pinned `react-markdown`, `remark-gfm` and `remark-breaks` dependencies, with `unified`/`remark-parse` for excerpts. No rich-text editor or preview interaction is introduced. See [field scope and safety behavior](training-workspace.md#markdown-descriptions-and-notes).
+
 ## Acceptance scenarios
 
 | Situation or input | Expected observable result | Verification approach or reference |
 | --- | --- | --- |
+| Markdown fields, cards and editors | Safe read-only formatting, noninteractive excerpts, original source on edit and no page overflow | [Markdown scenarios](../../tests/e2e/markdown.spec.ts), [renderer tests](../../tests/unit/markdown.test.ts) |
 | Any app page in either theme | Shared controls retain labels/actions and the existing palette; no horizontal page overflow | [Shared UI browser coverage](../../tests/e2e/shared-ui.spec.ts) and representative screenshots |
 | Open dialog, nested editor or confirmation | Correct focus entry/return; Escape closes one layer; background cannot receive modal focus | [Inspector tests](../../tests/e2e/workout-inspector.spec.ts), shared UI and onboarding suites |
 | Resize with a draft editor open | Draft remains; inspector mode changes after closing the editor | Inspector browser test |

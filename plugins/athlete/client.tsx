@@ -10,6 +10,7 @@ import {
   ErrorMessage,
   Field,
   Input,
+  MarkdownContent,
   OperationalStatus,
   orderedWeekdays,
   PageHeader,
@@ -329,7 +330,15 @@ export default function AthletePage(props: PluginPageProps) {
                             ` · ${record.endDate ? `until ${dateLabel(record.endDate)}` : 'ongoing'} · ${record.severity}`}
                           {kind === 'event' && ` · ${record.kind}`}
                         </small>
-                        <p>{record.body ?? record.description ?? record.notes}</p>
+                        <MarkdownContent
+                          source={record.body ?? record.description ?? record.notes}
+                        />
+                        {kind === 'injury' && record.notes && (
+                          <section className="context-record-notes" aria-label="Additional notes">
+                            <h3>Additional notes</h3>
+                            <MarkdownContent source={record.notes} />
+                          </section>
+                        )}
                       </div>
                       <div className="row-action-group">
                         <Button

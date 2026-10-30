@@ -41,3 +41,5 @@ export {
 export * from './provider';
 
 export * from './components/tabs';
+export { MarkdownContent } from './markdown-content';
+export { markdownToPlainText } from './markdown';

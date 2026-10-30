@@ -11,6 +11,8 @@ export const importStreamSchema = z.enum([
   'bodyBattery',
 ]);
 export type ImportStream = z.infer<typeof importStreamSchema>;
+export const importScopeSchema = z.enum(['activities', 'health', 'both']);
+export type ImportScope = z.infer<typeof importScopeSchema>;
 export const rejectionDiagnosticSchema = z.object({
   stream: importStreamSchema,
   from: dateSchema.nullable(),

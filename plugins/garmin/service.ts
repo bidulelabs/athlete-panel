@@ -1,4 +1,4 @@
-import { garminStatusSchema } from '@athlete-panel/contracts';
+import { garminStatusSchema, operationContracts } from '@athlete-panel/contracts';
 import { importStreamSchema } from '@athlete-panel/contracts';
 import { coverageDto, persistCoverage, resumeActivityScan, type StoredCoverage } from './coverage';
 import { requiredRow } from '../../packages/host/src/rows';
@@ -30,6 +30,9 @@ import {
   requestCoverageIdentity,
   type GarminSyncCursor,
   parseSyncCursor,
+  syncScope,
+  importsStream,
+  currentGarminDate as today,
 } from './sync';
 import { assertAccountBinding, streamMetrics, type HealthStream } from './normalize';
 import { automaticHealthHistoryStart } from './history-policy';
@@ -43,7 +46,9 @@ import {
   unscannedCoverage,
   recoveryTaskSchema,
   type RecoveryTask,
+  retireReconciliation,
 } from './recovery';
+import { RECOVERY_STREAMS } from './recovery-policy';
 
 const configurationSchema = z.object({
   lastErrorCode: z.string().nullable().optional(),
@@ -65,14 +70,6 @@ export async function getConfiguration(
 }
 async function saveConfig(tx: Transaction, config: Configuration) {
   await tx`insert into host.settings(key,value) values('garmin',${tx.json(config)}) on conflict(key) do update set value=excluded.value`;
-}
-function today(timeZone = 'UTC') {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
 }
 export async function configure(body: unknown) {
   const input = z
@@ -141,25 +138,21 @@ export async function configure(body: unknown) {
   );
 }
 export async function sync(body: unknown) {
-  const input = z
-    .object({
-      mode: z.enum(['recent', 'full']).default('recent'),
-      from: dateSchema.nullable().optional(),
-      to: dateSchema.optional(),
-      stream: importStreamSchema.optional(),
-    })
-    .strict()
-    .parse(body);
+  const input = operationContracts.garmin.sync.input.parse(body);
   return transaction(async (tx) => {
     const config = await getConfiguration(tx);
     assert(config?.encryptedKey, 'disconnected', 'Configure a Garmin key first.');
     assert(!config.paused, 'paused', 'Resume Garmin import first.');
-    if (input.mode === 'full') await clearRecoveryFailures(tx, input.stream);
     const profile = await loadProfile(tx),
       end = input.to ?? today(profile?.timezone);
     assert(!input.to || input.from, 'invalid_range', 'A targeted reimport requires both dates.');
     const targeted = !!(input.from && input.to),
       automaticStart = automaticHealthHistoryStart(config.earliestDate);
+    assert(
+      !input.scope || (targeted && input.mode === 'full' && !input.stream),
+      'invalid_range',
+      'Choose a refresh scope with both dates, without a stream retry.',
+    );
     assert(
       !input.stream || (targeted && input.mode === 'full'),
       'invalid_range',
@@ -182,7 +175,13 @@ export async function sync(body: unknown) {
       timeZone: profile?.timezone,
       ...(targeted && input.from !== '0001-01-01' ? { activityFrom: input.from! } : {}),
       ...(input.stream ? { targetStream: input.stream } : {}),
+      ...(input.scope ? { scope: input.scope } : {}),
     });
+    if (input.mode === 'full')
+      await clearRecoveryFailures(
+        tx,
+        RECOVERY_STREAMS.filter((stream) => importsStream(cursor, stream)),
+      );
     const kind = input.mode === 'full' ? 'garmin-history' : 'garmin-recent';
     // Expand an old automatic backfill in place. Explicit range repairs keep their own bounds.
     if (input.mode === 'full' && !targeted)
@@ -195,9 +194,10 @@ export async function sync(body: unknown) {
       saved.earliestHealthDate === cursor.earliestHealthDate &&
       (saved.activityFrom ?? null) === (cursor.activityFrom ?? null) &&
       saved.targetStream === cursor.targetStream &&
+      (saved.scope ?? 'both') === (cursor.scope ?? 'both') &&
       (!exactEnd || saved.today === cursor.today);
     const active =
-      await tx`select id,status,payload from host.jobs where plugin_id='garmin' and kind=${kind} and status in ('queued','running','paused') order by created_at desc`;
+      await tx`select id,status,payload from host.jobs where plugin_id='garmin' and kind=${kind} and status in ('queued','running','paused','disabled') order by created_at desc`;
     const activeJob = active[0];
     if (activeJob) {
       assert(
@@ -213,6 +213,7 @@ export async function sync(body: unknown) {
       and payload#>>'{cursor,mode}'=${cursor.mode} and payload#>>'{cursor,earliestHealthDate}'=${cursor.earliestHealthDate}
       and coalesce(payload#>>'{cursor,activityFrom}','')=${cursor.activityFrom ?? ''}
       and coalesce(payload#>>'{cursor,targetStream}','')=${cursor.targetStream ?? ''}
+      and coalesce(payload#>>'{cursor,scope}','both')=${cursor.scope ?? 'both'}
       and (${!exactEnd} or payload#>>'{cursor,today}'=${cursor.today}) order by updated_at desc,created_at desc limit 1`;
     if (failed) {
       await tx`update host.jobs set status='queued',attempts=0,error=null,lease_owner=null,lease_until=null,next_run_at=now(),updated_at=now() where id=${failed.id}`;
@@ -283,7 +284,7 @@ export async function status(includeCoverage = true) {
       next_run_at: Date;
       updated_at: Date;
     }[]
-  >`select id,kind,status,progress,error,next_run_at,updated_at from host.jobs where plugin_id='garmin' and kind in ('garmin-history','garmin-recent','garmin-catchup','garmin-reconcile')
+  >`select id,kind,status,progress,error,next_run_at,updated_at from host.jobs where plugin_id='garmin' and kind in ('garmin-history','garmin-recent','garmin-catchup')
     order by case when status in ('queued','running','paused') then 0 else 1 end,priority desc,updated_at desc limit 1`;
   const [history] = await sql<
     { status: string }[]
@@ -377,6 +378,7 @@ export async function coveragePage(body: unknown) {
 }
 export async function scheduleRecent() {
   await transaction(async (tx) => {
+    await retireReconciliation(tx);
     const config = await getConfiguration(tx);
     if (!config?.encryptedKey || config.paused) return;
     await tx`update host.jobs set priority=case when kind='garmin-recent' then 30 when payload#>>'{cursor,activityFrom}' is not null then 20 else 10 end where plugin_id='garmin' and kind in ('garmin-recent','garmin-history') and status in ('queued','running','paused','disabled')`;
@@ -444,6 +446,10 @@ function clientFor(config: Configuration) {
   return client;
 }
 export async function runGarminJob(job: Job) {
+  if (job.kind === 'garmin-reconcile') {
+    await transaction((tx) => retireReconciliation(tx, job));
+    return;
+  }
   const config = await getConfiguration();
   if (!config?.encryptedKey || config.paused) {
     await transaction(async (tx) => {
@@ -463,11 +469,15 @@ export async function runGarminJob(job: Job) {
       job.payload.recovery === undefined
         ? undefined
         : recoveryTaskSchema.parse(job.payload.recovery);
-    if (!(await transaction((tx) => beginStep(tx, job, recovery)))) return;
+    if (!(await transaction((tx) => beginStep(tx, job)))) return;
     cursor = await resumeActivityScan(connection() as unknown as Transaction, cursor);
     if (job.payload.generation !== config.generation && cursor.phase !== 'identity') {
       coverageCursor = { ...cursor, phase: 'identity' };
-      const identity = await getAccountIdentity(clientFor(config), cursor.today);
+      const identity = await getAccountIdentity(
+        clientFor(config),
+        today(cursor.timeZone),
+        syncScope(cursor),
+      );
       assertAccountBinding(config.accountId, [identity]);
       cursor = { ...cursor, accountId: identity };
       reverifiedIdentity = true;
@@ -570,15 +580,8 @@ export async function runGarminJob(job: Job) {
       if (coverage.stream === 'identity')
         await tx`delete from garmin.coverage where status='failed' and stream='identity' and start_date=${coverage.from ?? '0001-01-01'} and end_date=${coverage.to}`;
       await persistCoverage(tx, coverage);
-      const context = {
-        today: today(cursor.timeZone),
-        earliestDate: automaticHealthHistoryStart(current.earliestDate),
-        accountId: step.accountId,
-        generation: config.generation,
-        timeZone: cursor.timeZone,
-      };
-      await recordRecoveryStep(tx, cursor, step.nextCursor, coverage, context, recovery);
-      const done = recovery?.mode === 'reconcile' || step.nextCursor.phase === 'done';
+      await recordRecoveryStep(tx, cursor, coverage);
+      const done = step.nextCursor.phase === 'done';
       const label = done
         ? 'Import complete'
         : coverage.stream === 'identity'

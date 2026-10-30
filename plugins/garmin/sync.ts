@@ -4,8 +4,10 @@ import {
   activityScanSchema,
   dateSchema,
   importStreamSchema,
+  importScopeSchema,
   type ActivityScan,
   type ImportStream,
+  type ImportScope,
   type RejectionDiagnostic,
 } from '@athlete-panel/contracts';
 import { validateRecords } from './record-validation';
@@ -47,6 +49,7 @@ export type GarminSyncCursor = {
   windowEnd: string;
   unavailableStreams: Array<HealthStream | 'activities'>;
   targetStream?: ImportStream;
+  scope?: ImportScope;
   activityScan?: ActivityScan;
 };
 export type SyncCoverage = {
@@ -88,6 +91,7 @@ export function parseSyncCursor(input: unknown): GarminSyncCursor {
       windowEnd: dateSchema,
       unavailableStreams: z.array(importStreamSchema),
       targetStream: importStreamSchema.optional(),
+      scope: importScopeSchema.optional(),
       activityScan: activityScanSchema.optional(),
     })
     .safeParse(input);
@@ -108,6 +112,15 @@ export type GarminSyncStep = {
 };
 export const ACTIVITY_PAGE_SIZE = 99;
 
+export function currentGarminDate(timeZone = 'UTC', now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
 export function addDays(date: string, days: number): string {
   if (!dayKey(date))
     throw new GarminError('invalid_configuration', 'Sync dates must be valid calendar dates.');
@@ -127,6 +140,7 @@ export function createSyncCursor(options: {
   accountId?: string | null;
   timeZone?: string;
   targetStream?: ImportStream;
+  scope?: ImportScope;
 }): GarminSyncCursor {
   if (
     !dayKey(options.today) ||
@@ -152,6 +166,7 @@ export function createSyncCursor(options: {
     windowEnd: options.today,
     unavailableStreams: [],
     ...(options.targetStream ? { targetStream: options.targetStream } : {}),
+    ...(options.scope ? { scope: options.scope } : {}),
   };
   validateCursor(cursor);
   return cursor;
@@ -159,6 +174,10 @@ export function createSyncCursor(options: {
 
 function validateCursor(cursor: GarminSyncCursor) {
   if (
+    (cursor.scope !== undefined && !importScopeSchema.safeParse(cursor.scope).success) ||
+    (cursor.scope !== undefined && cursor.targetStream !== undefined) ||
+    (syncScope(cursor) === 'activities' && cursor.phase.includes('health')) ||
+    (syncScope(cursor) === 'health' && cursor.phase.includes('activities')) ||
     (cursor.targetStream && !importStreamSchema.safeParse(cursor.targetStream).success) ||
     (cursor.activityScan && !activityScanSchema.safeParse(cursor.activityScan).success) ||
     (cursor.targetStream &&
@@ -205,6 +224,23 @@ function validateCursor(cursor: GarminSyncCursor) {
   }
 }
 
+/** Legacy stream repairs retain their exact stream while restricting identity probes too. */
+export function syncScope(cursor: Pick<GarminSyncCursor, 'scope' | 'targetStream'>): ImportScope {
+  return cursor.targetStream
+    ? cursor.targetStream === 'activities'
+      ? 'activities'
+      : 'health'
+    : (cursor.scope ?? 'both');
+}
+
+export function importsStream(cursor: GarminSyncCursor, stream: ImportStream): boolean {
+  if (cursor.targetStream) return cursor.targetStream === stream;
+  const scope = syncScope(cursor);
+  return (
+    scope === 'both' || (stream === 'activities' ? scope === 'activities' : scope === 'health')
+  );
+}
+
 /** Stable coverage key for the request represented by this checkpoint, including failed attempts. */
 function healthStreamAt(index: number): HealthStream {
   const stream = HEALTH_STREAMS[index];
@@ -217,12 +253,12 @@ export function requestCoverageIdentity(
   cursor: GarminSyncCursor,
 ): Pick<SyncCoverage, 'stream' | 'phase' | 'from' | 'to'> {
   validateCursor(cursor);
-  if (cursor.targetStream && cursor.phase !== 'identity')
+  if ((cursor.targetStream || cursor.scope === 'activities') && cursor.phase !== 'identity')
     return {
-      stream: cursor.targetStream,
+      stream: cursor.targetStream ?? 'activities',
       phase: cursor.phase,
       from:
-        cursor.targetStream === 'activities'
+        syncScope(cursor) === 'activities'
           ? (cursor.activityFrom ?? null)
           : cursor.earliestHealthDate,
       to: cursor.today,
@@ -286,21 +322,26 @@ export function healthRequest(
 }
 
 /** Uses only stable documented numeric account identifiers; never display names or token claims. */
-export async function getAccountIdentity(client: GarminReader, today: string): Promise<string> {
+export async function getAccountIdentity(
+  client: GarminReader,
+  today: string,
+  scope: ImportScope = 'both',
+): Promise<string> {
   if (!dayKey(today))
     throw new GarminError('invalid_configuration', 'The current Garmin calendar date is invalid.');
-  try {
-    const activity = await client.get('/activitylist-service/activities/search/activities', {
-      start: 0,
-      limit: 1,
-      excludeChildren: true,
-    });
-    const id = assertAccountBinding(null, accountIds(activity, 'activities'));
-    if (id !== null) return id;
-  } catch (error) {
-    if (!(error instanceof GarminError) || error.code !== 'forbidden') throw error;
-  }
-  for (const stream of ['daily', 'hrv'] as const) {
+  if (scope !== 'health')
+    try {
+      const activity = await client.get('/activitylist-service/activities/search/activities', {
+        start: 0,
+        limit: 1,
+        excludeChildren: true,
+      });
+      const id = assertAccountBinding(null, accountIds(activity, 'activities'));
+      if (id !== null) return id;
+    } catch (error) {
+      if (!(error instanceof GarminError) || error.code !== 'forbidden') throw error;
+    }
+  for (const stream of scope === 'activities' ? [] : (['daily', 'hrv'] as const)) {
     const request = healthRequest(stream, addDays(today, -27), today);
     try {
       const payload = await client.get(request.path, request.query);
@@ -312,7 +353,7 @@ export async function getAccountIdentity(client: GarminReader, today: string): P
   }
   throw new GarminError(
     'account_identity_unavailable',
-    'Garmin did not return a stable account identifier. No data was imported. Record or synchronize an activity or recent health data, then retry.',
+    'Garmin did not return a stable account identifier for the selected data. No data was imported. Synchronize the selected data in Garmin, then retry.',
   );
 }
 
@@ -320,6 +361,7 @@ export async function getAccountIdentity(client: GarminReader, today: string): P
 export async function runSyncStep(
   cursor: GarminSyncCursor,
   client: GarminReader,
+  now = new Date(),
 ): Promise<GarminSyncStep> {
   const coverageIdentity = requestCoverageIdentity(cursor);
   const next = { ...cursor, unavailableStreams: [...cursor.unavailableStreams] };
@@ -345,12 +387,13 @@ export async function runSyncStep(
     return result;
   }
   if (cursor.phase === 'identity') {
-    const identity = await getAccountIdentity(client, cursor.today);
+    const identity = await getAccountIdentity(
+      client,
+      currentGarminDate(cursor.timeZone, now),
+      syncScope(cursor),
+    );
     result.accountId = next.accountId = assertAccountBinding(cursor.accountId, [identity]);
-    next.phase =
-      cursor.targetStream && cursor.targetStream !== 'activities'
-        ? 'recent-health'
-        : 'recent-activities';
+    next.phase = syncScope(cursor) === 'health' ? 'recent-health' : 'recent-activities';
     if (cursor.targetStream && cursor.targetStream !== 'activities')
       next.healthStreamIndex = HEALTH_STREAMS.indexOf(cursor.targetStream);
     return result;
@@ -377,11 +420,12 @@ export async function runSyncStep(
     } catch (error) {
       if (!(error instanceof GarminError) || error.code !== 'forbidden') throw error;
       next.unavailableStreams = [...new Set([...next.unavailableStreams, 'activities' as const])];
-      next.phase = cursor.targetStream
-        ? 'done'
-        : cursor.phase === 'recent-activities'
-          ? 'recent-health'
-          : 'history-health';
+      next.phase =
+        syncScope(cursor) === 'activities'
+          ? 'done'
+          : cursor.phase === 'recent-activities'
+            ? 'recent-health'
+            : 'history-health';
       next.windowEnd =
         cursor.phase === 'recent-activities' ? cursor.today : addDays(recentStart, -1);
       if (next.windowEnd < cursor.earliestHealthDate) next.phase = 'done';
@@ -455,11 +499,12 @@ export async function runSyncStep(
       next.previousPageFingerprint = null;
       delete next.activityScan;
       next.healthStreamIndex = 0;
-      next.phase = cursor.targetStream
-        ? 'done'
-        : cursor.phase === 'recent-activities'
-          ? 'recent-health'
-          : 'history-health';
+      next.phase =
+        syncScope(cursor) === 'activities'
+          ? 'done'
+          : cursor.phase === 'recent-activities'
+            ? 'recent-health'
+            : 'history-health';
       next.windowEnd =
         cursor.phase === 'recent-activities' ? cursor.today : addDays(recentStart, -1);
       if (next.phase === 'history-health' && next.windowEnd < cursor.earliestHealthDate)
@@ -546,7 +591,8 @@ export async function runSyncStep(
       next.phase = cursor.mode === 'initial' ? 'history-activities' : 'done';
       if (
         next.phase === 'history-activities' &&
-        (next.unavailableStreams.includes('activities') ||
+        (syncScope(cursor) === 'health' ||
+          next.unavailableStreams.includes('activities') ||
           (cursor.activityFrom !== undefined && cursor.activityFrom >= recentStart))
       ) {
         next.phase = 'history-health';

@@ -1,0 +1,289 @@
+.garmin-page {
+  width: 100%;
+  min-width: 0;
+}
+.garmin-page .page-header {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+.garmin-page .header-actions {
+  max-width: 100%;
+  margin-inline-start: auto;
+}
+.garmin-import-actions {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.garmin-connection {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 24px 0;
+  border-block: 1px solid var(--line);
+}
+.garmin-summary {
+  min-width: 0;
+}
+.garmin-connection-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+}
+.garmin-last-sync {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.garmin-refresh-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: min-content;
+  max-width: 34ch;
+  text-align: left;
+}
+.garmin-refresh-action p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.garmin-refresh-trigger[data-slot='button']:disabled {
+  opacity: 1;
+  background: var(--surface-raised);
+  color: var(--muted);
+  border-color: var(--line);
+}
+.garmin-refresh-receipt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+}
+.garmin-refresh-receipt span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.garmin-summary h2,
+.garmin-policy h2,
+.garmin-details h2 {
+  font-size: 19px;
+  font-weight: 600;
+}
+.garmin-summary > p {
+  margin-top: 8px;
+  max-width: 70ch;
+  color: var(--muted);
+}
+.garmin-sync-summary {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.garmin-sync-summary dt {
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.garmin-sync-summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.garmin-connection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 300px;
+  flex-shrink: 0;
+}
+.garmin-overview {
+  display: grid;
+  gap: 24px 40px;
+  margin-top: 28px;
+}
+.garmin-policy,
+.garmin-details {
+  min-width: 0;
+}
+.garmin-policy ul {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.garmin-policy li {
+  max-width: 70ch;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.garmin-policy strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.garmin-detail-list {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.garmin-detail-link[data-slot='button'] {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  height: auto;
+  gap: 20px;
+  padding: 18px 8px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  text-align: left;
+  white-space: normal;
+}
+.garmin-detail-link strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+.garmin-detail-link span span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.garmin-key-input {
+  position: relative;
+}
+.garmin-key-input [data-slot='input'] {
+  min-height: 44px;
+  padding-inline-end: 52px;
+}
+.garmin-key-toggle[data-slot='button'] {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 44px;
+  height: 100%;
+  min-height: 44px;
+  color: var(--muted);
+  border-radius: 0 7px 7px 0;
+}
+.garmin-key-toggle[data-slot='button']:focus-visible {
+  outline-offset: -4px;
+}
+.garmin-key-help[data-slot='button'] {
+  align-self: flex-start;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.garmin-dialog.ui-modal {
+  overflow: hidden;
+}
+.garmin-dialog .dialog-body {
+  overflow: auto;
+  overscroll-behavior: contain;
+  line-height: 1.6;
+}
+.garmin-coverage-dialog.ui-modal.dialog-wide {
+  width: min(1060px, calc(100vw - 32px));
+}
+.garmin-dialog .section-heading {
+  margin-bottom: 16px;
+}
+.garmin-dialog .muted-text {
+  font-size: 13px;
+}
+.garmin-recovery {
+  display: grid;
+  gap: 20px;
+}
+.garmin-recovery .garmin-sync-summary {
+  margin-top: 0;
+}
+.garmin-dialog-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.garmin-dialog-toolbar p {
+  color: var(--muted);
+}
+.garmin-current-import {
+  margin-top: 20px;
+  overflow-wrap: anywhere;
+}
+.garmin-import-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+}
+.garmin-import-list li {
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+}
+.garmin-import-list li > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.garmin-import-list strong {
+  font-weight: 500;
+}
+.garmin-import-list p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 1280px) {
+  .garmin-overview {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .garmin-connection-actions {
+    max-width: none;
+  }
+}
+@media (max-width: 760px) {
+  .garmin-page .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .garmin-page .header-actions {
+    padding-top: 0;
+    margin-inline-start: 0;
+  }
+  .garmin-page .header-actions > button {
+    width: 100%;
+  }
+  .garmin-refresh-action {
+    width: 100%;
+    max-width: none;
+    align-items: stretch;
+    text-align: left;
+  }
+  .garmin-import-actions {
+    width: 100%;
+  }
+  .garmin-connection {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .garmin-connection-actions {
+    max-width: none;
+    justify-content: flex-start;
+  }
+}

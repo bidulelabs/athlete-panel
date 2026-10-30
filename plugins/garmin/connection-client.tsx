@@ -4,6 +4,7 @@ import { useId, useRef, useState, type ReactNode } from 'react';
 import { ErrorMessage, requestId, type PluginPageProps } from '@athlete-panel/ui';
 import type { GarminConnection } from '../../packages/contracts/src/garmin-connection';
 import { canRetryConnection, connectionMessage } from './connection-status';
+import { ArrowUpRight, Eye, EyeOff } from 'lucide-react';
 
 /** Public, shared connection controls. The key exists only in this mounted form. */
 export function GarminKeyForm({
@@ -51,38 +52,58 @@ export function GarminKeyForm({
     >
       <div className="field">
         <label htmlFor={id}>Garmin Personal API key</label>
-        <Input
-          id={id}
-          name="garmin-personal-api-key"
-          type={visible ? 'text' : 'password'}
-          required
-          minLength={8}
-          maxLength={4096}
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          value={key}
-          disabled={busy}
-          aria-describedby={`${id}-help`}
-          onChange={(e) => {
-            setKey(e.target.value);
-            attempt.current = requestId();
-          }}
-        />
+        <div className="garmin-key-input">
+          <Input
+            id={id}
+            name="garmin-personal-api-key"
+            type={visible ? 'text' : 'password'}
+            required
+            minLength={8}
+            maxLength={4096}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={key}
+            disabled={busy}
+            aria-describedby={`${id}-help`}
+            onChange={(e) => {
+              setKey(e.target.value);
+              attempt.current = requestId();
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="garmin-key-toggle"
+            type="button"
+            aria-label={visible ? 'Hide key' : 'Show key'}
+            title={visible ? 'Hide key' : 'Show key'}
+            aria-controls={id}
+            disabled={busy}
+            onClick={() => setVisible(!visible)}
+          >
+            {visible ? (
+              <EyeOff size={18} aria-hidden="true" />
+            ) : (
+              <Eye size={18} aria-hidden="true" />
+            )}
+          </Button>
+        </div>
         <small id={`${id}-help`}>
           Your key is sent to your instance, stored encrypted, and used by the server to connect to
           Garmin. Athlete Panel never asks for your Garmin password.
         </small>
+        <Button variant="link" asChild className="garmin-key-help">
+          <a
+            href="https://developer.garmin.com/gc-developer-program/personal/personal-api/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Get a personal API key <ArrowUpRight size={14} aria-hidden="true" />
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </Button>
       </div>
-      <Button
-        variant="link"
-        className="text-button"
-        type="button"
-        aria-pressed={visible}
-        onClick={() => setVisible(!visible)}
-      >
-        {visible ? 'Hide key' : 'Show key'}
-      </Button>
       <ErrorMessage error={error} />
       <div className="dialog-actions">
         {onCancel && (

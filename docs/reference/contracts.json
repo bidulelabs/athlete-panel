@@ -17037,6 +17037,14 @@
                 "stress",
                 "bodyBattery"
               ]
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "activities",
+                "health",
+                "both"
+              ]
             }
           },
           "required": [

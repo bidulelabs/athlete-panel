@@ -39,6 +39,7 @@ test('shared controls and all app pages retain usable themes, navigation and key
     ]) {
       await page.goto(path);
       await expect(page.locator('.page-content')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toHaveCount(0);
       await page.evaluate((value) => {
         document.documentElement.dataset.theme = value;
       }, theme);

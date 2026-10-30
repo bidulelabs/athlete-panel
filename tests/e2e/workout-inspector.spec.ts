@@ -51,6 +51,7 @@ async function preview(page: Page) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
   await page.getByLabel('Go to date').fill('2030-01-07');
+  await expect(page.getByLabel('Go to date')).toHaveValue('2030-01-07');
   return { data, writes: () => writes };
 }
 
@@ -89,8 +90,8 @@ test('read-only prescription retains repeat structure, all targets, notes and di
   await inspector.getByRole('button', { name: 'Close workout details' }).click();
   await expect(trigger).toBeFocused();
   data.profile!.units = 'imperial';
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+  await page.reload();
+  await expect(page.locator('.page-content')).toBeVisible();
   await page
     .getByRole('button', {
       name: info.project.name === 'mobile' ? 'Change color theme' : 'Switch to light mode',
@@ -213,13 +214,21 @@ test('long details reflow at narrow and landscape widths while close and logging
   data.workouts[3]!.title =
     'A very long session title with an unbroken reference abcdefghijklmnopqrstuvwxyz0123456789';
   data.workouts[3]!.notes = 'Review one interval at a time.\n'.repeat(60);
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+  await page.reload();
+  // The shell can appear while locale/profile initialization is still changing the week.
+  await expect(page.getByLabel('Go to date')).toHaveValue('2030-01-07');
   await page.setViewportSize({ width: 320, height: 640 });
   const add = page.getByRole('button', { name: 'Add to 7 Jan', exact: true });
-  const box = await add.boundingBox();
-  expect(box!.width).toBeGreaterThanOrEqual(44);
-  expect(box!.height).toBeGreaterThanOrEqual(44);
+  await expect(add).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        const box = await add.boundingBox();
+        return box ? Math.min(box.width, box.height) : 0;
+      },
+      { message: 'The day-add button must have a visible 44px touch target in both dimensions.' },
+    )
+    .toBeGreaterThanOrEqual(44);
   await page.getByRole('button', { name: `Open ${data.workouts[3]!.title}`, exact: true }).tap();
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   for (const width of [320, 768, 1024]) {
@@ -352,8 +361,8 @@ test('a save finishing after a week change reloads the new week', async ({ page 
 test('imperial edits keep stored distances the owner did not change', async ({ page }) => {
   const { data } = await preview(page);
   data.profile!.units = 'imperial';
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+  await page.reload();
+  await expect(page.locator('.page-content')).toBeVisible();
   const sent: { values: Record<string, unknown> }[] = [];
   await page.route('**/api/plugins/training/mutate', async (route) => {
     sent.push(...route.request().postDataJSON().commands);

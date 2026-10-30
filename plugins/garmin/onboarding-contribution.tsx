@@ -24,16 +24,6 @@ export function OnboardingConnection({
       {' '}
       {!connection.connected || editingKey ? (
         <>
-          <p>
-            <a
-              href="https://developer.garmin.com/gc-developer-program/personal/personal-api/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Get a Garmin Personal API key
-              <span className="sr-only"> (opens in a new tab)</span>
-            </a>
-          </p>
           <p className="muted-text">
             Sign in to Garmin Connect, open Personal API Key, create a key, accept Garmin's terms
             and choose its expiry. Copy the key when Garmin displays it; you cannot view it again

@@ -153,6 +153,10 @@ Calendar workout cards use 5px corners, fact cards and icon controls use 6px, an
 
 ### Buttons and inputs
 
+Workspace content begins with each page's own heading and controls, without a repeated workspace label or divider above it. The phone navigation bar retains its brand, navigation and theme controls. Reload controls appear with errors when recovery is needed. Provider import actions live on their feature page; Garmin pairs primary **Sync latest data** with secondary **Refresh date range**.
+
+Save recovery uses a secondary **Reload saved data** button within the form's error message, including inside dialogs. Keep it reachable with a 44px minimum height, disable it during the read, and show the reload result nearby. Preserve the draft and dialog while refreshing stored data; reserve **Try again** for the existing workspace-load error action.
+
 Primary actions use orange with a contrasting dark foreground. Secondary actions use a neutral surface and border. Destructive actions must remain legible in both themes. Every icon-only action has an accessible name and a visible focus treatment. Phone calendar navigation, day creation, detail controls and logging actions have at least 44px hit areas. Inputs use the shared label, hint and error patterns from [UI primitives](packages/ui/src/primitives.tsx).
 
 ### Calendar cards

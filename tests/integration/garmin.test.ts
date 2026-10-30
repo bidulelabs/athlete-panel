@@ -24,7 +24,11 @@ import {
   scheduleRecent,
   pause,
 } from '../../plugins/garmin/service';
-import { createSyncCursor, type GarminSyncCursor } from '../../plugins/garmin/sync';
+import {
+  createSyncCursor,
+  currentGarminDate,
+  type GarminSyncCursor,
+} from '../../plugins/garmin/sync';
 import { GARMIN_HEALTH_HISTORY_START } from '../../plugins/garmin/history-policy';
 import { GARMIN_ORIGIN, GARMIN_TOKEN_PATH } from '../../plugins/garmin/transport';
 
@@ -63,6 +67,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
   let tokenFailure: number | null;
   let nextFailure: { status: number; headers?: HeadersInit } | null;
   let blockActivity: (() => Promise<Response>) | null;
+  let emptyHistoricalIdentity: boolean;
   let fetcher: ReturnType<typeof vi.fn>;
   const originalEncryption = process.env.ENCRYPTION_KEY;
 
@@ -80,6 +85,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     tokenFailure = null;
     nextFailure = null;
     blockActivity = null;
+    emptyHistoricalIdentity = false;
     fetcher = vi.fn(async (input: URL | string, init: RequestInit) => {
       const url = new URL(input);
       // Fail closed: every request is intercepted, no fallback to the network exists.
@@ -103,8 +109,11 @@ describe('durable Garmin worker with synthetic Personal API', () => {
       }
       if (url.pathname.includes('dailySleepSummaries')) return response(sleepRows);
       if (url.pathname.includes('/dailysummaries')) return response({ data: [] });
-      if (url.pathname.includes('/hrv/'))
+      if (url.pathname.includes('/hrv/')) {
+        if (emptyHistoricalIdentity && url.pathname.endsWith('/2019-03-20'))
+          return response({ hrvSummaries: [] });
         return response({ userProfilePk: '555', hrvSummaries: [] });
+      }
       return response([]);
     });
     vi.stubGlobal('fetch', fetcher);
@@ -352,8 +361,15 @@ describe('durable Garmin worker with synthetic Personal API', () => {
         activityType: { typeKey: 'gravel_cycling' },
       }),
     ];
-    await scheduleCursor({ phase: 'recent-activities' });
+    await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null where plugin_id='garmin'`;
+    await sync({ mode: 'full', from: day, to: day, scope: 'activities' });
+    fetcher.mockClear();
     await takeStep();
+    await takeStep();
+    await takeStep();
+    expect(fetcher.mock.calls.every(([url]) => String(url).includes('/activities/search/'))).toBe(
+      true,
+    );
     state = await loadWorkspace();
     expect(state.activities).toHaveLength(1);
     expect(state.activities[0]).toMatchObject({
@@ -376,6 +392,133 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     });
     expect(state.workouts[0].revision).toBe(2);
   });
+
+  it.each(['activities', 'health', 'both'] as const)(
+    'rejects unbounded %s refreshes before changing recovery state or queuing work',
+    async (scope) => {
+      await bootstrap();
+      const jobs = await connection()`select * from host.jobs order by id`;
+      const scans = await connection()`select * from garmin.scan_state order by stream`;
+      for (const dates of [{}, { from: day }])
+        await expect(sync({ mode: 'full', scope, ...dates })).rejects.toMatchObject({
+          code: 'invalid_range',
+        });
+      expect(await connection()`select * from host.jobs order by id`).toEqual(jobs);
+      expect(await connection()`select * from garmin.scan_state order by stream`).toEqual(scans);
+    },
+  );
+
+  it.each([{ stream: 'sleep' }, { scope: 'health' }])(
+    'uses current health for old-period identity and credential re-verification: %j',
+    async (selection) => {
+      await bootstrap();
+      await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null`;
+      emptyHistoricalIdentity = true;
+      const requested = await sync({
+        mode: 'full',
+        from: '2019-03-01',
+        to: '2019-03-20',
+        ...selection,
+      });
+      fetcher.mockClear();
+      const first = await takeStep();
+      expect(first.saved.id).toBe(requested.id);
+      expect(first.saved.payload.cursor).toMatchObject({
+        phase: 'recent-health',
+        today: '2019-03-20',
+      });
+      await connection()`update host.settings set value=value || ${connection().json({ generation: randomUUID() })} where key='garmin'`;
+      const second = await takeStep();
+      expect(second.saved.error).toBeNull();
+      expect(second.saved.payload.cursor.today).toBe('2019-03-20');
+      const paths = fetcher.mock.calls.map(([url]) => new URL(String(url)));
+      expect(paths.some((url) => url.pathname.includes('/activities/'))).toBe(false);
+      const probes = paths.filter((url) => url.pathname.includes('/hrv/'));
+      expect(probes).toHaveLength(2);
+      expect(probes.every((url) => url.pathname.endsWith('/' + currentGarminDate()))).toBe(true);
+      expect(
+        paths.some(
+          (url) =>
+            url.pathname.includes('dailySleepSummaries') &&
+            url.searchParams.get('endDate') === '2019-03-20',
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.each(['activities', 'health', 'both'] as const)(
+    'resumes matching %s refreshes, rejects conflicting scope and limits credential re-verification',
+    async (scope) => {
+      await bootstrap();
+      await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null`;
+      const input = { mode: 'full', from: day, to: day, scope };
+      const first = await sync(input);
+      expect((await sync(input)).id).toBe(first.id);
+      await connection()`update host.jobs set status='disabled' where id=${first.id}`;
+      expect(await sync(input)).toEqual({ id: first.id, status: 'disabled' });
+      await expect(
+        sync({ ...input, scope: scope === 'activities' ? 'health' : 'activities' }),
+      ).rejects.toMatchObject({ code: 'import_busy' });
+      await expect(sync({ ...input, stream: 'activities' })).rejects.toMatchObject({
+        code: 'invalid_range',
+      });
+      await expect(sync({ mode: 'recent', scope })).rejects.toMatchObject({
+        code: 'invalid_range',
+      });
+      await connection()`update host.jobs set status='queued' where id=${first.id}`;
+      const { saved } = await takeStep();
+      await connection()`update host.jobs set status='failed',attempts=8 where id=${first.id}`;
+      expect((await sync(input)).id).toBe(first.id);
+      expect(
+        (await connection()`select payload from host.jobs where id=${first.id}`)[0].payload,
+      ).toEqual(saved.payload);
+      // A replaced generation must reverify within scope before resuming the stored data phase.
+      await connection()`update host.settings set value=value || ${connection().json({ generation: randomUUID() })} where key='garmin'`;
+      fetcher.mockClear();
+      await takeStep();
+      const paths = fetcher.mock.calls
+        .map(([url]) => new URL(String(url)).pathname)
+        .filter((path) => path !== GARMIN_TOKEN_PATH);
+      expect(paths.length).toBeGreaterThan(0);
+      if (scope === 'activities')
+        expect(paths.every((path) => path.includes('/activities/search/'))).toBe(true);
+      if (scope === 'health')
+        expect(paths.every((path) => !path.includes('/activities/search/'))).toBe(true);
+    },
+  );
+
+  it.each([200, 500])(
+    'discards a %s response already in flight when reconciliation is retired',
+    async (responseStatus) => {
+      const first = await bootstrap();
+      let release!: (response: Response) => void;
+      let started!: () => void;
+      const pending = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      blockActivity = () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+          started();
+        });
+      await connection()`update host.jobs set next_run_at=now() where id=${first.job.id}`;
+      const job = (await claimJob('inflight'))!;
+      const running = runGarminJob(job);
+      await pending;
+      // Model a request dispatched by the previous handler before the retirement policy took effect.
+      await connection()`update host.jobs set kind='garmin-reconcile' where id=${job.id}`;
+      const configBefore = await getConfiguration();
+      await scheduleRecent();
+      release(response(responseStatus === 200 ? activities : 'upstream failure', responseStatus));
+      await running;
+      expect((await connection()`select status from host.jobs where id=${job.id}`)[0].status).toBe(
+        'cancelled',
+      );
+      expect((await loadWorkspace()).activities).toHaveLength(0);
+      expect(await connection()`select * from garmin.coverage`).toHaveLength(0);
+      expect(await getConfiguration()).toEqual(configBefore);
+    },
+  );
 
   it('finds a moved unlinked activity by stable identity without reading the complete imported history', async () => {
     await bootstrap();

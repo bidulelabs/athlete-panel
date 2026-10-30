@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { closeDatabase, connection, transaction } from '../../packages/host/src/db';
 import { migrate } from '../../packages/host/src/migrations';
-import { enqueue, claimJob } from '../../packages/host/src/jobs';
+import { enqueue, claimJob, failClaimedJob, type Job } from '../../packages/host/src/jobs';
 import {
   configure,
   getConfiguration,
@@ -12,6 +12,8 @@ import {
   coveragePage,
   pause,
   sync,
+  status,
+  disconnect,
 } from '../../plugins/garmin/service';
 import { scheduleRecovery } from '../../plugins/garmin/recovery';
 import {
@@ -131,50 +133,156 @@ it('recovers an outage longer than seven days, behind recent work, using complet
     unscanned.rows.every((row) => row.scanState === 'unscanned' && row.lastScannedAt === null),
   ).toBe(true);
 });
-it('rotates all history streams, preserves activity pagination, imports late records and persists the five-minute budget across restarts', async () => {
+it('never queues rescans of completed history across scheduler restarts', async () => {
   await covered();
-  await transaction((tx) => scheduleRecovery(tx, context));
-  const first = await step();
-  expect(first.payload.recovery.stream).toBe('activities');
-  expect((await loadWorkspace()).activities[0]?.localDate).toBe(addDays(context.today, -365));
-  expect(
-    (
-      await connection()`select reconcile_cursor from garmin.scan_state where stream='activities'`
-    )[0].reconcile_cursor.activityOffset,
-  ).toBe(1);
-  const calls = fetcher.mock.calls.length;
-  await closeDatabase();
-  await transaction((tx) => scheduleRecovery(tx, context));
-  expect(await claimJob('restart')).toBeNull();
-  // Even an early queued claim cannot bypass the persisted request budget.
-  await connection()`update host.jobs set status='queued',next_run_at=now() where id=${first.id}`;
-  await step();
-  expect(fetcher.mock.calls).toHaveLength(calls);
-  await connection()`update host.jobs set status='completed' where id=${first.id}`;
-  const visited = new Set(['activities']);
-  for (let n = 0; n < 6; n++) {
-    await connection()`update garmin.scheduler set next_reconcile_at=now()-interval '1 second'`;
-    await transaction((tx) => scheduleRecovery(tx, context));
-    visited.add((await step()).payload.recovery.stream);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await scheduleRecent();
+    await closeDatabase();
   }
-  expect(visited.size).toBe(7);
-  await connection()`update garmin.scheduler set next_reconcile_at=now()-interval '1 second'`;
-  await transaction((tx) => scheduleRecovery(tx, context));
-  const continuation = await step();
-  expect(continuation.payload.cursor.activityOffset).toBe(1);
   expect(
-    (
-      await connection()`select reconcile_cursor from garmin.scan_state where stream='activities'`
-    )[0].reconcile_cursor,
-  ).toBeNull();
-  expect(await connection()`select id from host.jobs where kind='garmin-reconcile'`).toHaveLength(
-    1,
-  );
+    await connection()`select id from host.jobs where kind in ('garmin-catchup','garmin-reconcile')`,
+  ).toHaveLength(0);
+  expect(await connection()`select id from host.jobs where kind='garmin-recent'`).toHaveLength(1);
+  expect(fetcher).not.toHaveBeenCalled();
+  expect((await loadWorkspace()).activities).toHaveLength(0);
+  // A late upload on an already scanned old date is picked up only by manual refresh.
+  await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null where kind='garmin-recent'`;
+  const oldDate = addDays(context.today, -365);
+  await sync({ mode: 'full', from: oldDate, to: oldDate, scope: 'activities' });
+  for (let n = 0; n < 3; n++) {
+    await connection()`update host.jobs set next_run_at=now() where status='queued'`;
+    await step();
+  }
+  expect((await loadWorkspace()).activities[0]?.localDate).toBe(oldDate);
 });
+
+async function legacyJob(state: string, stream: 'activities' | 'sleep' = 'activities') {
+  const id = randomUUID();
+  const payload = {
+    cursor: windowCursor(stream, { from: '2025-01-01', to: '2025-01-28' }, context),
+    generation: context.generation,
+    recovery: { mode: 'reconcile', stream },
+  };
+  await connection()`insert into host.jobs(id,plugin_id,kind,status,payload,lease_owner,lease_until,error,attempts) values(${id},'garmin','garmin-reconcile',${state},${connection().json(payload)},'old-worker',now()+interval '3 minutes','retained diagnostic',3)`;
+  return {
+    id,
+    plugin_id: 'garmin',
+    kind: 'garmin-reconcile',
+    status: state,
+    payload,
+    lease_owner: 'old-worker',
+    attempts: 3,
+    priority: 0,
+    progress: {},
+  } satisfies Job;
+}
+
+it.each(['queued', 'running', 'paused', 'disabled', 'failed'])(
+  'retires %s reconciliation even while paused, retaining checkpoints and diagnostics',
+  async (state) => {
+    await covered();
+    await transaction((tx) => scheduleRecovery(tx, context));
+    await pause({ paused: true });
+    const job = await legacyJob(state);
+    await scheduleRecent();
+    await scheduleRecent();
+    await runGarminJob(job);
+    await failClaimedJob(job);
+    expect(
+      (
+        await connection()`select status,payload,error,attempts,lease_owner,lease_until from host.jobs where id=${job.id}`
+      )[0],
+    ).toEqual({
+      status: 'cancelled',
+      payload: job.payload,
+      error: 'retained diagnostic',
+      attempts: 3,
+      lease_owner: null,
+      lease_until: null,
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+    expect((await status()).recovery).toMatchObject({
+      reconciliation: null,
+      nextReconcileAt: null,
+    });
+  },
+);
+
+it('retires disconnected jobs and fences cancellation-only handlers against stale leases and payloads', async () => {
+  await disconnect();
+  const job = await legacyJob('running');
+  await runGarminJob({ ...job, lease_owner: 'stale-worker' });
+  await runGarminJob({ ...job, payload: {} });
+  expect((await connection()`select status from host.jobs where id=${job.id}`)[0].status).toBe(
+    'running',
+  );
+  await runGarminJob(job);
+  expect((await connection()`select status from host.jobs where id=${job.id}`)[0].status).toBe(
+    'cancelled',
+  );
+  const queued = await legacyJob('queued');
+  await scheduleRecent();
+  expect((await connection()`select status from host.jobs where id=${queued.id}`)[0].status).toBe(
+    'cancelled',
+  );
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it.each(['none', 'job', 'coverage'])(
+  'clears only reconciliation-only retry gates with independent failure: %s',
+  async (independent) => {
+    await covered();
+    await transaction((tx) => scheduleRecovery(tx, context));
+    const job = await legacyJob('failed', 'sleep');
+    await connection()`update garmin.scan_state set needs_retry=true where stream='sleep'`;
+    await connection()`insert into garmin.coverage(stream,start_date,end_date,status,scan_state,error) values('sleep','2025-01-01','2025-01-28','failed','failed','retained failure')`;
+    if (independent === 'job')
+      await connection()`insert into host.jobs(id,plugin_id,kind,status,payload) values(${randomUUID()},'garmin','garmin-history','failed',${connection().json(job.payload)})`;
+    if (independent === 'coverage')
+      await connection()`insert into garmin.coverage(stream,start_date,end_date,status,scan_state) values('sleep','2024-01-01','2024-01-28','failed','failed')`;
+    await pause({ paused: true });
+    await scheduleRecent();
+    expect(
+      (await connection()`select needs_retry from garmin.scan_state where stream='sleep'`)[0]
+        .needs_retry,
+    ).toBe(independent !== 'none');
+    expect((await coveragePage({ filter: 'failed' })).total).toBe(
+      independent === 'coverage' ? 2 : 1,
+    );
+  },
+);
+
+it.each(['activities', 'health'] as const)(
+  'pending %s refresh only reserves its selected streams from catch-up',
+  async (scope) => {
+    await covered();
+    await transaction((tx) => scheduleRecovery(tx, context));
+    await connection()`truncate garmin.coverage`;
+    await connection()`update garmin.scan_state set needs_retry=true`;
+    await sync({
+      mode: 'full',
+      from: scope === 'activities' ? '0001-01-01' : '2000-01-01',
+      to: context.today,
+      scope,
+    });
+    const states = await connection()`select stream,needs_retry from garmin.scan_state`;
+    expect(
+      states.every(
+        (state) =>
+          state.needs_retry ===
+          (scope === 'activities' ? state.stream !== 'activities' : state.stream === 'activities'),
+      ),
+    ).toBe(true);
+    await connection()`update garmin.scan_state set needs_retry=false`;
+    await transaction((tx) => scheduleRecovery(tx, context));
+    const [job] = await connection()`select payload from host.jobs where kind='garmin-catchup'`;
+    expect(job.payload.recovery.stream === 'activities').toBe(scope === 'health');
+  },
+);
 it('suspends forbidden historical streams until a successful recent probe and keeps other streams eligible', async () => {
-  await covered();
+  await covered(addDays(context.today, -30));
   await transaction((tx) => scheduleRecovery(tx, context));
-  await connection()`update host.jobs set status='completed' where kind='garmin-reconcile'`;
+  await connection()`update host.jobs set status='completed' where kind='garmin-catchup'`;
   await connection()`update garmin.scan_state set last_scheduled_at=now()`;
   await connection()`update garmin.scan_state set last_scheduled_at=null where stream='sleep'`;
   deniedSleep = true;
@@ -184,7 +292,6 @@ it('suspends forbidden historical streams until a successful recent probe and ke
     (await connection()`select unavailable from garmin.scan_state where stream='sleep'`)[0]
       .unavailable,
   ).toBe(true);
-  await connection()`update garmin.scheduler set next_reconcile_at=now()-interval '1 second'`;
   await transaction((tx) => scheduleRecovery(tx, context));
   expect((await step()).payload.recovery.stream).not.toBe('sleep');
   deniedSleep = false;
@@ -202,7 +309,7 @@ it('suspends forbidden historical streams until a successful recent probe and ke
   ).toBe(false);
 });
 it('honours provider backoff across job kinds and preserves pause controls', async () => {
-  await covered();
+  await covered(addDays(context.today, -30));
   await transaction((tx) => scheduleRecovery(tx, context));
   throttle = true;
   const rejected = await step();
@@ -228,9 +335,9 @@ it('honours provider backoff across job kinds and preserves pause controls', asy
   expect(await claimJob('paused')).toBeNull();
 });
 it('keeps failed historical checkpoints visible and requires explicit repair before retrying that stream', async () => {
-  await covered();
+  await covered(addDays(context.today, -30));
   await transaction((tx) => scheduleRecovery(tx, context));
-  await connection()`update host.jobs set status='failed',attempts=8,error='lease_expired' where kind='garmin-reconcile'`;
+  await connection()`update host.jobs set status='failed',attempts=8,error='lease_expired' where kind='garmin-catchup'`;
   await transaction((tx) => scheduleRecovery(tx, context));
   expect(
     (await connection()`select needs_retry from garmin.scan_state where stream='activities'`)[0]
@@ -253,8 +360,7 @@ it('keeps failed historical checkpoints visible and requires explicit repair bef
       .needs_retry,
   ).toBe(false);
   expect(
-    (
-      await connection()`select status from host.jobs where kind='garmin-reconcile' and attempts=8`
-    )[0].status,
+    (await connection()`select status from host.jobs where kind='garmin-catchup' and attempts=8`)[0]
+      .status,
   ).toBe('cancelled');
 });

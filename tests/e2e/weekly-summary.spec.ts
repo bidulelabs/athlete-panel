@@ -26,9 +26,21 @@ async function preview(page: Page) {
 }
 const row = (week: ReturnType<Page['locator']>, name: string) =>
   week.getByRole('row').filter({ has: week.page().getByRole('rowheader', { name, exact: true }) });
-async function refresh(page: Page) {
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+async function refresh(page: Page, expectedStart = '2030-01-07') {
+  const firstDay = page.locator('.calendar-day').first();
+  const date = await firstDay.getAttribute('data-date');
+  const week = page.locator('.calendar-week').first();
+  const expanded = await week.locator('.week-summary-toggle').getAttribute('aria-expanded');
+  const details = await week
+    .getByRole('table', { name: 'Planned and recorded training' })
+    .isVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  await expect(firstDay).toHaveAttribute('data-date', expectedStart);
+  if (expanded === 'true' && (await firstDay.getAttribute('data-date')) === date) {
+    await week.getByRole('button', { name: /^Expand summary/ }).click();
+    if (details) await week.getByRole('button', { name: 'Show details', exact: true }).click();
+  }
 }
 
 test('each week expands independently with accurate volume, elevation, sleep and keyboard controls', async ({
@@ -141,7 +153,7 @@ test('partial totals suppress comparisons, zero stays known, and unit/week chang
   );
   const before = JSON.stringify(data.workouts);
   data.profile!.weekStartsOnPreference = 'sunday';
-  await refresh(page);
+  await refresh(page, '2030-01-06');
   await expect(page.locator('.calendar-day').first()).toHaveAttribute('data-date', '2030-01-06');
   await expect(week.locator('.week-summary-toggle')).toHaveAttribute('aria-expanded', 'false');
   await week.getByRole('button', { name: /^Expand summary/ }).click();
@@ -187,12 +199,17 @@ test('unavailable data, zero plans and refresh failures do not invent complete t
       }),
     { times: 1 },
   );
-  await refresh(page);
+  await page.getByRole('button', { name: 'Next week', exact: true }).click();
   await expect(page.locator('.page-error')).toContainText('Synthetic refresh failure');
   await expect(row(week, 'Training duration')).toContainText('Duration unavailable');
   data.activities[0]!.durationSeconds = 3600;
   await page.getByRole('button', { name: 'Try again', exact: true }).click();
   await expect(page.locator('.page-error')).toHaveCount(0);
+  await expect(page.locator('.calendar-day').first()).toHaveAttribute('data-date', '2030-01-14');
+  await page.getByRole('button', { name: 'Previous week', exact: true }).click();
+  await expect(page.locator('.calendar-day').first()).toHaveAttribute('data-date', '2030-01-07');
+  await week.getByRole('button', { name: /^Expand summary/ }).click();
+  await week.getByRole('button', { name: 'Show details', exact: true }).click();
   await expect(row(week, 'Training duration')).toContainText('1h');
   await expect(row(week, 'Training duration')).toContainText('Partial');
   expect(mutations()).toBe(0);

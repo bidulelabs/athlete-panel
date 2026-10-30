@@ -56,7 +56,6 @@ import {
   Menu,
   Moon,
   Plug,
-  RefreshCw,
   Settings2,
   ShieldCheck,
   Sun,
@@ -75,6 +74,7 @@ import {
   useAction,
 } from './primitives';
 import { operationalHealth } from './operational-status';
+import { ReloadableRequestError } from './request-error';
 import { resolveWeekStartsOn, startOfWeek, type WeekStartsOn } from './calendar-dates';
 
 export interface PluginPageProps {
@@ -219,35 +219,39 @@ export function WorkspaceApp({
     window.addEventListener('popstate', pop);
     return () => window.removeEventListener('popstate', pop);
   }, []);
-  const refresh = useCallback(async () => {
-    const sequence = ++refreshSequence.current;
-    setRefreshing(true);
-    try {
-      const response = await fetch(`/api/workspace?from=${from}&to=${to}`, {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(15000),
-      });
-      if (response.status === 401) {
-        window.location.assign(
-          `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`,
-        );
-        return;
+  const refresh = useCallback(
+    async (reportFailure = false) => {
+      const sequence = ++refreshSequence.current;
+      setRefreshing(true);
+      try {
+        const response = await fetch(`/api/workspace?from=${from}&to=${to}`, {
+          cache: 'no-store',
+          signal: AbortSignal.timeout(15000),
+        });
+        if (response.status === 401) {
+          window.location.assign(
+            `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+          );
+          return;
+        }
+        const result: unknown = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(responseError(result, 'Unable to load your workspace.'));
+        if (sequence === refreshSequence.current) {
+          setEnvelope(workspaceEnvelopeSchema.parse(result));
+          setLoadedRange({ from, to });
+          setError(null);
+          setRefreshNotice(null);
+        }
+      } catch (err) {
+        if (sequence === refreshSequence.current)
+          setError(err instanceof Error ? err.message : 'Unable to load your workspace.');
+        if (reportFailure) throw err;
+      } finally {
+        if (sequence === refreshSequence.current) setRefreshing(false);
       }
-      const result: unknown = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(responseError(result, 'Unable to load your workspace.'));
-      if (sequence === refreshSequence.current) {
-        setEnvelope(workspaceEnvelopeSchema.parse(result));
-        setLoadedRange({ from, to });
-        setError(null);
-        setRefreshNotice(null);
-      }
-    } catch (err) {
-      if (sequence === refreshSequence.current)
-        setError(err instanceof Error ? err.message : 'Unable to load your workspace.');
-    } finally {
-      if (sequence === refreshSequence.current) setRefreshing(false);
-    }
-  }, [from, to]);
+    },
+    [from, to],
+  );
   const latestRefresh = useRef(refresh);
   latestRefresh.current = refresh;
   useEffect(() => {
@@ -263,7 +267,9 @@ export function WorkspaceApp({
   const request = useCallback(
     createPluginRequester(async (pluginId: string, operation: string, body: unknown) => {
       const serverDidNotAnswerMessage =
-        'The server did not answer, so the change may have been saved. Reload to check before trying again.';
+        'The server did not answer, so the change may have been saved. Use Reload saved data to check before trying again.';
+      const reloadError = (message: string) =>
+        new ReloadableRequestError(message, () => latestRefresh.current(true));
       const response = await fetch(
         `/api/plugins/${encodeURIComponent(pluginId)}/${encodeURIComponent(operation)}`,
         {
@@ -273,15 +279,26 @@ export function WorkspaceApp({
           signal: AbortSignal.timeout(15000),
         },
       ).catch(() => {
-        throw new Error(serverDidNotAnswerMessage);
+        throw reloadError(serverDidNotAnswerMessage);
       });
       const result: unknown = await response.json().catch(() => null);
-      if (!response.ok)
-        throw new Error(
-          result === null
-            ? serverDidNotAnswerMessage
-            : responseError(result, 'The change could not be saved.'),
-        );
+      if (!response.ok) {
+        if (result === null) throw reloadError(serverDidNotAnswerMessage);
+        const code =
+          typeof result === 'object' &&
+          'error' in result &&
+          typeof result.error === 'object' &&
+          result.error !== null &&
+          'code' in result.error
+            ? result.error.code
+            : null;
+        if (code === 'STALE_REVISION')
+          throw reloadError(
+            `${responseError(result, 'This item changed.')} Use Reload saved data to review the saved version. Your draft will stay open.`,
+          );
+        throw new Error(responseError(result, 'The change could not be saved.'));
+      }
+      if (result === null) throw reloadError(serverDidNotAnswerMessage);
       // The mutation is committed even if reloading the workspace fails.
       setRefreshNotice('Your change was saved. Reloading the workspace…');
       await latestRefresh.current();
@@ -445,21 +462,6 @@ export function WorkspaceApp({
       )}
 
       <main className="workspace-main">
-        <div className="workspace-topline">
-          <span>
-            <span className="status-dot" />
-            Private training workspace
-          </span>
-          <Button
-            variant="link"
-            className="text-button"
-            onClick={() => void refresh()}
-            disabled={refreshing}
-          >
-            <RefreshCw size={13} className={refreshing ? 'spin' : ''} />
-            {refreshing ? 'Refreshing' : 'Refresh'}
-          </Button>
-        </div>
         {error && (
           <div className="page-error">
             {refreshNotice && (
@@ -475,7 +477,12 @@ export function WorkspaceApp({
                 {dateLabel(loadedRange.to)}.
               </p>
             )}
-            <Button variant="link" className="text-button" onClick={() => void refresh()}>
+            <Button
+              variant="link"
+              className="text-button"
+              disabled={refreshing}
+              onClick={() => void refresh()}
+            >
               Try again
             </Button>
           </div>

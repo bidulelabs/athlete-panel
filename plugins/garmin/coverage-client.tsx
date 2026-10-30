@@ -74,18 +74,14 @@ export function CoverageHistory({
   }, [filter, offset, key, checkedAt, retry]);
   const result = page?.key === key ? page.data : null;
   return (
-    <section className="section-block" aria-label="History coverage">
+    <section aria-label="History coverage results">
       <div className="section-heading">
         <div>
-          <h2>History coverage</h2>
           <p className="muted-text">
-            Scanned means Garmin answered the request, not that it retained every measurement.
-            Empty, unavailable and unscanned periods are not zero measurements.
+            Scanned means Garmin answered a request. It does not mean every measurement was
+            available. Missing data is not a zero measurement.
           </p>
         </div>
-        <Button variant="outline" className="button" disabled={disabled} onClick={() => onRetry()}>
-          Retry date range
-        </Button>
       </div>
       <label className="field">
         <span>Show history windows</span>

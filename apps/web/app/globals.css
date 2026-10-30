@@ -263,21 +263,6 @@ svg {
   width: calc(100% - 218px);
   padding: 0 32px 42px;
 }
-.workspace-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 55px;
-  border-bottom: 1px solid var(--line);
-  color: var(--faint);
-  font-size: 10px;
-  letter-spacing: 0.2px;
-}
-.workspace-topline > span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
 .status-dot {
   display: inline-block;
   width: 6px;
@@ -994,71 +979,6 @@ svg {
   line-height: 1.7;
   margin-top: 5px;
 }
-.connection-panel {
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  padding: 30px 0;
-  display: flex;
-  align-items: center;
-  gap: 22px;
-}
-.connection-logo {
-  height: 72px;
-  width: 72px;
-  display: grid;
-  place-items: center;
-  background: var(--accent-soft);
-  color: var(--accent);
-  border: 1px solid var(--accent-line);
-  border-radius: 16px;
-  flex-shrink: 0;
-}
-.connection-copy {
-  flex: 1;
-}
-.connection-copy h2 {
-  font-size: 22px;
-}
-.connection-copy > p {
-  color: var(--muted);
-  font-size: 12px;
-  margin-top: 8px;
-}
-.connection-details {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 10px;
-  color: var(--faint);
-  margin-top: 13px;
-}
-.settings-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 250px;
-  gap: 50px;
-  margin-top: 35px;
-}
-.settings-section > h2 {
-  margin-bottom: 12px;
-}
-.setting-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 24px 0;
-  border-bottom: 1px solid var(--line);
-}
-.setting-line strong {
-  font-size: 13px;
-  font-weight: 500;
-}
-.setting-line p {
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 5px;
-}
 .context-panel {
   border-left: 1px solid var(--line);
   padding-left: 25px;
@@ -1756,20 +1676,6 @@ svg {
   .inspector {
     z-index: 40;
   }
-  .settings-layout {
-    grid-template-columns: 1fr;
-  }
-  .settings-layout > .context-panel {
-    border-left: 0;
-    padding: 20px 0;
-    border-top: 1px solid var(--line);
-  }
-  .connection-panel {
-    flex-wrap: wrap;
-  }
-  .connection-panel > .button {
-    margin-left: 94px;
-  }
   .plugin-table-header,
   .plugin-row {
     grid-template-columns: minmax(0, 1fr) 105px 40px;
@@ -1834,10 +1740,6 @@ svg {
     margin-left: 0;
     width: 100%;
     padding: 0 18px 30px;
-  }
-  .workspace-topline {
-    height: 40px;
-    font-size: 9px;
   }
   .page-header {
     padding: 23px 0;
@@ -2051,50 +1953,6 @@ svg {
   }
   .section-heading h2 {
     font-size: 16px;
-  }
-  .connection-panel {
-    gap: 15px;
-    padding: 23px 0;
-    align-items: flex-start;
-  }
-  .connection-logo {
-    width: 46px;
-    height: 46px;
-    border-radius: 11px;
-  }
-  .connection-copy {
-    flex: 1;
-    min-width: 200px;
-  }
-  .connection-copy h2 {
-    font-size: 19px;
-  }
-  .connection-copy .eyebrow {
-    font-size: 8px;
-  }
-  .connection-panel > .button {
-    margin-left: 61px;
-  }
-  .connection-details {
-    font-size: 9px;
-  }
-  .setting-line {
-    align-items: flex-start;
-    gap: 15px;
-  }
-  .setting-line .button {
-    font-size: 10px;
-    padding: 7px 9px;
-  }
-  .setting-line p {
-    font-size: 10px;
-  }
-  .settings-layout {
-    margin-top: 25px;
-    gap: 25px;
-  }
-  .settings-section > h2 {
-    font-size: 17px;
   }
   .context-panel p {
     font-size: 11px;

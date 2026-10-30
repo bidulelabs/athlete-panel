@@ -153,7 +153,8 @@ test('notes, events and dated constraints open full details under either week st
   await expect(metric(page, 'Active through')).toContainText('Ongoing');
   await close(page);
   fixture.profile!.weekStartsOnPreference = 'sunday';
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.reload();
+  await page.getByLabel('Go to date').fill('2030-01-06');
   await expect(page.getByLabel('Go to date')).toHaveValue('2030-01-06');
   await expect(
     page
@@ -175,7 +176,8 @@ test('activity details preserve recorded dates, units and links without navigati
   await expect(metric(page, 'Average heart rate')).toContainText('Unavailable');
   await close(page);
   fixture.profile!.units = 'imperial';
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await page.reload();
+  await page.getByLabel('Go to date').fill('2030-01-06');
   await expect(
     page.getByRole('button', { name: 'Open activity River path run', exact: true }),
   ).toContainText('5.0 mi');

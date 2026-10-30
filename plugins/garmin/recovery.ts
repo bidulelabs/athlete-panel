@@ -13,16 +13,15 @@ import {
   addDays,
   requestCoverageIdentity,
   parseSyncCursor,
+  importsStream,
   type GarminSyncCursor,
   type SyncCoverage,
 } from './sync';
 import {
   RECOVERY_STREAMS,
-  RECONCILE_INTERVAL,
   healthBucket,
   windowCursor,
   nextGap,
-  nextReconciliation,
   uncovered,
   type RecoveryContext,
   type SuccessfulRange,
@@ -30,18 +29,17 @@ import {
 } from './recovery-policy';
 
 export const recoveryTaskSchema = z.object({
-  mode: z.enum(['catchup', 'reconcile']),
+  mode: z.literal('catchup'),
   stream: importStreamSchema,
 });
 export type RecoveryTask = z.infer<typeof recoveryTaskSchema>;
 type StreamState = {
   stream: ImportStream;
-  reconcile_cursor: unknown;
   unavailable: boolean;
   needs_retry: boolean;
   last_scheduled_at: Date | null;
 };
-type ScheduleState = { next_reconcile_at: Date; blocked_until: Date | null };
+type ScheduleState = { blocked_until: Date | null };
 
 async function initialize(tx: Transaction) {
   await tx`insert into garmin.scheduler(id) values(true) on conflict do nothing`;
@@ -49,6 +47,56 @@ async function initialize(tx: Transaction) {
     RECOVERY_STREAMS.map((stream) => ({ stream })),
     'stream',
   )} on conflict do nothing`;
+}
+
+/** Cancellation is deliberate invalidation; retained evidence is never rewritten as new failure. */
+export async function retireReconciliation(tx: Transaction, claim?: Job) {
+  const retired = await tx<{ id: string; status: string; payload: unknown }[]>`
+    select id,status,payload from host.jobs where plugin_id='garmin' and kind='garmin-reconcile'
+    and status in ('queued','running','paused','disabled','failed')
+    and (${claim?.id ?? null}::uuid is null or
+      (id=${claim?.id ?? null} and status='running' and lease_owner=${claim?.lease_owner ?? null} and lease_until>now())) for update`;
+  if (claim && (!retired[0] || canonical(retired[0].payload) !== canonical(claim.payload))) return;
+  if (!retired.length) return;
+  await tx`update host.jobs set status='cancelled',lease_owner=null,lease_until=null,updated_at=now() where id in ${tx(retired.map((row) => row.id))}`;
+  const windowOf = (payload: unknown) => {
+    try {
+      return requestCoverageIdentity(parseSyncCursor((payload as { cursor?: unknown })?.cursor));
+    } catch {
+      return null;
+    }
+  };
+  const failedWindows = retired
+    .filter((row) => row.status === 'failed')
+    .map((row) => windowOf(row.payload));
+  if (!failedWindows.length) return;
+  const remaining = await tx<
+    { payload: unknown }[]
+  >`select payload from host.jobs where plugin_id='garmin' and status='failed'`;
+  const otherWindows = remaining.map((row) => windowOf(row.payload));
+  for (const stream of RECOVERY_STREAMS) {
+    if (
+      !failedWindows.some((window) => window?.stream === stream) ||
+      otherWindows.some(
+        (window) => !window || window.stream === stream || window.stream === 'identity',
+      )
+    )
+      continue;
+    const failures = await tx<
+      { from: string; to: string }[]
+    >`select start_date::text as "from",end_date::text as "to" from garmin.coverage where stream=${stream} and scan_state='failed'`;
+    if (
+      failures.every((failure) =>
+        failedWindows.some(
+          (window) =>
+            window?.stream === stream &&
+            (window.from ?? '0001-01-01') === failure.from &&
+            window.to === failure.to,
+        ),
+      )
+    )
+      await tx`update garmin.scan_state set needs_retry=false,updated_at=now() where stream=${stream}`;
+  }
 }
 export async function successfulRanges(tx: Transaction): Promise<SuccessfulRange[]> {
   return tx<
@@ -84,7 +132,7 @@ export async function scheduleRecovery(tx: Transaction, context: RecoveryContext
   await initialize(tx);
   const failures = await tx<
     { payload: { cursor: unknown; recovery: { stream: ImportStream } } }[]
-  >`select j.payload from host.jobs j join garmin.scan_state s on s.stream=j.payload#>>'{recovery,stream}' where j.plugin_id='garmin' and j.kind in ('garmin-catchup','garmin-reconcile') and j.status='failed' and not s.needs_retry`;
+  >`select j.payload from host.jobs j join garmin.scan_state s on s.stream=j.payload#>>'{recovery,stream}' where j.plugin_id='garmin' and j.kind='garmin-catchup' and j.status='failed' and not s.needs_retry`;
   for (const failure of failures) {
     try {
       const window = requestCoverageIdentity(parseSyncCursor(failure.payload.cursor));
@@ -94,7 +142,7 @@ export async function scheduleRecovery(tx: Transaction, context: RecoveryContext
       // Invalid checkpoints have no trustworthy date window; the job itself remains visible.
     }
   }
-  await tx`update garmin.scan_state s set needs_retry=true from host.jobs j where j.plugin_id='garmin' and j.kind in ('garmin-catchup','garmin-reconcile') and j.status='failed' and j.payload#>>'{recovery,stream}'=s.stream`;
+  await tx`update garmin.scan_state s set needs_retry=true from host.jobs j where j.plugin_id='garmin' and j.kind='garmin-catchup' and j.status='failed' and j.payload#>>'{recovery,stream}'=s.stream`;
   const [timing] = await tx<ScheduleState[]>`select * from garmin.scheduler where id=true`;
   if (timing?.blocked_until && timing.blocked_until.getTime() > Date.now()) return;
   const states = await tx<
@@ -108,7 +156,7 @@ export async function scheduleRecovery(tx: Transaction, context: RecoveryContext
   for (const state of states) {
     if (state.unavailable || state.needs_retry) continue;
     const pending: DateRange[] = cursors
-      .filter((cursor) => !cursor.targetStream || cursor.targetStream === state.stream)
+      .filter((cursor) => importsStream(cursor, state.stream))
       .map((cursor) => ({
         from:
           state.stream === 'activities'
@@ -130,39 +178,10 @@ export async function scheduleRecovery(tx: Transaction, context: RecoveryContext
     )
       break;
   }
-  // Initial/repair/catch-up work is processed before periodic rescans, including while it backs off.
-  const [foreground] =
-    await tx`select id from host.jobs where plugin_id='garmin' and kind in ('garmin-history','garmin-catchup') and status in ('queued','running','paused','disabled') limit 1`;
-  if (foreground || (timing && timing.next_reconcile_at.getTime() > Date.now())) return;
-  for (const state of states) {
-    if (state.unavailable || state.needs_retry) continue;
-    const end = addDays(context.today, -7);
-    if (end < context.earliestDate) continue;
-    const cursor = state.reconcile_cursor
-      ? parseSyncCursor(state.reconcile_cursor)
-      : windowCursor(
-          state.stream,
-          state.stream === 'activities'
-            ? { from: '0001-01-01', to: end }
-            : healthBucket(context.earliestDate, end),
-          context,
-        );
-    if (
-      await queue(
-        tx,
-        'garmin-reconcile',
-        cursor,
-        context,
-        { mode: 'reconcile', stream: state.stream },
-        0,
-      )
-    )
-      break;
-  }
 }
 
-/** Reserve pacing before any provider call; a restart cannot spend accumulated scan credit. */
-export async function beginStep(tx: Transaction, job: Job, task?: RecoveryTask) {
+/** Fence the claim and honor persisted provider backoff before any provider call. */
+export async function beginStep(tx: Transaction, job: Job) {
   await initialize(tx);
   const [lease] = await tx<
     { payload: unknown }[]
@@ -175,26 +194,18 @@ export async function beginStep(tx: Transaction, job: Job, task?: RecoveryTask) 
   const [state] = await tx<
     ScheduleState[]
   >`select * from garmin.scheduler where id=true for update`;
-  const due = Math.max(
-    state?.blocked_until?.getTime() ?? 0,
-    task?.mode === 'reconcile' ? (state?.next_reconcile_at.getTime() ?? 0) : 0,
-  );
+  const due = state?.blocked_until?.getTime() ?? 0;
   if (due > Date.now()) {
     await tx`update host.jobs set status='queued',lease_owner=null,lease_until=null,next_run_at=${new Date(due)} where id=${job.id}`;
     return false;
   }
-  if (task?.mode === 'reconcile')
-    await tx`update garmin.scheduler set next_reconcile_at=${new Date(Date.now() + RECONCILE_INTERVAL)} where id=true`;
   return true;
 }
 
 export async function recordRecoveryStep(
   tx: Transaction,
   cursor: GarminSyncCursor,
-  next: GarminSyncCursor,
   coverage: SyncCoverage,
-  context: RecoveryContext,
-  task?: RecoveryTask,
 ) {
   if (coverage.stream === 'identity') return;
   const stream = importStreamSchema.parse(coverage.stream);
@@ -202,10 +213,6 @@ export async function recordRecoveryStep(
     await tx`update garmin.scan_state set unavailable=true,updated_at=now() where stream=${stream}`;
   else if (coverage.scanState === 'scanned' && cursor.mode === 'recent')
     await tx`update garmin.scan_state set unavailable=false,updated_at=now() where stream=${stream}`;
-  if (task?.mode === 'reconcile') {
-    const pending = nextReconciliation(cursor, next, context);
-    await tx`update garmin.scan_state set reconcile_cursor=${pending ? tx.json(pending as never) : null},updated_at=now() where stream=${stream}`;
-  }
 }
 
 export async function recordRecoveryFailure(
@@ -219,9 +226,12 @@ export async function recordRecoveryFailure(
   if (task && !retry)
     await tx`update garmin.scan_state set needs_retry=true,updated_at=now() where stream=${task.stream}`;
 }
-export async function clearRecoveryFailures(tx: Transaction, stream?: ImportStream) {
-  await tx`update garmin.scan_state set needs_retry=false where (${stream ?? null}::text is null or stream=${stream ?? null})`;
-  await tx`update host.jobs set status='cancelled',lease_owner=null,lease_until=null where plugin_id='garmin' and kind in ('garmin-catchup','garmin-reconcile') and status='failed' and (${stream ?? null}::text is null or payload#>>'{recovery,stream}'=${stream ?? null})`;
+export async function clearRecoveryFailures(
+  tx: Transaction,
+  streams: ImportStream[] = RECOVERY_STREAMS,
+) {
+  await tx`update garmin.scan_state set needs_retry=false where stream in ${tx(streams)}`;
+  await tx`update host.jobs set status='cancelled',lease_owner=null,lease_until=null where plugin_id='garmin' and kind='garmin-catchup' and status='failed' and payload#>>'{recovery,stream}' in ${tx(streams)}`;
 }
 
 export async function unscannedCoverage(
@@ -270,7 +280,7 @@ export async function recoveryStatus(
 ): Promise<RecoveryStatus> {
   const jobs = await tx<
     { kind: string; status: string; payload: { cursor: unknown }; next_run_at: Date }[]
-  >`select distinct on (kind) kind,status,payload,next_run_at from host.jobs where plugin_id='garmin' and kind in ('garmin-catchup','garmin-reconcile') order by kind,case when status in ('queued','running','paused','disabled') then 0 else 1 end,created_at desc`;
+  >`select distinct on (kind) kind,status,payload,next_run_at from host.jobs where plugin_id='garmin' and kind='garmin-catchup' order by kind,case when status in ('queued','running','paused','disabled') then 0 else 1 end,created_at desc`;
   const project = (kind: string) => {
     const job = jobs.find((row) => row.kind === kind);
     if (!job) return null;
@@ -288,14 +298,13 @@ export async function recoveryStatus(
     }
     return { ...range, status: job.status, nextRunAt: job.next_run_at?.toISOString() ?? null };
   };
-  const [schedule] = await tx<ScheduleState[]>`select * from garmin.scheduler where id=true`;
   const failures = await tx<
     { stream: ImportStream }[]
   >`select stream from garmin.scan_state where needs_retry=true order by stream`;
   return recoveryStatusSchema.parse({
     catchup: project('garmin-catchup'),
-    reconciliation: project('garmin-reconcile'),
-    nextReconcileAt: schedule?.next_reconcile_at.toISOString() ?? null,
+    reconciliation: null,
+    nextReconcileAt: null,
     unscannedWindows: (await unscannedCoverage(tx, context)).length,
     retryStreams: failures.map((row) => row.stream),
   });

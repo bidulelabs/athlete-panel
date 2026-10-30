@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { commandsSchema, type EntityChange, type Workout } from '../../packages/contracts/src';
+import {
+  commandsSchema,
+  type EntityChange,
+  type Workout,
+  type WorkspaceState,
+} from '../../packages/contracts/src';
 import { transaction } from '../../packages/host/src/db';
 import { canonical } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
@@ -10,7 +15,8 @@ import {
   findEntity,
   stateWithChanges,
 } from '../../instance/services';
-import { applyCommands, validateWorkspace } from './engine';
+import { applyCommands, effectiveDate, validateWorkspace } from './engine';
+import { normalizeOrders } from './engine/state';
 
 export { idempotent } from '../../packages/host/src/idempotency';
 import { idempotent } from '../../packages/host/src/idempotency';
@@ -46,6 +52,37 @@ export async function mutate(body: unknown) {
       },
     ),
   );
+}
+function checkUndoAgainstLaterChanges(state: WorkspaceState, changes: EntityChange[]) {
+  const restoredState = stateWithChanges(state, changes);
+  const currentDates = new Map(
+    [...state.workouts, ...state.notes].map((item) => [item.id, effectiveDate(item, state.plans)]),
+  );
+  for (const item of [...restoredState.workouts, ...restoredState.notes]) {
+    const { schedule } = item;
+    const date = effectiveDate(item, restoredState.plans);
+    const change = changes.find((candidate) => candidate.id === item.id);
+    assert(
+      (schedule.kind !== 'plan' ||
+        restoredState.plans.some((plan) => plan.id === schedule.planId)) &&
+        (change !== undefined || date === currentDates.get(item.id)),
+      'undo_conflict',
+      'A later change to its plan prevents restoring the whole change. No records were changed.',
+      409,
+    );
+    if (change) change.afterEffectiveDate = date;
+  }
+  const normalizedState = structuredClone(restoredState);
+  normalizeOrders(normalizedState);
+  assert(
+    normalizedState.workouts.every(
+      (workout, index) => workout.order === restoredState.workouts[index]?.order,
+    ),
+    'undo_conflict',
+    'A later change to the same day prevents restoring the whole change. No records were changed.',
+    409,
+  );
+  validateWorkspace(restoredState);
 }
 export async function undoChange(body: unknown) {
   const input = z.object({ id: z.uuid(), idempotencyKey: z.uuid() }).strict().parse(body);
@@ -102,7 +139,7 @@ export async function undoChange(body: unknown) {
             : {}),
         });
       }
-      validateWorkspace(stateWithChanges(state, changes));
+      checkUndoAgainstLaterChanges(state, changes);
       await persistChanges(changes, tx);
       const id = await audit(tx, changes, `Undo: ${entry.summary}`);
       await tx`update host.changes set undone_at=now(),undo_id=${id} where id=${input.id}`;

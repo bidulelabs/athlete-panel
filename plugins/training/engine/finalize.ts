@@ -10,28 +10,10 @@ export function finalize(initial: WorkspaceState, state: WorkspaceState): Mutati
   normalizeOrders(state);
   const beforeById = new Map(allEntities(initial).map((entry) => [entry.value.id, entry]));
   const afterById = new Map(allEntities(state).map((entry) => [entry.value.id, entry]));
-  const affectedPlans = new Set<string>();
-  const scheduledEntries = [
-    ...initial.workouts,
-    ...initial.notes,
-    ...state.workouts,
-    ...state.notes,
-  ];
-  for (const item of scheduledEntries) {
+  for (const item of [...state.workouts, ...state.notes]) {
     const previous = beforeById.get(item.id)?.value as typeof item | undefined;
-    const next = afterById.get(item.id)?.value as typeof item | undefined;
-    const previousDate = previous ? effectiveDate(previous, initial.plans) : null;
-    const nextDate = next ? effectiveDate(next, state.plans) : null;
-    if (!equal(previous, next) || previousDate !== nextDate) {
-      if (previous?.schedule.kind === 'plan') affectedPlans.add(previous.schedule.planId);
-      if (next?.schedule.kind === 'plan') affectedPlans.add(next.schedule.planId);
-      if (previous && next && previousDate !== nextDate) next.revision = previous.revision + 1;
-    }
-  }
-  // Plans are aggregate concurrency boundaries for edits/deletes of their children.
-  for (const plan of state.plans) {
-    const previous = initial.plans.find((candidate) => candidate.id === plan.id);
-    if (previous && affectedPlans.has(plan.id)) plan.revision = previous.revision + 1;
+    if (previous && effectiveDate(previous, initial.plans) !== effectiveDate(item, state.plans))
+      item.revision = previous.revision + 1;
   }
   const changes: EntityChange[] = [];
   for (const [id, entry] of beforeById) {

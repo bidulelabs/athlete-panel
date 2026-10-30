@@ -6,7 +6,6 @@ import {
   agentScopeSchema,
 } from '../../packages/contracts/src';
 import { z } from 'zod';
-import { canonical } from '../../packages/host/src/crypto';
 import { assert } from '../../packages/host/src/errors';
 import { effectiveDate } from '../training/public/server';
 type Scope = z.infer<typeof agentScopeSchema>;
@@ -164,13 +163,6 @@ export function assertBounded(
     ] as const) {
       if (!value) continue;
       if (change.entity === 'plan') {
-        if (
-          change.before &&
-          change.after &&
-          canonical({ ...change.before, revision: 0 }) ===
-            canonical({ ...change.after, revision: 0 })
-        )
-          continue;
         const plan = value as WorkspaceState['plans'][number];
         assert(
           plan.startDate !== null && plan.startDate >= scope.from && plan.startDate <= scope.to,

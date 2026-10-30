@@ -96,7 +96,7 @@ describe('pure training engine', () => {
       },
     ]);
     expect(result.state.workouts.find((item) => item.id === id(2))?.revision).toBe(2);
-    expect(result.changes).toHaveLength(2);
+    expect(result.changes).toHaveLength(1);
     expect(result.changes.find((change) => change.id === id(2))?.before).toMatchObject({
       title: 'Ride',
     });
@@ -104,10 +104,10 @@ describe('pure training engine', () => {
       title: 'New',
       notes: 'Second change',
     });
-    expect(result.state.plans[0].revision).toBe(2);
-    expect(() =>
-      run(result.state, [{ action: 'plan.delete', id: id(1), expectedRevision: 1 }]),
-    ).toThrow(/changed/);
+    expect(result.state.plans[0].revision).toBe(1);
+    expect(
+      run(result.state, [{ action: 'plan.delete', id: id(1), expectedRevision: 1 }]).state.workouts,
+    ).not.toContainEqual(expect.objectContaining({ id: id(2) }));
   });
   it('resolves independent and plan-relative dates without stale copies', () => {
     const state = training();
@@ -215,8 +215,8 @@ describe('pure training engine', () => {
       },
     ]).state;
     for (const command of [
-      { action: 'plan.update', id: id(1), expectedRevision: 2, values: { startDate: null } },
-      { action: 'plan.delete', id: id(1), expectedRevision: 2 },
+      { action: 'plan.update', id: id(1), expectedRevision: 1, values: { startDate: null } },
+      { action: 'plan.delete', id: id(1), expectedRevision: 1 },
       {
         action: 'workout.update',
         id: id(2),
@@ -246,7 +246,7 @@ describe('pure training engine', () => {
     const command: CommandInput = {
       action: 'plan.duplicate',
       id: id(1),
-      expectedRevision: 2,
+      expectedRevision: 1,
       values: { id: id(5), title: 'Next build', startDate: '2026-11-01' },
     };
     const first = run(linked, [command]);
@@ -420,7 +420,7 @@ describe('pure training engine', () => {
         ],
       },
     ]);
-    expect(reordered.changes).toHaveLength(3);
+    expect(reordered.changes).toHaveLength(2);
     expect(reordered.state.workouts.map((item) => [item.id, item.order, item.revision])).toEqual([
       [id(2), 2, 2],
       [id(3), 1, 2],
@@ -438,7 +438,7 @@ describe('pure training engine', () => {
       { action: 'workout.delete', id: id(3), expectedRevision: 2 },
     ]);
     expect(deleted.state.workouts[0]).toMatchObject({ order: 1, revision: 3 });
-    expect(deleted.changes).toHaveLength(3);
+    expect(deleted.changes).toHaveLength(2);
   });
   it('restricts agent writes to pending prescription and notes', () => {
     const state = training();

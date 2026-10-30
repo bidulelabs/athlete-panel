@@ -192,7 +192,7 @@ test('owner reviews a multi-week proposal one line per record, grouped by week',
     tag = randomUUID().slice(0, 6),
     summary = `Weekly review ${info.project.name} ${tag}`,
     planTitle = `Synthetic base block ${tag}`,
-    [planId, intervalsId, longRunId, movedId, removedId] = Array.from({ length: 5 }, () =>
+    [planId, intervalsId, longRunId, movedId, removedId] = Array.from({ length: 5 }, (): string =>
       randomUUID(),
     );
   const owner = (operation: string, data: unknown) =>
@@ -309,7 +309,7 @@ test('owner reviews a multi-week proposal one line per record, grouped by week',
     await expect(edits.locator('details.proposal-diff')).toHaveCount(5);
     await expect(
       week('Plans and undated changes').locator('summary.proposal-diff-head'),
-    ).toHaveText([new RegExp(`Create${planTitle}`)]);
+    ).toHaveText([new RegExp(`Create${planTitle}starts Tue 2 Mar$`)]);
     await expect(week('Week of 1 Mar 2027').locator('summary.proposal-diff-head')).toHaveText([
       /CreateSynthetic intervalsTue 2 Mar · Running · 1h · 10\.0 km/,
       /DeleteSynthetic removed runThu 4 Mar · Running · 40m/,

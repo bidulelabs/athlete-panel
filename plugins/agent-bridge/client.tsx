@@ -492,6 +492,10 @@ function ReviewChange({
       : moved && 'Unscheduled',
     moved &&
       `moved from ${change.beforeEffectiveDate ? dateLabel(change.beforeEffectiveDate) : 'unscheduled'}`,
+    record &&
+      'startDate' in record &&
+      record.startDate &&
+      `starts ${dateLabel(record.startDate, { weekday: 'short', day: 'numeric', month: 'short' })}`,
     record && 'kind' in record && record.kind === 'rest' && 'Rest day',
     record && 'sport' in record && record.sport && sportLabel(record.sport),
     record &&

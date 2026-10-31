@@ -1,8 +1,9 @@
 import { basename } from 'node:path';
-import { verifyBackup } from './restore';
+import { exitOnStopSignals, verifyBackup } from './restore';
 const args = process.argv.slice(2);
 if (args.length !== 1)
   throw new Error('Usage: pnpm exec tsx scripts/verify-backup.ts /backups/archive.fgr');
+exitOnStopSignals();
 try {
   const verified = await verifyBackup(
     args[0],

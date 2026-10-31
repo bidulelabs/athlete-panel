@@ -6,6 +6,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Activity, ArrowRight, ShieldCheck } from 'lucide-react';
 import { ErrorMessage, Field, SubmitButton } from '@athlete-panel/ui';
 
+const unreachableMessage = 'Unable to reach this instance. Please refresh and try again.';
+
 export default function LoginPage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [password, setPassword] = useState('');
@@ -15,7 +17,7 @@ export default function LoginPage() {
     void fetch('/api/auth/status')
       .then((response) => response.json())
       .then((value) => setConfigured(value.configured))
-      .catch(() => setError('Unable to reach this instance. Please refresh and try again.'));
+      .catch(() => setError(unreachableMessage));
   }, []);
   async function signIn(event: FormEvent) {
     event.preventDefault();
@@ -26,12 +28,14 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
+      }).catch(() => {
+        throw new Error(unreachableMessage);
       });
       const value = await response.json().catch(() => null);
       if (!response.ok)
         throw new Error(
           value === null
-            ? 'Unable to reach this instance. Please refresh and try again.'
+            ? unreachableMessage
             : typeof value.error === 'string'
               ? value.error
               : (value.error?.message ?? 'Unable to sign in. Check your password.'),

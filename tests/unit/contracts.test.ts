@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
+  agentCommandSchema,
+  agentCommandsSchema,
   commandSchema,
   completionSchema,
   dateSchema,
@@ -132,5 +135,63 @@ describe('versioned domain contracts', () => {
     expect(profileValuesSchema.safeParse({ weeklyAvailability: { monday: 90000 } }).success).toBe(
       false,
     );
+  });
+});
+
+describe('agent command contract', () => {
+  it('refuses owner-only actions that the owner command schema accepts', () => {
+    for (const command of [
+      { action: 'profile.set', expectedRevision: null, values: {} },
+      {
+        action: 'workout.complete',
+        id,
+        expectedRevision: 1,
+        values: { status: 'completed', performedDate: '2026-10-24' },
+      },
+      { action: 'event.create', values: { title: 'Race', date: '2026-10-25' } },
+    ]) {
+      expect(commandSchema.safeParse(command).success).toBe(true);
+      expect(agentCommandSchema.safeParse(command).error?.issues).toMatchObject([
+        { path: ['action'], message: expect.stringContaining("'plan.create'") },
+      ]);
+    }
+  });
+
+  it('accepts agent actions and refuses unknown fields', () => {
+    expect(agentCommandSchema.safeParse(create(3600)).success).toBe(true);
+    expect(
+      agentCommandSchema.safeParse({
+        action: 'workout.reorder',
+        date: '2026-10-24',
+        workouts: [{ id, expectedRevision: 1 }],
+      }).success,
+    ).toBe(true);
+    const workout = create(3600);
+    for (const command of [
+      { ...workout, values: { ...workout.values, elevationGain: 300 } },
+      { ...workout, comment: 'Easy ride' },
+    ])
+      expect(agentCommandSchema.safeParse(command).error?.issues).toMatchObject([
+        { code: 'unrecognized_keys' },
+      ]);
+  });
+
+  it('gives every number field of the agent contract a description', () => {
+    const contract = z.toJSONSchema(agentCommandsSchema, { unrepresentable: 'any' });
+    const isNumber = (schema: Record<string, unknown>): boolean =>
+      [schema.type].flat().some((type) => type === 'number' || type === 'integer') ||
+      ((schema.anyOf as Record<string, unknown>[] | undefined)?.some(isNumber) ?? false);
+    const undescribed: string[] = [];
+    const visit = (node: unknown, path: string) => {
+      if (!node || typeof node !== 'object') return;
+      for (const [key, child] of Object.entries(node)) visit(child, `${path}.${key}`);
+      const properties = (node as { properties?: Record<string, Record<string, unknown>> })
+        .properties;
+      for (const [name, property] of Object.entries(properties ?? {}))
+        if (isNumber(property) && !property.description) undescribed.push(`${path}.${name}`);
+    };
+    visit(contract, 'agentCommands');
+    expect((contract.items as { oneOf: unknown[] }).oneOf).toHaveLength(12);
+    expect(undescribed).toEqual([]);
   });
 });

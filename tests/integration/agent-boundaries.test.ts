@@ -117,7 +117,7 @@ it('rechecks revoked credentials after preflight while waiting for the transacti
         operation === 'context'
           ? contextForToken(token)
           : submitProposal(token, {
-              commands: [{ action: 'profile.set', expectedRevision: 1, values: {} }],
+              commands: [{ action: 'plan.create', values: { title: 'Synthetic' } }],
               summary: 'Synthetic',
               contextDigest: 'a'.repeat(64),
               idempotencyKey: randomUUID(),

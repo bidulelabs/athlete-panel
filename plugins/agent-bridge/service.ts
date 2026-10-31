@@ -2,7 +2,7 @@ import { persistAndAudit } from '../../instance/commit';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
-  commandsSchema,
+  agentCommandsSchema,
   agentScopeSchema,
   agentGrantValuesSchema,
   type Command,
@@ -87,7 +87,7 @@ export async function submitProposal(token: string, body: unknown) {
   const candidate = await grantForToken(token, connection());
   const input = z
     .object({
-      commands: commandsSchema,
+      commands: agentCommandsSchema,
       summary: z.string().min(1).max(500),
       contextDigest: z.string().length(64),
       idempotencyKey: z.uuid(),

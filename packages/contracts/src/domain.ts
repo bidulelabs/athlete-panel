@@ -29,14 +29,27 @@ const text = z.string().trim().min(1).max(255);
 const notes = z.string().max(4000);
 export const narrativeSchema = z.string().max(20000);
 const nullableNumber = nonnegativeSchema.nullable();
+const privateNotes = <T extends z.ZodString>(schema: T) =>
+  schema.describe('Private text. Agents read and write it only when their grant includes notes.');
 const base = { id: idSchema, revision: revisionSchema };
 
-export const scheduleSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('independent'), date: dateSchema }).strict(),
-  z
-    .object({ kind: z.literal('plan'), planId: idSchema, day: z.number().int().min(1).max(3660) })
-    .strict(),
-]);
+export const scheduleSchema = z
+  .discriminatedUnion('kind', [
+    z.object({ kind: z.literal('independent'), date: dateSchema }).strict(),
+    z
+      .object({
+        kind: z.literal('plan'),
+        planId: idSchema.describe('Id of the plan that places this record.'),
+        day: z
+          .number()
+          .int()
+          .min(1)
+          .max(3660)
+          .describe('Day within the plan, 1-based: day 1 is the plan startDate.'),
+      })
+      .strict(),
+  ])
+  .describe('Either an independent date or a day within a plan, never both.');
 export type Schedule = z.infer<typeof scheduleSchema>;
 
 const zoneBounds = z
@@ -97,9 +110,13 @@ export type Profile = z.infer<typeof profileSchema>;
 
 export const targetSchema = z
   .object({
-    kind: z.enum(['heartRateBpm', 'powerWatts', 'paceSecondsPerKilometer', 'rpe']),
-    min: z.number().finite().positive(),
-    max: z.number().finite().positive(),
+    kind: z
+      .enum(['heartRateBpm', 'powerWatts', 'paceSecondsPerKilometer', 'rpe'])
+      .describe(
+        'Unit of min and max: beats per minute, watts, seconds per kilometer, or RPE from 1 to 10.',
+      ),
+    min: z.number().finite().positive().describe('Lower bound, in the unit of kind.'),
+    max: z.number().finite().positive().describe('Upper bound, in the unit of kind.'),
   })
   .strict()
   .superRefine((target, ctx) => {
@@ -117,10 +134,14 @@ export const targetSchema = z
 export const intervalStepSchema = z
   .object({
     kind: z.enum(['warmup', 'work', 'recovery', 'cooldown']),
-    durationSeconds: nullableNumber.default(null),
-    distanceMeters: nullableNumber.default(null),
+    durationSeconds: nullableNumber
+      .describe('Step duration in seconds. Set exactly one of durationSeconds and distanceMeters.')
+      .default(null),
+    distanceMeters: nullableNumber
+      .describe('Step distance in meters. Set exactly one of durationSeconds and distanceMeters.')
+      .default(null),
     target: targetSchema.nullable().default(null),
-    notes: notes.default(''),
+    notes: privateNotes(notes).default(''),
   })
   .strict()
   .superRefine((step, ctx) => {
@@ -142,7 +163,7 @@ export const workoutStepSchema = z.union([
   z
     .object({
       kind: z.literal('repeat'),
-      times: z.number().int().min(2).max(100),
+      times: z.number().int().min(2).max(100).describe('Number of times the steps run.'),
       steps: z.array(intervalStepSchema).min(1).max(50),
     })
     .strict(),
@@ -206,11 +227,20 @@ export const completionSchema = completionValuesSchema
   });
 export type Completion = z.infer<typeof completionSchema>;
 
+const planFieldsWithoutDefaults = {
+  title: text,
+  description: privateNotes(narrativeSchema),
+  startDate: dateSchema
+    .nullable()
+    .describe(
+      'Date of plan day 1. Null leaves the plan unscheduled; agent proposals need a date inside the grant.',
+    ),
+};
 export const planValuesSchema = z
   .object({
-    title: text,
-    description: narrativeSchema.default(''),
-    startDate: dateSchema.nullable().default(null),
+    ...planFieldsWithoutDefaults,
+    description: planFieldsWithoutDefaults.description.default(''),
+    startDate: planFieldsWithoutDefaults.startDate.default(null),
   })
   .strict();
 export const planSchema = planValuesSchema.extend(base);
@@ -218,28 +248,61 @@ export type Plan = z.infer<typeof planSchema>;
 export const strengthExerciseSchema = z
   .object({
     name: text,
-    sets: z.number().int().positive().nullable().optional(),
-    repetitions: z.string().max(255).optional(),
-    weightKg: nullableNumber.optional(),
-    loadDescription: z.string().max(1000).optional(),
-    restSeconds: nullableNumber.optional(),
-    instructions: notes.optional(),
+    sets: z.number().int().positive().nullable().optional().describe('Number of sets.'),
+    repetitions: z
+      .string()
+      .max(255)
+      .optional()
+      .describe('Repetitions per set as free text, for example 8-10.'),
+    weightKg: nullableNumber.optional().describe('Load in kilograms.'),
+    loadDescription: z
+      .string()
+      .max(1000)
+      .optional()
+      .describe('Load as free text when it is not a weight.'),
+    restSeconds: nullableNumber.optional().describe('Rest between sets in seconds.'),
+    instructions: privateNotes(notes).optional(),
   })
   .strict();
 export type StrengthExercise = z.infer<typeof strengthExerciseSchema>;
-const workoutFields = {
+const workoutFieldsWithoutDefaults = {
   title: text,
-  kind: z.enum(['workout', 'rest']).optional(),
-  sport: sportSchema.nullable(),
-  sportSubgroup: sportSchema.nullable().optional(),
+  kind: z
+    .enum(['workout', 'rest'])
+    .describe('workout, or rest for a rest day with no sport, volume, steps or exercises.'),
+  sport: sportSchema
+    .nullable()
+    .describe('Garmin sport group typeKey, for example running. Null for a rest day.'),
+  sportSubgroup: sportSchema
+    .nullable()
+    .describe('Garmin typeKey inside the sport group, for example trail_running.'),
+  plannedElevationGainMeters: nullableNumber.describe('Planned elevation gain in meters.'),
+  exercises: z.array(strengthExerciseSchema).max(100),
   schedule: scheduleSchema,
-  durationSeconds: nullableNumber.default(null),
-  distanceMeters: nullableNumber.default(null),
-  plannedElevationGainMeters: nullableNumber.optional(),
-  steps: z.array(workoutStepSchema).max(100).default([]),
-  exercises: z.array(strengthExerciseSchema).max(100).optional(),
-  order: z.number().int().min(1).max(10000).default(1),
-  notes: narrativeSchema.default(''),
+  durationSeconds: nullableNumber.describe('Planned duration in seconds.'),
+  distanceMeters: nullableNumber.describe('Planned distance in meters.'),
+  steps: z.array(workoutStepSchema).max(100).describe('Interval steps, in order.'),
+  order: z
+    .number()
+    .int()
+    .min(1)
+    .max(10000)
+    .describe('Position among the workouts of the same day, 1-based.'),
+  notes: privateNotes(narrativeSchema),
+};
+const workoutFields = {
+  title: workoutFieldsWithoutDefaults.title,
+  kind: workoutFieldsWithoutDefaults.kind.optional(),
+  sport: workoutFieldsWithoutDefaults.sport,
+  sportSubgroup: workoutFieldsWithoutDefaults.sportSubgroup.optional(),
+  schedule: workoutFieldsWithoutDefaults.schedule,
+  durationSeconds: workoutFieldsWithoutDefaults.durationSeconds.default(null),
+  distanceMeters: workoutFieldsWithoutDefaults.distanceMeters.default(null),
+  plannedElevationGainMeters: workoutFieldsWithoutDefaults.plannedElevationGainMeters.optional(),
+  steps: workoutFieldsWithoutDefaults.steps.default([]),
+  exercises: workoutFieldsWithoutDefaults.exercises.optional(),
+  order: workoutFieldsWithoutDefaults.order.default(1),
+  notes: workoutFieldsWithoutDefaults.notes.default(''),
 };
 const unrefinedWorkoutValues = z.object(workoutFields).strict();
 function validateWorkout(value: z.infer<typeof unrefinedWorkoutValues>, ctx: z.RefinementCtx) {
@@ -282,7 +345,7 @@ export const workoutSchema = workoutValuesSchema
   });
 export type Workout = z.infer<typeof workoutSchema>;
 export const noteValuesSchema = z
-  .object({ title: text, body: narrativeSchema, schedule: scheduleSchema })
+  .object({ title: text, body: privateNotes(narrativeSchema), schedule: scheduleSchema })
   .strict();
 export const noteSchema = noteValuesSchema.extend(base);
 export type Note = z.infer<typeof noteSchema>;
@@ -402,36 +465,26 @@ export const emptyWorkspace = (): WorkspaceState => ({
   health: [],
 });
 
-const existing = { id: idSchema, expectedRevision: revisionSchema };
-const createId = { id: idSchema.optional() };
+const existing = {
+  id: idSchema.describe('Id of the existing record.'),
+  expectedRevision: revisionSchema.describe(
+    'Revision of the record when it was read. The command is refused if the record changed since.',
+  ),
+};
+const createId = {
+  id: idSchema
+    .optional()
+    .describe(
+      'Optional UUID for the new record. A later command of the same batch can use it as schedule.planId.',
+    ),
+};
 const nonemptyPatch = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) =>
   schema
     .partial()
     .refine((patch) => Object.keys(patch).length > 0, 'An update must contain at least one field.');
 // Patch schemas intentionally contain no defaults: omission must never erase existing values.
-const planPatchSchema = nonemptyPatch(
-  z
-    .object({ title: text, description: narrativeSchema, startDate: dateSchema.nullable() })
-    .strict(),
-);
-const workoutPatchSchema = nonemptyPatch(
-  z
-    .object({
-      title: text,
-      kind: z.enum(['workout', 'rest']),
-      sport: sportSchema.nullable(),
-      sportSubgroup: sportSchema.nullable(),
-      plannedElevationGainMeters: nullableNumber,
-      exercises: z.array(strengthExerciseSchema).max(100),
-      schedule: scheduleSchema,
-      durationSeconds: nullableNumber,
-      distanceMeters: nullableNumber,
-      steps: z.array(workoutStepSchema).max(100),
-      order: z.number().int().min(1).max(10000),
-      notes: narrativeSchema,
-    })
-    .strict(),
-);
+const planPatchSchema = nonemptyPatch(z.object(planFieldsWithoutDefaults).strict());
+const workoutPatchSchema = nonemptyPatch(z.object(workoutFieldsWithoutDefaults).strict());
 const notePatchSchema = nonemptyPatch(noteValuesSchema);
 const eventPatchSchema = nonemptyPatch(
   z
@@ -450,6 +503,74 @@ const injuryPatchSchema = nonemptyPatch(
     })
     .strict(),
 );
+const planCreateCommand = z
+  .object({ action: z.literal('plan.create'), values: planValuesSchema.extend(createId) })
+  .strict();
+const planUpdateCommand = z
+  .object({ action: z.literal('plan.update'), ...existing, values: planPatchSchema })
+  .strict();
+const planDeleteCommand = z.object({ action: z.literal('plan.delete'), ...existing }).strict();
+const planDuplicateCommand = z
+  .object({
+    action: z.literal('plan.duplicate'),
+    ...existing,
+    values: z
+      .object({ ...createId, title: text, startDate: planFieldsWithoutDefaults.startDate })
+      .strict(),
+  })
+  .strict();
+const workoutCreateCommand = z
+  .object({
+    action: z.literal('workout.create'),
+    values: workoutValuesSchema.safeExtend(createId),
+  })
+  .strict();
+const workoutUpdateCommand = z
+  .object({ action: z.literal('workout.update'), ...existing, values: workoutPatchSchema })
+  .strict();
+const workoutDeleteCommand = z
+  .object({ action: z.literal('workout.delete'), ...existing })
+  .strict();
+const workoutDuplicateCommand = z
+  .object({
+    action: z.literal('workout.duplicate'),
+    ...existing,
+    values: z.object({ ...createId, schedule: scheduleSchema, title: text.optional() }).strict(),
+  })
+  .strict();
+const workoutReorderCommand = z
+  .object({
+    action: z.literal('workout.reorder'),
+    date: dateSchema.describe('Day whose workouts are reordered.'),
+    workouts: z
+      .array(z.object(existing).strict())
+      .min(1)
+      .max(1000)
+      .describe('Every workout of that day, exactly once, in the new order.'),
+  })
+  .strict();
+const noteCreateCommand = z
+  .object({ action: z.literal('note.create'), values: noteValuesSchema.extend(createId) })
+  .strict();
+const noteUpdateCommand = z
+  .object({ action: z.literal('note.update'), ...existing, values: notePatchSchema })
+  .strict();
+const noteDeleteCommand = z.object({ action: z.literal('note.delete'), ...existing }).strict();
+export const agentCommandSchema = z.discriminatedUnion('action', [
+  planCreateCommand,
+  planUpdateCommand,
+  planDeleteCommand,
+  planDuplicateCommand,
+  workoutCreateCommand,
+  workoutUpdateCommand,
+  workoutDeleteCommand,
+  workoutDuplicateCommand,
+  workoutReorderCommand,
+  noteCreateCommand,
+  noteUpdateCommand,
+  noteDeleteCommand,
+]);
+export const agentCommandsSchema = z.array(agentCommandSchema).min(1).max(200);
 export const commandSchema = z.discriminatedUnion('action', [
   z
     .object({
@@ -458,53 +579,24 @@ export const commandSchema = z.discriminatedUnion('action', [
       values: profileValuesSchema,
     })
     .strict(),
-  z
-    .object({ action: z.literal('plan.create'), values: planValuesSchema.extend(createId) })
-    .strict(),
-  z.object({ action: z.literal('plan.update'), ...existing, values: planPatchSchema }).strict(),
-  z.object({ action: z.literal('plan.delete'), ...existing }).strict(),
-  z
-    .object({
-      action: z.literal('plan.duplicate'),
-      ...existing,
-      values: z.object({ ...createId, title: text, startDate: dateSchema.nullable() }).strict(),
-    })
-    .strict(),
-  z
-    .object({
-      action: z.literal('workout.create'),
-      values: workoutValuesSchema.safeExtend(createId),
-    })
-    .strict(),
-  z
-    .object({ action: z.literal('workout.update'), ...existing, values: workoutPatchSchema })
-    .strict(),
-  z.object({ action: z.literal('workout.delete'), ...existing }).strict(),
-  z
-    .object({
-      action: z.literal('workout.duplicate'),
-      ...existing,
-      values: z.object({ ...createId, schedule: scheduleSchema, title: text.optional() }).strict(),
-    })
-    .strict(),
+  planCreateCommand,
+  planUpdateCommand,
+  planDeleteCommand,
+  planDuplicateCommand,
+  workoutCreateCommand,
+  workoutUpdateCommand,
+  workoutDeleteCommand,
+  workoutDuplicateCommand,
   z
     .object({ action: z.literal('workout.complete'), ...existing, values: completionInputSchema })
     .strict(),
   z.object({ action: z.literal('workout.clearCompletion'), ...existing }).strict(),
   z.object({ action: z.literal('workout.link'), ...existing, activityId: idSchema }).strict(),
   z.object({ action: z.literal('workout.unlink'), ...existing }).strict(),
-  z
-    .object({
-      action: z.literal('workout.reorder'),
-      date: dateSchema,
-      workouts: z.array(z.object(existing).strict()).min(1).max(1000),
-    })
-    .strict(),
-  z
-    .object({ action: z.literal('note.create'), values: noteValuesSchema.extend(createId) })
-    .strict(),
-  z.object({ action: z.literal('note.update'), ...existing, values: notePatchSchema }).strict(),
-  z.object({ action: z.literal('note.delete'), ...existing }).strict(),
+  workoutReorderCommand,
+  noteCreateCommand,
+  noteUpdateCommand,
+  noteDeleteCommand,
   z
     .object({ action: z.literal('event.create'), values: eventValuesSchema.extend(createId) })
     .strict(),

@@ -224,6 +224,114 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it('schedules a new recent import an hour after the last one failed', async () => {
+    await bootstrap();
+    await scheduleRecent();
+    const [failing] =
+      await connection()`update host.jobs set attempts=7 where kind='garmin-recent' returning id,created_at`;
+    nextFailure = { status: 503 };
+    const { saved } = await takeStep();
+    expect(saved).toMatchObject({ id: failing.id, status: 'failed' });
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(failing.created_at.getTime() + 3_599_999);
+    await scheduleRecent();
+    expect(await connection()`select id from host.jobs where kind='garmin-recent'`).toHaveLength(1);
+
+    clock.mockReturnValue(failing.created_at.getTime() + 3_600_000);
+    await scheduleRecent();
+    const recent =
+      await connection()`select id,status,payload from host.jobs where kind='garmin-recent' order by created_at`;
+    expect(recent.map((job) => [job.id, job.status])).toEqual([
+      [failing.id, 'failed'],
+      [expect.any(String), 'queued'],
+    ]);
+    expect(recent[1].payload.cursor.mode).toBe('recent');
+  });
+
+  it('waits 1, 1, 2, 4, 8, 16 then 24 hours after recent imports fail in a row', async () => {
+    await configure({ key });
+    const started = Date.parse('2026-10-25T12:00:00.000Z');
+    const clock = vi.spyOn(Date, 'now');
+    let createdAt = started;
+    for (const [failures, waitHours] of [
+      [1, 1],
+      [2, 2],
+      [3, 4],
+      [4, 8],
+      [5, 16],
+      [6, 24],
+      [7, 24],
+    ]) {
+      clock.mockReturnValue(createdAt);
+      await scheduleRecent();
+      await connection()`update host.jobs set status='failed',error='lease_expired',created_at=${new Date(createdAt)} where kind='garmin-recent' and status='queued'`;
+      expect(
+        await connection()`select id from host.jobs where kind='garmin-recent' and status='failed'`,
+      ).toHaveLength(failures);
+      clock.mockReturnValue(createdAt + waitHours * 3_600_000 - 1);
+      await scheduleRecent();
+      expect(
+        await connection()`select id from host.jobs where kind='garmin-recent' and status='queued'`,
+      ).toHaveLength(0);
+      createdAt += waitHours * 3_600_000;
+    }
+    clock.mockReturnValue(createdAt);
+    await scheduleRecent();
+    await connection()`update host.jobs set status='completed',created_at=${new Date(createdAt)} where kind='garmin-recent' and status='queued'`;
+    clock.mockReturnValue(createdAt + 3_600_000);
+    await scheduleRecent();
+    expect(
+      await connection()`select id from host.jobs where kind='garmin-recent' and status='queued'`,
+    ).toHaveLength(1);
+  });
+
+  it('does not reschedule a recent import while it is still running after a failure', async () => {
+    await configure({ key });
+    const started = Date.parse('2026-10-25T12:00:00.000Z');
+    await connection()`insert into host.jobs(id,plugin_id,kind,status,payload,created_at) values(${randomUUID()},'garmin','garmin-recent','failed','{}',${new Date(started)})`;
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(started + 3_600_000);
+    await scheduleRecent();
+    const running =
+      await connection()`update host.jobs set status='running',lease_owner='worker',lease_until=now()+interval '3 minutes',created_at=${new Date(started + 3_600_000)} where kind='garmin-recent' and status='queued' returning id`;
+    expect(running).toHaveLength(1);
+    clock.mockReturnValue(started + 10 * 3_600_000);
+    await Promise.all([scheduleRecent(), scheduleRecent()]);
+    expect(
+      await connection()`select id,status from host.jobs where kind='garmin-recent' and status<>'failed'`,
+    ).toEqual([{ id: running[0]!.id, status: 'running' }]);
+  });
+
+  it.each([
+    [
+      'a revoked key',
+      () => {
+        nextFailure = { status: 401 };
+        tokenFailure = 401;
+      },
+      "Garmin couldn't accept this key. Create or check your Personal API key, then try again.",
+    ],
+    [
+      'another Garmin account',
+      () => {
+        activities = [activityRow({ ownerId: '999' })];
+      },
+      'This instance is already linked to another Garmin account. Use a key for the same account.',
+    ],
+  ])('stops recent imports after %s until the owner acts', async (_reason, fail, message) => {
+    await bootstrap();
+    await scheduleRecent();
+    const [failing] =
+      await connection()`select id,created_at from host.jobs where kind='garmin-recent'`;
+    fail();
+    const { saved } = await takeStep();
+    expect(saved).toMatchObject({ id: failing.id, status: 'failed' });
+    vi.spyOn(Date, 'now').mockReturnValue(failing.created_at.getTime() + 48 * 3_600_000);
+    await scheduleRecent();
+    expect(
+      await connection()`select id from host.jobs where kind='garmin-recent' and id<>${failing.id}`,
+    ).toHaveLength(0);
+    expect(await status(false)).toMatchObject({ paused: true, status: message });
+  });
+
   it('expands legacy history without replacing credentials or resetting progress', async () => {
     const first = await bootstrap();
     await connection()`update host.settings set value=jsonb_set(value,'{earliestDate}','"2026-01-01"'::jsonb) where key='garmin'`;

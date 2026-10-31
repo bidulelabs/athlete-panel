@@ -5,6 +5,7 @@ import contextlib
 import fcntl
 import getpass
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -788,7 +789,7 @@ class Hosted:
                 if error.code == 403:
                     failure = 'HTTP 403 (Forbidden): the public endpoint or proxy denied the deployment health request.'
                 error.close()
-            except (OSError, ValueError): pass
+            except (OSError, ValueError, http.client.HTTPException): pass
             time.sleep(2)
         else: raise OperationError('HTTPS readiness failed: ' + failure + ' /api/health must return HTTP 200 JSON with status ready without redirects. Check public access, proxy rules, DNS, ports 80/443 and ingress logs, then resume. Read status before choosing recovery.')
 

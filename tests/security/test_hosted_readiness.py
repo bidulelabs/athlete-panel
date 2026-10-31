@@ -31,6 +31,10 @@ class HostedReadiness(unittest.TestCase):
                 response = owner.responses[0] if self.path == '/api/health' else READY
                 if self.path == '/api/health' and len(owner.responses) > 1:
                     owner.responses.pop(0)
+                if isinstance(response, bytes):
+                    self.wfile.write(response)
+                    self.close_connection = True
+                    return
                 status, content_type, body, location = response
                 self.send_response(status)
                 self.send_header('Content-Type', content_type)
@@ -164,6 +168,21 @@ class HostedReadiness(unittest.TestCase):
         ]
         self.check()
         self.assertEqual(self.paths, ['/api/health'] * 4)
+        self.worker.assert_called_once_with(self.release, 'synthetic-start-time')
+
+    def test_malformed_http_retries_without_exposing_response_details(self):
+        self.responses = [b'HELLO https://private.invalid/secret-token\r\n\r\n']
+        with self.assertRaisesRegex(hosted.OperationError, 'HTTPS readiness failed') as result:
+            self.check()
+        self.assertEqual(self.paths, ['/api/health'] * 60)
+        for private in ['HELLO', 'private.invalid', 'secret-token']:
+            self.assertNotIn(private, str(result.exception))
+        self.worker.assert_not_called()
+
+    def test_malformed_http_can_recover_to_valid_readiness(self):
+        self.responses = [b'HELLO\r\n\r\n', READY]
+        self.check()
+        self.assertEqual(self.paths, ['/api/health'] * 2)
         self.worker.assert_called_once_with(self.release, 'synthetic-start-time')
 
     def test_http_rejection_reports_status_without_private_response_details(self):

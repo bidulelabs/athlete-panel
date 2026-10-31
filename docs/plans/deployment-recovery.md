@@ -119,3 +119,11 @@ The initial full Python run failed one existing cancellation test because its pr
 Tests use synthetic loopback responses and mocked deployment side effects; no real private server, proxy rules, credentials or athlete records are involved. Docker is not running, so container rehearsals and database integration checks were not run. No UI behavior changed, and browser checks were not repeated. Local checks do not establish live Cloudflare behavior. No deployment or publication was performed.
 
 The owner subsequently authorized committing the fix and opening a pull request with a title and description. This authorizes pushing the source branch for review; deployment and release publication remain outside scope.
+
+### PR 67 review follow-up
+
+The owner requested review of [PR 67's feedback](https://github.com/bidulelabs/athlete-panel/pull/67#discussion_r4431823931). The single actionable comment identifies a pre-existing HTTP parser exception gap: `BadStatusLine` is an `http.client.HTTPException`, which escaped the readiness retry handler. Two new loopback regressions reproduced the uncaught exception before the fix, including a synthetic private URL in the raw status line.
+
+The public probe now catches `HTTPException` alongside existing transport/JSON failures, preserving the retry limit and sanitized readiness error without printing parser details. Tests cover 60 failed attempts without advancing to the worker, and malformed HTTP followed by valid readiness. The hosted acceptance scenarios include this case; no deployment phase, public contract, migration or architecture ownership changes.
+
+Verification: the complete Python suite passed (115 passed, two Linux-only tests skipped), including both new real-loopback regressions and the existing deployment/recovery checks. Documentation checks passed for 43 files, and the diff passed whitespace review. Framework validation checked the updated acceptance scenario, test references and this execution record; ownership and operating commands are unchanged. Application type/build/database/browser checks were not repeated for this Python-only exception-handling correction. No deployment or release publication was performed.

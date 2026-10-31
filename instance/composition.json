@@ -4,17 +4,17 @@
     {
       "path": "plugins/athlete",
       "enabled": true,
-      "version": "1.2.0"
+      "version": "1.3.0"
     },
     {
       "path": "plugins/training",
       "enabled": true,
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     {
       "path": "plugins/activity-records",
       "enabled": true,
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     {
       "path": "plugins/calendar",
@@ -24,7 +24,7 @@
     {
       "path": "plugins/garmin",
       "enabled": true,
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     {
       "path": "plugins/health",
@@ -34,7 +34,7 @@
     {
       "path": "plugins/agent-bridge",
       "enabled": true,
-      "version": "2.0.0"
+      "version": "2.1.1"
     },
     {
       "path": "personal-plugins/cycling-sleep",

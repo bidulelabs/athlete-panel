@@ -1,5 +1,6 @@
 import {
   proposalExpiresAt,
+  grantScopeSchema,
   workspaceEnvelopeSchema,
   type WorkspaceEnvelope,
 } from '../packages/contracts/src';
@@ -15,7 +16,8 @@ type ProposalRow = {
   status: string;
   digest: string;
   createdAt: Date;
-  changes: unknown;
+  affectedCount: number;
+  dateBounds: unknown;
   summary: string;
 };
 type GrantRow = {
@@ -23,9 +25,7 @@ type GrantRow = {
   label: string;
   expiresAt: Date;
   revoked: boolean;
-  from: string;
-  to: string;
-  includeNotes: boolean;
+  scope: unknown;
 };
 type AuditRow = {
   id: string;
@@ -70,10 +70,11 @@ export async function readWorkspaceResponse(range: {
           }),
       sql<
         ProposalRow[]
-      >`select id,status,digest,created_at as "createdAt",changes,summary from host.proposals order by created_at desc limit 50`,
+      >`select id,status,digest,created_at as "createdAt",jsonb_array_length(changes) as "affectedCount",summary,
+      (select jsonb_build_object('from',min(coalesce(c->>'afterEffectiveDate',c->>'beforeEffectiveDate')),'to',max(coalesce(c->>'afterEffectiveDate',c->>'beforeEffectiveDate'))) from jsonb_array_elements(changes) c) as "dateBounds" from host.proposals order by created_at desc limit 50`,
       sql<
         GrantRow[]
-      >`select id,label,expires_at as "expiresAt",revoked,scope->>'from' as "from",scope->>'to' as "to",(scope->>'includeNotes')::boolean as "includeNotes" from host.grants order by created_at desc limit 50`,
+      >`select id,label,expires_at as "expiresAt",revoked,scope from host.grants order by created_at desc limit 50`,
       sql<
         AuditRow[]
       >`select id,created_at as "createdAt",summary,undone_at as "undoneAt",changes from host.changes order by created_at desc limit 50`,
@@ -99,7 +100,11 @@ export async function readWorkspaceResponse(range: {
       expiresAt: proposalExpiresAt(row.createdAt),
       warnings: [],
     })),
-    grants: grants.map((row) => ({ ...row, expiresAt: row.expiresAt.toISOString() })),
+    grants: grants.map(({ scope, ...row }) => ({
+      ...row,
+      ...grantScopeSchema.parse(scope),
+      expiresAt: row.expiresAt.toISOString(),
+    })),
     changes: changes.map((row) => ({
       ...row,
       createdAt: row.createdAt.toISOString(),

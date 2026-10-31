@@ -3,12 +3,12 @@ export const registry = [
   {
     "path": "plugins/athlete",
     "enabled": true,
-    "version": "1.2.0",
+    "version": "1.3.0",
     "manifest": {
       "id": "athlete",
       "name": "Athlete",
       "description": "Profile, preferences and training constraints",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "hostApi": "^1.1.0",
       "dependencies": {
         "training": "^2.0.0"
@@ -20,7 +20,8 @@ export const registry = [
       "client": "client.tsx",
       "server": "server.ts",
       "public": {
-        "client": "public/client.ts"
+        "client": "public/client.ts",
+        "server": "public/server.ts"
       },
       "routes": [
         {
@@ -40,7 +41,8 @@ export const registry = [
       "migrations": [
         "migrations/001-initial.sql",
         "migrations/002-identity-index.sql",
-        "migrations/003-onboarding.sql"
+        "migrations/003-onboarding.sql",
+        "migrations/004-history-reads.sql"
       ],
       "services": [],
       "jobs": [],
@@ -51,12 +53,12 @@ export const registry = [
   {
     "path": "plugins/training",
     "enabled": true,
-    "version": "2.0.0",
+    "version": "2.1.0",
     "manifest": {
       "id": "training",
       "name": "Training",
       "description": "Plans, workouts and recorded completion",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "hostApi": "^1.1.0",
       "dependencies": {},
       "optionalDependencies": {},
@@ -79,7 +81,8 @@ export const registry = [
       "schema": "training",
       "migrations": [
         "migrations/001-initial.sql",
-        "migrations/002-identity-index.sql"
+        "migrations/002-identity-index.sql",
+        "migrations/003-history-reads.sql"
       ],
       "services": [],
       "jobs": [],
@@ -90,12 +93,12 @@ export const registry = [
   {
     "path": "plugins/activity-records",
     "enabled": true,
-    "version": "2.0.0",
+    "version": "2.1.0",
     "manifest": {
       "id": "activity-records",
       "name": "Activity history",
       "description": "Normalized activities and health history",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "hostApi": "^1.1.0",
       "dependencies": {
         "training": "^2.0.0"
@@ -105,7 +108,8 @@ export const registry = [
       "client": "client.tsx",
       "server": "server.ts",
       "public": {
-        "shared": "public/shared.ts"
+        "shared": "public/shared.ts",
+        "server": "public/server.ts"
       },
       "routes": [
         {
@@ -118,7 +122,8 @@ export const registry = [
       "schema": "activity_records",
       "migrations": [
         "migrations/001-initial.sql",
-        "migrations/002-identity-index.sql"
+        "migrations/002-identity-index.sql",
+        "migrations/003-history-reads.sql"
       ],
       "services": [],
       "jobs": [],
@@ -163,12 +168,12 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "2.0.0",
+    "version": "2.1.0",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "hostApi": "^1.2.0",
       "dependencies": {
         "activity-records": "^2.0.0"
@@ -199,7 +204,8 @@ export const registry = [
         "migrations/001-initial.sql",
         "migrations/002-coverage-quality.sql",
         "migrations/003-scan-diagnostics.sql",
-        "migrations/004-recovery-scheduling.sql"
+        "migrations/004-recovery-scheduling.sql",
+        "migrations/005-history-reads.sql"
       ],
       "services": [],
       "jobs": [
@@ -250,17 +256,17 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "2.0.0",
+    "version": "2.1.1",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "2.0.0",
+      "version": "2.1.1",
       "hostApi": "^1.2.0",
       "dependencies": {
-        "training": "^2.0.0",
-        "athlete": "^1.2.0",
-        "activity-records": "^2.0.0"
+        "training": "^2.1.0",
+        "athlete": "^1.3.0",
+        "activity-records": "^2.1.0"
       },
       "optionalDependencies": {},
       "required": false,
@@ -318,4 +324,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="998d6d44d89e7e0fcd437ac601ef17a62bb38ec292fb845920c435fbf3c1b539";
+export const schemaSignature="88f626da028f423bfa22f40afcd86872f0c4d35a673813cbbd788b264fc08b7d";

@@ -2,7 +2,7 @@
   "id": "athlete",
   "name": "Athlete",
   "description": "Profile, preferences and training constraints",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "hostApi": "^1.1.0",
   "dependencies": {
     "training": "^2.0.0"
@@ -18,7 +18,8 @@
   "migrations": [
     "migrations/001-initial.sql",
     "migrations/002-identity-index.sql",
-    "migrations/003-onboarding.sql"
+    "migrations/003-onboarding.sql",
+    "migrations/004-history-reads.sql"
   ],
   "services": [],
   "jobs": [],
@@ -37,6 +38,7 @@
     "garmin": "^2.0.0"
   },
   "public": {
-    "client": "public/client.ts"
+    "client": "public/client.ts",
+    "server": "public/server.ts"
   }
 }

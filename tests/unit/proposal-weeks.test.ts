@@ -119,3 +119,36 @@ describe('proposal review plan names', () => {
     });
   });
 });
+
+it('groups month-boundary weeks without duplicating moves or deletions and summarizes exact changes', async () => {
+  const { groupChangesByMonth, summarizeProposal } =
+    await import('../../plugins/agent-bridge/proposal-weeks');
+  const added = created(1, 'January', '2027-01-31');
+  const moved = {
+    ...created(2, 'Moved', '2027-02-01'),
+    before: workout(2, 'Moved'),
+    beforeEffectiveDate: '2026-12-01',
+  };
+  const deleted = {
+    ...created(3, 'Deleted', '2027-02-02'),
+    before: workout(3, 'Deleted'),
+    after: null,
+    beforeEffectiveDate: '2027-02-02',
+    afterEffectiveDate: null,
+  };
+  const changes = [deleted, added, moved];
+  const months = groupChangesByMonth(changes);
+  expect(months.map((month) => [month.month, month.changes.length])).toEqual([
+    ['2027-01', 1],
+    ['2027-02', 2],
+  ]);
+  expect(new Set(months.flatMap((month) => month.changes.map((change) => change.id))).size).toBe(3);
+  expect(summarizeProposal(changes)).toEqual({
+    from: '2026-12-01',
+    to: '2027-02-02',
+    sports: ['running'],
+    added: 1,
+    changed: 1,
+    deleted: 1,
+  });
+});

@@ -1,6 +1,7 @@
 import {
-  agentScopeSchema,
-  commandsSchema,
+  grantScopeSchema,
+  planningScope,
+  agentCommandsSchema,
   entityChangeSchema,
   proposalContextSchema,
   proposalReviewInputSchema,
@@ -101,10 +102,10 @@ export async function evaluateProposal(tx: Transaction, input: { id: string; dig
       'This proposal expired after seven days. Request a replacement.',
     );
   const context = proposalContextSchema.parse(proposal.context);
-  const commands = commandsSchema.parse(proposal.commands);
+  const commands = agentCommandsSchema.parse(proposal.commands);
   const changes = entityChangeSchema.array().parse(proposal.changes);
   assert(
-    canonical(context.scope) === canonical(agentScopeSchema.parse(proposal.scope)),
+    canonical(context.scope) === canonical(planningScope(grantScopeSchema.parse(proposal.scope))),
     'out_of_scope',
     'The stored proposal scope no longer matches its grant.',
     403,

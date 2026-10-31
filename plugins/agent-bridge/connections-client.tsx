@@ -1,19 +1,17 @@
 'use client';
 
-import { Alert } from '@athlete-panel/ui';
-import { Checkbox, Button, Input, NativeSelect } from '@athlete-panel/ui';
+import { Button, Input } from '@athlete-panel/ui';
 import { useEffect, useState } from 'react';
 import { Check, Clipboard, ShieldCheck, Terminal } from 'lucide-react';
-import type { AgentConnectionStatus } from '@athlete-panel/contracts';
 import {
-  addDays,
-  ErrorMessage,
-  Field,
-  Modal,
-  PageHeader,
-  useAction,
-  useWorkspace,
-} from '@athlete-panel/ui';
+  planningScope,
+  planningScopeSchema,
+  historyScopeSchema,
+  type AgentConnectionStatus,
+} from '@athlete-panel/contracts';
+import { ErrorMessage, Field, Modal, PageHeader, useAction, useWorkspace } from '@athlete-panel/ui';
+
+import { ConnectionAccess } from './connection-access';
 
 export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -54,7 +52,10 @@ export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
         </Button>
         <ol>
           <li>Type the approval code shown in your terminal.</li>
-          <li>Choose dates, notes access, and when access expires.</li>
+          <li>
+            Choose historical review, training proposals or both, their separate dates, notes access
+            and expiry.
+          </li>
           <li>
             Ask your agent to read the training-planning skill linked in AGENTS.md and propose your
             changes.
@@ -76,7 +77,8 @@ export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
 }
 
 export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => void }) {
-  const { request, data } = useWorkspace();
+  const { request, data, weekStartsOn } = useWorkspace();
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [connection, setConnection] = useState<AgentConnectionStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -112,8 +114,7 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
   return (
     <>
       <PageHeader
-        eyebrow="YOUR AGENT, YOUR PERMISSION"
-        title="Connect your training agent"
+        title="Connect your training assistant"
         description="Only approve a connection you started from your terminal."
       />
       <section className="section-block" style={{ maxWidth: 680 }}>
@@ -121,20 +122,65 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
         {!connection && !loadError && <p role="status">Loading the connection request…</p>}
         {connection && pending && (
           <form
+            onChange={() => setFieldErrors({})}
             onSubmit={(event) => {
               event.preventDefault();
               const form = new FormData(event.currentTarget);
               const typedCode = String(form.get('code'))
                 .replace(/[^0-9a-f]/gi, '')
                 .toUpperCase();
+              const errors: Record<string, string> = {};
+              const allowHistory = form.get('allowHistory') === 'on';
+              const allowPlanning = form.get('allowPlanning') === 'on';
+              if (!allowHistory && !allowPlanning)
+                errors.capabilities = 'Choose history, training proposals, or both to connect.';
+              if (allowPlanning) {
+                const checked = planningScopeSchema.safeParse({
+                  from: String(form.get('from')),
+                  to: String(form.get('to')),
+                });
+                if (!checked.success)
+                  errors.planning = checked.error.issues.map((i) => i.message).join(' ');
+              }
+              if (allowHistory) {
+                const checked = historyScopeSchema.safeParse({
+                  from: String(form.get('historyFrom')),
+                  to: String(form.get('historyTo')),
+                  categories: form.getAll('categories'),
+                  weekStartsOn,
+                });
+                if (!checked.success)
+                  errors.history = checked.error.issues.map((i) => i.message).join(' ');
+              }
+              if (allowHistory && !form.getAll('categories').length)
+                errors.history =
+                  'Choose at least one history category under Customize shared data.';
+              setFieldErrors(errors);
+              if (Object.keys(errors).length) return;
               void action.run(async () => {
                 const result = await request('agent-bridge', 'approve-connection', {
                   id,
                   code: `${typedCode.slice(0, 4)}-${typedCode.slice(4)}`,
                   label: String(form.get('label')),
-                  from: String(form.get('from')),
-                  to: String(form.get('to')),
-                  includeNotes: form.get('includeNotes') === 'on',
+                  version: 2,
+                  history: !allowHistory
+                    ? null
+                    : {
+                        from: String(form.get('historyFrom')),
+                        to: String(form.get('historyTo')),
+                        includeNotes: form.get('historyNotes') === 'on',
+                        categories: form.getAll('categories') as (
+                          'activities' | 'health' | 'training' | 'context'
+                        )[],
+                        weekStartsOn,
+                      },
+                  planning: !allowPlanning
+                    ? null
+                    : {
+                        from: String(form.get('from')),
+                        to: String(form.get('to')),
+                        includeNotes: form.get('includeNotes') === 'on',
+                      },
                   expiresInHours: Number(form.get('expiresInHours')),
                 });
                 setConnection(result);
@@ -155,37 +201,7 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
             <Field label="Agent name">
               <Input required name="label" maxLength={100} defaultValue={connection.label} />
             </Field>
-            <div className="form-grid">
-              <Field label="Read records from">
-                <Input required type="date" name="from" defaultValue={addDays(today, -28)} />
-              </Field>
-              <Field label="Through">
-                <Input required type="date" name="to" defaultValue={addDays(today, 14)} />
-              </Field>
-            </div>
-            <Field label="Access expires after">
-              <NativeSelect name="expiresInHours" defaultValue="1">
-                <option value="1">1 hour</option>
-                <option value="4">4 hours</option>
-                <option value="24">24 hours</option>
-              </NativeSelect>
-            </Field>
-            <label className="checkbox-row">
-              <Checkbox name="includeNotes" />
-              Include private plan, workout, interval, completion, and calendar notes
-            </label>
-            <Alert role="status" className="callout">
-              <strong>What you are sharing</strong>
-              <p>
-                Your profile, goals, availability, zones, and relevant training, events, injury
-                constraints, activities, and health records. Your external agent may send this
-                context to its model provider.
-              </p>
-              <p>
-                Access allows reading context and submitting proposals. Applying changes still
-                requires your review in Athlete Panel. Garmin keys and server secrets are excluded.
-              </p>
-            </Alert>
+            <ConnectionAccess today={today} weekStartsOn={weekStartsOn} errors={fieldErrors} />
             <p className="form-footnote">
               This connection request expires at{' '}
               {new Date(connection.expiresAt).toLocaleTimeString()}. You can disconnect the agent at
@@ -229,13 +245,15 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
             </h2>
             <p>
               {approved
-                ? 'Return to your terminal to finish connecting. It will save the credential automatically. You can then ask your agent to propose training changes.'
+                ? 'Return to your terminal to finish connecting. It will save the credential automatically. You can then ask your agent to use the approved capabilities.'
                 : 'No active connection can be completed from this request. Run pnpm agent connect to start again.'}
             </p>
             {approved && (
               <p>
-                Access expires {new Date(connection.grant!.expiresAt).toLocaleString()}. Proposed
-                changes will appear in the Agent workspace for your review.
+                Access expires {new Date(connection.grant!.expiresAt).toLocaleString()}.{' '}
+                {planningScope(connection.grant!)
+                  ? 'Proposed changes will appear in the Agent workspace for your review and explicit approval.'
+                  : 'This access is read-only; proposal submission is not permitted.'}
               </p>
             )}
           </div>

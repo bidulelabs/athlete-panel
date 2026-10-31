@@ -1,5 +1,6 @@
 import {
   agentCommandSchema,
+  AGENT_COMMAND_LIMIT,
   commandsSchema,
   type Command,
   type CommandInput,
@@ -32,7 +33,11 @@ export function applyCommands(
   options: { actor: 'owner' | 'agent'; idFactory?: () => string },
 ): MutationResult {
   const initial = validateWorkspace(input);
-  const commands = commandsSchema.parse(inputs);
+  const commands = (
+    options.actor === 'agent'
+      ? commandsSchema.element.array().min(1).max(AGENT_COMMAND_LIMIT)
+      : commandsSchema
+  ).parse(inputs);
   const state: WorkspaceState = structuredClone(initial);
   const context = createCommandContext(initial, state, options);
   for (const command of commands) {

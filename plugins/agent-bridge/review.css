@@ -108,3 +108,180 @@
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
+
+.proposal-week > details > summary {
+  cursor: pointer;
+  min-height: 44px;
+}
+.proposal-week > details > summary h4 {
+  flex: 1;
+}
+.proposal-week-chevron {
+  flex-shrink: 0;
+}
+.proposal-week > details[open] > summary .proposal-week-chevron {
+  transform: rotate(90deg);
+}
+
+.connection-access {
+  display: grid;
+  gap: 24px;
+}
+.connection-capability {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+.connection-capability + .connection-capability {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.connection-capability legend {
+  float: left;
+  width: 100%;
+}
+.connection-capability > p {
+  clear: both;
+  margin: 0 0 12px;
+}
+.connection-capability legend .checkbox-row {
+  min-height: 44px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.connection-scope {
+  display: grid;
+  gap: 8px;
+}
+.connection-customize > summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.connection-customize > summary {
+  gap: 8px;
+}
+.connection-customize[open] > summary svg {
+  transform: rotate(90deg);
+}
+.connection-customize .checkbox-row {
+  min-height: 44px;
+}
+.connection-receipt {
+  border-block: 1px solid var(--line);
+  padding-block: 20px;
+  overflow-wrap: anywhere;
+}
+.connection-receipt h2 {
+  font-size: 19px;
+  margin-bottom: 16px;
+}
+.connection-receipt dl {
+  display: grid;
+  gap: 16px;
+}
+.connection-receipt dl > div {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 16px;
+}
+.connection-receipt dt {
+  color: var(--muted);
+}
+.connection-receipt dd {
+  margin: 0;
+}
+.connection-receipt > p {
+  margin-top: 16px;
+  font-weight: 500;
+}
+.proposal-overview {
+  margin-bottom: 20px;
+}
+.proposal-overview-dates {
+  font-weight: 600;
+}
+.proposal-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  margin-block: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.proposal-counts > div {
+  display: flex;
+  gap: 8px;
+}
+.proposal-counts dt {
+  color: var(--muted);
+}
+.proposal-counts dd {
+  margin: 0;
+  font-weight: 600;
+}
+.proposal-month {
+  border-bottom: 1px solid var(--line);
+}
+.proposal-month > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  cursor: pointer;
+}
+.proposal-month > summary strong {
+  flex: 1;
+}
+.proposal-month > summary span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.proposal-month > summary svg {
+  flex-shrink: 0;
+}
+.proposal-month[open] > summary svg {
+  transform: rotate(90deg);
+}
+.proposal-month[open] {
+  padding-bottom: 16px;
+}
+.proposal-month .proposal-week + .proposal-week {
+  margin-top: 8px;
+}
+.proposal-diff-summary {
+  min-height: 44px;
+  padding-block: 8px;
+}
+.connection-customize > summary:focus-visible,
+.proposal-month > summary:focus-visible,
+.proposal-week-heading:focus-visible,
+.proposal-diff-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 600px) {
+  .connection-receipt dl > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+/* Grid spacing owns these gaps; avoid stacking the global form margins. */
+.connection-access .field,
+.connection-access .form-footnote {
+  margin-bottom: 0;
+}
+.connection-scope .form-footnote {
+  margin-top: 0;
+}
+.connection-scope {
+  grid-template-columns: minmax(0, 1fr);
+}
+.connection-scope .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 12px 14px;
+}

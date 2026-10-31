@@ -2,12 +2,12 @@
   "id": "agent-bridge",
   "name": "Agent workspace",
   "description": "Review training changes from your external agent",
-  "version": "2.0.0",
+  "version": "2.1.1",
   "hostApi": "^1.2.0",
   "dependencies": {
-    "training": "^2.0.0",
-    "athlete": "^1.2.0",
-    "activity-records": "^2.0.0"
+    "training": "^2.1.0",
+    "athlete": "^1.3.0",
+    "activity-records": "^2.1.0"
   },
   "required": false,
   "routes": [

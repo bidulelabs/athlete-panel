@@ -59,6 +59,25 @@ export class RecordRepository<T extends StoredRecord> {
     await tx`insert into ${tx(this.schema + '.records')} (kind,id,revision,data,deleted) values (${kind},${record.id},${record.revision},${tx.json(record as never)},false)
       on conflict (kind,id) do update set revision=excluded.revision,data=excluded.data,deleted=false,updated_at=now()`;
   }
+  /** Bounded transport batches; callers retain transaction and domain validation ownership. */
+  async saveMany(kind: string, records: readonly StoredRecord[], tx: Transaction) {
+    for (const record of records) this.parse(kind, record);
+    for (let offset = 0; offset < records.length; offset += 200) {
+      const rows = records.slice(offset, offset + 200).map((record) => ({
+        kind,
+        id: record.id,
+        revision: record.revision,
+        data: tx.json(record as never),
+        deleted: false,
+      }));
+      await tx`insert into ${tx(this.schema + '.records')} ${tx(rows, 'kind', 'id', 'revision', 'data', 'deleted')}
+        on conflict (kind,id) do update set revision=excluded.revision,data=excluded.data,deleted=false,updated_at=now()`;
+    }
+  }
+  async removeMany(kind: string, ids: readonly string[], tx: Transaction) {
+    for (let offset = 0; offset < ids.length; offset += 200)
+      await tx`update ${tx(this.schema + '.records')} set deleted=true,revision=revision+1,updated_at=now() where kind=${kind} and id=any(${ids.slice(offset, offset + 200)})`;
+  }
   async remove(kind: string, id: string, tx: Transaction) {
     await tx`update ${tx(this.schema + '.records')} set deleted=true,revision=revision+1,updated_at=now() where kind=${kind} and id=${id}`;
   }

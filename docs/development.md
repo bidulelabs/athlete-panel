@@ -240,6 +240,23 @@ pnpm exec tsx scripts/benchmark-history.ts 30000
 pnpm exec tsx scripts/benchmark-history.ts 100000
 ```
 
+The populated-year and complete-export benchmark uses a separate temporary database under the same guarded test server:
+
+```sh
+pnpm exec tsx scripts/benchmark-review.ts 30000 current
+pnpm exec tsx scripts/benchmark-review.ts 100000 current --history-only
+```
+
+It adds 1,000 existing interval workouts and a plan to the five-year fixture, then measures a single 1,500-command proposal (500 creates, 500 moves/edits, 500 deletions), review, application and undo. History measurements include first/next pages, complete sequential exports with an already cached selection and a fresh grant, a concurrent owner workout save, and a representative bounded record query plan with buffers. `--history-only` omits annual mutation measurements but still exercises the concurrent save. An optional lowercase report label distinguishes local runs; results stay under ignored `.runtime/review-performance/`. First calls and fresh grants are not cold-database-cache results. Warm page/review quantiles have only three samples; exports have two observations. Compare the same fixture and environment rather than treating local measurements as a production capacity guarantee.
+
+To profile the smaller workload with the same instrumentation used by its recorded before/after comparison:
+
+```sh
+node --cpu-prof --cpu-prof-dir=.runtime/review-performance --import tsx scripts/benchmark-review.ts 30000 profiled
+```
+
+Create the ignored report directory first if it does not yet exist. Keep profiles and raw JSON outside Git.
+
 The first fixture contains at least 30,000 representative records spanning five calendar years; the second adds explicitly synthetic activity stress records. Reports include actual counts, environment, first/warm timings, query counts/plans, response bytes, memory and annual proposal timings. Caches are not forcibly cleared; these are local measurements, not production-capacity guarantees.
 
 ## Verification

@@ -31,6 +31,8 @@ Increasing the old shared date bound would silently couple history to proposal p
 
 ## Relationships
 
+- Read-concurrency and disposable summary reuse are extended by [ADR 017](017-historical-read-reuse.md); the independent permission and explicit restart decisions remain unchanged.
+
 - Requirements: [Agent training](../features/agent-training.md).
 - Ownership: [Architecture](../architecture.md).
 - Verification and deployment evidence: [Execution record](../plans/historical-agent-review.md).

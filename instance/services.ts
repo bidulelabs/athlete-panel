@@ -100,22 +100,38 @@ export function stateWithChanges(state: WorkspaceState, changes: EntityChange[])
   return next;
 }
 export async function persistChanges(changes: EntityChange[], tx: Transaction) {
-  for (const change of changes)
-    if (change.before === null && change.after?.revision === 1) {
-      for (const repository of new Set(Object.values(repositories))) {
-        const old =
-          await tx`select id from ${tx(repository.schema + '.records')} where id=${change.id} limit 1`;
-        if (old.length)
-          throw new (await import('../packages/host/src/errors')).AppError(
-            'reserved_identity',
-            'This identity belongs to an existing or deleted record.',
-            409,
-          );
-      }
+  const createdIds = changes
+    .filter((change) => change.before === null && change.after?.revision === 1)
+    .map((change) => change.id);
+  if (createdIds.length) {
+    for (const repository of new Set(Object.values(repositories))) {
+      const old =
+        await tx`select id from ${tx(repository.schema + '.records')} where id=any(${createdIds}) limit 1`;
+      if (old.length)
+        throw new (await import('../packages/host/src/errors')).AppError(
+          'reserved_identity',
+          'This identity belongs to an existing or deleted record.',
+          409,
+        );
     }
-  // Release old unique associations before installing the final transaction state.
-  for (const change of changes)
-    if (change.before) await repositories[change.entity].remove(change.entity, change.id, tx);
-  for (const change of changes)
-    if (change.after) await repositories[change.entity].save(change.entity, change.after, tx);
+  }
+  const groups = new Map<EntityKind, EntityChange[]>();
+  for (const change of changes) {
+    const group = groups.get(change.entity) ?? [];
+    group.push(change);
+    groups.set(change.entity, group);
+  }
+  // Release every old unique association before installing any final records.
+  for (const [kind, group] of groups)
+    await repositories[kind].removeMany(
+      kind,
+      group.filter((change) => change.before).map((change) => change.id),
+      tx,
+    );
+  for (const [kind, group] of groups)
+    await repositories[kind].saveMany(
+      kind,
+      group.flatMap((change) => (change.after ? [change.after] : [])),
+      tx,
+    );
 }

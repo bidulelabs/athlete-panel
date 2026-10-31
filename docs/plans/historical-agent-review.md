@@ -140,6 +140,8 @@ Framework validation checked the affected spec, canonical commands, architecture
 
 ## PR 70 browser pipeline correction — 2026-10-31
 
+Subsequent performance and code-organization work requested by the owner is tracked in the [annual review and history performance report](agent-review-performance.md).
+
 The owner requested diagnosis and repair of the failed pipeline. In [run 41220578908](https://github.com/bidulelabs/athlete-panel/actions/runs/41220578908), desktop and mobile each failed only the onboarding scenario that checks that agent pairing is not obscured. Both attempts looked for the former heading “Connect your training agent”; the simplified connection page correctly renders “Connect your training assistant.” The aggregate verification gate consequently failed. Other application, integration, publication-security and container checks succeeded; release publication was skipped for this pull request.
 
 Reproduced the same two failures locally against a freshly seeded isolated browser database on port 55439 and the production build on port 3018. The failure snapshots show the current assistant heading and no welcome dialog. Updated the onboarding assertion to the exact current accessible heading, retaining its unauthenticated-session, foreign-origin and onboarding-visibility checks. Application behavior, permissions, source contracts, plugin versions and migrations are unchanged. The earlier 30-scenario verification subset did not include this onboarding test; the complete desktop/phone suite is the appropriate regression check.

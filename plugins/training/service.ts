@@ -58,10 +58,11 @@ function checkUndoAgainstLaterChanges(state: WorkspaceState, changes: EntityChan
   const currentDates = new Map(
     [...state.workouts, ...state.notes].map((item) => [item.id, effectiveDate(item, state.plans)]),
   );
+  const changesById = new Map(changes.map((change) => [change.id, change]));
   for (const item of [...restoredState.workouts, ...restoredState.notes]) {
     const { schedule } = item;
     const date = effectiveDate(item, restoredState.plans);
-    const change = changes.find((candidate) => candidate.id === item.id);
+    const change = changesById.get(item.id);
     assert(
       (schedule.kind !== 'plan' ||
         restoredState.plans.some((plan) => plan.id === schedule.planId)) &&
@@ -102,6 +103,16 @@ export async function undoChange(body: unknown) {
         return activityId ? [activityId] : [];
       });
       const state = await loadWorkspace(tx, undefined, { records: 'linked', activityIds });
+      const revisions = new Map<string, number>();
+      for (const kind of new Set(original.map((change) => change.entity))) {
+        const ids = original.filter((change) => change.entity === kind).map((change) => change.id);
+        for (let offset = 0; offset < ids.length; offset += 200) {
+          const rows = await tx<
+            { id: string; revision: number }[]
+          >`select id,revision from ${tx(repositories[kind].schema + '.records')} where kind=${kind} and id=any(${ids.slice(offset, offset + 200)})`;
+          for (const row of rows) revisions.set(row.id, row.revision);
+        }
+      }
       const changes: EntityChange[] = [];
       for (const change of original) {
         const current = findEntity(state, change.entity, change.id);
@@ -112,11 +123,10 @@ export async function undoChange(body: unknown) {
           409,
         );
         // Revision monotonically increases on restoration, including deleted records.
-        const [stored] =
-          await tx`select revision from ${tx(repositories[change.entity].schema + '.records')} where kind=${change.entity} and id=${change.id}`;
+        const storedRevision = revisions.get(change.id);
         if (change.after === null)
           assert(
-            stored?.revision === (change.before?.revision ?? 0) + 1,
+            storedRevision === (change.before?.revision ?? 0) + 1,
             'undo_conflict',
             'A later change to the deleted record prevents restoring the whole change.',
             409,
@@ -124,7 +134,7 @@ export async function undoChange(body: unknown) {
         const after = change.before
           ? {
               ...change.before,
-              revision: Math.max(stored?.revision ?? 0, current?.revision ?? 0) + 1,
+              revision: Math.max(storedRevision ?? 0, current?.revision ?? 0) + 1,
             }
           : null;
         changes.push({

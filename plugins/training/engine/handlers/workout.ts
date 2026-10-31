@@ -2,7 +2,7 @@ import { workoutSchema, type Command, type Workout } from '@athlete-panel/contra
 import { effectiveDate } from '../../dates';
 import type { CommandContext } from '../context';
 import { fail } from '../errors';
-import { bucket, equal, normalizeOrders, placeWorkout } from '../state';
+import { bucket, equal } from '../state';
 
 export function handleWorkout(
   context: CommandContext,
@@ -18,7 +18,7 @@ export function handleWorkout(
     }
   >,
 ): void {
-  const { state, createId, get, checkSchedule, pendingForAgent } = context;
+  const { state, createId, get, checkSchedule, pendingForAgent, ordering } = context;
   switch (command.action) {
     case 'workout.create': {
       checkSchedule(command.values.schedule);
@@ -29,7 +29,7 @@ export function handleWorkout(
         completion: null,
       });
       state.workouts.push(workout);
-      placeWorkout(state, workout, command.values.order);
+      ordering.place(workout, command.values.order);
       break;
     }
     case 'workout.update': {
@@ -57,7 +57,7 @@ export function handleWorkout(
       const oldBucket = bucket(workout, state);
       Object.assign(workout, command.values);
       if (oldBucket !== bucket(workout, state) || command.values.order !== undefined)
-        placeWorkout(state, workout, command.values.order ?? 10000);
+        ordering.place(workout, command.values.order ?? 10000);
       break;
     }
     case 'workout.delete': {
@@ -69,7 +69,7 @@ export function handleWorkout(
           'Clear completion or unlink the activity before deleting this workout.',
         );
       state.workouts = state.workouts.filter((item) => item.id !== workout.id);
-      normalizeOrders(state);
+      ordering.remove(workout);
       break;
     }
     case 'workout.duplicate': {
@@ -84,7 +84,7 @@ export function handleWorkout(
         completion: null,
       };
       state.workouts.push(copy);
-      placeWorkout(state, copy, 10000);
+      ordering.place(copy, 10000);
       break;
     }
     case 'workout.reorder': {

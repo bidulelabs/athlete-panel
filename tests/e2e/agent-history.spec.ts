@@ -7,6 +7,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { addDays } from '../../plugins/training/dates';
+import { annualId, seedAnnualReview } from '../fixtures/annual-review';
 const password = process.env.E2E_PASSWORD!;
 const sql = postgres(isolatedDatabaseUrl('E2E_DATABASE_URL'), { max: 1, onnotice: () => {} });
 test.beforeEach(async () => {
@@ -155,87 +156,106 @@ test('one annual proposal stays pending until owner acknowledgement and applies 
   await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
   const owner = (operation: string, data: unknown) =>
     page.request.post(`/api/plugins/${operation}`, { headers: { Origin: baseURL! }, data });
-  const grantResponse = await owner('agent-bridge/grant', {
-    label: 'Annual browser',
-    version: 2,
-    history: null,
-    planning: { from: '2027-11-01', to: '2028-11-01', includeNotes: false },
-  });
-  expect(grantResponse.ok()).toBe(true);
-  const { token, grant } = await grantResponse.json();
-  const headers = { Authorization: `Bearer ${token}` },
-    context = await (await request.get('/api/agent/context', { headers })).json(),
-    summary = `Annual review ${info.project.name} ${randomUUID()}`;
-  const proposed = await request.post('/api/agent/propose', {
-    headers,
-    data: {
-      summary,
-      contextDigest: context.contextDigest,
-      idempotencyKey: randomUUID(),
-      commands: Array.from({ length: 366 }, (_, day) => ({
-        action: 'workout.create',
-        values: {
-          title: `Annual session ${day}`,
-          sport: 'running',
-          schedule: { kind: 'independent', date: addDays('2027-11-01', day) },
-          durationSeconds: 1800,
-        },
-      })),
-    },
-  });
-  expect(proposed.ok()).toBe(true);
-  const stored = await proposed.json();
-  expect(
-    (await request.post('/api/agent/apply', { headers, data: { id: stored.id } })).status(),
-  ).toBe(403);
-  await page.goto('/agent');
-  await page
-    .locator('.proposal-row')
-    .filter({ hasText: summary })
-    .getByRole('button', { name: 'Review', exact: true })
-    .click();
-  const dialog = page.getByRole('dialog'),
-    apply = dialog.getByRole('button', { name: 'Apply reviewed changes', exact: true });
-  await expect(apply).toBeDisabled();
-  await expect(dialog.getByText('366 changes', { exact: true })).toBeVisible();
-  await expect(
-    dialog.getByText('I have reviewed these changes and want to apply them.'),
-  ).toBeVisible();
-  await expect(dialog.getByRole('region', { name: 'Proposal overview' })).toContainText('Running');
-  const month = dialog
-    .locator('details.proposal-month')
-    .filter({ has: page.locator('summary > strong').getByText('November 2027', { exact: true }) });
-  await month.locator(':scope > summary').click();
-  await month.locator('.proposal-week > details > summary').first().click();
-  await month.locator('.proposal-diff-summary').first().click();
-  await expect(month.getByRole('table').first()).toBeVisible();
-  await month.locator(':scope > summary').click();
-  for (const theme of ['light', 'dark']) {
-    await page.evaluate((value) => {
-      document.documentElement.dataset.theme = value;
-      document.documentElement.classList.toggle('dark', value === 'dark');
-    }, theme);
-    await page.screenshot({
-      path: `.runtime/browser/annual-review-${info.project.name}-${theme}.png`,
-      fullPage: true,
-      animations: 'disabled',
+  const fixture = await sql.begin((tx) => seedAnnualReview(tx, '2027-11-01'));
+  try {
+    const grantResponse = await owner('agent-bridge/grant', {
+      label: 'Annual browser',
+      version: 2,
+      history: null,
+      planning: { from: '2027-11-01', to: '2028-11-01', includeNotes: false },
     });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
+    expect(grantResponse.ok()).toBe(true);
+    const { token, grant } = await grantResponse.json();
+    const headers = { Authorization: `Bearer ${token}` },
+      context = await (await request.get('/api/agent/context', { headers })).json(),
+      summary = `Annual review ${info.project.name} ${randomUUID()}`;
+    const proposed = await request.post('/api/agent/propose', {
+      headers,
+      data: {
+        summary,
+        contextDigest: context.contextDigest,
+        idempotencyKey: randomUUID(),
+        commands: fixture.commands,
+      },
+    });
+    expect(proposed.ok()).toBe(true);
+    const stored = await proposed.json();
+    expect(
+      (await request.post('/api/agent/apply', { headers, data: { id: stored.id } })).status(),
+    ).toBe(403);
+    await page.goto('/agent');
+    const reviewStarted = performance.now();
+    await page
+      .locator('.proposal-row')
+      .filter({ hasText: summary })
+      .getByRole('button', { name: 'Review', exact: true })
+      .click();
+    const dialog = page.getByRole('dialog'),
+      apply = dialog.getByRole('button', { name: 'Apply reviewed changes', exact: true });
+    await expect(apply).toBeDisabled();
+    await expect(dialog.getByText('1500 changes', { exact: true })).toBeVisible();
+    await expect(
+      dialog.getByText('I have reviewed these changes and want to apply them.'),
+    ).toBeVisible();
+    const reviewMs = performance.now() - reviewStarted;
+    await expect(dialog.getByRole('region', { name: 'Proposal overview' })).toContainText(
+      'Running',
     );
+    const month = dialog.locator('details.proposal-month').filter({
+      has: page.locator('summary > strong').getByText('November 2027', { exact: true }),
+    });
+    await expect(dialog.locator('.proposal-week')).toHaveCount(0);
+    await month.locator(':scope > summary').click();
+    await month.locator('.proposal-week > details > summary').first().click();
+    await month.locator('.proposal-diff-summary').first().click();
+    await expect(month.getByRole('table').first()).toBeVisible();
+    await month.locator(':scope > summary').click();
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+        document.documentElement.classList.toggle('dark', value === 'dark');
+      }, theme);
+      await page.screenshot({
+        path: `.runtime/browser/annual-review-${info.project.name}-${theme}.png`,
+        fullPage: true,
+        animations: 'disabled',
+      });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    }
+    await dialog.getByRole('checkbox').check();
+    const applyStarted = performance.now();
+    await apply.click();
+    await expect(dialog).toHaveCount(0);
+    const applyMs = performance.now() - applyStarted;
+    const envelope = await (
+      await page.request.get('/api/workspace?from=2027-11-01&to=2027-11-07')
+    ).json();
+    const audit = envelope.changes.find((entry: { summary: string }) => entry.summary === summary);
+    expect(audit.changes).toHaveLength(1500);
+    const undoStarted = performance.now();
+    expect(
+      (await owner('agent-bridge/undo', { id: audit.id, idempotencyKey: randomUUID() })).ok(),
+    ).toBe(true);
+    console.log(
+      JSON.stringify({
+        annualBrowser: info.project.name,
+        commands: 1500,
+        reviewMs,
+        applyMs,
+        undoMs: performance.now() - undoStarted,
+      }),
+    );
+    await owner('agent-bridge/revoke', { id: grant.id });
+  } finally {
+    const ids = [
+      fixture.plan.id,
+      ...fixture.workouts.map((w) => w.id),
+      ...Array.from({ length: 500 }, (_, i) => annualId(3000 + i)),
+    ];
+    await sql`delete from training.records where id=any(${ids})`;
   }
-  await dialog.getByRole('checkbox').check();
-  await apply.click();
-  await expect(dialog).toHaveCount(0);
-  const envelope = await (
-    await page.request.get('/api/workspace?from=2027-11-01&to=2027-11-07')
-  ).json();
-  const audit = envelope.changes.find((entry: { summary: string }) => entry.summary === summary);
-  expect(audit.changes).toHaveLength(366);
-  expect(
-    (await owner('agent-bridge/undo', { id: audit.id, idempotencyKey: randomUUID() })).ok(),
-  ).toBe(true);
-  await owner('agent-bridge/revoke', { id: grant.id });
 });
 
 test('one assistant approval keeps the receipt, categories, notes and submitted scopes in agreement', async ({

@@ -40,15 +40,21 @@ test('historical browser approval explains read-only access, validates dates and
       .getByLabel('Approval code', { exact: true })
       .fill(output.match(/Approval code: ([A-F0-9-]+)/)![1]!);
     await expect(
-      page.getByRole('checkbox', { name: 'Suggest training changes', exact: true }),
-    ).toBeChecked();
-    await page.getByRole('checkbox', { name: 'Suggest training changes', exact: true }).uncheck();
-    await page.getByRole('checkbox', { name: 'Read my history', exact: true }).check();
-    await page.getByRole('combobox', { name: 'History period', exact: true }).selectOption('1');
+      page.getByRole('combobox', { name: 'Can it suggest training changes?', exact: true }),
+    ).toHaveValue('yes');
+    await page
+      .getByRole('combobox', { name: 'Can it suggest training changes?', exact: true })
+      .selectOption('no');
+    const historyPeriod = page.getByRole('combobox', {
+      name: 'How much history can your assistant read?',
+      exact: true,
+    });
+    await historyPeriod.selectOption('1');
     await expect(page.getByRole('region', { name: 'Access summary' })).toContainText(
-      await page.getByLabel('History from', { exact: true }).inputValue(),
+      await page.locator('input[name="historyFrom"]').inputValue(),
     );
-    await page.getByRole('combobox', { name: 'History period', exact: true }).selectOption('5');
+    await historyPeriod.selectOption('5');
+    await historyPeriod.selectOption('custom');
     await page.getByLabel('History from', { exact: true }).fill('2021-10-31');
     await page.getByLabel('History through', { exact: true }).fill('2026-11-01');
     await page.getByRole('button', { name: 'Approve connection', exact: true }).click();
@@ -246,35 +252,64 @@ test('one assistant approval keeps the receipt, categories, notes and submitted 
     await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.getByLabel('Approval code', { exact: true }).fill(pending.code);
-    const history = page.getByRole('checkbox', { name: 'Read my history', exact: true });
-    const planning = page.getByRole('checkbox', { name: 'Suggest training changes', exact: true });
+    const history = page.getByRole('combobox', {
+      name: 'How much history can your assistant read?',
+      exact: true,
+    });
+    const planning = page.getByRole('combobox', {
+      name: 'Can it suggest training changes?',
+      exact: true,
+    });
+    const period = page.getByRole('combobox', { name: 'Proposal period', exact: true });
     const receipt = page.getByRole('region', { name: 'Access summary' });
-    await expect(history).not.toBeChecked();
-    await planning.uncheck();
+    await expect(history).toHaveValue('4weeks');
+    await expect(planning).toHaveValue('yes');
+    await expect(period).toHaveValue('short');
+    // Presets submit exact independent bounds without exposing four unnecessary date inputs.
+    await expect(page.locator('input[type="date"]')).toHaveCount(0);
+    const today = await page.locator('input[name="historyTo"]').inputValue();
+    await expect(page.locator('input[name="historyFrom"]')).toHaveValue(addDays(today, -27));
+    await expect(page.locator('input[name="from"]')).toHaveValue(today);
+    await expect(page.locator('input[name="to"]')).toHaveValue(addDays(today, 13));
+    await history.selectOption('none');
+    await expect(receipt).toContainText('Only the proposal period, shown below.');
+    await planning.selectOption('no');
     await page.getByRole('button', { name: 'Approve connection', exact: true }).click();
-    await expect(
-      page.getByText('Choose history, training proposals, or both to connect.'),
-    ).toBeVisible();
-    await history.check();
-    await planning.check();
-    await page.getByRole('combobox', { name: 'History period', exact: true }).selectOption('3');
-    await page.getByRole('combobox', { name: 'Proposal period', exact: true }).selectOption('year');
+    await expect(page.locator('.connection-access').getByRole('alert')).toContainText(
+      'Choose a history period or allow training proposals',
+    );
+    await history.selectOption('5');
+    await planning.selectOption('yes');
+    await period.selectOption('year');
     await page.setViewportSize({ width: 320, height: 800 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    const historyFrom = await page.getByLabel('History from', { exact: true }).inputValue();
-    const planningFrom = await page
-      .getByLabel('Read and propose from', { exact: true })
-      .inputValue();
-    const planningTo = await page.getByLabel('Through', { exact: true }).inputValue();
-    await expect(receipt).toContainText(`${historyFrom} through`);
+    const historyFrom = await page.locator('input[name="historyFrom"]').inputValue();
+    const planningFrom = await page.locator('input[name="from"]').inputValue();
+    const planningTo = await page.locator('input[name="to"]').inputValue();
+    await expect(receipt).toContainText(`${historyFrom} through ${today}`);
     await expect(receipt).toContainText(`${planningFrom} through ${planningTo}`);
-    const scopes = page.locator('.connection-capability');
-    await scopes.first().getByText('Customize shared data', { exact: true }).click();
+    await expect(receipt).toContainText(
+      'Can also read profile, goals, availability, zones, training, events, injuries, activities and health in this period.',
+    );
+    await period.selectOption('custom');
+    await page.getByLabel('Proposals through', { exact: true }).fill(addDays(planningTo, 1));
+    await page.getByRole('button', { name: 'Approve connection', exact: true }).click();
+    await expect(page.locator('.connection-access').getByRole('alert')).toContainText(
+      `Choose an end date from ${planningFrom} through ${planningTo}`,
+    );
+    await page.getByLabel('Proposals through', { exact: true }).fill(planningTo);
+    // Analysis-only hides proposal fields without losing the deliberate custom dates.
+    await planning.selectOption('no');
+    await expect(page.locator('input[name="from"]')).toHaveCount(0);
+    await planning.selectOption('yes');
+    await expect(period).toHaveValue('custom');
+    await expect(page.getByLabel('Proposals through', { exact: true })).toHaveValue(planningTo);
+    await page.getByText('Customize shared data', { exact: true }).click();
     await page.getByRole('checkbox', { name: 'Health measurements', exact: true }).uncheck();
     await page
-      .getByRole('checkbox', { name: 'Include private notes in historical review', exact: true })
+      .getByRole('checkbox', { name: 'Include private notes in history', exact: true })
       .check();
     await page
       .getByRole('combobox', { name: 'Access expires after', exact: true })

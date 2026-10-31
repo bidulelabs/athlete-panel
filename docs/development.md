@@ -174,7 +174,7 @@ Run the connection command from the local checkout while Athlete Panel is runnin
 pnpm agent connect
 ```
 
-The command opens the owner approval page. Sign in if necessary, compare its code with your terminal, select “Read my history” and/or “Suggest training changes,” choose their separate date presets or custom dates, check the access summary and approve. “Customize shared data” contains category and private-note choices; notes are off by default. History allows up to five calendar years and planning up to one calendar year; expanding either requires fresh approval. The CLI saves the credential automatically and reports success. No token is copied into the terminal or model conversation. Agent workspace → Connected agents shows access, expiration and Disconnect.
+The command opens the owner approval page. Sign in if necessary, compare its code with your terminal, choose how much history to share, decide whether it can suggest training changes, check the separate dates in the access summary and approve. New approvals default to the last four weeks of history and proposals for the next two weeks, including today; past reading does not permit past edits. Choose “No, analysis only” to prevent proposals, or “None” to share only proposal-period context. Exact date fields appear for Custom dates. “Customize shared data” contains category and private-note choices; notes are off by default. History allows up to five calendar years and planning up to one calendar year; expanding either requires fresh approval. The CLI saves the credential automatically and reports success. No token is copied into the terminal or model conversation. Agent workspace → Connected agents shows access, expiration and Disconnect.
 
 The instance defaults to the previously configured URL, then `APP_ORIGIN`, then `http://127.0.0.1:3000`. For a different instance or a terminal without a browser:
 
@@ -202,7 +202,7 @@ Historical ranges include both endpoints and may extend through the fifth calend
 
 ```sh
 pnpm agent connect --label "Training assistant"
-# Approve historical reading and training proposals independently in the browser.
+# Select Last 5 years, then optionally allow suggestions for a separate proposal period.
 pnpm agent history --out /secure/five-years.json
 pnpm agent history summary --from 2025-01-01 --to 2025-12-31 --out /secure/year.json
 pnpm agent history summary --from 2025-10-01 --to 2025-10-31 --period week --out /secure/month.json
@@ -228,6 +228,8 @@ pnpm agent history records --after-file /secure/page-1.json --out /secure/page-2
 Approve the example's exact dates/categories in the browser. `history discover` lists available categories/date bounds and supported filters. `history summary` defaults to calendar months; use `--period week` for drill-down. `history records` requires `--category activities|health|workouts|plans|notes|events|injuries|coverage`. Sport/subgroup filters apply only to activities/workouts; `--metric` requires health. Workouts expose counts of prescription parts; use `--record-id UUID --section steps|exercises` to page those parts. Core details are the default. Notes require the corresponding capability's notes permission.
 
 All history commands accept `--review-file` to explicitly select source versions instead of the automatic review. `--page` opts into one-page output; `--after-file` also remains one-page by default. Existing `--all` commands still work. Existing scripts expecting a single page with `--out` must add `--page`. Summary/record pages default to 100 items, permit `--limit 1..200`, and never exceed 1 MiB. `--after-file` reads the previous response's exact query/token/cursor. `--all --out FILE` streams pages into a protected temporary file and replaces the destination only after successful completion. Changed records return `history_changed`: discard the prior review/results and restart with `--restart` without explicit review/cursor files. A stale cached review remains stale until that explicit restart; the CLI never silently retries with newer data. Explicit file workflows obtain a fresh discovery with `--restart`. The CLI does not silently mix versions or publish a partial export. Collection-wide invalidation can also occur after an unrelated import/edit. Current-profile context is not historical profile evidence. See the [summary semantics](features/agent-training.md#summary-semantics-and-evidence).
+
+Read recent or long-term facts through `history` when granted; `context` contains records only within the separate proposal period, plus permitted current profile context. Keep its digest for proposal submission. History access never authorizes copying or editing a source outside proposal dates.
 
 For annual planning use the existing planning context/proposal commands above. One proposal supports 1,500 commands and 4 MiB; oversized requests fail with guidance. Submission does not change training. Review the complete proposal and explicitly apply it in Agent workspace. There is no CLI apply command.
 

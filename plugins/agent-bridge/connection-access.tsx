@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { addCalendarYears } from '@athlete-panel/contracts';
 import { addDays, Checkbox, ErrorMessage, Field, Input, NativeSelect } from '@athlete-panel/ui';
+import { historyAnniversaryStart } from './connection-periods';
 
 const categories = {
   activities: 'Recorded activities',
@@ -12,94 +13,50 @@ const categories = {
   context: 'Current profile, goals, events and injuries',
 };
 type Category = keyof typeof categories;
+type Range = { from: string; to: string };
 
 function DateRange({
   kind,
-  today,
-  error,
+  custom,
   range,
   onRange,
 }: {
   kind: 'history' | 'planning';
-  today: string;
-  error?: string;
-  range: { from: string; to: string };
-  onRange: (range: { from: string; to: string }) => void;
+  custom: boolean;
+  range: Range;
+  onRange: (range: Range) => void;
 }) {
   const history = kind === 'history';
-  const [preset, setPreset] = useState(() =>
-    history
-      ? range.from === addCalendarYears(today, -5) && range.to === today
-        ? '5'
-        : 'custom'
-      : range.from === addDays(today, -28) && range.to === addDays(today, 14)
-        ? 'short'
-        : 'custom',
-  );
-  const { from, to } = range;
-  const choose = (value: string) => {
-    setPreset(value);
-    if (value === 'custom') return;
-    onRange({
-      from: history
-        ? addCalendarYears(today, -Number(value))
-        : value === 'short'
-          ? addDays(today, -28)
-          : today,
-      to: history
-        ? today
-        : value === 'year'
-          ? addCalendarYears(today, 1)
-          : addDays(today, value === 'short' ? 14 : 83),
-    });
-  };
+  const names = history ? ['historyFrom', 'historyTo'] : ['from', 'to'];
+  if (!custom)
+    return (
+      <>
+        <input type="hidden" name={names[0]} value={range.from} />
+        <input type="hidden" name={names[1]} value={range.to} />
+      </>
+    );
   return (
     <>
-      <Field label={history ? 'History period' : 'Proposal period'}>
-        <NativeSelect value={preset} onChange={(event) => choose(event.target.value)}>
-          {history ? (
-            <>
-              <option value="1">Last year</option>
-              <option value="3">Last three years</option>
-              <option value="5">Last five years</option>
-            </>
-          ) : (
-            <>
-              <option value="short">Recent + next 2 weeks</option>
-              <option value="12weeks">Next 12 weeks</option>
-              <option value="year">Next year</option>
-            </>
-          )}
-          <option value="custom">Custom dates</option>
-        </NativeSelect>
-      </Field>
       <div className="form-grid">
-        <Field label={history ? 'History from' : 'Read and propose from'}>
+        <Field label={history ? 'History from' : 'Proposals from'}>
           <Input
             required
             type="date"
-            name={history ? 'historyFrom' : 'from'}
-            value={from}
-            onChange={(event) => {
-              onRange({ from: event.target.value, to });
-              setPreset('custom');
-            }}
+            name={names[0]}
+            value={range.from}
+            onChange={(event) => onRange({ ...range, from: event.target.value })}
           />
         </Field>
-        <Field label={history ? 'History through' : 'Through'}>
+        <Field label={history ? 'History through' : 'Proposals through'}>
           <Input
             required
             type="date"
-            name={history ? 'historyTo' : 'to'}
-            value={to}
-            onChange={(event) => {
-              onRange({ from, to: event.target.value });
-              setPreset('custom');
-            }}
+            name={names[1]}
+            value={range.to}
+            onChange={(event) => onRange({ ...range, to: event.target.value })}
           />
         </Field>
       </div>
-      <ErrorMessage error={error ?? null} />
       <p className="form-footnote">
         Both dates are included. Up to {history ? 'five calendar years' : 'one calendar year'};
         future dates are allowed.
@@ -108,7 +65,7 @@ function DateRange({
   );
 }
 
-/** The visible receipt is derived from the same form values sent for approval. */
+/** The receipt and submitted scopes use the same values; presets never couple the ranges. */
 export function ConnectionAccess({
   today,
   weekStartsOn,
@@ -118,50 +75,118 @@ export function ConnectionAccess({
   weekStartsOn: 0 | 1;
   errors: Record<string, string>;
 }) {
-  const [history, setHistory] = useState(false);
+  const [historyPreset, setHistoryPreset] = useState('4weeks');
+  const [planningPreset, setPlanningPreset] = useState('short');
   const [planning, setPlanning] = useState(true);
-  const [historyRange, setHistoryRange] = useState({
-    from: addCalendarYears(today, -5),
-    to: today,
-  });
-  const [planningRange, setPlanningRange] = useState({
-    from: addDays(today, -28),
-    to: addDays(today, 14),
+  const [historyRange, setHistoryRange] = useState<Range>({ from: addDays(today, -27), to: today });
+  const [planningRange, setPlanningRange] = useState<Range>({
+    from: today,
+    to: addDays(today, 13),
   });
   const [historyNotes, setHistoryNotes] = useState(false);
   const [planningNotes, setPlanningNotes] = useState(false);
   const [expiry, setExpiry] = useState('1');
   const [selected, setSelected] = useState<Category[]>(Object.keys(categories) as Category[]);
-  const range = (value: { from: string; to: string }) =>
+  const history = historyPreset !== 'none';
+  const range = (value: Range) =>
     `${value.from || 'Choose a start date'} through ${value.to || 'choose an end date'}`;
   return (
     <div className="connection-access">
-      <fieldset className="connection-capability">
-        <legend>
-          <label className="checkbox-row">
-            <Checkbox
-              name="allowHistory"
-              checked={history}
-              onCheckedChange={(value) => setHistory(value === true)}
-            />
-            Read my history
-          </label>
-        </legend>
-        <p className="muted-text">Let your assistant understand long-term patterns.</p>
+      <div className="connection-scope">
+        <Field label="How much history can your assistant read?">
+          <NativeSelect
+            value={historyPreset}
+            onChange={(event) => {
+              const value = event.target.value;
+              setHistoryPreset(value);
+              if (value !== 'none' && value !== 'custom')
+                setHistoryRange({
+                  from:
+                    value === '4weeks'
+                      ? addDays(today, -27)
+                      : historyAnniversaryStart(today, value === '1' ? 1 : 5),
+                  to: today,
+                });
+            }}
+          >
+            <option value="4weeks">Last 4 weeks</option>
+            <option value="1">Last year</option>
+            <option value="5">Last 5 years</option>
+            <option value="custom">Custom dates</option>
+            <option value="none">None</option>
+          </NativeSelect>
+        </Field>
         {history && (
-          <div className="connection-scope">
+          <>
+            <input type="hidden" name="allowHistory" value="on" />
             <DateRange
               kind="history"
-              today={today}
-              error={errors.history}
+              custom={historyPreset === 'custom'}
               range={historyRange}
               onRange={setHistoryRange}
             />
-            <details className="connection-customize">
-              <summary>
-                <ChevronRight size={16} aria-hidden="true" />
-                Customize shared data
-              </summary>
+          </>
+        )}
+        <ErrorMessage error={errors.history ?? null} />
+      </div>
+      <div className="connection-scope">
+        <Field label="Can it suggest training changes?">
+          <NativeSelect
+            value={planning ? 'yes' : 'no'}
+            onChange={(event) => setPlanning(event.target.value === 'yes')}
+          >
+            <option value="yes">Yes, for me to review</option>
+            <option value="no">No, analysis only</option>
+          </NativeSelect>
+        </Field>
+        {planning && (
+          <>
+            <input type="hidden" name="allowPlanning" value="on" />
+            <Field label="Proposal period">
+              <NativeSelect
+                value={planningPreset}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setPlanningPreset(value);
+                  if (value !== 'custom')
+                    setPlanningRange({
+                      from: today,
+                      to:
+                        value === 'year'
+                          ? addCalendarYears(today, 1)
+                          : addDays(today, value === 'short' ? 13 : 83),
+                    });
+                }}
+              >
+                <option value="short">Next 2 weeks</option>
+                <option value="12weeks">Next 12 weeks</option>
+                <option value="year">Next year</option>
+                <option value="custom">Custom dates</option>
+              </NativeSelect>
+            </Field>
+            <DateRange
+              kind="planning"
+              custom={planningPreset === 'custom'}
+              range={planningRange}
+              onRange={setPlanningRange}
+            />
+            <p className="form-footnote">
+              Your assistant can also read existing training and context in this period.
+            </p>
+            <ErrorMessage error={errors.planning ?? null} />
+          </>
+        )}
+      </div>
+      <ErrorMessage error={errors.capabilities ?? null} />
+      {(history || planning) && (
+        <details className="connection-customize">
+          <summary>
+            <ChevronRight size={16} aria-hidden="true" />
+            Customize shared data
+          </summary>
+          {history && (
+            <fieldset>
+              <legend>History data</legend>
               {(Object.keys(categories) as Category[]).map((category) => (
                 <label className="checkbox-row" key={category}>
                   <Checkbox
@@ -185,41 +210,16 @@ export function ConnectionAccess({
                   checked={historyNotes}
                   onCheckedChange={(value) => setHistoryNotes(value === true)}
                 />
-                Include private notes in historical review
+                Include private notes in history
               </label>
-            </details>
-          </div>
-        )}
-      </fieldset>
-      <fieldset className="connection-capability">
-        <legend>
-          <label className="checkbox-row">
-            <Checkbox
-              name="allowPlanning"
-              checked={planning}
-              onCheckedChange={(value) => setPlanning(value === true)}
-            />
-            Suggest training changes
-          </label>
-        </legend>
-        <p className="muted-text">Nothing changes until you review and apply the proposal.</p>
-        {planning && (
-          <div className="connection-scope">
-            <DateRange
-              kind="planning"
-              today={today}
-              error={errors.planning}
-              range={planningRange}
-              onRange={setPlanningRange}
-            />
-            <details className="connection-customize">
-              <summary>
-                <ChevronRight size={16} aria-hidden="true" />
-                Customize shared data
-              </summary>
+            </fieldset>
+          )}
+          {planning && (
+            <fieldset>
+              <legend>Proposal context</legend>
               <p>
-                Planning shares profile, goals, availability, zones, training, events, injuries,
-                activities and health within these dates.
+                Profile, goals, availability, zones, training, events, injuries, activities and
+                health in the proposal period.
               </p>
               <label className="checkbox-row">
                 <Checkbox
@@ -227,13 +227,12 @@ export function ConnectionAccess({
                   checked={planningNotes}
                   onCheckedChange={(value) => setPlanningNotes(value === true)}
                 />
-                Include private plan, workout, interval, completion, and calendar notes
+                Include private notes in the proposal period
               </label>
-            </details>
-          </div>
-        )}
-      </fieldset>
-      <ErrorMessage error={errors.capabilities ?? null} />
+            </fieldset>
+          )}
+        </details>
+      )}
       <Field label="Access expires after">
         <NativeSelect
           name="expiresInHours"
@@ -246,10 +245,10 @@ export function ConnectionAccess({
         </NativeSelect>
       </Field>
       <section className="connection-receipt" aria-label="Access summary" aria-live="polite">
-        <h2>Your assistant’s access</h2>
+        <h2>Before you approve</h2>
         <dl>
           <div>
-            <dt>History</dt>
+            <dt>Read history</dt>
             <dd>
               {history ? (
                 <>
@@ -257,30 +256,32 @@ export function ConnectionAccess({
                   <br />
                   {selected.length
                     ? selected.map((category) => categories[category]).join(' · ')
-                    : 'Select at least one data category.'}
+                    : 'Select at least one history category.'}
                   <br />
                   Private notes: {historyNotes ? 'included' : 'excluded'} · Weeks start{' '}
                   {weekStartsOn === 0 ? 'Sunday' : 'Monday'}
                 </>
+              ) : planning ? (
+                'Only the proposal period, shown below.'
               ) : (
-                'Not shared'
+                'No history selected.'
               )}
             </dd>
           </div>
           <div>
-            <dt>Proposals</dt>
+            <dt>Propose changes</dt>
             <dd>
               {planning ? (
                 <>
                   {range(planningRange)}
                   <br />
-                  Profile, goals, availability, zones, training, events, injuries, activities and
-                  health.
+                  Can also read profile, goals, availability, zones, training, events, injuries,
+                  activities and health in this period.
                   <br />
                   Private notes: {planningNotes ? 'included' : 'excluded'}
                 </>
               ) : (
-                'Not permitted'
+                'Not permitted. Analysis only.'
               )}
             </dd>
           </div>
@@ -293,10 +294,10 @@ export function ConnectionAccess({
         </dl>
         <p>
           {planning
-            ? 'You must review and explicitly apply every proposal in Athlete Panel.'
+            ? 'Only you can apply changes, after reviewing the exact proposal in Agent workspace.'
             : history
-              ? 'This connection is read-only. Proposal submission is not permitted.'
-              : 'Choose at least one permission to connect.'}
+              ? 'This connection is read-only. It cannot submit proposals or change your training.'
+              : 'Choose a history period or allow training proposals to connect.'}
         </p>
       </section>
       <p className="form-footnote">

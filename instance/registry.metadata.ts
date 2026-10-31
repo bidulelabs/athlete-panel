@@ -256,12 +256,12 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "2.1.1",
+    "version": "2.1.2",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "hostApi": "^1.2.0",
       "dependencies": {
         "training": "^2.1.0",

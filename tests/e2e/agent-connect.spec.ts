@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { addDays } from '../../plugins/training/dates';
 import { isolatedDatabaseUrl } from '../support/test-database';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -94,6 +96,34 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     expect(await context.done).toBe(0);
     const exported = JSON.parse(await readFile(join(directory, 'context.json'), 'utf8'));
     expect(exported.scope.includeNotes).toBe(false);
+    const headers = { Authorization: `Bearer ${saved.token}` };
+    const discovery = await page.request.post('/api/agent/history-discover', { headers, data: {} });
+    expect(discovery.ok()).toBe(true);
+    const readScope = (await discovery.json()).scope;
+    expect(readScope.to).toBe(exported.scope.from);
+    expect(readScope.from).toBe(addDays(exported.scope.from, -27));
+    expect(exported.scope.to).toBe(addDays(exported.scope.from, 13));
+    // Reading yesterday must not authorize a proposal for yesterday.
+    const outOfScope = await page.request.post('/api/agent/propose', {
+      headers,
+      data: {
+        summary: 'Synthetic history must not widen proposals',
+        contextDigest: exported.contextDigest,
+        idempotencyKey: randomUUID(),
+        commands: [
+          {
+            action: 'workout.create',
+            values: {
+              title: 'Outside proposal dates',
+              sport: 'running',
+              schedule: { kind: 'independent', date: addDays(exported.scope.from, -1) },
+            },
+          },
+        ],
+      },
+    });
+    expect(outOfScope.ok()).toBe(false);
+    expect((await outOfScope.json()).error.code).toBe('out_of_scope');
     await page.getByRole('button', { name: 'Back to Agent workspace' }).click();
     const row = page.locator('.proposal-row').filter({ hasText: label });
     await row.getByRole('button', { name: 'Disconnect', exact: true }).click();

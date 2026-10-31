@@ -53,8 +53,8 @@ export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
         <ol>
           <li>Type the approval code shown in your terminal.</li>
           <li>
-            Choose historical review, training proposals or both, their separate dates, notes access
-            and expiry.
+            Choose how much history to share and whether your assistant can suggest changes. Review
+            the separate dates, shared data and expiry before approving.
           </li>
           <li>
             Ask your agent to read the training-planning skill linked in AGENTS.md and propose your
@@ -133,7 +133,8 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
               const allowHistory = form.get('allowHistory') === 'on';
               const allowPlanning = form.get('allowPlanning') === 'on';
               if (!allowHistory && !allowPlanning)
-                errors.capabilities = 'Choose history, training proposals, or both to connect.';
+                errors.capabilities =
+                  'Choose a history period or allow training proposals to connect.';
               if (allowPlanning) {
                 const checked = planningScopeSchema.safeParse({
                   from: String(form.get('from')),

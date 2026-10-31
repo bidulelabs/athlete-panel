@@ -127,29 +127,6 @@
   display: grid;
   gap: 24px;
 }
-.connection-capability {
-  min-width: 0;
-  border: 0;
-  padding: 0;
-}
-.connection-capability + .connection-capability {
-  border-top: 1px solid var(--line);
-  padding-top: 24px;
-}
-.connection-capability legend {
-  float: left;
-  width: 100%;
-}
-.connection-capability > p {
-  clear: both;
-  margin: 0 0 12px;
-}
-.connection-capability legend .checkbox-row {
-  min-height: 44px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text);
-}
 .connection-scope {
   display: grid;
   gap: 8px;
@@ -167,6 +144,17 @@
 }
 .connection-customize[open] > summary svg {
   transform: rotate(90deg);
+}
+.connection-customize fieldset {
+  min-width: 0;
+  border: 0;
+  padding: 12px 0 0;
+}
+.connection-customize legend {
+  font-weight: 600;
+}
+.connection-customize fieldset p {
+  margin: 8px 0;
 }
 .connection-customize .checkbox-row {
   min-height: 44px;
@@ -186,7 +174,7 @@
 }
 .connection-receipt dl > div {
   display: grid;
-  grid-template-columns: 90px minmax(0, 1fr);
+  grid-template-columns: 110px minmax(0, 1fr);
   gap: 16px;
 }
 .connection-receipt dt {

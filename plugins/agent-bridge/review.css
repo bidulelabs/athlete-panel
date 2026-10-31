@@ -108,3 +108,17 @@
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
+
+.proposal-week > details > summary {
+  cursor: pointer;
+  min-height: 44px;
+}
+.proposal-week > details > summary h4 {
+  flex: 1;
+}
+.proposal-week-chevron {
+  flex-shrink: 0;
+}
+.proposal-week > details[open] > summary .proposal-week-chevron {
+  transform: rotate(90deg);
+}

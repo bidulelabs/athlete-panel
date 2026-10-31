@@ -10,6 +10,7 @@ import {
   activitySchema,
   healthRecordSchema,
   dateSchema,
+  agentConnectionStatusSchema,
 } from './domain';
 import { onboardingSchema } from './onboarding';
 import { garminConnectionSchema } from './garmin-connection';
@@ -85,22 +86,18 @@ export const proposalSummarySchema = z.object({
   status: z.enum(['pending', 'applied', 'rejected']),
   digest: z.string(),
   createdAt: z.iso.datetime(),
-  changes: z.array(entityChangeSchema),
+  changes: z.array(entityChangeSchema).default([]),
+  affectedCount: z.number().int().nonnegative().optional(),
+  dateBounds: z.object({ from: dateSchema.nullable(), to: dateSchema.nullable() }).optional(),
   summary: z.string(),
   warnings: z.array(
     z.union([z.string(), z.object({ message: z.string().optional() }).passthrough()]),
   ),
 });
 export type ProposalSummary = z.infer<typeof proposalSummarySchema>;
-export const grantSummarySchema = z.object({
-  id: z.uuid(),
-  label: z.string(),
-  expiresAt: z.iso.datetime(),
-  revoked: z.boolean(),
-  from: dateSchema,
-  to: dateSchema,
-  includeNotes: z.boolean(),
-});
+export const grantSummarySchema = agentConnectionStatusSchema.shape.grant
+  .unwrap()
+  .and(z.object({ revoked: z.boolean() }));
 export type GrantSummary = z.infer<typeof grantSummarySchema>;
 export const auditEntrySchema = z.object({
   id: z.uuid(),

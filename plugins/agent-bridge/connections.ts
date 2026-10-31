@@ -5,7 +5,8 @@ import {
   agentConnectionIdSchema,
   agentConnectionStartSchema,
   agentConnectionStatusSchema,
-  agentScopeSchema,
+  grantScopeSchema,
+  scopeFromGrant,
   type AgentConnectionStatus,
 } from '../../packages/contracts/src';
 import { connection, transaction, type Transaction } from '../../packages/host/src/db';
@@ -65,7 +66,7 @@ async function publicStatus(row: ConnectionRow, tx: Transaction): Promise<AgentC
       grant = {
         id: stored.id,
         label: stored.label,
-        ...agentScopeSchema.parse(stored.scope),
+        ...grantScopeSchema.parse(stored.scope),
         expiresAt: stored.expires_at.toISOString(),
       };
   }
@@ -120,7 +121,7 @@ export async function approveConnection(body: unknown) {
       'This connection request is no longer pending.',
       409,
     );
-    const scope = agentScopeSchema.parse(input),
+    const scope = scopeFromGrant(input),
       id = randomUUID();
     const expiresAt = new Date(Date.now() + input.expiresInHours * 3600000).toISOString();
     await tx`insert into host.grants(id,token_hash,label,scope,expires_at) values(${id},${row.token_hash},${input.label},${tx.json(scope)},${expiresAt})`;

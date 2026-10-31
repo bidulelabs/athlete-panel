@@ -3,10 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
   agentCommandsSchema,
-  agentScopeSchema,
+  grantScopeSchema,
+  scopeFromGrant,
+  planningScope,
   agentGrantValuesSchema,
   type Command,
   proposalApplyInputSchema,
+  proposalSummarySchema,
+  proposalExpiresAt,
 } from '../../packages/contracts/src';
 import { connection, transaction, type Transaction } from '../../packages/host/src/db';
 import { canonical, digest, randomToken } from '../../packages/host/src/crypto';
@@ -25,11 +29,10 @@ import {
   assertBounded,
 } from './proposal-validation';
 import { evaluateProposal, reviewProposal } from './proposal-review';
-const scopeSchema = agentScopeSchema;
 
 export async function createGrant(body: unknown) {
   const input = agentGrantValuesSchema.parse(body);
-  const scope = scopeSchema.parse(input);
+  const scope = scopeFromGrant(input);
   const id = randomUUID(),
     token = randomToken();
   const expiresAt = new Date(Date.now() + input.expiresInHours * 3600000).toISOString();
@@ -45,9 +48,12 @@ export async function revokeGrant(body: unknown) {
   });
   return { ok: true };
 }
-async function grantForToken(token: string, tx: Transaction | ReturnType<typeof connection>) {
+export async function grantForToken(
+  token: string,
+  tx: Transaction | ReturnType<typeof connection>,
+) {
   const [grant] =
-    await tx`select * from host.grants where token_hash=${digest(token)} and revoked=false and expires_at>now()`;
+    await tx`select * from host.grants where token_hash=${digest(token)} and revoked=false and expires_at>clock_timestamp()`;
   assert(grant, 'invalid_grant', 'This agent grant is expired or revoked.', 401);
   return grant;
 }
@@ -55,7 +61,13 @@ export async function contextForToken(token: string) {
   const candidate = await grantForToken(token, connection());
   return transaction(async (tx) => {
     const grant = await grantForToken(token, tx),
-      scope = scopeSchema.parse(grant.scope);
+      scope = planningScope(grantScopeSchema.parse(grant.scope));
+    assert(
+      scope,
+      'forbidden',
+      'This connection has no training proposal permission. Approve planning access in the browser.',
+      403,
+    );
     assert(
       grant.id === candidate.id,
       'invalid_grant',
@@ -105,7 +117,13 @@ export async function submitProposal(token: string, body: unknown) {
     .parse(body);
   return transaction(async (tx) => {
     const grant = await grantForToken(token, tx),
-      scope = scopeSchema.parse(grant.scope);
+      scope = planningScope(grantScopeSchema.parse(grant.scope));
+    assert(
+      scope,
+      'forbidden',
+      'This connection has no training proposal permission. Approve planning access in the browser.',
+      403,
+    );
     assert(
       grant.id === candidate.id,
       'invalid_grant',
@@ -196,7 +214,7 @@ export async function submitProposal(token: string, body: unknown) {
             summary: input.summary,
           }),
         );
-        await tx`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest) values(${id},${grant.id},'pending',${input.summary},${tx.json(commands as never)},${tx.json(result.changes as never)},${tx.json({ version: 2, scope, digest: input.contextDigest, snapshot: context } as never)},${proposalDigest})`;
+        await tx`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest) values(${id},${grant.id},'pending',${input.summary},${tx.json(commands as never)},${tx.json(result.changes as never)},${tx.json({ version: 'version' in grant.scope ? 3 : 2, scope, digest: input.contextDigest, snapshot: context } as never)},${proposalDigest})`;
         return {
           id,
           digest: proposalDigest,
@@ -249,3 +267,19 @@ export async function rejectProposal(body: unknown) {
   return { ok: true };
 }
 export { undoChange, reviewProposal };
+
+/** Owner-only detail operation; the external grant adapter does not expose it. */
+export async function proposalDetails(body: unknown) {
+  const { id } = z.object({ id: z.uuid() }).parse(body);
+  const rows =
+    await connection()`select id,status,digest,created_at,summary,changes from host.proposals where id=${id}`;
+  const row = rows[0];
+  assert(row, 'not_found', 'This proposal is unavailable.', 404);
+  return proposalSummarySchema.parse({
+    ...row,
+    createdAt: row.created_at.toISOString(),
+    expiresAt: proposalExpiresAt(row.created_at),
+    affectedCount: row.changes.length,
+    warnings: [],
+  });
+}

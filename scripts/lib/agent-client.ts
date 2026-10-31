@@ -1,3 +1,4 @@
+import { runHistoryCli } from './agent-history';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
@@ -8,6 +9,7 @@ import { parseArgs } from 'node:util';
 import { z } from 'zod';
 import {
   agentConnectionStartedSchema,
+  describeAgentAccess,
   agentConnectionStatusSchema,
 } from '../../packages/contracts/src';
 
@@ -93,8 +95,11 @@ async function request(
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: options.signal
-        ? AbortSignal.any([options.signal, AbortSignal.timeout(10000)])
-        : AbortSignal.timeout(10000),
+        ? AbortSignal.any([
+            options.signal,
+            AbortSignal.timeout(path.startsWith('history-') || path === 'propose' ? 60000 : 10000),
+          ])
+        : AbortSignal.timeout(path.startsWith('history-') || path === 'propose' ? 60000 : 10000),
     });
   } catch {
     if (options.signal?.aborted) throw new Error('Connection cancelled.');
@@ -212,7 +217,7 @@ async function connect(origin: string, configPath: string, label: string, noOpen
       );
       saved = true;
       console.log(
-        `\nConnected. Your credential was saved privately.\nAccess: ${status.grant.from} through ${status.grant.to}; ${status.grant.includeNotes ? 'private notes included' : 'private notes excluded'}.\nExpires: ${new Date(status.grant.expiresAt).toLocaleString()}.\n\nAsk your agent to read the training-planning skill linked in AGENTS.md and propose your training changes. Review and apply proposals in Athlete Panel.`,
+        `\nConnected. Your credential was saved privately.\n${describeAgentAccess(status.grant).join('\n')}\nExpires: ${new Date(status.grant.expiresAt).toLocaleString()}.\n\nAsk your agent to read the training-planning skill linked in AGENTS.md and propose your training changes. Review and apply proposals in Athlete Panel.`,
       );
       return;
     }
@@ -255,6 +260,19 @@ export async function runAgentCli(args: string[]) {
       out: { type: 'string' },
       file: { type: 'string' },
       help: { type: 'boolean' },
+      from: { type: 'string' },
+      to: { type: 'string' },
+      category: { type: 'string' },
+      sport: { type: 'string' },
+      subgroup: { type: 'string' },
+      metric: { type: 'string' },
+      period: { type: 'string' },
+      limit: { type: 'string' },
+      section: { type: 'string' },
+      'record-id': { type: 'string' },
+      'review-file': { type: 'string' },
+      'after-file': { type: 'string' },
+      all: { type: 'boolean' },
     },
   });
   const action = positionals[0];
@@ -262,9 +280,15 @@ export async function runAgentCli(args: string[]) {
     console.log(
       'pnpm agent connect [--url <instance>] [--label <name>] [--no-open]\npnpm agent context --out <file>\npnpm agent propose --file <file>\nAdvanced: pnpm agent configure --url <instance> --token-stdin',
     );
+    console.log(
+      'pnpm agent history discover|summary|records|context [--from YYYY-MM-DD --to YYYY-MM-DD] [--period month|week] [--category activities|health|workouts|plans|notes|events|injuries|coverage] [--sport <group> --subgroup <type>] [--metric <metric>] [--review-file <file>] [--after-file <file>] [--limit 1..200] [--record-id <uuid> --section steps|exercises] [--all --out <file>]',
+    );
     return;
   }
-  if (positionals.length !== 1 || !['connect', 'configure', 'context', 'propose'].includes(action))
+  if (
+    positionals.length !== (action === 'history' ? 2 : 1) ||
+    !['connect', 'configure', 'context', 'propose', 'history'].includes(action)
+  )
     throw new Error(
       'Use pnpm agent connect, context, propose, or configure. See pnpm agent --help.',
     );
@@ -307,6 +331,15 @@ export async function runAgentCli(args: string[]) {
   if (!config) throw new Error('No agent connection is configured. Run pnpm agent connect first.');
   if (config.expiresAt && Date.parse(config.expiresAt) <= Date.now())
     throw new Error('Agent access expired. Run pnpm agent connect to approve fresh access.');
+  if (action === 'history') {
+    await runHistoryCli(
+      positionals[1],
+      values,
+      (path, body) => request(config.url, path, { token: config.token, body }),
+      savePrivateFile,
+    );
+    return;
+  }
   if (action === 'propose' && !values.file)
     throw new Error('Use pnpm agent propose --file <proposal.json>.');
   const payload =

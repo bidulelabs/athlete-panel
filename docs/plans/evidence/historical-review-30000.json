@@ -1,0 +1,682 @@
+{
+  "generatedAt": "2026-10-31T14:08:11.994Z",
+  "dataset": {
+    "days": 1827,
+    "activities": 5481,
+    "health": 20219,
+    "workouts": 5481,
+    "plans": 1,
+    "profiles": 1,
+    "coverageWindows": 28,
+    "total": 31211
+  },
+  "requested": 30000,
+  "seedMs": 1659.1585,
+  "environment": {
+    "node": "v22.22.0",
+    "postgres": "PostgreSQL 17.11 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "platform": "darwin",
+    "release": "27.2.0",
+    "arch": "arm64",
+    "cpu": "Apple M4 Pro",
+    "cpuCount": 14,
+    "systemMemoryBytes": 51539607552
+  },
+  "measurements": {
+    "discovery": {
+      "runs": 10,
+      "timingsMs": [
+        228.1731249999998,
+        205.27420900000016,
+        194.8304589999998,
+        196.82674999999972,
+        193.5528330000002,
+        191.90220799999997,
+        192.09604100000024,
+        190.17333400000007,
+        191.113875,
+        192.34129200000007
+      ],
+      "responseBytes": [
+        1946,
+        1946,
+        1946,
+        1946,
+        1946,
+        1946,
+        1946,
+        1946,
+        1946,
+        1946
+      ],
+      "queryCounts": [
+        27,
+        27,
+        27,
+        27,
+        27,
+        27,
+        27,
+        27,
+        27,
+        27
+      ],
+      "firstMs": 228.1731249999998,
+      "warmP50Ms": 192.34129200000007,
+      "warmP95Ms": 205.27420900000016,
+      "maxBytes": 1946,
+      "queriesPerCall": [
+        27
+      ],
+      "rssBefore": 169852928,
+      "peakRss": 186073088,
+      "heapBefore": 21530952,
+      "peakHeap": 40604136
+    },
+    "fiveYearMonthlyFirstPage": {
+      "runs": 10,
+      "timingsMs": [
+        627.919875,
+        588.5033330000006,
+        585.5868340000006,
+        587.8442919999998,
+        592.8284169999997,
+        602.4550829999998,
+        583.2965839999997,
+        587.8880420000005,
+        590.7522079999999,
+        585.8252499999999
+      ],
+      "responseBytes": [
+        133479,
+        133479,
+        133479,
+        133479,
+        133479,
+        133479,
+        133479,
+        133479,
+        133479,
+        133479
+      ],
+      "queryCounts": [
+        49,
+        49,
+        49,
+        49,
+        49,
+        49,
+        49,
+        49,
+        49,
+        49
+      ],
+      "firstMs": 627.919875,
+      "warmP50Ms": 587.8880420000005,
+      "warmP95Ms": 602.4550829999998,
+      "maxBytes": 133479,
+      "queriesPerCall": [
+        49
+      ],
+      "rssBefore": 186073088,
+      "peakRss": 261980160,
+      "heapBefore": 30555304,
+      "peakHeap": 131783384
+    },
+    "selectedMonthRecords": {
+      "runs": 10,
+      "timingsMs": [
+        5.951375000000553,
+        5.249207999999271,
+        6.24829200000022,
+        5.587999999999738,
+        5.395667000000685,
+        4.908166999999594,
+        4.8165420000004815,
+        4.87158399999862,
+        5.367000000000189,
+        5.922582999999577
+      ],
+      "responseBytes": [
+        14129,
+        14129,
+        14129,
+        14129,
+        14129,
+        14129,
+        14129,
+        14129,
+        14129,
+        14129
+      ],
+      "queryCounts": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "firstMs": 5.951375000000553,
+      "warmP50Ms": 5.367000000000189,
+      "warmP95Ms": 6.24829200000022,
+      "maxBytes": 14129,
+      "queriesPerCall": [
+        16
+      ],
+      "rssBefore": 256851968,
+      "peakRss": 256851968,
+      "heapBefore": 86302360,
+      "peakHeap": 90338336
+    },
+    "nextDetailPage": {
+      "runs": 10,
+      "timingsMs": [
+        8.127333999998882,
+        7.876667000000452,
+        8.231458000000202,
+        8.155042000000321,
+        8.058458000001337,
+        7.471999999999753,
+        7.632750000000669,
+        7.7484170000007,
+        8.485499999998865,
+        8.895999999998821
+      ],
+      "responseBytes": [
+        43854,
+        43854,
+        43854,
+        43854,
+        43854,
+        43854,
+        43854,
+        43854,
+        43854,
+        43854
+      ],
+      "queryCounts": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+      ],
+      "firstMs": 8.127333999998882,
+      "warmP50Ms": 8.058458000001337,
+      "warmP95Ms": 8.895999999998821,
+      "maxBytes": 43854,
+      "queriesPerCall": [
+        16
+      ],
+      "rssBefore": 256114688,
+      "peakRss": 256114688,
+      "heapBefore": 89566256,
+      "peakHeap": 93387776
+    },
+    "annualValidationAndStorage": {
+      "runs": 1,
+      "timingsMs": [
+        7551.248042000001
+      ],
+      "responseBytes": [
+        23943
+      ],
+      "queryCounts": [
+        17
+      ],
+      "firstMs": 7551.248042000001,
+      "warmP50Ms": null,
+      "warmP95Ms": null,
+      "maxBytes": 23943,
+      "queriesPerCall": [
+        17
+      ],
+      "rssBefore": 265109504,
+      "peakRss": 265207808,
+      "heapBefore": 97811808,
+      "peakHeap": 107291448
+    },
+    "annualReview": {
+      "runs": 3,
+      "timingsMs": [
+        7775.846666999998,
+        7518.784666,
+        7485.7771250000005
+      ],
+      "responseBytes": [
+        233,
+        233,
+        233
+      ],
+      "queryCounts": [
+        13,
+        13,
+        13
+      ],
+      "firstMs": 7775.846666999998,
+      "warmP50Ms": 7518.784666,
+      "warmP95Ms": 7518.784666,
+      "maxBytes": 233,
+      "queriesPerCall": [
+        13
+      ],
+      "rssBefore": 263389184,
+      "peakRss": 301268992,
+      "heapBefore": 40049864,
+      "peakHeap": 91027496
+    },
+    "annualDetailLoad": {
+      "runs": 3,
+      "timingsMs": [
+        6.568834000005154,
+        5.747957999999926,
+        3.757791999996698
+      ],
+      "responseBytes": [
+        151351,
+        151351,
+        151351
+      ],
+      "queryCounts": [
+        1,
+        1,
+        1
+      ],
+      "firstMs": 6.568834000005154,
+      "warmP50Ms": 5.747957999999926,
+      "warmP95Ms": 5.747957999999926,
+      "maxBytes": 151351,
+      "queriesPerCall": [
+        1
+      ],
+      "rssBefore": 301285376,
+      "peakRss": 301744128,
+      "heapBefore": 63181656,
+      "peakHeap": 65957216
+    },
+    "annualApply": {
+      "runs": 1,
+      "timingsMs": [
+        7738.1649160000015
+      ],
+      "responseBytes": [
+        151157
+      ],
+      "queryCounts": [
+        1481
+      ],
+      "firstMs": 7738.1649160000015,
+      "warmP50Ms": null,
+      "warmP95Ms": null,
+      "maxBytes": 151157,
+      "queriesPerCall": [
+        1481
+      ],
+      "rssBefore": 302432256,
+      "peakRss": 305872896,
+      "heapBefore": 71047256,
+      "peakHeap": 71368512
+    },
+    "annualUndo": {
+      "runs": 1,
+      "timingsMs": [
+        396.06495800000266
+      ],
+      "responseBytes": [
+        151105
+      ],
+      "queryCounts": [
+        748
+      ],
+      "firstMs": 396.06495800000266,
+      "warmP50Ms": null,
+      "warmP95Ms": null,
+      "maxBytes": 151105,
+      "queriesPerCall": [
+        748
+      ],
+      "rssBefore": 305938432,
+      "peakRss": 312770560,
+      "heapBefore": 52548160,
+      "peakHeap": 79336128
+    }
+  },
+  "queryPlan": {
+    "QUERY PLAN": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 0.28,
+          "Total Cost": 8.31,
+          "Plan Rows": 1,
+          "Plan Width": 69,
+          "Actual Startup Time": 0.015,
+          "Actual Total Time": 0.035,
+          "Actual Rows": 31,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 27,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "Plans": [
+            {
+              "Node Type": "Index Scan",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "history_sport_date_id",
+              "Relation Name": "records",
+              "Alias": "records",
+              "Startup Cost": 0.28,
+              "Total Cost": 8.31,
+              "Plan Rows": 1,
+              "Plan Width": 69,
+              "Actual Startup Time": 0.015,
+              "Actual Total Time": 0.033,
+              "Actual Rows": 31,
+              "Actual Loops": 1,
+              "Index Cond": "(((data ->> 'sport'::text) = 'running'::text) AND ((data ->> 'localDate'::text) >= '2025-10-01'::text) AND ((data ->> 'localDate'::text) <= '2025-10-31'::text))",
+              "Rows Removed by Index Recheck": 0,
+              "Shared Hit Blocks": 27,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            }
+          ]
+        },
+        "Planning": {
+          "Shared Hit Blocks": 0,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.075,
+        "Triggers": [],
+        "Execution Time": 0.041
+      }
+    ]
+  },
+  "trainingQueryPlan": {
+    "QUERY PLAN": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 676.44,
+          "Total Cost": 853.68,
+          "Plan Rows": 633,
+          "Plan Width": 101,
+          "Actual Startup Time": 15.662,
+          "Actual Total Time": 20.969,
+          "Actual Rows": 1000,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 459,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "Plans": [
+            {
+              "Node Type": "Result",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 676.44,
+              "Total Cost": 853.68,
+              "Plan Rows": 633,
+              "Plan Width": 101,
+              "Actual Startup Time": 15.662,
+              "Actual Total Time": 20.929,
+              "Actual Rows": 1000,
+              "Actual Loops": 1,
+              "Shared Hit Blocks": 459,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0,
+              "Plans": [
+                {
+                  "Node Type": "Sort",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Startup Cost": 676.44,
+                  "Total Cost": 678.02,
+                  "Plan Rows": 633,
+                  "Plan Width": 1212,
+                  "Actual Startup Time": 15.642,
+                  "Actual Total Time": 15.67,
+                  "Actual Rows": 1000,
+                  "Actual Loops": 1,
+                  "Sort Key": [
+                    "(LEAST(CASE WHEN ((CASE WHEN (r.kind = 'plan'::text) THEN (r.data ->> 'startDate'::text) WHEN (r.kind = 'event'::text) THEN (r.data ->> 'date'::text) WHEN ((r.data #>> '{schedule,kind}'::text[]) = 'independent'::text) THEN (r.data #>> '{schedule,date}'::text[]) WHEN ((p.data ->> 'startDate'::text) IS NOT NULL) THEN (((((p.data ->> 'startDate'::text))::date + ((r.data #>> '{schedule,day}'::text[]))::integer) - 1))::text ELSE NULL::text END >= '2021-10-31'::text) AND (CASE WHEN (r.kind = 'plan'::text) THEN (r.data ->> 'startDate'::text) WHEN (r.kind = 'event'::text) THEN (r.data ->> 'date'::text) WHEN ((r.data #>> '{schedule,kind}'::text[]) = 'independent'::text) THEN (r.data #>> '{schedule,date}'::text[]) WHEN ((p.data ->> 'startDate'::text) IS NOT NULL) THEN (((((p.data ->> 'startDate'::text))::date + ((r.data #>> '{schedule,day}'::text[]))::integer) - 1))::text ELSE NULL::text END <= '2026-10-31'::text)) THEN CASE WHEN (r.kind = 'plan'::text) THEN (r.data ->> 'startDate'::text) WHEN (r.kind = 'event'::text) THEN (r.data ->> 'date'::text) WHEN ((r.data #>> '{schedule,kind}'::text[]) = 'independent'::text) THEN (r.data #>> '{schedule,date}'::text[]) WHEN ((p.data ->> 'startDate'::text) IS NOT NULL) THEN (((((p.data ->> 'startDate'::text))::date + ((r.data #>> '{schedule,day}'::text[]))::integer) - 1))::text ELSE NULL::text END ELSE NULL::text END, CASE WHEN (((r.data #>> '{completion,performedDate}'::text[]) >= '2021-10-31'::text) AND ((r.data #>> '{completion,performedDate}'::text[]) <= '2026-10-31'::text)) THEN (r.data #>> '{completion,performedDate}'::text[]) ELSE NULL::text END))",
+                    "r.id"
+                  ],
+                  "Sort Method": "top-N heapsort",
+                  "Sort Space Used": 1056,
+                  "Sort Space Type": "Memory",
+                  "Shared Hit Blocks": 459,
+                  "Shared Read Blocks": 0,
+                  "Shared Dirtied Blocks": 0,
+                  "Shared Written Blocks": 0,
+                  "Local Hit Blocks": 0,
+                  "Local Read Blocks": 0,
+                  "Local Dirtied Blocks": 0,
+                  "Local Written Blocks": 0,
+                  "Temp Read Blocks": 0,
+                  "Temp Written Blocks": 0,
+                  "Plans": [
+                    {
+                      "Node Type": "Hash Join",
+                      "Parent Relationship": "Outer",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Join Type": "Left",
+                      "Startup Cost": 8.15,
+                      "Total Cost": 646.98,
+                      "Plan Rows": 633,
+                      "Plan Width": 1212,
+                      "Actual Startup Time": 0.024,
+                      "Actual Total Time": 13.95,
+                      "Actual Rows": 5481,
+                      "Actual Loops": 1,
+                      "Inner Unique": true,
+                      "Hash Cond": "((r.data #>> '{schedule,planId}'::text[]) = p.id)",
+                      "Filter": "(((CASE WHEN (r.kind = 'plan'::text) THEN (r.data ->> 'startDate'::text) WHEN (r.kind = 'event'::text) THEN (r.data ->> 'date'::text) WHEN ((r.data #>> '{schedule,kind}'::text[]) = 'independent'::text) THEN (r.data #>> '{schedule,date}'::text[]) WHEN ((p.data ->> 'startDate'::text) IS NOT NULL) THEN (((((p.data ->> 'startDate'::text))::date + ((r.data #>> '{schedule,day}'::text[]))::integer) - 1))::text ELSE NULL::text END >= '2021-10-31'::text) AND (CASE WHEN (r.kind = 'plan'::text) THEN (r.data ->> 'startDate'::text) WHEN (r.kind = 'event'::text) THEN (r.data ->> 'date'::text) WHEN ((r.data #>> '{schedule,kind}'::text[]) = 'independent'::text) THEN (r.data #>> '{schedule,date}'::text[]) WHEN ((p.data ->> 'startDate'::text) IS NOT NULL) THEN (((((p.data ->> 'startDate'::text))::date + ((r.data #>> '{schedule,day}'::text[]))::integer) - 1))::text ELSE NULL::text END <= '2026-10-31'::text)) OR (((r.data #>> '{completion,performedDate}'::text[]) >= '2021-10-31'::text) AND ((r.data #>> '{completion,performedDate}'::text[]) <= '2026-10-31'::text)))",
+                      "Rows Removed by Filter": 0,
+                      "Shared Hit Blocks": 459,
+                      "Shared Read Blocks": 0,
+                      "Shared Dirtied Blocks": 0,
+                      "Shared Written Blocks": 0,
+                      "Local Hit Blocks": 0,
+                      "Local Read Blocks": 0,
+                      "Local Dirtied Blocks": 0,
+                      "Local Written Blocks": 0,
+                      "Temp Read Blocks": 0,
+                      "Temp Written Blocks": 0,
+                      "Plans": [
+                        {
+                          "Node Type": "Seq Scan",
+                          "Parent Relationship": "Outer",
+                          "Parallel Aware": false,
+                          "Async Capable": false,
+                          "Relation Name": "records",
+                          "Alias": "r",
+                          "Startup Cost": 0,
+                          "Total Cost": 525.52,
+                          "Plan Rows": 5481,
+                          "Plan Width": 614,
+                          "Actual Startup Time": 0.003,
+                          "Actual Total Time": 0.692,
+                          "Actual Rows": 5481,
+                          "Actual Loops": 1,
+                          "Filter": "((NOT deleted) AND (kind = 'workout'::text))",
+                          "Rows Removed by Filter": 1,
+                          "Shared Hit Blocks": 457,
+                          "Shared Read Blocks": 0,
+                          "Shared Dirtied Blocks": 0,
+                          "Shared Written Blocks": 0,
+                          "Local Hit Blocks": 0,
+                          "Local Read Blocks": 0,
+                          "Local Dirtied Blocks": 0,
+                          "Local Written Blocks": 0,
+                          "Temp Read Blocks": 0,
+                          "Temp Written Blocks": 0
+                        },
+                        {
+                          "Node Type": "Hash",
+                          "Parent Relationship": "Inner",
+                          "Parallel Aware": false,
+                          "Async Capable": false,
+                          "Startup Cost": 8.14,
+                          "Total Cost": 8.14,
+                          "Plan Rows": 1,
+                          "Plan Width": 603,
+                          "Actual Startup Time": 0.007,
+                          "Actual Total Time": 0.008,
+                          "Actual Rows": 1,
+                          "Actual Loops": 1,
+                          "Hash Buckets": 1024,
+                          "Original Hash Buckets": 1024,
+                          "Hash Batches": 1,
+                          "Original Hash Batches": 1,
+                          "Peak Memory Usage": 9,
+                          "Shared Hit Blocks": 2,
+                          "Shared Read Blocks": 0,
+                          "Shared Dirtied Blocks": 0,
+                          "Shared Written Blocks": 0,
+                          "Local Hit Blocks": 0,
+                          "Local Read Blocks": 0,
+                          "Local Dirtied Blocks": 0,
+                          "Local Written Blocks": 0,
+                          "Temp Read Blocks": 0,
+                          "Temp Written Blocks": 0,
+                          "Plans": [
+                            {
+                              "Node Type": "Index Scan",
+                              "Parent Relationship": "Outer",
+                              "Parallel Aware": false,
+                              "Async Capable": false,
+                              "Scan Direction": "Forward",
+                              "Index Name": "history_plan_start",
+                              "Relation Name": "records",
+                              "Alias": "p",
+                              "Startup Cost": 0.12,
+                              "Total Cost": 8.14,
+                              "Plan Rows": 1,
+                              "Plan Width": 603,
+                              "Actual Startup Time": 0.005,
+                              "Actual Total Time": 0.005,
+                              "Actual Rows": 1,
+                              "Actual Loops": 1,
+                              "Shared Hit Blocks": 2,
+                              "Shared Read Blocks": 0,
+                              "Shared Dirtied Blocks": 0,
+                              "Shared Written Blocks": 0,
+                              "Local Hit Blocks": 0,
+                              "Local Read Blocks": 0,
+                              "Local Dirtied Blocks": 0,
+                              "Local Written Blocks": 0,
+                              "Temp Read Blocks": 0,
+                              "Temp Written Blocks": 0
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "Planning": {
+          "Shared Hit Blocks": 0,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0
+        },
+        "Planning Time": 0.235,
+        "Triggers": [],
+        "Execution Time": 21.068
+      }
+    ]
+  },
+  "annualSnapshot": {
+    "stored_bytes": 844,
+    "json_bytes": 684,
+    "diff_json_bytes": 164224
+  },
+  "processResourceUsage": {
+    "userCPUTime": 43854874,
+    "systemCPUTime": 931113,
+    "maxRSS": 305616,
+    "sharedMemorySize": 0,
+    "unsharedDataSize": 0,
+    "unsharedStackSize": 0,
+    "minorPageFault": 23567,
+    "majorPageFault": 0,
+    "swappedOut": 0,
+    "fsRead": 0,
+    "fsWrite": 0,
+    "ipcSent": 7475,
+    "ipcReceived": 31614,
+    "signalsCount": 0,
+    "voluntaryContextSwitches": 276,
+    "involuntaryContextSwitches": 110220
+  },
+  "limitations": [
+    "Synthetic local database; not production capacity.",
+    "First measured call in each series and subsequent warm calls; discovery starts in a fresh benchmark process. OS/PostgreSQL caches were not forcibly cleared, so this is not a cold-cache measurement.",
+    "Latency measures service execution and JSON serialization, not HTTP/TLS or external model processing.",
+    "Peak RSS includes fixture generation and earlier operations; per-operation samples include before/peak values."
+  ]
+}

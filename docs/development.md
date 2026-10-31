@@ -174,7 +174,7 @@ Run the connection command from the local checkout while Athlete Panel is runnin
 pnpm agent connect
 ```
 
-The command opens the owner approval page. Sign in if necessary, compare its code with your terminal, choose the context dates, optional private notes and access duration, then approve. The CLI saves the credential automatically and reports success. No token is copied into the terminal or model conversation. Agent workspace → Connected agents shows access, expiration and Disconnect.
+The command opens the owner approval page. Sign in if necessary, compare its code with your terminal, choose Historical review, Training proposals or Both, their separate dates/categories, optional private notes and access duration, then approve. History allows up to five calendar years and planning up to one calendar year; expanding either requires fresh approval. The CLI saves the credential automatically and reports success. No token is copied into the terminal or model conversation. Agent workspace → Connected agents shows access, expiration and Disconnect.
 
 The instance defaults to the previously configured URL, then `APP_ORIGIN`, then `http://127.0.0.1:3000`. For a different instance or a terminal without a browser:
 
@@ -192,9 +192,39 @@ pnpm agent context --out /secure/training-context.json
 pnpm agent propose --file /secure/proposal.json
 ```
 
-Configuration defaults to `~/.config/athlete-panel/agent.json`; `ATHLETE_PANEL_AGENT_CONFIG` selects another path. Credentials and exported files are atomically saved with mode 0600 and are not encrypted on the local filesystem. Keep context/proposal files outside Git. Runtime command schemas are documented in the [generated reference](reference/contracts.json). The grant permits context reads and proposal submission only. The owner reviews/applies the exact proposal in the app; there is no CLI apply command or SQL grant.
+Configuration defaults to `~/.config/athlete-panel/agent.json`; `ATHLETE_PANEL_AGENT_CONFIG` selects another path. Credentials and exported files are atomically saved with mode 0600 and are not encrypted on the local filesystem. Keep context/proposal files outside Git. Runtime command schemas are documented in the [generated reference](reference/contracts.json). The grant permits only its explicitly approved historical and/or planning capabilities. Historical-only access cannot submit proposals. The owner reviews/applies the exact proposal in the app; there is no CLI apply command or SQL grant.
 
 Advanced compatibility: an owner-created manual grant can still be configured using `pnpm agent configure --url https://your-instance.example --token-stdin < /secure/agent-grant.txt`. This command refuses interactive terminal input and recommends browser connection instead. Remote connections require HTTPS, credentials are never put in browser URLs, and CLI HTTP requests do not follow redirects.
+
+### Historical review and annual planning commands
+
+Historical ranges include both endpoints and may extend through the fifth calendar anniversary; planning ranges through the first. February 29 anniversaries clamp to February 28 in non-leap years. Existing grants retain their old dates and do not gain history access. Future scheduled records are permitted. The browser captures the current resolved week boundary for the review.
+
+```sh
+pnpm agent connect --label "History and annual planning"
+pnpm agent history discover --out /secure/history.json
+pnpm agent history summary --review-file /secure/history.json --from 2021-10-31 --to 2026-10-31 --period month --all --out /secure/five-years.json
+pnpm agent history summary --review-file /secure/history.json --from 2025-01-01 --to 2025-12-31 --period month --all --out /secure/year.json
+pnpm agent history summary --review-file /secure/history.json --from 2025-10-01 --to 2025-10-31 --period week --all --out /secure/month.json
+pnpm agent history records --review-file /secure/history.json --category activities --sport running --from 2025-10-01 --to 2025-10-31 --limit 100 --out /secure/page-1.json
+pnpm agent history records --after-file /secure/page-1.json --out /secure/page-2.json
+pnpm agent history context --review-file /secure/history.json --out /secure/current-context.json
+```
+
+Approve the example's exact dates/categories in the browser. `history discover` lists available categories/date bounds and supported filters. `history summary` defaults to calendar months; use `--period week` for drill-down. `history records` requires `--category activities|health|workouts|plans|notes|events|injuries|coverage`. Sport/subgroup filters apply only to activities/workouts; `--metric` requires health. Workouts expose counts of prescription parts; use `--record-id UUID --section steps|exercises` to page those parts. Core details are the default. Notes require the corresponding capability's notes permission.
+
+All history commands accept `--review-file` to retain the same source versions. Summary/record pages default to 100 items, permit `--limit 1..200`, and never exceed 1 MiB. `--after-file` reads the previous response's exact query/token/cursor. `--all --out FILE` streams pages into a protected temporary file and replaces the destination only after successful completion. Changed records return `history_changed`: discard the prior review/results and restart discovery. The CLI does not silently mix versions or publish a partial export. Collection-wide invalidation can also occur after an unrelated import/edit. Current-profile context is not historical profile evidence. See the [summary semantics](features/agent-training.md#summary-semantics-and-evidence).
+
+For annual planning use the existing planning context/proposal commands above. One proposal supports 1,500 commands and 4 MiB; oversized requests fail with guidance. Submission does not change training. Review the complete proposal and explicitly apply it in Agent workspace. There is no CLI apply command.
+
+Synthetic performance measurement (requires the explicit loopback `_test` URL from Verification) creates/drops its own temporary database and saves reports in `.runtime/history/`:
+
+```sh
+pnpm exec tsx scripts/benchmark-history.ts 30000
+pnpm exec tsx scripts/benchmark-history.ts 100000
+```
+
+The first fixture contains at least 30,000 representative records spanning five calendar years; the second adds explicitly synthetic activity stress records. Reports include actual counts, environment, first/warm timings, query counts/plans, response bytes, memory and annual proposal timings. Caches are not forcibly cleared; these are local measurements, not production-capacity guarantees.
 
 ## Verification
 

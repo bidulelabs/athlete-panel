@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from 'react';
 import {
   CheckCircle2,
+  ChevronRight,
   Eye,
   FileCheck2,
   KeyRound,
@@ -40,6 +41,7 @@ import {
 } from '@athlete-panel/ui';
 import {
   proposalReviewSchema,
+  describeAgentAccess,
   type ProposalReview,
   type ProposalSummary,
   type Entity,
@@ -129,7 +131,8 @@ export default function AgentBridgePage(_: PluginPageProps) {
                   <div>
                     <strong>{item.summary || 'Training adjustment'}</strong>
                     <p>
-                      {item.changes?.length ?? 0} change{item.changes?.length === 1 ? '' : 's'} ·{' '}
+                      {item.affectedCount ?? item.changes.length} change
+                      {(item.affectedCount ?? item.changes.length) === 1 ? '' : 's'} ·{' '}
                       {new Date(item.createdAt).toLocaleString('en-GB')}
                     </p>
                   </div>
@@ -164,10 +167,9 @@ export default function AgentBridgePage(_: PluginPageProps) {
                 <div className="proposal-row" key={grant.id}>
                   <div>
                     <strong>{grant.label || 'Training agent'}</strong>
-                    <p>
-                      {dateLabel(grant.from)} — {dateLabel(grant.to)} ·{' '}
-                      {grant.includeNotes ? 'Includes notes' : 'Private notes excluded'}
-                    </p>
+                    {describeAgentAccess(grant).map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
                     <p>Expires {new Date(grant.expiresAt).toLocaleString('en-GB')}</p>
                   </div>
                   <Badge className="badge">
@@ -256,10 +258,43 @@ export default function AgentBridgePage(_: PluginPageProps) {
             </p>
           </div>
           {connectOpen && <ConnectAgentDialog onClose={() => setConnectOpen(false)} />}
-          {proposal && <ProposalDialog proposal={proposal} onClose={() => setProposalId(null)} />}
+          {proposal && <ProposalLoader proposal={proposal} onClose={() => setProposalId(null)} />}
         </TabsContent>
       </Tabs>
     </>
+  );
+}
+
+function ProposalLoader({ proposal, onClose }: { proposal: ProposalSummary; onClose: () => void }) {
+  const { request } = useWorkspace();
+  const [details, setDetails] = useState<ProposalSummary | null>(
+    proposal.changes.length ? proposal : null,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setError(null);
+    void request('agent-bridge', 'details', { id: proposal.id })
+      .then((value) => {
+        if (active) setDetails(value);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [proposal.id, request, retry]);
+  if (details) return <ProposalDialog proposal={details} onClose={onClose} />;
+  return (
+    <Modal open onClose={onClose} title="Review proposed changes">
+      <div className="dialog-body">
+        <p role="status">Loading proposed edits…</p>
+        <ErrorMessage error={error} />
+        {error && <Button onClick={() => setRetry((v) => v + 1)}>Retry details</Button>}
+      </div>
+    </Modal>
   );
 }
 
@@ -459,20 +494,23 @@ function ProposedEditsByWeek({
       : 'Plans';
     return (
       <section className="proposal-week" aria-label={title} key={week.weekStart ?? 'undated'}>
-        <div className="proposal-week-heading">
-          <h4>{title}</h4>
-          <span>
-            {week.changes.length} change{week.changes.length === 1 ? '' : 's'}
-          </span>
-        </div>
-        {week.changes.map((change) => (
-          <ReviewChange
-            change={change}
-            planTitles={planTitles}
-            caption="Proposed field changes"
-            key={`${change.entity}:${change.id}`}
-          />
-        ))}
+        <details open={changes.length <= 200}>
+          <summary className="proposal-week-heading">
+            <h4>{title}</h4>
+            <span>
+              {week.changes.length} change{week.changes.length === 1 ? '' : 's'}
+            </span>
+            <ChevronRight className="proposal-week-chevron" size={16} aria-hidden="true" />
+          </summary>
+          {week.changes.map((change) => (
+            <ReviewChange
+              change={change}
+              planTitles={planTitles}
+              caption="Proposed field changes"
+              key={`${change.entity}:${change.id}`}
+            />
+          ))}
+        </details>
       </section>
     );
   });

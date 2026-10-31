@@ -14,7 +14,12 @@ import {
   agentConnectionStatusSchema,
 } from './domain';
 import { onboardingActionSchema, onboardingSchema } from './onboarding';
-import { mutationResponseSchema, coveragePageSchema, grantSummarySchema } from './responses';
+import {
+  mutationResponseSchema,
+  coveragePageSchema,
+  grantSummarySchema,
+  proposalSummarySchema,
+} from './responses';
 const id = z.object({ id: z.uuid() });
 const undo = id.extend({ idempotencyKey: z.uuid() }).strict();
 const ok = z.object({ ok: z.boolean() });
@@ -73,6 +78,7 @@ export const operationContracts = {
     ),
   },
   'agent-bridge': {
+    details: operation(id, proposalSummarySchema),
     grant: operation(
       agentGrantValuesSchema,
       z.object({ grant: grantSummarySchema, token: z.string() }),

@@ -11,6 +11,8 @@ import {
   agentConnectionStartSchema,
   agentConnectionApprovalSchema,
   agentConnectionStatusSchema,
+  historyQuerySchema,
+  historyResponseSchema,
 } from '../packages/contracts/src';
 import { onboardingSchema, onboardingActionSchema } from '../packages/contracts/src/onboarding';
 import { manifestSchema } from '../packages/plugin-sdk/src';
@@ -46,6 +48,10 @@ const output =
       workspace: z.toJSONSchema(workspaceStateSchema, { unrepresentable: 'any' }),
       plugin: z.toJSONSchema(manifestSchema, { unrepresentable: 'any' }),
       agentGrant: z.toJSONSchema(agentGrantValuesSchema, { unrepresentable: 'any' }),
+      history: {
+        request: z.toJSONSchema(historyQuerySchema),
+        response: z.toJSONSchema(historyResponseSchema, { unrepresentable: 'any' }),
+      },
       agentConnection: {
         start: z.toJSONSchema(agentConnectionStartSchema),
         approve: z.toJSONSchema(agentConnectionApprovalSchema, { unrepresentable: 'any' }),

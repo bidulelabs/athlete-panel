@@ -376,18 +376,25 @@ export async function coveragePage(body: unknown) {
   >`select stream,start_date::text as "from",end_date::text as "to",status,records,missing_days as "missingDays",unknown_metrics as "unknownMetrics",error,scan_state as "scanState",scanned_at as "lastScannedAt",rejected_records as "rejectedRecords",diagnostics from garmin.coverage where (${input.filter}='all' or status=${input.filter} or (${input.filter}='rejected' and rejected_records>0)) order by end_date desc,stream,start_date desc limit 50 offset ${input.offset}`;
   return { rows: rows.map(coverageDto), total: count.total, offset: input.offset, limit: 50 };
 }
+const RECENT_IMPORT_WAIT_HOURS_BY_FAILURES = [1, 1, 2, 4, 8, 16, 24];
 export async function scheduleRecent() {
   await transaction(async (tx) => {
     await retireReconciliation(tx);
     const config = await getConfiguration(tx);
     if (!config?.encryptedKey || config.paused) return;
     await tx`update host.jobs set priority=case when kind='garmin-recent' then 30 when payload#>>'{cursor,activityFrom}' is not null then 20 else 10 end where plugin_id='garmin' and kind in ('garmin-recent','garmin-history') and status in ('queued','running','paused','disabled')`;
-    const [last] =
-      await tx`select created_at,status from host.jobs where plugin_id='garmin' and kind='garmin-recent' order by created_at desc limit 1`;
+    const latestRecentJobs = await tx<
+      { created_at: Date; status: string }[]
+    >`select created_at,status from host.jobs where plugin_id='garmin' and kind='garmin-recent' order by created_at desc limit ${RECENT_IMPORT_WAIT_HOURS_BY_FAILURES.length - 1}`;
+    const consecutiveFailures = latestRecentJobs.findIndex((job) => job.status !== 'failed');
+    const waitHours =
+      RECENT_IMPORT_WAIT_HOURS_BY_FAILURES[
+        consecutiveFailures === -1 ? latestRecentJobs.length : consecutiveFailures
+      ]!;
     const profile = await loadProfile(tx);
     if (
-      last?.status !== 'failed' &&
-      (!last || Date.now() - new Date(last.created_at).getTime() >= 60 * 60 * 1000)
+      !latestRecentJobs[0] ||
+      Date.now() - latestRecentJobs[0].created_at.getTime() >= waitHours * 60 * 60 * 1000
     )
       await enqueue(
         tx,

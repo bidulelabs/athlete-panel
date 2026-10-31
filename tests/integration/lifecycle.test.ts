@@ -132,6 +132,18 @@ describe('transactional migration and source lifecycle', () => {
     expect(failed.stderr).toContain(`checksum mismatch: ${first.name}`);
   });
 
+  it.each(['localhost', '127.0.0.1'])(
+    'names the refused address when %s accepts no database connection',
+    (host) => {
+      const failed = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/migrate.ts'], {
+        env: { ...process.env, ADMIN_DATABASE_URL: `postgres://synthetic@${host}:1/athlete_panel` },
+        encoding: 'utf8',
+      });
+      expect(failed.status).toBe(1);
+      expect(failed.stderr.trim().split('\n').at(-1)).toContain('ECONNREFUSED 127.0.0.1:1');
+    },
+  );
+
   it('verifies retained migration files even after their plugin leaves the active composition', async () => {
     await migrate(root);
     const file = 'personal-plugins/retired-fixture/migrations/001.sql';

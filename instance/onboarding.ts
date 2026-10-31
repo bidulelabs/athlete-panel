@@ -54,14 +54,13 @@ export async function updateOnboarding(body: unknown) {
             'Your settings changed elsewhere. Review the latest values before saving.',
             409,
           );
-          const { id: _id, revision: _revision, ...values } = state.profile ?? {};
           const result = applyCommands(
             state,
             [
               {
                 action: 'profile.set',
                 expectedRevision: input.expectedProfileRevision,
-                values: { ...values, ...input.values },
+                values: input.values,
               },
             ],
             { actor: 'owner' },

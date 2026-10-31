@@ -42,7 +42,7 @@ test('saved week starts align headings, navigation and totals without moving wor
   page,
 }, info) => {
   await login(page);
-  const original = (await state(page)).profile;
+  const original = { weekStartsOnPreference: 'auto', ...(await state(page)).profile };
   const ids = [randomUUID(), randomUUID(), randomUUID()];
   try {
     await mutate(
@@ -143,7 +143,7 @@ test('Automatic follows browser region, while Today follows the athlete timezone
   browser,
 }) => {
   await login(page);
-  const original = (await state(page)).profile;
+  const original = { weekStartsOnPreference: 'auto', ...(await state(page)).profile };
   const { id: _id, revision: _revision, ...values } = original;
   try {
     await mutate(page, [
@@ -188,7 +188,7 @@ test('Automatic follows browser region, while Today follows the athlete timezone
 
 test('failed preference saves retain the choice and allow retry', async ({ page }) => {
   await login(page);
-  const original = (await state(page)).profile;
+  const original = { weekStartsOnPreference: 'auto', ...(await state(page)).profile };
   try {
     await navigate(page, 'Settings');
     await page.getByRole('combobox', { name: /First day of the week/ }).selectOption('sunday');

@@ -1,7 +1,7 @@
 import { createDecipheriv, createHash } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream, rmSync } from 'node:fs';
 import { chmod, cp, mkdir, mkdtemp, open, readFile, readdir, rm, stat } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -110,8 +110,13 @@ export async function verifyBackup(
 ): Promise<{ stage: string; metadata: BackupMetadata; cleanup: () => Promise<void> }> {
   const key = await loadBackupKey(keyFile);
   const stage = await mkdtemp(join(stageParentDirectory, 'athlete-panel-restore-'));
+  const deleteStage = () => rmSync(stage, { recursive: true, force: true });
+  process.once('exit', deleteStage);
   await chmod(stage, 0o700);
-  const cleanup = () => rm(stage, { recursive: true, force: true });
+  const cleanup = async () => {
+    await rm(stage, { recursive: true, force: true });
+    process.off('exit', deleteStage);
+  };
   try {
     const input = await open(file, 'r');
     const size = (await input.stat()).size;
@@ -192,6 +197,11 @@ export async function verifyBackup(
   } finally {
     key.fill(0);
   }
+}
+
+export function exitOnStopSignals() {
+  for (const signalName of ['SIGINT', 'SIGTERM'] as const)
+    process.once(signalName, () => process.exit(128 + constants.signals[signalName]));
 }
 
 export async function restoreBackup(options: RestoreOptions): Promise<BackupMetadata> {
@@ -307,6 +317,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     throw new Error(
       'Usage: pnpm exec tsx scripts/restore.ts <archive.fgr> --confirm-replace --source-dir <new-directory>',
     );
+  exitOnStopSignals();
   const metadata = await restoreBackup({
     file,
     sourceDirectory,

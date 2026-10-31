@@ -57,7 +57,7 @@ import { effectiveDate } from './dates';
 import { InspectorPanel } from './inspector-panel';
 import { WorkoutPrescription } from './prescription';
 import { ExerciseEditor, ExercisePrescription } from './exercises';
-import { distanceFieldText, distanceMetersFromField } from './distance-field';
+import { storedFromUnitField, unitFieldText } from './unit-field';
 
 export async function mutate(
   request: PluginPageProps['request'],
@@ -426,11 +426,12 @@ export function WorkoutEditor({
       sport: rest ? null : sport,
       sportSubgroup: rest ? null : subgroup || null,
       schedule,
-      durationSeconds:
-        rest || values.get('duration') === '' ? null : Number(values.get('duration')) * 60,
+      durationSeconds: rest
+        ? null
+        : storedFromUnitField(values.get('duration'), workout?.durationSeconds, 60),
       distanceMeters: rest
         ? null
-        : distanceMetersFromField(values.get('distance'), workout?.distanceMeters, factor),
+        : storedFromUnitField(values.get('distance'), workout?.distanceMeters, factor),
       plannedElevationGainMeters:
         rest || values.get('elevation') === ''
           ? null
@@ -535,9 +536,7 @@ export function WorkoutEditor({
                   type="number"
                   min="0"
                   step="any"
-                  defaultValue={
-                    workout?.durationSeconds != null ? workout.durationSeconds / 60 : ''
-                  }
+                  defaultValue={unitFieldText(workout?.durationSeconds, 60)}
                   placeholder="Optional"
                 />
               </Field>
@@ -547,7 +546,7 @@ export function WorkoutEditor({
                   type="number"
                   min="0"
                   step="any"
-                  defaultValue={distanceFieldText(workout?.distanceMeters, factor)}
+                  defaultValue={unitFieldText(workout?.distanceMeters, factor)}
                   placeholder="Optional"
                 />
               </Field>
@@ -644,14 +643,18 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
                         : String(fields.get('date')),
                       durationSeconds: linked
                         ? workout.completion!.durationSeconds
-                        : status === 'skipped' || fields.get('duration') === ''
+                        : status === 'skipped'
                           ? null
-                          : Number(fields.get('duration')) * 60,
+                          : storedFromUnitField(
+                              fields.get('duration'),
+                              workout.completion?.durationSeconds,
+                              60,
+                            ),
                       distanceMeters: linked
                         ? workout.completion!.distanceMeters
                         : status === 'skipped'
                           ? null
-                          : distanceMetersFromField(
+                          : storedFromUnitField(
                               fields.get('distance'),
                               workout.completion?.distanceMeters,
                               factor,
@@ -713,11 +716,7 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
                   min="0"
                   step="any"
                   placeholder="Unknown"
-                  defaultValue={
-                    workout.completion?.durationSeconds != null
-                      ? workout.completion.durationSeconds / 60
-                      : ''
-                  }
+                  defaultValue={unitFieldText(workout.completion?.durationSeconds, 60)}
                 />
               </Field>
               <Field label={`Actual distance · ${factor === 1000 ? 'km' : 'mi'}`}>
@@ -728,7 +727,7 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
                   min="0"
                   step="any"
                   placeholder="Unknown"
-                  defaultValue={distanceFieldText(workout.completion?.distanceMeters, factor)}
+                  defaultValue={unitFieldText(workout.completion?.distanceMeters, factor)}
                 />
               </Field>
             </div>

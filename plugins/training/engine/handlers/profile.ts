@@ -13,6 +13,7 @@ export function handleProfile(
       if (command.expectedRevision !== currentRevision)
         fail('STALE_REVISION', 'Profile changed. Reload before saving.');
       state.profile = profileSchema.parse({
+        ...state.profile,
         ...command.values,
         id: 'owner',
         revision: currentRevision ?? 1,

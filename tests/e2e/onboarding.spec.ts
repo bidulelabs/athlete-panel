@@ -196,7 +196,9 @@ test('status and mutations require an owner session and origin; agent pairing is
   expect(rejected.status()).toBe(403);
   await setSetup();
   await page.goto(`/agent?connect=${randomUUID()}`);
-  await expect(page.getByRole('heading', { name: /Connect your training agent/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Connect your training assistant', exact: true }),
+  ).toBeVisible();
   await expect(dialog(page)).not.toBeVisible();
 });
 

@@ -21,5 +21,8 @@
   "capabilities": [],
   "client": "client.tsx",
   "server": "server.ts",
-  "schema": "activity_records"
+  "schema": "activity_records",
+  "public": {
+    "shared": "public/shared.ts"
+  }
 }

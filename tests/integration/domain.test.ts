@@ -1,6 +1,6 @@
 import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type CommandInput } from '@athlete-panel/contracts';
 import { closeDatabase, connection } from '../../packages/host/src/db';
 import { migrate } from '../../packages/host/src/migrations';
@@ -836,6 +836,59 @@ describe('transactional training and external-agent workflow', () => {
       }
     },
   );
+
+  it('keeps the context digest when a health day moves from the daily list into a week', async () => {
+    await save([{ action: 'workout.create', values: workout() as never }]);
+    for (const [index, localDate] of ['2026-10-17', '2026-10-18'].entries()) {
+      const health = {
+        id: id(20 + index),
+        revision: 1,
+        provider: 'garmin',
+        externalId: `555:hrv:${localDate}:hrvMilliseconds`,
+        metric: 'hrvMilliseconds',
+        localDate,
+        measuredAt: null,
+        value: 40 + index * 10,
+      };
+      await connection()`insert into activity_records.records(kind,id,revision,data) values('health',${health.id},1,${connection().json(health)})`;
+    }
+    const grant = await createGrant({ label: 'Two weeks', from: '2026-10-12', to: '2026-10-25' });
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-10-24T12:00:00Z'));
+      const saturday = await contextForToken(grant.token);
+      vi.setSystemTime(new Date('2026-10-25T12:00:00Z'));
+      const sunday = await contextForToken(grant.token);
+      expect(saturday.context.health.map((r) => r.localDate)).toEqual(['2026-10-18']);
+      expect(saturday.context.healthWeeks[0]!.metrics.hrvMilliseconds).toEqual({
+        average: 40,
+        days: 1,
+      });
+      expect(sunday.context.health).toEqual([]);
+      expect(sunday.context.healthWeeks[0]!.metrics.hrvMilliseconds).toEqual({
+        average: 45,
+        days: 2,
+      });
+      expect(sunday.contextDigest).toBe(saturday.contextDigest);
+      await expect(
+        submitProposal(grant.token, {
+          commands: [
+            {
+              action: 'workout.update',
+              id: id(2),
+              expectedRevision: 1,
+              values: { durationSeconds: 1800 },
+            },
+          ],
+          summary: 'Adjust duration',
+          contextDigest: saturday.contextDigest,
+          idempotencyKey: randomUUID(),
+        }),
+      ).resolves.toMatchObject({ status: 'pending' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it('does not disclose excluded notes in proposal submission responses or erase them on apply', async () => {
     const secret = 'Synthetic private note excluded from the grant';

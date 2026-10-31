@@ -104,7 +104,9 @@ export const registry = [
       "required": true,
       "client": "client.tsx",
       "server": "server.ts",
-      "public": {},
+      "public": {
+        "shared": "public/shared.ts"
+      },
       "routes": [
         {
           "path": "/activities",

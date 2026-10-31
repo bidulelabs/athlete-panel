@@ -14,6 +14,8 @@ import { assert } from '../../packages/host/src/errors';
 import { loadWorkspace } from '../../instance/services';
 import { applyCommands } from '../training/public/server';
 import { idempotent, undoChange } from '../training/public/server';
+import { todayInTimeZone } from '../training/public/shared';
+import { recentHealthAndWeeklyAverages } from './health-weeks';
 
 import {
   boundedContext,
@@ -64,7 +66,14 @@ export async function contextForToken(token: string) {
     return {
       version: 1,
       scope,
-      context,
+      context: {
+        ...context,
+        ...recentHealthAndWeeklyAverages(
+          context,
+          scope,
+          todayInTimeZone(context.profile?.timezone),
+        ),
+      },
       contextDigest: digest(canonical(context)),
       expiresAt: grant.expires_at,
     };

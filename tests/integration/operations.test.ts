@@ -615,6 +615,50 @@ syncBuiltinESMExports();
     30000,
   );
 
+  const verifyCommand = () => ['scripts/verify-backup.ts', file];
+  const restoreCommand = (caseName: string) => [
+    'scripts/restore.ts',
+    file,
+    '--confirm-replace',
+    '--source-dir',
+    join(temp, `${caseName}-restored-source`),
+  ];
+
+  it.each([
+    { tool: 'verify-backup', signal: 'SIGINT', exitCode: 130 },
+    { tool: 'verify-backup', signal: 'SIGTERM', exitCode: 143 },
+    { tool: 'restore', signal: 'SIGINT', exitCode: 130 },
+    { tool: 'restore', signal: 'SIGTERM', exitCode: 143 },
+  ] as const)(
+    'deletes the decrypted staging directory when $tool stops on $signal',
+    async ({ tool, signal, exitCode }) => {
+      const caseName = `${tool}-${signal}`;
+      const stopped = await startBackup(
+        caseName,
+        tool === 'restore' ? restoreCommand(caseName) : verifyCommand(),
+        quickPgDumpScript,
+        'open_archive',
+      );
+      await vi.waitFor(
+        async () => expect(await stat(stopped.verificationStartedFile)).toBeTruthy(),
+        { timeout: 20000 },
+      );
+      expect(await stopped.leftoverFiles()).toEqual([
+        expect.stringMatching(/^athlete-panel-restore-/),
+      ]);
+      stopped.child.kill(signal);
+      expect(await stopped.childExitCode).toBe(exitCode);
+      expect(await stopped.leftoverFiles()).toEqual([]);
+    },
+    30000,
+  );
+
+  it('deletes the decrypted staging directory when verify-backup completes', async () => {
+    const completed = await startBackup('verify-completes', verifyCommand(), quickPgDumpScript);
+    expect(await completed.childExitCode).toBe(0);
+    expect(await completed.leftoverFiles()).toEqual([]);
+  }, 30000);
+
   it('deletes both staging directories when the manual backup is forced to exit after 10 s', async () => {
     const backup = await startBackup(
       'forced-exit',

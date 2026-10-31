@@ -1,6 +1,6 @@
 import { runHistoryCli } from './agent-history';
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -273,6 +273,8 @@ export async function runAgentCli(args: string[]) {
       'review-file': { type: 'string' },
       'after-file': { type: 'string' },
       all: { type: 'boolean' },
+      page: { type: 'boolean' },
+      restart: { type: 'boolean' },
     },
   });
   const action = positionals[0];
@@ -281,12 +283,12 @@ export async function runAgentCli(args: string[]) {
       'pnpm agent connect [--url <instance>] [--label <name>] [--no-open]\npnpm agent context --out <file>\npnpm agent propose --file <file>\nAdvanced: pnpm agent configure --url <instance> --token-stdin',
     );
     console.log(
-      'pnpm agent history discover|summary|records|context [--from YYYY-MM-DD --to YYYY-MM-DD] [--period month|week] [--category activities|health|workouts|plans|notes|events|injuries|coverage] [--sport <group> --subgroup <type>] [--metric <metric>] [--review-file <file>] [--after-file <file>] [--limit 1..200] [--record-id <uuid> --section steps|exercises] [--all --out <file>]',
+      'pnpm agent history --out <overview.json> (monthly overview, all pages; automatic review tracking)\npnpm agent history discover|summary|records|context [--from YYYY-MM-DD --to YYYY-MM-DD] [--period month|week] [--category activities|health|workouts|plans|notes|events|injuries|coverage] [--sport <group> --subgroup <type>] [--metric <metric>] [--review-file <file>] [--after-file <file>] [--limit 1..200] [--record-id <uuid> --section steps|exercises] [--page | --all] [--restart] [--out <file>]',
     );
     return;
   }
   if (
-    positionals.length !== (action === 'history' ? 2 : 1) ||
+    (action === 'history' ? positionals.length > 2 : positionals.length !== 1) ||
     !['connect', 'configure', 'context', 'propose', 'history'].includes(action)
   )
     throw new Error(
@@ -337,6 +339,12 @@ export async function runAgentCli(args: string[]) {
       values,
       (path, body) => request(config.url, path, { token: config.token, body }),
       savePrivateFile,
+      {
+        path: `${configPath}.history-review.json`,
+        identity: createHash('sha256')
+          .update(JSON.stringify([config.url, config.token]))
+          .digest('hex'),
+      },
     );
     return;
   }

@@ -20,6 +20,7 @@ backups/
 # Default private agent workflow exports
 context.json
 proposal.json
+*.history-review.json
 
 # Private exports, keys and local database snapshots (never source inputs).
 private-exports/

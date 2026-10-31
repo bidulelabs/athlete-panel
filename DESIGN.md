@@ -214,3 +214,9 @@ Supported narrative fields use shared read-only Markdown typography at 14px/1.7 
 Editors retain the existing textarea and Save actions with a “Markdown supported” hint; no toolbar or preview button is added. Compact clickable cards show plain-text excerpts. Full descriptions and additional injury notes remain separate readable sections. [Training behavior](docs/features/training-workspace.md#markdown-descriptions-and-notes) owns field scope, storage and safety rules.
 
 Markdown that cannot be processed safely falls back to the source in the same typography, with preserved line breaks and wrapping long text. Keep surrounding edit/delete actions available; do not replace the page with an error or show the source as an unwrapped code block.
+
+### Assistant access and proposal review
+
+Assistant approval uses two independent checkbox-led permission sections with date presets and editable exact dates. Category and note customization is disclosed on demand. A flat, always-visible definition list summarizes actual access before approval; avoid repeated warning panels or nested cards. Notes remain visibly excluded unless selected. Shared controls, paired theme tokens and 44px disclosure targets carry the existing notebook style.
+
+Proposal review leads with dates, sports and ordinary-sized added/changed/deleted counts. Long proposals disclose months, then weeks and exact records. Small proposals keep direct week access. Month rows use restrained dividers; week bands reuse the raised surface. Disclosure controls have visible keyboard focus, and before/after fields render only when opened. Hierarchy must never hide deletion or application consequences.

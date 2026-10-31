@@ -1,25 +1,17 @@
 'use client';
 
-import { Alert } from '@athlete-panel/ui';
-import { Checkbox, Button, Input, NativeSelect } from '@athlete-panel/ui';
+import { Button, Input } from '@athlete-panel/ui';
 import { useEffect, useState } from 'react';
 import { Check, Clipboard, ShieldCheck, Terminal } from 'lucide-react';
 import {
-  addCalendarYears,
   planningScope,
   planningScopeSchema,
   historyScopeSchema,
   type AgentConnectionStatus,
 } from '@athlete-panel/contracts';
-import {
-  addDays,
-  ErrorMessage,
-  Field,
-  Modal,
-  PageHeader,
-  useAction,
-  useWorkspace,
-} from '@athlete-panel/ui';
+import { ErrorMessage, Field, Modal, PageHeader, useAction, useWorkspace } from '@athlete-panel/ui';
+
+import { ConnectionAccess } from './connection-access';
 
 export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -86,7 +78,6 @@ export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
 
 export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => void }) {
   const { request, data, weekStartsOn } = useWorkspace();
-  const [mode, setMode] = useState('planning');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [connection, setConnection] = useState<AgentConnectionStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -123,8 +114,7 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
   return (
     <>
       <PageHeader
-        eyebrow="YOUR AGENT, YOUR PERMISSION"
-        title="Connect your training agent"
+        title="Connect your training assistant"
         description="Only approve a connection you started from your terminal."
       />
       <section className="section-block" style={{ maxWidth: 680 }}>
@@ -140,7 +130,11 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
                 .replace(/[^0-9a-f]/gi, '')
                 .toUpperCase();
               const errors: Record<string, string> = {};
-              if (mode !== 'history') {
+              const allowHistory = form.get('allowHistory') === 'on';
+              const allowPlanning = form.get('allowPlanning') === 'on';
+              if (!allowHistory && !allowPlanning)
+                errors.capabilities = 'Choose history, training proposals, or both to connect.';
+              if (allowPlanning) {
                 const checked = planningScopeSchema.safeParse({
                   from: String(form.get('from')),
                   to: String(form.get('to')),
@@ -148,7 +142,7 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
                 if (!checked.success)
                   errors.planning = checked.error.issues.map((i) => i.message).join(' ');
               }
-              if (mode !== 'planning') {
+              if (allowHistory) {
                 const checked = historyScopeSchema.safeParse({
                   from: String(form.get('historyFrom')),
                   to: String(form.get('historyTo')),
@@ -158,6 +152,9 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
                 if (!checked.success)
                   errors.history = checked.error.issues.map((i) => i.message).join(' ');
               }
+              if (allowHistory && !form.getAll('categories').length)
+                errors.history =
+                  'Choose at least one history category under Customize shared data.';
               setFieldErrors(errors);
               if (Object.keys(errors).length) return;
               void action.run(async () => {
@@ -166,26 +163,24 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
                   code: `${typedCode.slice(0, 4)}-${typedCode.slice(4)}`,
                   label: String(form.get('label')),
                   version: 2,
-                  history:
-                    mode === 'planning'
-                      ? null
-                      : {
-                          from: String(form.get('historyFrom')),
-                          to: String(form.get('historyTo')),
-                          includeNotes: form.get('historyNotes') === 'on',
-                          categories: form.getAll('categories') as (
-                            'activities' | 'health' | 'training' | 'context'
-                          )[],
-                          weekStartsOn,
-                        },
-                  planning:
-                    mode === 'history'
-                      ? null
-                      : {
-                          from: String(form.get('from')),
-                          to: String(form.get('to')),
-                          includeNotes: form.get('includeNotes') === 'on',
-                        },
+                  history: !allowHistory
+                    ? null
+                    : {
+                        from: String(form.get('historyFrom')),
+                        to: String(form.get('historyTo')),
+                        includeNotes: form.get('historyNotes') === 'on',
+                        categories: form.getAll('categories') as (
+                          'activities' | 'health' | 'training' | 'context'
+                        )[],
+                        weekStartsOn,
+                      },
+                  planning: !allowPlanning
+                    ? null
+                    : {
+                        from: String(form.get('from')),
+                        to: String(form.get('to')),
+                        includeNotes: form.get('includeNotes') === 'on',
+                      },
                   expiresInHours: Number(form.get('expiresInHours')),
                 });
                 setConnection(result);
@@ -206,96 +201,7 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
             <Field label="Agent name">
               <Input required name="label" maxLength={100} defaultValue={connection.label} />
             </Field>
-            <Field label="Access purpose">
-              <NativeSelect value={mode} onChange={(event) => setMode(event.target.value)}>
-                <option value="planning">Training proposals</option>
-                <option value="history">Historical review</option>
-                <option value="both">Both</option>
-              </NativeSelect>
-            </Field>
-            {mode !== 'planning' && (
-              <fieldset>
-                <legend>Historical review · up to five calendar years</legend>
-                <div className="form-grid">
-                  <Field label="History from">
-                    <Input
-                      required
-                      type="date"
-                      name="historyFrom"
-                      defaultValue={addCalendarYears(today, -5)}
-                    />
-                  </Field>
-                  <Field label="History through">
-                    <Input required type="date" name="historyTo" defaultValue={today} />
-                  </Field>
-                </div>
-                <ErrorMessage error={fieldErrors.history ?? null} />
-                {(['activities', 'health', 'training', 'context'] as const).map((category) => (
-                  <label className="checkbox-row" key={category}>
-                    <Checkbox name="categories" value={category} defaultChecked />
-                    {category === 'context'
-                      ? 'Current profile, goals, events and injury context'
-                      : category === 'training'
-                        ? 'Plans, workouts and recorded completion'
-                        : category === 'health'
-                          ? 'Health measurements'
-                          : 'Recorded activities'}
-                  </label>
-                ))}
-                <label className="checkbox-row">
-                  <Checkbox name="historyNotes" />
-                  Include private notes in historical review
-                </label>
-                <p className="form-footnote">
-                  Dates include both endpoints. Weeks start{' '}
-                  {weekStartsOn === 0 ? 'Sunday' : 'Monday'}, captured from your current preference.
-                  Future scheduled records are allowed.
-                </p>
-              </fieldset>
-            )}
-            {mode !== 'history' && (
-              <fieldset>
-                <legend>Training proposals · up to one calendar year</legend>
-                <div className="form-grid">
-                  <Field label="Read records from">
-                    <Input required type="date" name="from" defaultValue={addDays(today, -28)} />
-                  </Field>
-                  <Field label="Through">
-                    <Input required type="date" name="to" defaultValue={addDays(today, 14)} />
-                  </Field>
-                </div>
-                <ErrorMessage error={fieldErrors.planning ?? null} />
-                <label className="checkbox-row">
-                  <Checkbox name="includeNotes" />
-                  Include private plan, workout, interval, completion, and calendar notes
-                </label>
-                <p className="form-footnote">
-                  Shares profile, goals, availability, zones, training, events, injuries, activities
-                  and health within this planning scope. Both dates are inclusive. Proposed changes
-                  still require your review and explicit application.
-                </p>
-              </fieldset>
-            )}
-            <Field label="Access expires after">
-              <NativeSelect name="expiresInHours" defaultValue="1">
-                <option value="1">1 hour</option>
-                <option value="4">4 hours</option>
-                <option value="24">24 hours</option>
-              </NativeSelect>
-            </Field>
-            <Alert role="status" className="callout">
-              <strong>What you are sharing</strong>
-              <p>
-                Only the selected capabilities, dates and categories above. Your external agent may
-                send this context to its model provider.
-              </p>
-              <p>
-                {mode === 'history'
-                  ? 'This connection is read-only. Proposal submission is not permitted.'
-                  : 'Proposal submission is permitted only within the separate planning dates. Applying changes requires your explicit review and approval in Athlete Panel.'}{' '}
-                Garmin keys, server secrets, raw provider payloads and GPS are excluded.
-              </p>
-            </Alert>
+            <ConnectionAccess today={today} weekStartsOn={weekStartsOn} errors={fieldErrors} />
             <p className="form-footnote">
               This connection request expires at{' '}
               {new Date(connection.expiresAt).toLocaleTimeString()}. You can disconnect the agent at

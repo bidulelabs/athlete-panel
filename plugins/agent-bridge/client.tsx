@@ -47,7 +47,13 @@ import {
   type Entity,
 } from '@athlete-panel/contracts';
 import { proposalRows } from './proposal-diff';
-import { calendarDate, groupChangesByWeek, planTitlesById } from './proposal-weeks';
+import {
+  calendarDate,
+  groupChangesByWeek,
+  groupChangesByMonth,
+  summarizeProposal,
+  planTitlesById,
+} from './proposal-weeks';
 import './review.css';
 import { ConnectAgentDialog, ConnectionApproval } from './connections-client';
 
@@ -314,6 +320,7 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewVersion, setReviewVersion] = useState(0);
   const pending = proposal.status === 'pending';
+  const overview = summarizeProposal(proposal.changes);
   const canApply =
     pending && (review?.applicability === 'ready' || review?.applicability === 'review-required');
   useEffect(() => {
@@ -356,11 +363,33 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
       wide
     >
       <div className="dialog-body">
-        <p>
-          Each affected record is listed by week. Open a record to see every field before and after,
-          including schedule, intervals and ordering. Deletions remove the listed record. Apply
-          saves this entire reviewed proposal together.
-        </p>
+        <section className="proposal-overview" aria-label="Proposal overview">
+          {overview.from && (
+            <p className="proposal-overview-dates">
+              {dateLabel(overview.from, { day: 'numeric', month: 'short', year: 'numeric' })} –{' '}
+              {dateLabel(overview.to!, { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          )}
+          {!!overview.sports.length && <p>{overview.sports.map(sportLabel).join(' · ')}</p>}
+          <dl className="proposal-counts">
+            <div>
+              <dt>Added</dt>
+              <dd>{overview.added}</dd>
+            </div>
+            <div>
+              <dt>Changed</dt>
+              <dd>{overview.changed}</dd>
+            </div>
+            <div>
+              <dt>Deleted</dt>
+              <dd>{overview.deleted}</dd>
+            </div>
+          </dl>
+          <p className="muted-text">
+            Open a month, week or record to inspect the exact edits. Apply saves this entire
+            proposal together.
+          </p>
+        </section>
         <div className="form-inline" style={{ justifyContent: 'space-between', marginBottom: 17 }}>
           <Badge className="badge accent">{proposal.status}</Badge>
           <span className="muted-text">
@@ -412,7 +441,7 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
         )}
         <section aria-label="Proposed edits">
           <h3>Proposed edits</h3>
-          <ProposedEditsByWeek changes={proposal.changes} planTitles={planTitles} />
+          <ProposedEdits changes={proposal.changes} planTitles={planTitles} />
         </section>
         {canApply && (
           <label className="checkbox-row" style={{ marginTop: 22 }}>
@@ -480,10 +509,40 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onCl
 
 const weekdayDate = { weekday: 'short', day: 'numeric', month: 'short' } as const;
 
-function ProposedEditsByWeek({
+function ProposedEdits({
   changes,
   planTitles,
 }: {
+  changes: ProposalSummary['changes'];
+  planTitles: Record<string, string>;
+}) {
+  const months = groupChangesByMonth(changes);
+  if (months.filter((month) => month.month).length <= 2 && changes.length <= 200)
+    return <ProposedEditsByWeek changes={changes} planTitles={planTitles} />;
+  return months.map((month) =>
+    month.month ? (
+      <details className="proposal-month" key={month.month}>
+        <summary>
+          <strong>{dateLabel(`${month.month}-01`, { month: 'long', year: 'numeric' })}</strong>
+          <span>
+            {month.changes.length} change{month.changes.length === 1 ? '' : 's'}
+          </span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </summary>
+        <ProposedEditsByWeek changes={month.changes} planTitles={planTitles} collapsed />
+      </details>
+    ) : (
+      <ProposedEditsByWeek key="undated" changes={month.changes} planTitles={planTitles} />
+    ),
+  );
+}
+
+function ProposedEditsByWeek({
+  changes,
+  planTitles,
+  collapsed = false,
+}: {
+  collapsed?: boolean;
   changes: ProposalSummary['changes'];
   planTitles: Record<string, string>;
 }) {
@@ -494,7 +553,7 @@ function ProposedEditsByWeek({
       : 'Plans';
     return (
       <section className="proposal-week" aria-label={title} key={week.weekStart ?? 'undated'}>
-        <details open={changes.length <= 200}>
+        <details open={!collapsed}>
           <summary className="proposal-week-heading">
             <h4>{title}</h4>
             <span>
@@ -527,6 +586,7 @@ function ReviewChange({
 }) {
   const { data } = useWorkspace();
   const units = data.profile?.units ?? 'metric';
+  const [expanded, setExpanded] = useState(false);
   const record = change.after ?? change.before;
   const date = calendarDate(change);
   const dateChanged =
@@ -551,7 +611,7 @@ function ReviewChange({
       distance(record.distanceMeters, units),
   ].filter(Boolean);
   return (
-    <details className="proposal-diff">
+    <details className="proposal-diff" onToggle={(event) => setExpanded(event.currentTarget.open)}>
       <summary className="proposal-diff-summary">
         <Badge className="badge">
           {!change.before ? 'Create' : !change.after ? 'Delete' : 'Update'}
@@ -559,44 +619,48 @@ function ReviewChange({
         <span className="proposal-diff-title">{recordLabel(record) ?? change.entity}</span>{' '}
         <span className="proposal-diff-facts">{summaryFacts.join(' · ')}</span>
       </summary>
-      <Table className="review-fields">
-        <caption className="sr-only">{caption}</caption>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Field</TableHead>
-            <TableHead>Before</TableHead>
-            <TableHead>After</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {proposalRows(change, units, planTitles).map((row) => (
-            <TableRow key={row.field}>
-              <TableHead scope="row">{row.field}</TableHead>
-              <TableCell>
-                <span className="review-mobile-label">Before: </span>
-                {row.before}
-              </TableCell>
-              <TableCell>
-                <span className="review-mobile-label">After: </span>
-                {row.after}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <details className="review-technical">
-        <summary>Technical details (complete record)</summary>
-        <div className="diff-columns">
-          <div>
-            <small>BEFORE</small>
-            <pre>{JSON.stringify(change.before, null, 2)}</pre>
-          </div>
-          <div>
-            <small>AFTER</small>
-            <pre>{JSON.stringify(change.after, null, 2)}</pre>
-          </div>
-        </div>
-      </details>
+      {expanded && (
+        <>
+          <Table className="review-fields">
+            <caption className="sr-only">{caption}</caption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Field</TableHead>
+                <TableHead>Before</TableHead>
+                <TableHead>After</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {proposalRows(change, units, planTitles).map((row) => (
+                <TableRow key={row.field}>
+                  <TableHead scope="row">{row.field}</TableHead>
+                  <TableCell>
+                    <span className="review-mobile-label">Before: </span>
+                    {row.before}
+                  </TableCell>
+                  <TableCell>
+                    <span className="review-mobile-label">After: </span>
+                    {row.after}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <details className="review-technical">
+            <summary>Technical details (complete record)</summary>
+            <div className="diff-columns">
+              <div>
+                <small>BEFORE</small>
+                <pre>{JSON.stringify(change.before, null, 2)}</pre>
+              </div>
+              <div>
+                <small>AFTER</small>
+                <pre>{JSON.stringify(change.after, null, 2)}</pre>
+              </div>
+            </div>
+          </details>
+        </>
+      )}
     </details>
   );
 }

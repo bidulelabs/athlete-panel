@@ -48,7 +48,9 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     await expect(page).toHaveURL(/\/login\?next=/);
     await page.getByLabel('Password', { exact: true }).fill(password!);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Connect your training agent' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Connect your training assistant' }),
+    ).toBeVisible();
     await expect(page.getByText(code)).toHaveCount(0);
     const approve = page.getByRole('button', { name: 'Approve connection', exact: true });
     const codeField = page.getByLabel('Approval code', { exact: true });

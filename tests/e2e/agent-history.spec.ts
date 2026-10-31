@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import postgres from 'postgres';
+import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -6,6 +8,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { addDays } from '../../plugins/training/dates';
 const password = process.env.E2E_PASSWORD!;
+const sql = postgres(isolatedDatabaseUrl('E2E_DATABASE_URL'), { max: 1, onnotice: () => {} });
+test.beforeEach(async () => {
+  await sql`delete from host.request_budgets where namespace='agent-enrollment'`;
+});
+test.afterAll(() => sql.end());
 test('historical browser approval explains read-only access, validates dates and supports CLI review in both themes', async ({
   page,
   baseURL,
@@ -32,7 +39,16 @@ test('historical browser approval explains read-only access, validates dates and
     await page
       .getByLabel('Approval code', { exact: true })
       .fill(output.match(/Approval code: ([A-F0-9-]+)/)![1]!);
-    await page.getByLabel('Access purpose').selectOption('history');
+    await expect(
+      page.getByRole('checkbox', { name: 'Suggest training changes', exact: true }),
+    ).toBeChecked();
+    await page.getByRole('checkbox', { name: 'Suggest training changes', exact: true }).uncheck();
+    await page.getByRole('checkbox', { name: 'Read my history', exact: true }).check();
+    await page.getByRole('combobox', { name: 'History period', exact: true }).selectOption('1');
+    await expect(page.getByRole('region', { name: 'Access summary' })).toContainText(
+      await page.getByLabel('History from', { exact: true }).inputValue(),
+    );
+    await page.getByRole('combobox', { name: 'History period', exact: true }).selectOption('5');
     await page.getByLabel('History from', { exact: true }).fill('2021-10-31');
     await page.getByLabel('History through', { exact: true }).fill('2026-11-01');
     await page.getByRole('button', { name: 'Approve connection', exact: true }).click();
@@ -43,10 +59,14 @@ test('historical browser approval explains read-only access, validates dates and
     await expect(page.getByText('This connection is read-only.', { exact: false })).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     for (const theme of ['light', 'dark']) {
-      await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+        document.documentElement.classList.toggle('dark', value === 'dark');
+      }, theme);
       await page.screenshot({
         path: `.runtime/browser/history-approval-${info.project.name}-${theme}.png`,
         fullPage: true,
+        animations: 'disabled',
       });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
@@ -76,16 +96,23 @@ test('historical browser approval explains read-only access, validates dates and
       expect(text).not.toContain(saved.token);
       expect(code, text).toBe(0);
     };
-    await runCli(['history', 'discover', '--out', join(directory, 'history.json')]);
+    await runCli(['history', '--out', join(directory, 'overview.json')]);
     await runCli([
       'history',
-      'summary',
-      '--review-file',
-      join(directory, 'history.json'),
-      '--all',
+      'records',
+      '--category',
+      'activities',
+      '--from',
+      '2026-10-01',
+      '--to',
+      '2026-10-31',
       '--out',
-      join(directory, 'overview.json'),
+      join(directory, 'details.json'),
     ]);
+    const savedReview = JSON.parse(await readFile(`${config}.history-review.json`, 'utf8'));
+    expect(JSON.parse(await readFile(join(directory, 'details.json'), 'utf8')).reviewToken).toBe(
+      savedReview.review.reviewToken,
+    );
     const overview = JSON.parse(await readFile(join(directory, 'overview.json'), 'utf8'));
     expect(overview.summaries.length).toBeGreaterThan(100);
     expect(overview.nextCursor).toBeNull();
@@ -168,11 +195,24 @@ test('one annual proposal stays pending until owner acknowledgement and applies 
   await expect(
     dialog.getByText('I have reviewed these changes and want to apply them.'),
   ).toBeVisible();
+  await expect(dialog.getByRole('region', { name: 'Proposal overview' })).toContainText('Running');
+  const month = dialog
+    .locator('details.proposal-month')
+    .filter({ has: page.locator('summary > strong').getByText('November 2027', { exact: true }) });
+  await month.locator(':scope > summary').click();
+  await month.locator('.proposal-week > details > summary').first().click();
+  await month.locator('.proposal-diff-summary').first().click();
+  await expect(month.getByRole('table').first()).toBeVisible();
+  await month.locator(':scope > summary').click();
   for (const theme of ['light', 'dark']) {
-    await page.evaluate((value) => (document.documentElement.dataset.theme = value), theme);
+    await page.evaluate((value) => {
+      document.documentElement.dataset.theme = value;
+      document.documentElement.classList.toggle('dark', value === 'dark');
+    }, theme);
     await page.screenshot({
       path: `.runtime/browser/annual-review-${info.project.name}-${theme}.png`,
       fullPage: true,
+      animations: 'disabled',
     });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
@@ -190,4 +230,75 @@ test('one annual proposal stays pending until owner acknowledgement and applies 
     (await owner('agent-bridge/undo', { id: audit.id, idempotencyKey: randomUUID() })).ok(),
   ).toBe(true);
   await owner('agent-bridge/revoke', { id: grant.id });
+});
+
+test('one assistant approval keeps the receipt, categories, notes and submitted scopes in agreement', async ({
+  page,
+  request,
+}) => {
+  const started = await request.post('/api/agent/connect', {
+    data: { label: 'Synthetic combined approval' },
+  });
+  expect(started.ok()).toBe(true);
+  const pending = await started.json();
+  try {
+    await page.goto(`/agent?connect=${pending.id}`);
+    await page.getByLabel('Password', { exact: true }).fill(password);
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await page.getByLabel('Approval code', { exact: true }).fill(pending.code);
+    const history = page.getByRole('checkbox', { name: 'Read my history', exact: true });
+    const planning = page.getByRole('checkbox', { name: 'Suggest training changes', exact: true });
+    const receipt = page.getByRole('region', { name: 'Access summary' });
+    await expect(history).not.toBeChecked();
+    await planning.uncheck();
+    await page.getByRole('button', { name: 'Approve connection', exact: true }).click();
+    await expect(
+      page.getByText('Choose history, training proposals, or both to connect.'),
+    ).toBeVisible();
+    await history.check();
+    await planning.check();
+    await page.getByRole('combobox', { name: 'History period', exact: true }).selectOption('3');
+    await page.getByRole('combobox', { name: 'Proposal period', exact: true }).selectOption('year');
+    await page.setViewportSize({ width: 320, height: 800 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    const historyFrom = await page.getByLabel('History from', { exact: true }).inputValue();
+    const planningFrom = await page
+      .getByLabel('Read and propose from', { exact: true })
+      .inputValue();
+    const planningTo = await page.getByLabel('Through', { exact: true }).inputValue();
+    await expect(receipt).toContainText(`${historyFrom} through`);
+    await expect(receipt).toContainText(`${planningFrom} through ${planningTo}`);
+    const scopes = page.locator('.connection-capability');
+    await scopes.first().getByText('Customize shared data', { exact: true }).click();
+    await page.getByRole('checkbox', { name: 'Health measurements', exact: true }).uncheck();
+    await page
+      .getByRole('checkbox', { name: 'Include private notes in historical review', exact: true })
+      .check();
+    await page
+      .getByRole('combobox', { name: 'Access expires after', exact: true })
+      .selectOption('4');
+    await expect(receipt).toContainText('Private notes: included');
+    await expect(receipt).toContainText('Private notes: excluded');
+    await expect(receipt).toContainText('4 hours after approval');
+    const approval = page.waitForRequest((r) => r.url().endsWith('/approve-connection'));
+    await page.getByRole('button', { name: 'Approve connection', exact: true }).click();
+    const submitted = (await approval).postDataJSON();
+    expect(submitted).toMatchObject({
+      version: 2,
+      history: { from: historyFrom, includeNotes: true },
+      planning: { from: planningFrom, to: planningTo, includeNotes: false },
+      expiresInHours: 4,
+    });
+    expect(submitted.history.categories).not.toContain('health');
+    await expect(
+      page.getByText('Return to your terminal to finish connecting.', { exact: false }),
+    ).toBeVisible();
+  } finally {
+    await request.post('/api/agent/connect-cancel', {
+      headers: { Authorization: `Bearer ${pending.token}` },
+      data: {},
+    });
+  }
 });

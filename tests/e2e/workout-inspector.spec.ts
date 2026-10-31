@@ -388,6 +388,38 @@ test('imperial edits keep stored distances the owner did not change', async ({ p
   expect(sent[2]!.values.distanceMeters).toBe(2 * 1609.344);
 });
 
+test('edits keep stored durations the owner did not change', async ({ page }) => {
+  const { data } = await preview(page);
+  const run = data.workouts.find((workout) => workout.title === 'Short easy run')!;
+  run.durationSeconds = 31;
+  run.completion!.durationSeconds = 31;
+  await page.reload();
+  await expect(page.locator('.page-content')).toBeVisible();
+  const sent: { values: Record<string, unknown> }[] = [];
+  await page.route('**/api/plugins/training/mutate', async (route) => {
+    sent.push(...route.request().postDataJSON().commands);
+    await route.fulfill({ json: { id: crypto.randomUUID(), changes: [] } });
+  });
+  await page.getByRole('button', { name: 'Open Short easy run', exact: true }).click();
+  const inspector = page.getByRole('complementary', { name: 'Workout details' });
+  await inspector.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByLabel('Workout title').fill('Short easy run, renamed');
+  await page.getByRole('button', { name: 'Save workout', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]!.values.durationSeconds).toBe(31);
+  await inspector.getByRole('button', { name: 'Edit completion', exact: true }).click();
+  await page.getByRole('button', { name: 'Save completion', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]!.values.durationSeconds).toBe(31);
+  await inspector.getByRole('button', { name: 'Edit completion', exact: true }).click();
+  await page.getByLabel('Actual duration · minutes').fill('0.5');
+  const reloaded = page.waitForResponse((response) => response.url().includes('/api/workspace?'));
+  await page.getByRole('button', { name: 'Save completion', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(3);
+  await reloaded;
+  expect(sent[2]!.values.durationSeconds).toBe(30);
+});
+
 test('a new interval target starts empty and cannot be saved until filled', async ({ page }) => {
   await preview(page);
   const sent: { values: { steps: { target: unknown }[] } }[] = [];

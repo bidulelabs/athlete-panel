@@ -155,6 +155,42 @@ class DeploymentRecovery(unittest.TestCase):
             with patch.object(instance, 'compose', return_value=Mock(stdout='worker')), patch.object(instance, 'run', return_value=Mock(stdout=IMAGE)), patch.object(instance, 'backup_status', side_effect=[{'worker': {'lastSeen': '2026-01-01', 'state': 'healthy'}}, {'worker': {'lastSeen': '2026-10-30', 'state': 'maintenance'}}]) as status, patch.object(hosted.time, 'sleep'):
                 instance.fresh_worker({'image': IMAGE}, '2026-10-29'); self.assertEqual(status.call_count, 2)
 
+    def test_upgrade_preflight_rechecks_preparation_but_never_blocks_maintenance_resume(self):
+        prepared = ['prepare-image', 'validate-upgrade-source', 'prepare-rehearsal-backup', 'rehearse-candidate']
+        cases = [
+            ([], False, True),
+            (['verify-current-https'], False, True),
+            (['verify-current-https'], True, False),  # Interrupted inside maintenance.
+            (['enable-maintenance'], False, False),  # Older checkpoint without the new probe.
+            (['enable-maintenance', 'drain-active-work', 'verify-pre-upgrade-backup', 'stop-application'], False, False),
+            (['enable-maintenance', 'drain-active-work', 'verify-pre-upgrade-backup', 'stop-application', 'apply-migrations'], False, False),
+        ]
+        for completed, started, check_current in cases:
+            with self.subTest(completed=completed, started=started), tempfile.TemporaryDirectory() as root, ExitStack() as stack:
+                instance = hosted.Hosted(root)
+                previous, candidate = {'image': 'old'}, {'image': IMAGE}
+                instance.record = {'active': previous, 'backupDirectory': root}
+                instance.begin('upgrade', previous=previous, candidate=candidate,
+                               preparationBackup={'file': 'preparation.fgr'}, backup={'file': 'final.fgr'})
+                instance.pending['completed'] = prepared + completed
+                if started: instance.pending['maintenanceStartedAt'] = hosted.timestamp()
+                instance.checkpoint()
+                instance.pending = hosted.read_json(Path(root) / 'operation.json')
+                for method in ['docker_ready', 'reconcile_commands', 'verify_storage', 'maintenance',
+                               'drain_work', 'compose', 'verify_archive', 'console']:
+                    stack.enter_context(patch.object(instance, method))
+                stack.enter_context(patch.object(instance, 'backup', return_value={'file': 'final.fgr'}))
+                public = stack.enter_context(patch.object(instance, 'public_health', side_effect=hosted.OperationError('current app unavailable')))
+                ready = stack.enter_context(patch.object(instance, 'ready', side_effect=RuntimeError('reached candidate readiness')))
+                if check_current:
+                    with self.assertRaisesRegex(hosted.OperationError, 'current app unavailable'): instance.resume()
+                    public.assert_called_once_with(previous)
+                    instance.maintenance.assert_not_called(); instance.compose.assert_not_called(); ready.assert_not_called()
+                    self.assertNotIn('verify-current-https', instance.pending['completed'])
+                else:
+                    with self.assertRaisesRegex(RuntimeError, 'reached candidate readiness'): instance.resume()
+                    public.assert_not_called(); ready.assert_called_once_with(candidate)
+
     def test_interruptions_at_deployment_boundaries_keep_final_snapshot_and_do_not_repeat_sql(self):
         for boundary in ['verify-pre-upgrade-backup', 'apply-migrations', 'verify-https-and-services', 'select-active-release', 'reopen-application', 'start-scheduled-backups']:
             with self.subTest(boundary=boundary), tempfile.TemporaryDirectory() as root, ExitStack() as stack:
@@ -169,7 +205,7 @@ class DeploymentRecovery(unittest.TestCase):
                 def console(_release, _service, script, *args, **kwargs):
                     if script == 'scripts/migrate.ts': state['migrations'] = 1  # Existing checksummed journal.
                 def maintenance(_release, enabled): state['maintenance'] = enabled
-                for method in ['docker_ready', 'reconcile_commands', 'verify_storage', 'prepare_candidate', 'validate_upgrade', 'drain_work', 'compose', 'verify_archive', 'ready', 'verify_deployed', 'start_backups', 'await_backup']:
+                for method in ['docker_ready', 'reconcile_commands', 'verify_storage', 'prepare_candidate', 'validate_upgrade', 'public_health', 'drain_work', 'compose', 'verify_archive', 'ready', 'verify_deployed', 'start_backups', 'await_backup']:
                     stack.enter_context(patch.object(instance, method))
                 stack.enter_context(patch.object(instance, 'backup', side_effect=backup))
                 stack.enter_context(patch.object(instance, 'console', side_effect=console))

@@ -91,3 +91,39 @@ Verification completed: all 59 Python security/controller/publication tests pass
 The full hosted source rehearsal passed using the current controller and the retained synthetic AMD64 application image `athlete-panel:review54-check` as its base, then building a custom-plugin upgrade fixture. It exercised actual Caddy HTTPS, installation, isolated restore testing, migration/reload interruptions and resume, backup-only retry with unchanged serving containers, matched recovery and an empty replacement cluster. Disposable services, volumes and state were removed. The report is `.runtime/readiness54-hosted.json`; logs use `/tmp/athlete-panel-readiness-*`. Upgrade took 214.495 seconds including deliberate interruptions, with 62.537 seconds in maintenance; the manual restore test took 24.168 seconds. These are local synthetic/emulated timings, not VPS estimates. Application integration, browser and the other two container rehearsals were not repeated locally for this controller-only fix; their earlier evidence remains separate and the PR workflow reruns the complete suite.
 
 Framework validation covers the readiness contract and acceptance scenario, architecture, canonical release authorization guidance and this execution evidence. This is a correction within ADR 012's existing verification boundary, so no new ADR is required. Maintain and Repository admin remain the intended tag-ruleset bypass roles; no GitHub settings are changed. Before/after record-preservation comparisons from the report remain a separate follow-up. No live publication, private-server deployment or production-data access is part of this change.
+
+## Deployment health client follow-up
+
+On 2026-10-31 the owner requested a controller fix after a v0.2.0 deployment encountered HTTP 403 / Cloudflare error 1010 with Python's default User-Agent during maintenance. The reported request succeeded with `AthletePanelDeployment/0.2.0`. Authorized scope is implementation and synthetic local verification, explicitly excluding deployment and publication.
+
+The official controller now shares one public readiness client between the current-app upgrade preflight and candidate checks. Requests identify the deployment probe and checked release version, with a product-only fallback for absent or unsafe custom metadata. Rejections include only a bounded HTTP status diagnostic, including explicit 403/proxy wording. TLS verification, redirect rejection, retry/request bounds, response size/content validation, image identity and fresh-worker checks remain intact.
+
+The `verify-current-https` preparation phase runs immediately before maintenance, repeats on preparation retries, and remains cancellable. Maintenance intent/completion bypasses this prerequisite on resume; interrupted operations, including older checkpoints without the added phase, can recreate stopped services and still verify the candidate. No operation-format change, application contract, migration, training rule or new runtime service is introduced. This corrects ADR 012's existing readiness boundary and does not require a new ADR.
+
+Verification completed on macOS with Python 3.12.8, Node 22.22.0 and pnpm 11.28.8:
+
+| Check | Actual result |
+| --- | --- |
+| Full Python security/controller/recovery/publication suite | 113 passed, two Linux-only checks skipped (115 discovered, 9.086 seconds). Includes versioned/fallback User-Agent, real loopback 403 before maintenance, safe diagnostics, cancellation and successful resume through candidate readiness, preparation rechecks, interrupted-maintenance/stopped-service resume, TLS context/request timeout, redirect/JSON/size/status validation, and image/worker checks. Publication effects are mocked. |
+| Repository checks | `pnpm check` passed: 252 unit tests across 35 files, both typechecks, generated/contract/skill/boundary checks, formatting, lint (141 existing warnings, no errors), and 43 documentation files. |
+| Production build | `pnpm build` passed for the web and worker. |
+| Diff and documentation review | Whitespace checks passed; affected specification, canonical runbook, architecture and links reviewed for behavior, ordering, recovery boundaries and requirement coverage. No diagrams or shared visual conventions changed. |
+
+The initial full Python run failed one existing cancellation test because its process-reconciliation lookup contacted the stopped Docker daemon. The test now mocks that lookup while retaining its cancellation/maintenance assertions; the complete rerun passed. Focused readiness and recovery runs also passed before the broader run. Logs are local under `/tmp/athlete-panel-health-*.log`.
+
+| Topic | Canonical document | Coverage completed | Remaining gaps |
+| --- | --- | --- | --- |
+| Public health identification and rejection | Hosted operations; architecture | Shared truthful User-Agent, sanitized HTTP status, unchanged readiness safeguards | Actual Cloudflare/public HTTPS acceptance |
+| Upgrade and interrupted resume | Development upgrade procedure; hosted operations | Pre-maintenance current-app check, repeated preparation checks, cancellation and safe recreation-stage resume | Docker-backed hosted/recovery rehearsal |
+
+Tests use synthetic loopback responses and mocked deployment side effects; no real private server, proxy rules, credentials or athlete records are involved. Docker is not running, so container rehearsals and database integration checks were not run. No UI behavior changed, and browser checks were not repeated. Local checks do not establish live Cloudflare behavior. No deployment or publication was performed.
+
+The owner subsequently authorized committing the fix and opening a pull request with a title and description. This authorizes pushing the source branch for review; deployment and release publication remain outside scope.
+
+### PR 67 review follow-up
+
+The owner requested review of [PR 67's feedback](https://github.com/bidulelabs/athlete-panel/pull/67#discussion_r4431823931). The single actionable comment identifies a pre-existing HTTP parser exception gap: `BadStatusLine` is an `http.client.HTTPException`, which escaped the readiness retry handler. Two new loopback regressions reproduced the uncaught exception before the fix, including a synthetic private URL in the raw status line.
+
+The public probe now catches `HTTPException` alongside existing transport/JSON failures, preserving the retry limit and sanitized readiness error without printing parser details. Tests cover 60 failed attempts without advancing to the worker, and malformed HTTP followed by valid readiness. The hosted acceptance scenarios include this case; no deployment phase, public contract, migration or architecture ownership changes.
+
+Verification: the complete Python suite passed (115 passed, two Linux-only tests skipped), including both new real-loopback regressions and the existing deployment/recovery checks. Documentation checks passed for 43 files, and the diff passed whitespace review. Framework validation checked the updated acceptance scenario, test references and this execution record; ownership and operating commands are unchanged. Application type/build/database/browser checks were not repeated for this Python-only exception-handling correction. No deployment or release publication was performed.

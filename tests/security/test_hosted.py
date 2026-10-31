@@ -288,7 +288,8 @@ class HostedSafety(unittest.TestCase):
     def test_cancel_refuses_an_ambiguous_maintenance_transition(self):
         with tempfile.TemporaryDirectory() as root:
             instance=hosted.Hosted(root);instance.begin('upgrade')
-            instance.pending['phase']='validate-upgrade-source';instance.checkpoint();instance.cancel()
+            instance.pending['phase']='validate-upgrade-source';instance.checkpoint()
+            with patch.object(instance,'reconcile_commands'):instance.cancel()
             self.assertIsNone(instance.pending)
             instance.begin('upgrade');instance.pending['phase']='enable-maintenance';instance.checkpoint()
             with self.assertRaises(hosted.OperationError):instance.cancel()

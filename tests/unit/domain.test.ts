@@ -523,6 +523,108 @@ describe('pure training engine', () => {
   });
 });
 
+describe('profile.set', () => {
+  const week = {
+    monday: 3600,
+    tuesday: 0,
+    wednesday: 5400,
+    thursday: 0,
+    friday: 0,
+    saturday: 7200,
+    sunday: 10800,
+  };
+  const workspaceWithSavedProfile = () =>
+    run(emptyWorkspace(), [
+      {
+        action: 'profile.set',
+        expectedRevision: null,
+        values: {
+          displayName: 'Synthetic owner',
+          timezone: 'America/New_York',
+          weekStartsOnPreference: 'monday',
+          goals: 'Base season',
+          ftpWatts: 250,
+          heartRateZones: { cycling: [120, 140], running: [125, 145, 160] },
+          weeklyAvailability: week,
+        },
+      },
+    ]).state;
+
+  it('changes only the fields it sends', () => {
+    const state = workspaceWithSavedProfile();
+    const goalsOnly = run(state, [
+      { action: 'profile.set', expectedRevision: 1, values: { goals: 'Spring marathon' } },
+    ]);
+    expect(goalsOnly.state.profile).toEqual({
+      ...state.profile,
+      goals: 'Spring marathon',
+      revision: 2,
+    });
+    const ftpCleared = run(state, [
+      { action: 'profile.set', expectedRevision: 1, values: { ftpWatts: null } },
+    ]);
+    expect(ftpCleared.state.profile).toEqual({ ...state.profile, ftpWatts: null, revision: 2 });
+    const tuesdayAdded = run(state, [
+      {
+        action: 'profile.set',
+        expectedRevision: 1,
+        values: { weeklyAvailability: { ...week, tuesday: 1800 } },
+      },
+    ]);
+    expect(tuesdayAdded.state.profile).toEqual({
+      ...state.profile,
+      weeklyAvailability: { ...week, tuesday: 1800 },
+      revision: 2,
+    });
+  });
+
+  it('changes nothing for empty values on a saved profile', () => {
+    const state = workspaceWithSavedProfile();
+    const empty = run(state, [{ action: 'profile.set', expectedRevision: 1, values: {} }]);
+    expect(empty.state.profile).toEqual(state.profile);
+    expect(empty.changes).toEqual([]);
+  });
+
+  it('fills the defaults on a first save', () => {
+    expect(
+      run(emptyWorkspace(), [{ action: 'profile.set', expectedRevision: null, values: {} }]).state
+        .profile,
+    ).toEqual({
+      id: 'owner',
+      revision: 1,
+      displayName: 'Athlete',
+      units: 'metric',
+      timezone: 'Europe/Paris',
+      language: 'en',
+      goals: '',
+      weeklyAvailability: Object.fromEntries(Object.keys(week).map((day) => [day, 0])),
+      heartRateZones: { cycling: [], running: [] },
+      ftpWatts: null,
+    });
+  });
+
+  it('rejects a stale revision', () => {
+    expect(() =>
+      run(workspaceWithSavedProfile(), [
+        { action: 'profile.set', expectedRevision: 2, values: { goals: 'Later' } },
+      ]),
+    ).toThrow(/changed/);
+  });
+
+  it.each([
+    [{ weeklyAvailability: { monday: 0 } }, /tuesday[\s\S]*expected number, received undefined/],
+    [{ heartRateZones: { running: [130] } }, /cycling[\s\S]*expected array, received undefined/],
+    [{ revision: 5 }, /Unrecognized key[\s\S]*revision/],
+    [{ displayName: null }, /displayName[\s\S]*expected string, received null/],
+  ])('rejects %j', (values, error) => {
+    expect(() =>
+      run(workspaceWithSavedProfile(), [
+        { action: 'profile.set', expectedRevision: 1, values: values as never },
+      ]),
+    ).toThrow(error);
+  });
+});
+
 describe('date and unit arithmetic', () => {
   it('crosses daylight-saving transitions and leap days as floating dates', () => {
     expect(addDays('2026-03-28', 1)).toBe('2026-03-29');

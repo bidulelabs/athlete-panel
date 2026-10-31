@@ -53,40 +53,40 @@ const zoneBounds = z
 const availableSeconds = z.number().int().min(0).max(86400);
 export const weekStartsOnPreferenceSchema = z.enum(['auto', 'sunday', 'monday']);
 export type WeekStartsOnPreference = z.infer<typeof weekStartsOnPreferenceSchema>;
+const units = z.enum(['metric', 'imperial']);
+const weeklyAvailability = z
+  .object({
+    monday: availableSeconds,
+    tuesday: availableSeconds,
+    wednesday: availableSeconds,
+    thursday: availableSeconds,
+    friday: availableSeconds,
+    saturday: availableSeconds,
+    sunday: availableSeconds,
+  })
+  .strict();
+const heartRateZones = z.object({ cycling: zoneBounds, running: zoneBounds }).strict();
+const ftpWatts = z.number().int().min(1).max(3000).nullable();
 export const profileValuesSchema = z
   .object({
     displayName: text.default('Athlete'),
-    units: z.enum(['metric', 'imperial']).default('metric'),
+    units: units.default('metric'),
     timezone: timezoneSchema.default('Europe/Paris'),
     language: z.literal('en').default('en'),
     // Omission means Automatic without rewriting older stored/audited profiles.
     weekStartsOnPreference: weekStartsOnPreferenceSchema.optional(),
     goals: notes.default(''),
-    weeklyAvailability: z
-      .object({
-        monday: availableSeconds.default(0),
-        tuesday: availableSeconds.default(0),
-        wednesday: availableSeconds.default(0),
-        thursday: availableSeconds.default(0),
-        friday: availableSeconds.default(0),
-        saturday: availableSeconds.default(0),
-        sunday: availableSeconds.default(0),
-      })
-      .strict()
-      .default({
-        monday: 0,
-        tuesday: 0,
-        wednesday: 0,
-        thursday: 0,
-        friday: 0,
-        saturday: 0,
-        sunday: 0,
-      }),
-    heartRateZones: z
-      .object({ cycling: zoneBounds.default([]), running: zoneBounds.default([]) })
-      .strict()
-      .default({ cycling: [], running: [] }),
-    ftpWatts: z.number().int().min(1).max(3000).nullable().default(null),
+    weeklyAvailability: weeklyAvailability.default({
+      monday: 0,
+      tuesday: 0,
+      wednesday: 0,
+      thursday: 0,
+      friday: 0,
+      saturday: 0,
+      sunday: 0,
+    }),
+    heartRateZones: heartRateZones.default({ cycling: [], running: [] }),
+    ftpWatts: ftpWatts.default(null),
   })
   .strict();
 export const profileSchema = profileValuesSchema.extend({
@@ -433,6 +433,20 @@ const workoutPatchSchema = nonemptyPatch(
     .strict(),
 );
 const notePatchSchema = nonemptyPatch(noteValuesSchema);
+const profilePatchSchema = z
+  .object({
+    displayName: text,
+    units,
+    timezone: timezoneSchema,
+    language: z.literal('en'),
+    weekStartsOnPreference: weekStartsOnPreferenceSchema,
+    goals: notes,
+    weeklyAvailability,
+    heartRateZones,
+    ftpWatts,
+  })
+  .strict()
+  .partial();
 const eventPatchSchema = nonemptyPatch(
   z
     .object({ title: text, date: dateSchema, kind: z.enum(['race', 'goal', 'other']), notes })
@@ -455,7 +469,7 @@ export const commandSchema = z.discriminatedUnion('action', [
     .object({
       action: z.literal('profile.set'),
       expectedRevision: revisionSchema.nullable(),
-      values: profileValuesSchema,
+      values: profilePatchSchema,
     })
     .strict(),
   z

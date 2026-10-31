@@ -63,43 +63,36 @@
                       "type": "object",
                       "properties": {
                         "monday": {
-                          "default": 0,
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 86400
                         },
                         "tuesday": {
-                          "default": 0,
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 86400
                         },
                         "wednesday": {
-                          "default": 0,
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 86400
                         },
                         "thursday": {
-                          "default": 0,
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 86400
                         },
                         "friday": {
-                          "default": 0,
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 86400
                         },
                         "saturday": {
-                          "default": 0,
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 86400
                         },
                         "sunday": {
-                          "default": 0,
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 86400
@@ -124,7 +117,6 @@
                       "type": "object",
                       "properties": {
                         "cycling": {
-                          "default": [],
                           "maxItems": 6,
                           "type": "array",
                           "items": {
@@ -134,7 +126,6 @@
                           }
                         },
                         "running": {
-                          "default": [],
                           "maxItems": 6,
                           "type": "array",
                           "items": {
@@ -2063,43 +2054,36 @@
                                   "type": "object",
                                   "properties": {
                                     "monday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "tuesday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "wednesday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "thursday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "friday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "saturday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "sunday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
@@ -2124,7 +2108,6 @@
                                   "type": "object",
                                   "properties": {
                                     "cycling": {
-                                      "default": [],
                                       "maxItems": 6,
                                       "type": "array",
                                       "items": {
@@ -2134,7 +2117,6 @@
                                       }
                                     },
                                     "running": {
-                                      "default": [],
                                       "maxItems": 6,
                                       "type": "array",
                                       "items": {
@@ -2247,43 +2229,36 @@
                                   "type": "object",
                                   "properties": {
                                     "monday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "tuesday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "wednesday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "thursday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "friday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "saturday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "sunday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
@@ -2308,7 +2283,6 @@
                                   "type": "object",
                                   "properties": {
                                     "cycling": {
-                                      "default": [],
                                       "maxItems": 6,
                                       "type": "array",
                                       "items": {
@@ -2318,7 +2292,6 @@
                                       }
                                     },
                                     "running": {
-                                      "default": [],
                                       "maxItems": 6,
                                       "type": "array",
                                       "items": {
@@ -5159,43 +5132,36 @@
                                   "type": "object",
                                   "properties": {
                                     "monday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "tuesday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "wednesday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "thursday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "friday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "saturday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "sunday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
@@ -5220,7 +5186,6 @@
                                   "type": "object",
                                   "properties": {
                                     "cycling": {
-                                      "default": [],
                                       "maxItems": 6,
                                       "type": "array",
                                       "items": {
@@ -5230,7 +5195,6 @@
                                       }
                                     },
                                     "running": {
-                                      "default": [],
                                       "maxItems": 6,
                                       "type": "array",
                                       "items": {
@@ -5343,43 +5307,36 @@
                                   "type": "object",
                                   "properties": {
                                     "monday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "tuesday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "wednesday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "thursday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "friday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "saturday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
                                     },
                                     "sunday": {
-                                      "default": 0,
                                       "type": "integer",
                                       "minimum": 0,
                                       "maximum": 86400
@@ -5404,7 +5361,6 @@
                                   "type": "object",
                                   "properties": {
                                     "cycling": {
-                                      "default": [],
                                       "maxItems": 6,
                                       "type": "array",
                                       "items": {
@@ -5414,7 +5370,6 @@
                                       }
                                     },
                                     "running": {
-                                      "default": [],
                                       "maxItems": 6,
                                       "type": "array",
                                       "items": {
@@ -8871,13 +8826,11 @@
                         "type": "object",
                         "properties": {
                           "displayName": {
-                            "default": "Athlete",
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 255
                           },
                           "units": {
-                            "default": "metric",
                             "type": "string",
                             "enum": [
                               "metric",
@@ -8885,12 +8838,10 @@
                             ]
                           },
                           "timezone": {
-                            "default": "Europe/Paris",
                             "type": "string",
                             "maxLength": 100
                           },
                           "language": {
-                            "default": "en",
                             "type": "string",
                             "const": "en"
                           },
@@ -8903,60 +8854,43 @@
                             ]
                           },
                           "goals": {
-                            "default": "",
                             "type": "string",
                             "maxLength": 4000
                           },
                           "weeklyAvailability": {
-                            "default": {
-                              "monday": 0,
-                              "tuesday": 0,
-                              "wednesday": 0,
-                              "thursday": 0,
-                              "friday": 0,
-                              "saturday": 0,
-                              "sunday": 0
-                            },
                             "type": "object",
                             "properties": {
                               "monday": {
-                                "default": 0,
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 86400
                               },
                               "tuesday": {
-                                "default": 0,
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 86400
                               },
                               "wednesday": {
-                                "default": 0,
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 86400
                               },
                               "thursday": {
-                                "default": 0,
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 86400
                               },
                               "friday": {
-                                "default": 0,
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 86400
                               },
                               "saturday": {
-                                "default": 0,
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 86400
                               },
                               "sunday": {
-                                "default": 0,
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 86400
@@ -8974,14 +8908,9 @@
                             "additionalProperties": false
                           },
                           "heartRateZones": {
-                            "default": {
-                              "cycling": [],
-                              "running": []
-                            },
                             "type": "object",
                             "properties": {
                               "cycling": {
-                                "default": [],
                                 "maxItems": 6,
                                 "type": "array",
                                 "items": {
@@ -8991,7 +8920,6 @@
                                 }
                               },
                               "running": {
-                                "default": [],
                                 "maxItems": 6,
                                 "type": "array",
                                 "items": {
@@ -9008,7 +8936,6 @@
                             "additionalProperties": false
                           },
                           "ftpWatts": {
-                            "default": null,
                             "anyOf": [
                               {
                                 "type": "integer",
@@ -9021,16 +8948,6 @@
                             ]
                           }
                         },
-                        "required": [
-                          "displayName",
-                          "units",
-                          "timezone",
-                          "language",
-                          "goals",
-                          "weeklyAvailability",
-                          "heartRateZones",
-                          "ftpWatts"
-                        ],
                         "additionalProperties": false
                       }
                     },
@@ -11013,43 +10930,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -11074,7 +10984,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -11084,7 +10993,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -11197,43 +11105,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -11258,7 +11159,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -11268,7 +11168,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -14035,43 +13934,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -14096,7 +13988,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -14106,7 +13997,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -14219,43 +14109,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -14280,7 +14163,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -14290,7 +14172,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -17603,43 +17484,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -17664,7 +17538,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -17674,7 +17547,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -17787,43 +17659,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -17848,7 +17713,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -17858,7 +17722,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -20654,43 +20517,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -20715,7 +20571,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -20725,7 +20580,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -20838,43 +20692,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -20899,7 +20746,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -20909,7 +20755,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -23716,43 +23561,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -23777,7 +23615,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -23787,7 +23624,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -23900,43 +23736,36 @@
                                 "type": "object",
                                 "properties": {
                                   "monday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "tuesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "wednesday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "thursday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "friday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "saturday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
                                   },
                                   "sunday": {
-                                    "default": 0,
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 86400
@@ -23961,7 +23790,6 @@
                                 "type": "object",
                                 "properties": {
                                   "cycling": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -23971,7 +23799,6 @@
                                     }
                                   },
                                   "running": {
-                                    "default": [],
                                     "maxItems": 6,
                                     "type": "array",
                                     "items": {
@@ -27184,13 +27011,11 @@
               "type": "object",
               "properties": {
                 "displayName": {
-                  "default": "Athlete",
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 255
                 },
                 "units": {
-                  "default": "metric",
                   "type": "string",
                   "enum": [
                     "metric",
@@ -27198,12 +27023,10 @@
                   ]
                 },
                 "timezone": {
-                  "default": "Europe/Paris",
                   "type": "string",
                   "maxLength": 100
                 },
                 "language": {
-                  "default": "en",
                   "type": "string",
                   "const": "en"
                 },
@@ -27216,60 +27039,43 @@
                   ]
                 },
                 "goals": {
-                  "default": "",
                   "type": "string",
                   "maxLength": 4000
                 },
                 "weeklyAvailability": {
-                  "default": {
-                    "monday": 0,
-                    "tuesday": 0,
-                    "wednesday": 0,
-                    "thursday": 0,
-                    "friday": 0,
-                    "saturday": 0,
-                    "sunday": 0
-                  },
                   "type": "object",
                   "properties": {
                     "monday": {
-                      "default": 0,
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 86400
                     },
                     "tuesday": {
-                      "default": 0,
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 86400
                     },
                     "wednesday": {
-                      "default": 0,
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 86400
                     },
                     "thursday": {
-                      "default": 0,
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 86400
                     },
                     "friday": {
-                      "default": 0,
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 86400
                     },
                     "saturday": {
-                      "default": 0,
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 86400
                     },
                     "sunday": {
-                      "default": 0,
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 86400
@@ -27287,14 +27093,9 @@
                   "additionalProperties": false
                 },
                 "heartRateZones": {
-                  "default": {
-                    "cycling": [],
-                    "running": []
-                  },
                   "type": "object",
                   "properties": {
                     "cycling": {
-                      "default": [],
                       "maxItems": 6,
                       "type": "array",
                       "items": {
@@ -27304,7 +27105,6 @@
                       }
                     },
                     "running": {
-                      "default": [],
                       "maxItems": 6,
                       "type": "array",
                       "items": {
@@ -27321,7 +27121,6 @@
                   "additionalProperties": false
                 },
                 "ftpWatts": {
-                  "default": null,
                   "anyOf": [
                     {
                       "type": "integer",
@@ -27334,16 +27133,6 @@
                   ]
                 }
               },
-              "required": [
-                "displayName",
-                "units",
-                "timezone",
-                "language",
-                "goals",
-                "weeklyAvailability",
-                "heartRateZones",
-                "ftpWatts"
-              ],
               "additionalProperties": false
             }
           },
@@ -29295,43 +29084,36 @@
                 "type": "object",
                 "properties": {
                   "monday": {
-                    "default": 0,
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 86400
                   },
                   "tuesday": {
-                    "default": 0,
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 86400
                   },
                   "wednesday": {
-                    "default": 0,
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 86400
                   },
                   "thursday": {
-                    "default": 0,
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 86400
                   },
                   "friday": {
-                    "default": 0,
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 86400
                   },
                   "saturday": {
-                    "default": 0,
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 86400
                   },
                   "sunday": {
-                    "default": 0,
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 86400
@@ -29356,7 +29138,6 @@
                 "type": "object",
                 "properties": {
                   "cycling": {
-                    "default": [],
                     "maxItems": 6,
                     "type": "array",
                     "items": {
@@ -29366,7 +29147,6 @@
                     }
                   },
                   "running": {
-                    "default": [],
                     "maxItems": 6,
                     "type": "array",
                     "items": {

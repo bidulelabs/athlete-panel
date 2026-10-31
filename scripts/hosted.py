@@ -749,6 +749,17 @@ class Hosted:
         container = self.compose(release, ['ps', '-q', 'web']).stdout.strip()
         if not container or not self.image_matches(self.run(['docker', 'inspect', '--format', '{{.Image}}', container]).stdout.strip(), release):
             raise OperationError('The selected web service is not running. Inspect service logs and correct it before resuming.')
+        self.public_health(release)
+        self.fresh_worker(release, after)
+
+    def public_health(self, release):
+        # Identify the deployment probe and the release being checked. Custom/older
+        # metadata without a safe version still gets a truthful product name.
+        version = release.get('metadata', {}).get('version', '')
+        agent = 'AthletePanelDeployment'
+        if isinstance(version, str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.+_-]{0,127}', version):
+            agent += '/' + version
+        request = urllib.request.Request(self.origin() + '/api/health', headers={'User-Agent': agent})
         context = ssl.create_default_context()
         if self.test and self.test.get('caFile'):
             context = ssl.create_default_context(cafile=self.test['caFile'])
@@ -762,19 +773,24 @@ class Hosted:
             context = ssl.create_default_context(cafile=str(certificate))
         health = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context), NoHealthRedirects())
         for _ in range(60):
+            failure = 'No valid readiness response.'
             try:
-                with health.open(self.origin() + '/api/health', timeout=5) as response:
+                with health.open(request, timeout=5) as response:
+                    failure = f'HTTP {response.status} did not provide the required readiness response.'
                     if response.status == 200 and response.headers.get_content_type() == 'application/json':
                         body = response.read(4097)
                         if len(body) <= 4096:
                             payload = json.loads(body)
                             if isinstance(payload, dict) and payload.get('status') == 'ready': break
             except urllib.error.HTTPError as error:
+                # Never include the exception's URL, reason, headers or response body.
+                failure = f'HTTP {error.code} rejected the deployment health request.'
+                if error.code == 403:
+                    failure = 'HTTP 403 (Forbidden): the public endpoint or proxy denied the deployment health request.'
                 error.close()
             except (OSError, ValueError): pass
             time.sleep(2)
-        else: raise OperationError('HTTPS readiness failed: /api/health must return HTTP 200 JSON with status ready without redirects. Check DNS, ports 80/443 and Caddy logs, then resume. Read status before choosing recovery.')
-        self.fresh_worker(release, after)
+        else: raise OperationError('HTTPS readiness failed: ' + failure + ' /api/health must return HTTP 200 JSON with status ready without redirects. Check public access, proxy rules, DNS, ports 80/443 and ingress logs, then resume. Read status before choosing recovery.')
 
     def verify_data(self, release):
         self.compose(release, ['run', '--rm', '--no-deps', '-T', 'web', 'node', '--import', 'tsx', '--input-type=module', '-e', DATA_CHECK])
@@ -868,7 +884,7 @@ class Hosted:
         self.resume()
 
     def cancel(self):
-        safe = {'prepare-image', 'validate-upgrade-source', 'prepare-rehearsal-backup', 'rehearse-candidate'}
+        safe = {'prepare-image', 'validate-upgrade-source', 'prepare-rehearsal-backup', 'rehearse-candidate', 'verify-current-https'}
         restore_test = self.pending and self.pending['kind'] == 'restore-test'
         if not restore_test and (not self.pending or self.pending['kind'] != 'upgrade' or not set(self.pending['completed']).issubset(safe) or self.pending.get('phase') not in safe | {None}):
             raise OperationError('Only upgrade preparation or a restore test can be cancelled. Once maintenance may have started, resume or recover its recorded backup instead.')
@@ -955,6 +971,12 @@ class Hosted:
             def preparation(): self.pending['preparationBackup'] = self.backup(previous); self.checkpoint()
             self.step('prepare-rehearsal-backup', preparation)
             self.step('rehearse-candidate', lambda: self.rehearsal(Path(self.record['backupDirectory']) / self.pending['preparationBackup']['file'], candidate))
+            if 'enable-maintenance' not in entry_completed and not self.pending.get('maintenanceStartedAt'):
+                # Recheck access on preparation retries, but never require the old
+                # app once maintenance may have begun or services may be stopped.
+                if 'verify-current-https' in self.pending['completed']:
+                    self.pending['completed'].remove('verify-current-https')
+                self.step('verify-current-https', lambda: self.public_health(previous))
             self.step('enable-maintenance', lambda: self.maintenance(previous, True))
             self.step('drain-active-work', lambda: self.drain_work(previous))
             def snapshot(): self.pending['backup'] = self.backup(previous); self.checkpoint()

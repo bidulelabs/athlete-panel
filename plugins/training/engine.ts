@@ -1,4 +1,5 @@
 import {
+  agentCommandSchema,
   commandsSchema,
   type Command,
   type CommandInput,
@@ -19,20 +20,9 @@ import { validateWorkspace } from './engine/state';
 export { effectiveDate } from './dates';
 export { DomainError } from './engine/errors';
 export { validateWorkspace } from './engine/state';
-const agentActions = new Set([
-  'plan.create',
-  'plan.update',
-  'plan.delete',
-  'plan.duplicate',
-  'workout.create',
-  'workout.update',
-  'workout.delete',
-  'workout.duplicate',
-  'workout.reorder',
-  'note.create',
-  'note.update',
-  'note.delete',
-]);
+const agentActions = new Set<string>(
+  agentCommandSchema.options.map((option) => option.shape.action.value),
+);
 /** Commands use initial-snapshot revisions; newly created entities can be addressed at revision 1.
  * Finalization increments each changed entity once. Callers own transactions, audit and idempotency.
  */

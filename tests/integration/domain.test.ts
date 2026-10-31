@@ -892,6 +892,33 @@ describe('transactional training and external-agent workflow', () => {
     await expect(contextForToken(expired.token)).rejects.toMatchObject({ code: 'invalid_grant' });
   });
 
+  it('refuses owner-only actions before storing a proposal', async () => {
+    await save([{ action: 'workout.create', values: workout() as never }]);
+    const grant = await createGrant({ label: 'Week', from: '2026-10-19', to: '2026-10-25' });
+    const context = await contextForToken(grant.token);
+    const ownerOnlyCommands = [
+      {
+        action: 'workout.complete',
+        id: id(2),
+        expectedRevision: 1,
+        values: { status: 'completed', performedDate: '2026-10-24' },
+      },
+      { action: 'event.create', values: { title: 'Race', date: '2026-10-25' } },
+    ];
+    for (const command of ownerOnlyCommands)
+      await expect(
+        submitProposal(grant.token, {
+          commands: [command],
+          summary: 'Owner-only change',
+          contextDigest: context.contextDigest,
+          idempotencyKey: randomUUID(),
+        }),
+      ).rejects.toMatchObject({
+        issues: [expect.objectContaining({ path: ['commands', 0, 'action'] })],
+      });
+    expect(await connection()`select id from host.proposals`).toHaveLength(0);
+  });
+
   it('permits note-free workout creation with a grant that excludes private notes', async () => {
     const grant = await createGrant({ label: 'New workout', from: '2026-10-19', to: '2026-10-25' });
     const context = await contextForToken(grant.token);

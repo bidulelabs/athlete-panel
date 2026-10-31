@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
 async function login(page: Page) {
   await page.goto('/login');
   await page.getByLabel('Password', { exact: true }).fill(process.env.E2E_PASSWORD!);
@@ -192,15 +192,24 @@ test('a proxy error page on save says the change may have been saved', async ({ 
     'The server did not answer, so the change may have been saved.',
   );
 });
-test('a proxy error page on sign-in does not show a parser error', async ({ page }) => {
-  await page.route('**/api/auth/login', (route) =>
-    route.fulfill({ status: 502, contentType: 'text/html', body: '<html>Bad gateway</html>' }),
-  );
-  await page.goto('/login');
-  await page.getByLabel('Password', { exact: true }).fill(process.env.E2E_PASSWORD!);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByText('Unable to reach this instance.', { exact: false })).toBeVisible();
-});
+for (const { failure, failLogin } of [
+  {
+    failure: 'a proxy error page',
+    failLogin: (route: Route) =>
+      route.fulfill({ status: 502, contentType: 'text/html', body: '<html>Bad gateway</html>' }),
+  },
+  { failure: 'a network failure', failLogin: (route: Route) => route.abort() },
+]) {
+  test(`${failure} on sign-in says the instance cannot be reached`, async ({ page }) => {
+    await page.route('**/api/auth/login', failLogin);
+    await page.goto('/login');
+    await page.getByLabel('Password', { exact: true }).fill(process.env.E2E_PASSWORD!);
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page.locator('.error-message')).toContainText(
+      'Unable to reach this instance. Please refresh and try again.',
+    );
+  });
+}
 
 test('an out-of-range year in Go to date keeps the current week', async ({ page }) => {
   await login(page);

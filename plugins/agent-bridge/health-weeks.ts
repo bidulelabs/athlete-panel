@@ -1,5 +1,6 @@
 import { healthMetricSchema, type HealthRecord, type Profile } from '../../packages/contracts/src';
 import { addDays } from '../training/public/shared';
+import { latestDailyHealth } from '../activity-records/public/shared';
 import { resolveWeekStartsOn, startOfWeek } from '../../packages/ui/src/calendar-dates';
 
 const earlierDate = (a: string, b: string) => (a < b ? a : b);
@@ -7,9 +8,10 @@ const daysInRange = (from: string, to: string) =>
   (Date.parse(to) - Date.parse(from)) / 86400000 + 1;
 
 function weeklyAverages(records: HealthRecord[]) {
+  const latestRecords = latestDailyHealth(records);
   return Object.fromEntries(
     healthMetricSchema.options.map((metric) => {
-      const recordsWithValue = records.filter((r) => r.metric === metric && r.value !== null);
+      const recordsWithValue = latestRecords.filter((r) => r.metric === metric && r.value !== null);
       const values = recordsWithValue
         .filter(
           (r) => recordsWithValue.filter((other) => other.localDate === r.localDate).length === 1,

@@ -16,12 +16,13 @@ const record = (
   metric: HealthRecord['metric'],
   value: number | null,
   account = '555',
+  revision = 1,
 ) =>
   healthRecordSchema.parse({
     id: `00000000-0000-4000-8000-${String(nextId++).padStart(12, '0')}`,
-    revision: 1,
+    revision,
     provider: 'garmin',
-    externalId: `${account}:daily:${localDate}:${metric}`,
+    externalId: `${account}:daily:${localDate}:${metric}:${nextId}`,
     metric,
     localDate,
     measuredAt: `${localDate}T06:30:00.000Z`,
@@ -109,6 +110,35 @@ describe('agent health context', () => {
     expect(
       result.healthWeeks.find((w) => w.from === '2026-10-05')!.metrics.restingHeartRateBpm,
     ).toEqual({ average: 50, days: 1 });
+  });
+
+  it.each([
+    { corrected: 60, expected: { average: 60, days: 1 }, reversed: false },
+    { corrected: 60, expected: { average: 60, days: 1 }, reversed: true },
+    { corrected: null, expected: { average: null, days: 0 }, reversed: false },
+    { corrected: null, expected: { average: null, days: 0 }, reversed: true },
+  ])(
+    'uses the latest revision when one account corrects 40 to $corrected (reversed input: $reversed)',
+    ({ corrected, expected, reversed }) => {
+      const original = record('2026-10-05', 'hrvMilliseconds', 40, '555', 1);
+      const correction = record('2026-10-05', 'hrvMilliseconds', corrected, '555', 2);
+      const result = weeks(reversed ? [correction, original] : [original, correction], {
+        from: '2026-10-05',
+        to: '2026-10-11',
+      });
+      expect(result.healthWeeks[0]!.metrics.hrvMilliseconds).toEqual(expected);
+    },
+  );
+
+  it('keeps the other account value when one of two accounts corrects its day to unknown', () => {
+    const result = weeks([
+      record('2026-10-05', 'restingHeartRateBpm', 48, '555', 1),
+      record('2026-10-05', 'restingHeartRateBpm', null, '555', 2),
+      record('2026-10-05', 'restingHeartRateBpm', 60, '777'),
+    ]);
+    expect(
+      result.healthWeeks.find((w) => w.from === '2026-10-05')!.metrics.restingHeartRateBpm,
+    ).toEqual({ average: 60, days: 1 });
   });
 
   it('returns no week when the grant starts inside the daily window', () => {

@@ -88,21 +88,6 @@ export function normalizeOrders(state: WorkspaceState): void {
     });
   }
 }
-export function placeWorkout(
-  state: WorkspaceState,
-  workout: Workout,
-  preferredOrder: number,
-): void {
-  const key = bucket(workout, state);
-  const siblings = state.workouts
-    .filter((candidate) => candidate.id !== workout.id && bucket(candidate, state) === key)
-    .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
-  siblings.splice(Math.min(Math.max(preferredOrder - 1, 0), siblings.length), 0, workout);
-  siblings.forEach((item, index) => {
-    item.order = index + 1;
-  });
-  normalizeOrders(state);
-}
 export function historyInPlan(state: WorkspaceState, planId: string): boolean {
   return state.workouts.some(
     (workout) =>

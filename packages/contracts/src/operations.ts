@@ -14,7 +14,13 @@ import {
   agentConnectionStatusSchema,
 } from './domain';
 import { onboardingActionSchema, onboardingSchema } from './onboarding';
-import { mutationResponseSchema, coveragePageSchema, grantSummarySchema } from './responses';
+import {
+  mutationResponseSchema,
+  coveragePageSchema,
+  grantSummarySchema,
+  proposalDetailsSchema,
+  auditEntrySchema,
+} from './responses';
 const id = z.object({ id: z.uuid() });
 const undo = id.extend({ idempotencyKey: z.uuid() }).strict();
 const ok = z.object({ ok: z.boolean() });
@@ -36,6 +42,7 @@ export const operationContracts = {
       mutationResponseSchema,
     ),
     undo: operation(undo, mutationResponseSchema),
+    'history-details': operation(id.strict(), auditEntrySchema),
   },
   garmin: {
     configure: operation(
@@ -73,6 +80,7 @@ export const operationContracts = {
     ),
   },
   'agent-bridge': {
+    details: operation(id, proposalDetailsSchema),
     grant: operation(
       agentGrantValuesSchema,
       z.object({ grant: grantSummarySchema, token: z.string() }),

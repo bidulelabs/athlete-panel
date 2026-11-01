@@ -1,0 +1,21 @@
+{
+  "revision": "09770bda9119a380982284726ad5364a4c5b13dd",
+  "files": [
+    "packages/host/migrations/001-host.sql",
+    "packages/host/migrations/002-job-priority.sql",
+    "packages/host/migrations/003-request-budgets.sql",
+    "packages/host/migrations/004-password-upgrade.sql",
+    "plugins/activity-records/migrations/001-initial.sql",
+    "plugins/activity-records/migrations/002-identity-index.sql",
+    "plugins/agent-bridge/migrations/001-connections.sql",
+    "plugins/athlete/migrations/001-initial.sql",
+    "plugins/athlete/migrations/002-identity-index.sql",
+    "plugins/athlete/migrations/003-onboarding.sql",
+    "plugins/garmin/migrations/001-initial.sql",
+    "plugins/garmin/migrations/002-coverage-quality.sql",
+    "plugins/garmin/migrations/003-scan-diagnostics.sql",
+    "plugins/garmin/migrations/004-recovery-scheduling.sql",
+    "plugins/training/migrations/001-initial.sql",
+    "plugins/training/migrations/002-identity-index.sql"
+  ]
+}

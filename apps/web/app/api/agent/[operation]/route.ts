@@ -1,3 +1,4 @@
+import { readHistory } from '../../../../../../plugins/agent-bridge/history';
 import { contextForToken, submitProposal } from '../../../../../../plugins/agent-bridge/service';
 import { pluginEnabled } from '../../../../../../packages/host/src/plugins';
 import { failure, json, readJson } from '../../../../../../packages/host/src/http';
@@ -9,6 +10,7 @@ import {
   pollConnection,
   cancelConnection,
 } from '../../../../../../plugins/agent-bridge/connections';
+import { AGENT_PROPOSAL_BYTES } from '../../../../../../packages/contracts/src';
 async function dispatch(request: Request, operation: string) {
   try {
     assert(pluginEnabled('agent-bridge'), 'plugin_disabled', 'Agent access is disabled.', 404);
@@ -41,10 +43,23 @@ async function dispatch(request: Request, operation: string) {
       return json(await pollConnection(token));
     if (operation === 'connect-cancel' && request.method === 'POST')
       return json(await cancelConnection(token));
+    if (
+      ['history-discover', 'history-summary', 'history-records', 'history-context'].includes(
+        operation,
+      ) &&
+      request.method === 'POST'
+    )
+      return json(
+        await readHistory(
+          token,
+          operation.slice(8) as 'discover' | 'summary' | 'records' | 'context',
+          await readJson(request),
+        ),
+      );
     if (operation === 'context' && request.method === 'GET')
       return json(await contextForToken(token));
     if (operation === 'propose' && request.method === 'POST')
-      return json(await submitProposal(token, await readJson(request)));
+      return json(await submitProposal(token, await readJson(request, AGENT_PROPOSAL_BYTES)));
     return json(
       {
         error: {

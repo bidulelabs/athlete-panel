@@ -13,6 +13,20 @@ export function connection(): Sql {
   }));
 }
 export type Transaction = TransactionSql;
+/** READ COMMITTED, read-only work without the domain write lock. Callers validate their own consistency. */
+export async function readTransaction<T>(fn: (tx: Transaction) => Promise<T>): Promise<T> {
+  return (await connection().begin('isolation level read committed read only', async (tx) => {
+    const checkMaintenance = async () => {
+      const rows = await tx`select value from host.settings where key='maintenance'`;
+      if (rows[0]?.value === true)
+        throw new AppError('maintenance', 'The instance is in maintenance mode.', 503);
+    };
+    await checkMaintenance();
+    const result = await fn(tx);
+    await checkMaintenance();
+    return result;
+  })) as T;
+}
 export async function transaction<T>(
   fn: (tx: Transaction) => Promise<T>,
   options: { allowMaintenance?: boolean } = {},

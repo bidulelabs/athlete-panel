@@ -2,7 +2,7 @@ import { planSchema, type Command, type Workout } from '@athlete-panel/contracts
 import type { CommandContext } from '../context';
 import { fail } from '../errors';
 import { duplicateChildId } from '../identities';
-import { historyInPlan, normalizeOrders, placeWorkout } from '../state';
+import { historyInPlan } from '../state';
 
 export function handlePlan(
   context: CommandContext,
@@ -11,7 +11,7 @@ export function handlePlan(
     { action: 'plan.create' | 'plan.update' | 'plan.delete' | 'plan.duplicate' }
   >,
 ): void {
-  const { state, options, createId, get } = context;
+  const { state, options, createId, get, ordering } = context;
   switch (command.action) {
     case 'plan.create': {
       state.plans.push(
@@ -33,7 +33,7 @@ export function handlePlan(
         );
       }
       Object.assign(plan, command.values);
-      normalizeOrders(state);
+      ordering.normalize();
       break;
     }
     case 'plan.delete': {
@@ -50,7 +50,7 @@ export function handlePlan(
         (item) => item.schedule.kind !== 'plan' || item.schedule.planId !== plan.id,
       );
       state.plans = state.plans.filter((item) => item.id !== plan.id);
-      normalizeOrders(state);
+      ordering.normalize();
       break;
     }
     case 'plan.duplicate': {
@@ -85,7 +85,7 @@ export function handlePlan(
           },
         };
         state.workouts.push(copy);
-        placeWorkout(state, copy, state.workouts.length);
+        ordering.place(copy, state.workouts.length);
       }
       for (const note of [...state.notes]) {
         if (note.schedule.kind === 'plan' && note.schedule.planId === original.id)

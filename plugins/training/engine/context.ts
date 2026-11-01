@@ -2,6 +2,7 @@ import { type Schedule, type Workout, type WorkspaceState } from '@athlete-panel
 import { randomUUID } from 'node:crypto';
 import { fail } from './errors';
 import { allEntities } from './state';
+import { createWorkoutOrdering } from './ordering';
 export type EngineOptions = { actor: 'owner' | 'agent'; idFactory?: () => string };
 export function createCommandContext(
   initial: WorkspaceState,
@@ -40,6 +41,14 @@ export function createCommandContext(
       fail('FORBIDDEN', 'Agents may edit pending workouts only.');
   };
 
-  return { state, options, createId, get, checkSchedule, pendingForAgent };
+  return {
+    state,
+    options,
+    createId,
+    get,
+    checkSchedule,
+    pendingForAgent,
+    ordering: createWorkoutOrdering(state),
+  };
 }
 export type CommandContext = ReturnType<typeof createCommandContext>;

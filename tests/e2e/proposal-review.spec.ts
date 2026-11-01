@@ -4,6 +4,82 @@ import { expect, test } from '@playwright/test';
 const password = process.env.E2E_PASSWORD;
 if (!password) throw new Error('Isolated E2E_PASSWORD required.');
 
+test('a plan-only proposal shows its date before owner approval in both themes', async ({
+  page,
+  request,
+}, info) => {
+  await page.goto('/login');
+  await page.getByLabel('Password', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  const origin = new URL(page.url()).origin;
+  const owner = (operation: string, data: unknown) =>
+    page.request.post(`/api/plugins/agent-bridge/${operation}`, {
+      headers: { Origin: origin },
+      data,
+    });
+  const access = await owner('grant', {
+    label: 'Synthetic plan date',
+    version: 2,
+    history: null,
+    planning: { from: '2026-11-01', to: '2026-11-30' },
+  });
+  expect(access.ok()).toBe(true);
+  const { token, grant } = await access.json();
+  let proposalId: string | undefined;
+  try {
+    const headers = { Authorization: `Bearer ${token}` };
+    const context = await (await request.get('/api/agent/context', { headers })).json();
+    const summary = `Plan date ${info.project.name} ${randomUUID()}`;
+    const proposed = await request.post('/api/agent/propose', {
+      headers,
+      data: {
+        summary,
+        contextDigest: context.contextDigest,
+        idempotencyKey: randomUUID(),
+        commands: [
+          {
+            action: 'plan.create',
+            values: { title: 'Synthetic dated plan', startDate: '2026-11-03' },
+          },
+        ],
+      },
+    });
+    expect(proposed.ok(), await proposed.text()).toBe(true);
+    proposalId = (await proposed.json()).id;
+    await page.goto('/agent');
+    await page
+      .locator('.proposal-row')
+      .filter({ hasText: summary })
+      .getByRole('button', { name: 'Review', exact: true })
+      .click();
+    const dialog = page.getByRole('dialog');
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+        document.documentElement.classList.toggle('dark', value === 'dark');
+      }, theme);
+      await expect(dialog.locator('.proposal-overview-dates')).toHaveText(
+        '3 Nov 2026 – 3 Nov 2026',
+      );
+      await expect(
+        dialog.getByRole('button', { name: 'Apply reviewed changes', exact: true }),
+      ).toBeDisabled();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      await page.screenshot({
+        path: `.runtime/browser/plan-date-${info.project.name}-${theme}.png`,
+        fullPage: true,
+        animations: 'disabled',
+      });
+    }
+  } finally {
+    if (proposalId) expect((await owner('reject', { id: proposalId })).ok()).toBe(true);
+    expect((await owner('revoke', { id: grant.id })).ok()).toBe(true);
+  }
+});
+
 test('owner reviews readable changes and applies the exact stored proposal', async ({
   page,
   request,

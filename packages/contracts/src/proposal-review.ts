@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { agentScopeSchema, workspaceStateSchema } from './domain';
+import { agentScopeSchema, planningScopeSchema, workspaceStateSchema } from './domain';
 import { entityChangeSchema } from './responses';
 
 export const PROPOSAL_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
@@ -7,6 +7,14 @@ export const proposalExpiresAt = (createdAt: Date | string) =>
   new Date(new Date(createdAt).getTime() + PROPOSAL_LIFETIME_MS).toISOString();
 const legacyContext = z.object({ scope: agentScopeSchema, digest: z.string().length(64) }).strict();
 export const proposalContextSchema = z.union([
+  z
+    .object({
+      version: z.literal(3),
+      scope: planningScopeSchema,
+      digest: z.string().length(64),
+      snapshot: workspaceStateSchema,
+    })
+    .strict(),
   legacyContext.extend({ version: z.literal(2), snapshot: workspaceStateSchema }).strict(),
   legacyContext,
 ]);

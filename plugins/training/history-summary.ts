@@ -46,37 +46,6 @@ export function historyRecords(entry: AuditEntry) {
   );
 }
 
-export function historyTitle(entry: AuditEntry) {
-  if (entry.summary.startsWith('Undo:')) return 'Reverted training changes';
-  const verbs: Record<string, string> = {
-    create: 'Created',
-    update: 'Updated',
-    delete: 'Deleted',
-    duplicate: 'Duplicated',
-    complete: 'Logged',
-    clearCompletion: 'Cleared completion for',
-    link: 'Linked an activity to',
-    unlink: 'Unlinked an activity from',
-  };
-  if (entry.summary === 'workout.reorder') return 'Reordered workouts';
-  const [entity, action] = entry.summary.split('.');
-  const verb = action ? verbs[action] : undefined;
-  const candidates = historyRecords(entry).filter((change) => change.entity === entity);
-  const record =
-    action === 'create' || action === 'duplicate'
-      ? candidates.find((change) => !change.before)
-      : action === 'delete'
-        ? candidates.find((change) => !change.after)
-        : (candidates.find((change) => changedFields(change).some((field) => field !== 'order')) ??
-          candidates[0]);
-  if (verb && record) return `${verb} ${recordName(record)}`;
-  // Preserve descriptive proposal summaries, while folding command batches into plain language.
-  return entry.summary.trim() &&
-    !/\b(?:profile|plan|workout|note|event|injury)\.[a-zA-Z]+/.test(entry.summary)
-    ? entry.summary
-    : 'Updated training';
-}
-
 function valueText(
   value: unknown,
   key: string,

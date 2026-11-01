@@ -1,54 +1,26 @@
 'use client';
-
-import { Alert } from '@athlete-panel/ui';
-import { Checkbox, Tabs, TabsList, TabsTrigger, TabsContent } from '@athlete-panel/ui';
-import { useConfirm } from '@athlete-panel/ui';
-import {
-  Button,
-  Badge,
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from '@athlete-panel/ui';
 import { useEffect, useState } from 'react';
+import { Eye, FileCheck2, Plus, RotateCcw, ShieldCheck } from 'lucide-react';
 import {
-  CheckCircle2,
-  Eye,
-  FileCheck2,
-  KeyRound,
-  Plus,
-  RotateCcw,
-  ShieldCheck,
-  X,
-} from 'lucide-react';
-import {
-  dateLabel,
-  distance,
-  duration,
-  sportLabel,
+  Badge,
+  Button,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  useConfirm,
   EmptyState,
   ErrorMessage,
-  Modal,
   PageHeader,
   requestId,
   useAction,
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import {
-  proposalReviewSchema,
-  type ProposalReview,
-  type ProposalSummary,
-  type Entity,
-} from '@athlete-panel/contracts';
-import { proposalRows } from './proposal-diff';
-import { calendarDate, groupChangesByWeek, planTitlesById } from './proposal-weeks';
-import './review.css';
 import { ConnectAgentDialog, ConnectionApproval } from './connections-client';
-
+import { ConnectedAgents } from './connections-list';
+import { ProposalLoader } from './proposal-dialog';
+import './review.css';
 export default function AgentBridgePage(_: PluginPageProps) {
   const confirm = useConfirm();
   const { envelope, request } = useWorkspace();
@@ -129,7 +101,8 @@ export default function AgentBridgePage(_: PluginPageProps) {
                   <div>
                     <strong>{item.summary || 'Training adjustment'}</strong>
                     <p>
-                      {item.changes?.length ?? 0} change{item.changes?.length === 1 ? '' : 's'} ·{' '}
+                      {item.affectedCount} change
+                      {item.affectedCount === 1 ? '' : 's'} ·{' '}
                       {new Date(item.createdAt).toLocaleString('en-GB')}
                     </p>
                   </div>
@@ -158,52 +131,7 @@ export default function AgentBridgePage(_: PluginPageProps) {
                 appear here for review.
               </EmptyState>
             ))}
-          {tab === 'grants' &&
-            (envelope.grants.length ? (
-              envelope.grants.map((grant) => (
-                <div className="proposal-row" key={grant.id}>
-                  <div>
-                    <strong>{grant.label || 'Training agent'}</strong>
-                    <p>
-                      {dateLabel(grant.from)} — {dateLabel(grant.to)} ·{' '}
-                      {grant.includeNotes ? 'Includes notes' : 'Private notes excluded'}
-                    </p>
-                    <p>Expires {new Date(grant.expiresAt).toLocaleString('en-GB')}</p>
-                  </div>
-                  <Badge className="badge">
-                    {grant.revoked
-                      ? 'Disconnected'
-                      : new Date(grant.expiresAt).getTime() < Date.now()
-                        ? 'Expired'
-                        : 'Active'}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="button small"
-                    disabled={action.busy || grant.revoked}
-                    onClick={() =>
-                      action.run(() => request('agent-bridge', 'revoke', { id: grant.id }))
-                    }
-                  >
-                    <X size={14} />
-                    Disconnect
-                  </Button>
-                </div>
-              ))
-            ) : (
-              <EmptyState
-                icon={<KeyRound size={26} />}
-                title="No connected agents"
-                action={
-                  <Button variant="outline" className="button" onClick={() => setConnectOpen(true)}>
-                    Connect an agent
-                  </Button>
-                }
-              >
-                Approve temporary access when you want an agent to help.
-              </EmptyState>
-            ))}
+          {tab === 'grants' && <ConnectedAgents onConnect={() => setConnectOpen(true)} />}
           {tab === 'history' &&
             (envelope.changes.length ? (
               envelope.changes.map((change) => (
@@ -211,8 +139,8 @@ export default function AgentBridgePage(_: PluginPageProps) {
                   <div>
                     <strong>{change.summary || 'Training data updated'}</strong>
                     <p>
-                      {change.changes?.length ?? 0} change{change.changes?.length === 1 ? '' : 's'}{' '}
-                      · {new Date(change.createdAt).toLocaleString('en-GB')}
+                      {change.affectedCount} change{change.affectedCount === 1 ? '' : 's'} ·{' '}
+                      {new Date(change.createdAt).toLocaleString('en-GB')}
                     </p>
                   </div>
                   <Badge className="badge">{change.undoneAt ? 'Undone' : 'Applied'}</Badge>
@@ -256,309 +184,9 @@ export default function AgentBridgePage(_: PluginPageProps) {
             </p>
           </div>
           {connectOpen && <ConnectAgentDialog onClose={() => setConnectOpen(false)} />}
-          {proposal && <ProposalDialog proposal={proposal} onClose={() => setProposalId(null)} />}
+          {proposal && <ProposalLoader proposal={proposal} onClose={() => setProposalId(null)} />}
         </TabsContent>
       </Tabs>
     </>
-  );
-}
-
-function recordLabel(record: Entity | null): string | undefined {
-  if (!record) return undefined;
-  if ('title' in record) return record.title;
-  if ('bodyPart' in record) return record.bodyPart;
-  return undefined;
-}
-function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onClose: () => void }) {
-  const { request, data } = useWorkspace();
-  const planTitles = planTitlesById(data.plans, proposal.changes);
-  const action = useAction();
-  const [acknowledged, setAcknowledged] = useState(false);
-  const [idempotencyKey] = useState(requestId);
-  const [review, setReview] = useState<ProposalReview | null>(null);
-  const [reviewError, setReviewError] = useState<string | null>(null);
-  const [reviewVersion, setReviewVersion] = useState(0);
-  const pending = proposal.status === 'pending';
-  const canApply =
-    pending && (review?.applicability === 'ready' || review?.applicability === 'review-required');
-  useEffect(() => {
-    const controller = new AbortController();
-    let active = true;
-    setAcknowledged(false);
-    setReview(null);
-    setReviewError(null);
-    if (!pending) return;
-    void (async () => {
-      try {
-        const response = await fetch('/api/plugins/agent-bridge/review', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: proposal.id, digest: proposal.digest }),
-          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
-          cache: 'no-store',
-        });
-        if (!response.ok) throw new Error('Proposal review could not load. Try again.');
-        const result = proposalReviewSchema.parse(await response.json());
-        if (active) setReview(result);
-      } catch (error) {
-        if (active)
-          setReviewError(
-            error instanceof Error ? error.message : 'Proposal review could not load.',
-          );
-      }
-    })();
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [proposal.id, proposal.digest, pending, reviewVersion]);
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title="Review proposed changes"
-      description={proposal.summary || 'Training adjustment'}
-      wide
-    >
-      <div className="dialog-body">
-        <p>
-          Each affected record is listed by week. Open a record to see every field before and after,
-          including schedule, intervals and ordering. Deletions remove the listed record. Apply
-          saves this entire reviewed proposal together.
-        </p>
-        <div className="form-inline" style={{ justifyContent: 'space-between', marginBottom: 17 }}>
-          <Badge className="badge accent">{proposal.status}</Badge>
-          <span className="muted-text">
-            {proposal.changes?.length ?? 0} change{proposal.changes?.length === 1 ? '' : 's'}
-          </span>
-        </div>
-        {proposal.warnings?.map((warning, index) => (
-          <Alert role="status" className="callout" key={index}>
-            {typeof warning === 'string' ? warning : (warning.message ?? JSON.stringify(warning))}
-          </Alert>
-        ))}
-        {pending && !review && !reviewError && (
-          <p role="status">Checking proposal and current context…</p>
-        )}
-        {reviewError && (
-          <>
-            <ErrorMessage error={reviewError} />
-            <Button variant="outline" onClick={() => setReviewVersion((value) => value + 1)}>
-              Retry review
-            </Button>
-          </>
-        )}
-        {review && (
-          <p className="muted-text">
-            Apply before {new Date(review.expiresAt).toLocaleString()} · Seven days from submission
-          </p>
-        )}
-        {review?.conflicts.map((conflict) => (
-          <Alert className="callout" key={conflict.code}>
-            {conflict.message}
-          </Alert>
-        ))}
-        {!!review?.contextChanges.length && (
-          <section aria-label="Changed context">
-            <h3>Context changed since submission</h3>
-            <p>
-              These facts changed after the agent prepared this proposal. Review them before
-              deciding whether the proposed training still suits you.
-            </p>
-            {review.contextChanges.map((change, index) => (
-              <ReviewChange
-                change={change}
-                planTitles={planTitles}
-                caption="Context at submission and now"
-                key={index}
-              />
-            ))}
-          </section>
-        )}
-        <section aria-label="Proposed edits">
-          <h3>Proposed edits</h3>
-          <ProposedEditsByWeek changes={proposal.changes} planTitles={planTitles} />
-        </section>
-        {canApply && (
-          <label className="checkbox-row" style={{ marginTop: 22 }}>
-            <Checkbox
-              checked={acknowledged}
-              onCheckedChange={(value) => setAcknowledged(value === true)}
-            />
-            {review?.applicability === 'review-required'
-              ? 'I have reviewed the changed context and still want to apply these exact edits.'
-              : 'I have reviewed these changes and want to apply them.'}
-          </label>
-        )}
-        <ErrorMessage error={action.error} />
-        <div className="dialog-actions">
-          {pending ? (
-            <>
-              <Button
-                variant="outline"
-                className="button"
-                disabled={action.busy}
-                onClick={() =>
-                  action.run(() => request('agent-bridge', 'reject', { id: proposal.id }), onClose)
-                }
-              >
-                Reject proposal
-              </Button>
-              <Button
-                variant="default"
-                className="button primary"
-                disabled={action.busy || !acknowledged || !canApply}
-                onClick={() =>
-                  action.run(async () => {
-                    try {
-                      return await request('agent-bridge', 'apply', {
-                        id: proposal.id,
-                        digest: proposal.digest,
-                        idempotencyKey,
-                        ...(review?.currentContextDigest
-                          ? { reviewedContextDigest: review.currentContextDigest }
-                          : {}),
-                      });
-                    } catch (error) {
-                      setAcknowledged(false);
-                      setReview(null);
-                      setReviewVersion((value) => value + 1);
-                      throw error;
-                    }
-                  }, onClose)
-                }
-              >
-                <CheckCircle2 size={16} />
-                {action.busy ? 'Applying…' : 'Apply reviewed changes'}
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" className="button" onClick={onClose}>
-              Close
-            </Button>
-          )}
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-const weekdayDate = { weekday: 'short', day: 'numeric', month: 'short' } as const;
-
-function ProposedEditsByWeek({
-  changes,
-  planTitles,
-}: {
-  changes: ProposalSummary['changes'];
-  planTitles: Record<string, string>;
-}) {
-  const { weekStartsOn } = useWorkspace();
-  return groupChangesByWeek(changes, weekStartsOn).map((week) => {
-    const title = week.weekStart
-      ? `Week of ${dateLabel(week.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })}`
-      : 'Plans';
-    return (
-      <section className="proposal-week" aria-label={title} key={week.weekStart ?? 'undated'}>
-        <div className="proposal-week-heading">
-          <h4>{title}</h4>
-          <span>
-            {week.changes.length} change{week.changes.length === 1 ? '' : 's'}
-          </span>
-        </div>
-        {week.changes.map((change) => (
-          <ReviewChange
-            change={change}
-            planTitles={planTitles}
-            caption="Proposed field changes"
-            key={`${change.entity}:${change.id}`}
-          />
-        ))}
-      </section>
-    );
-  });
-}
-
-function ReviewChange({
-  change,
-  planTitles,
-  caption,
-}: {
-  change: ProposalSummary['changes'][number];
-  planTitles: Record<string, string>;
-  caption: string;
-}) {
-  const { data } = useWorkspace();
-  const units = data.profile?.units ?? 'metric';
-  const record = change.after ?? change.before;
-  const date = calendarDate(change);
-  const dateChanged =
-    change.before && change.after && change.beforeEffectiveDate !== change.afterEffectiveDate;
-  const summaryFacts = [
-    date && dateLabel(date, weekdayDate),
-    dateChanged &&
-      `moved from ${change.beforeEffectiveDate ? dateLabel(change.beforeEffectiveDate) : 'unscheduled'}`,
-    record &&
-      'startDate' in record &&
-      record.startDate &&
-      `starts ${dateLabel(record.startDate, weekdayDate)}`,
-    record && 'kind' in record && record.kind === 'rest' && 'Rest day',
-    record && 'sport' in record && record.sport && sportLabel(record.sport),
-    record &&
-      'durationSeconds' in record &&
-      record.durationSeconds != null &&
-      duration(record.durationSeconds),
-    record &&
-      'distanceMeters' in record &&
-      record.distanceMeters != null &&
-      distance(record.distanceMeters, units),
-  ].filter(Boolean);
-  return (
-    <details className="proposal-diff">
-      <summary className="proposal-diff-summary">
-        <Badge className="badge">
-          {!change.before ? 'Create' : !change.after ? 'Delete' : 'Update'}
-        </Badge>{' '}
-        <span className="proposal-diff-title">{recordLabel(record) ?? change.entity}</span>{' '}
-        <span className="proposal-diff-facts">{summaryFacts.join(' · ')}</span>
-      </summary>
-      <Table className="review-fields">
-        <caption className="sr-only">{caption}</caption>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Field</TableHead>
-            <TableHead>Before</TableHead>
-            <TableHead>After</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {proposalRows(change, units, planTitles).map((row) => (
-            <TableRow key={row.field}>
-              <TableHead scope="row">{row.field}</TableHead>
-              <TableCell>
-                <span className="review-mobile-label">Before: </span>
-                {row.before}
-              </TableCell>
-              <TableCell>
-                <span className="review-mobile-label">After: </span>
-                {row.after}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <details className="review-technical">
-        <summary>Technical details (complete record)</summary>
-        <div className="diff-columns">
-          <div>
-            <small>BEFORE</small>
-            <pre>{JSON.stringify(change.before, null, 2)}</pre>
-          </div>
-          <div>
-            <small>AFTER</small>
-            <pre>{JSON.stringify(change.after, null, 2)}</pre>
-          </div>
-        </div>
-      </details>
-    </details>
   );
 }

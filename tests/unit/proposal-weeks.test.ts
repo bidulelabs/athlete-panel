@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { planSchema, workoutSchema, type EntityChange } from '@athlete-panel/contracts';
 import { proposalRows } from '../../plugins/agent-bridge/proposal-diff';
-import { groupChangesByWeek, planTitlesById } from '../../plugins/agent-bridge/proposal-weeks';
+import {
+  groupChangesByWeek,
+  planTitlesById,
+  summarizeProposal,
+} from '../../plugins/agent-bridge/proposal-weeks';
 
 const plan = planSchema.parse({
   id: '00000000-0000-4000-8000-000000000010',
@@ -96,6 +100,30 @@ describe('proposal review weeks', () => {
 });
 
 describe('proposal review plan names', () => {
+  it.each([
+    { before: null, after: plan, from: '2026-11-03', to: '2026-11-03' },
+    { before: plan, after: null, from: '2026-11-03', to: '2026-11-03' },
+    {
+      before: plan,
+      after: { ...plan, startDate: '2026-12-01' },
+      from: '2026-11-03',
+      to: '2026-12-01',
+    },
+    {
+      before: plan,
+      after: { ...plan, startDate: '2026-01-01' },
+      from: '2026-01-01',
+      to: '2026-11-03',
+    },
+    { before: null, after: { ...plan, startDate: null }, from: undefined, to: undefined },
+  ])(
+    'includes plan dates in the overview without changing grouping: $from through $to',
+    ({ before, after, from, to }) => {
+      const change: EntityChange = { entity: 'plan', id: plan.id, before, after };
+      expect(summarizeProposal([change])).toMatchObject({ from, to });
+      expect(groupChangesByWeek([change], 1)[0]?.weekStart).toBeNull();
+    },
+  );
   it('names a plan created by the same proposal instead of showing its id', () => {
     const planWorkout = workoutSchema.parse({
       ...workout(1, 'Plan run'),
@@ -117,5 +145,38 @@ describe('proposal review plan names', () => {
       before: 'Not present',
       after: plan.id,
     });
+  });
+});
+
+it('groups month-boundary weeks without duplicating moves or deletions and summarizes exact changes', async () => {
+  const { groupChangesByMonth, summarizeProposal } =
+    await import('../../plugins/agent-bridge/proposal-weeks');
+  const added = created(1, 'January', '2027-01-31');
+  const moved = {
+    ...created(2, 'Moved', '2027-02-01'),
+    before: workout(2, 'Moved'),
+    beforeEffectiveDate: '2026-12-01',
+  };
+  const deleted = {
+    ...created(3, 'Deleted', '2027-02-02'),
+    before: workout(3, 'Deleted'),
+    after: null,
+    beforeEffectiveDate: '2027-02-02',
+    afterEffectiveDate: null,
+  };
+  const changes = [deleted, added, moved];
+  const months = groupChangesByMonth(changes);
+  expect(months.map((month) => [month.month, month.changes.length])).toEqual([
+    ['2027-01', 1],
+    ['2027-02', 2],
+  ]);
+  expect(new Set(months.flatMap((month) => month.changes.map((change) => change.id))).size).toBe(3);
+  expect(summarizeProposal(changes)).toEqual({
+    from: '2026-12-01',
+    to: '2027-02-02',
+    sports: ['running'],
+    added: 1,
+    changed: 1,
+    deleted: 1,
   });
 });

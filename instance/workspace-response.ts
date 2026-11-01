@@ -1,5 +1,6 @@
 import {
   proposalExpiresAt,
+  grantScopeSchema,
   workspaceEnvelopeSchema,
   type WorkspaceEnvelope,
 } from '../packages/contracts/src';
@@ -9,13 +10,15 @@ import { pluginStatus, pluginEnabled } from '../packages/host/src/plugins';
 import { readOnboarding } from '../packages/host/src/onboarding';
 import { status } from '../plugins/garmin/public/server';
 import { loadWorkspace } from './services';
+import { recentChanges } from '../plugins/training/public/server';
 
 type ProposalRow = {
   id: string;
   status: string;
   digest: string;
   createdAt: Date;
-  changes: unknown;
+  affectedCount: number;
+  dateBounds: unknown;
   summary: string;
 };
 type GrantRow = {
@@ -23,16 +26,7 @@ type GrantRow = {
   label: string;
   expiresAt: Date;
   revoked: boolean;
-  from: string;
-  to: string;
-  includeNotes: boolean;
-};
-type AuditRow = {
-  id: string;
-  createdAt: Date;
-  summary: string;
-  undoneAt: Date | null;
-  changes: unknown;
+  scope: unknown;
 };
 type JobRow = {
   id: string;
@@ -70,13 +64,18 @@ export async function readWorkspaceResponse(range: {
           }),
       sql<
         ProposalRow[]
-      >`select id,status,digest,created_at as "createdAt",changes,summary from host.proposals order by created_at desc limit 50`,
+      >`select id,status,digest,created_at as "createdAt",jsonb_array_length(changes) as "affectedCount",summary,
+      (select jsonb_build_object('from',min(d.date),'to',max(d.date))
+        from jsonb_array_elements(changes) c
+        cross join lateral (values
+          (c->>'beforeEffectiveDate'), (c->>'afterEffectiveDate'),
+          (case when c->>'entity'='plan' then c#>>'{before,startDate}' end),
+          (case when c->>'entity'='plan' then c#>>'{after,startDate}' end)
+        ) d(date)) as "dateBounds" from host.proposals order by created_at desc limit 50`,
       sql<
         GrantRow[]
-      >`select id,label,expires_at as "expiresAt",revoked,scope->>'from' as "from",scope->>'to' as "to",(scope->>'includeNotes')::boolean as "includeNotes" from host.grants order by created_at desc limit 50`,
-      sql<
-        AuditRow[]
-      >`select id,created_at as "createdAt",summary,undone_at as "undoneAt",changes from host.changes order by created_at desc limit 50`,
+      >`select id,label,expires_at as "expiresAt",revoked,scope from host.grants order by created_at desc limit 50`,
+      recentChanges(),
       sql<
         JobRow[]
       >`select id,status,kind,progress,error,next_run_at as "nextRunAt",attempts from host.jobs order by created_at desc limit 50`,
@@ -99,12 +98,12 @@ export async function readWorkspaceResponse(range: {
       expiresAt: proposalExpiresAt(row.createdAt),
       warnings: [],
     })),
-    grants: grants.map((row) => ({ ...row, expiresAt: row.expiresAt.toISOString() })),
-    changes: changes.map((row) => ({
+    grants: grants.map(({ scope, ...row }) => ({
       ...row,
-      createdAt: row.createdAt.toISOString(),
-      undoneAt: row.undoneAt?.toISOString() ?? null,
+      ...grantScopeSchema.parse(scope),
+      expiresAt: row.expiresAt.toISOString(),
     })),
+    changes,
     jobs: jobs.map((row) => ({
       ...row,
       nextRunAt: row.nextRunAt.toISOString(),

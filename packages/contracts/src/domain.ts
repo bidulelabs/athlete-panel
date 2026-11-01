@@ -584,7 +584,15 @@ export const agentCommandSchema = z.discriminatedUnion('action', [
   noteUpdateCommand,
   noteDeleteCommand,
 ]);
-export const agentCommandsSchema = z.array(agentCommandSchema).min(1).max(200);
+export const AGENT_COMMAND_LIMIT = 1500;
+export const AGENT_PROPOSAL_BYTES = 4 * 1024 * 1024;
+export const agentCommandsSchema = z
+  .array(agentCommandSchema)
+  .min(1)
+  .max(
+    AGENT_COMMAND_LIMIT,
+    'A proposal supports at most 1,500 commands. Reduce its size without silently shortening the requested program.',
+  );
 export const commandSchema = z.discriminatedUnion('action', [
   z
     .object({
@@ -645,28 +653,101 @@ const agentScopeFields = {
   to: dateSchema,
   includeNotes: z.boolean().default(false),
 };
+/** Inclusive floating dates; an unavailable leap-day anniversary clamps to February 28. */
+export function addCalendarYears(date: string, years: number): string {
+  dateSchema.parse(date);
+  const year = Number(date.slice(0, 4)) + years;
+  const monthDay = date.slice(5);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  return `${String(year).padStart(4, '0')}-${monthDay === '02-29' && !leap ? '02-28' : monthDay}`;
+}
 const boundedAgentDates = (scope: { from: string; to: string }) =>
   scope.from <= scope.to && (Date.parse(scope.to) - Date.parse(scope.from)) / 86400000 <= 120;
-const agentDatesMessage = 'Context range must be ordered and at most 121 days.';
-export const agentScopeSchema = z
+export const agentScopeSchema = z.object(agentScopeFields).refine(boundedAgentDates, {
+  path: ['to'],
+  message:
+    'Legacy context ranges allow at most 121 inclusive days. Approve a new connection for annual planning.',
+});
+function calendarRange(scope: { from: string; to: string }, years: number, ctx: z.RefinementCtx) {
+  if (!dateSchema.safeParse(scope.from).success || !dateSchema.safeParse(scope.to).success) return;
+  const latest = addCalendarYears(scope.from, years);
+  if (scope.to < scope.from || scope.to > latest)
+    ctx.addIssue({
+      code: 'custom',
+      path: ['to'],
+      message: `Choose an end date from ${scope.from} through ${latest}, inclusive (at most ${years} calendar ${years === 1 ? 'year' : 'years'}).`,
+    });
+}
+export const planningScopeSchema = z
   .object(agentScopeFields)
-  .refine(boundedAgentDates, agentDatesMessage);
-export const agentGrantValuesSchema = z
+  .strict()
+  .superRefine((scope, ctx) => calendarRange(scope, 1, ctx));
+export const historyCategorySchema = z.enum(['activities', 'health', 'training', 'context']);
+export const historyScopeSchema = z
   .object({
-    label: z.string().trim().min(1).max(100),
     ...agentScopeFields,
-    expiresInHours: z.number().positive().max(24).default(1),
+    categories: z
+      .array(historyCategorySchema)
+      .min(1)
+      .max(4)
+      .refine((v) => new Set(v).size === v.length, 'Choose each category once.'),
+    weekStartsOn: z.union([z.literal(0), z.literal(1)]),
   })
   .strict()
-  .refine(boundedAgentDates, agentDatesMessage);
+  .superRefine((scope, ctx) => calendarRange(scope, 5, ctx));
+const accessFields = {
+  version: z.literal(2),
+  history: historyScopeSchema.nullable(),
+  planning: planningScopeSchema.nullable(),
+};
+const hasCapability = (v: { history: unknown; planning: unknown }) =>
+  Boolean(v.history || v.planning);
+export const agentAccessSchema = z
+  .object(accessFields)
+  .strict()
+  .refine(hasCapability, 'Choose historical review, training proposals, or both.');
+export const grantScopeSchema = z.union([agentAccessSchema, agentScopeSchema.strict()]);
+export type GrantScope = z.infer<typeof grantScopeSchema>;
+export type PlanningScope = z.infer<typeof planningScopeSchema>;
+export type HistoryScope = z.infer<typeof historyScopeSchema>;
+export function planningScope(scope: GrantScope): PlanningScope | null {
+  return 'version' in scope ? scope.planning : scope;
+}
+export function historicalScope(scope: GrantScope): HistoryScope | null {
+  return 'version' in scope ? scope.history : null;
+}
+const grantMetadata = {
+  label: z.string().trim().min(1).max(100),
+  expiresInHours: z.number().positive().max(24).default(1),
+};
+const legacyGrant = z
+  .object({ ...grantMetadata, ...agentScopeFields })
+  .strict()
+  .refine(boundedAgentDates, 'Legacy context ranges allow at most 121 inclusive days.');
+const modernGrant = z
+  .object({ ...grantMetadata, ...accessFields })
+  .strict()
+  .refine(hasCapability, 'Choose at least one capability.');
+export const agentGrantValuesSchema = z.union([modernGrant, legacyGrant]);
+/** Strip only approval metadata; never interpret a modern grant as a legacy shared scope. */
+export function scopeFromGrant(input: z.infer<typeof agentGrantValuesSchema>): GrantScope {
+  return 'version' in input
+    ? agentAccessSchema.parse({
+        version: input.version,
+        history: input.history,
+        planning: input.planning,
+      })
+    : agentScopeSchema.parse(input);
+}
 export const agentConnectionStartSchema = z
   .object({ label: z.string().trim().min(1).max(100) })
   .strict();
 export const agentConnectionIdSchema = z.object({ id: idSchema }).strict();
-export const agentConnectionApprovalSchema = agentGrantValuesSchema.safeExtend({
-  id: idSchema,
-  code: z.string().regex(/^[A-F0-9]{4}-[A-F0-9]{4}$/),
-});
+const approvalFields = { id: idSchema, code: z.string().regex(/^[A-F0-9]{4}-[A-F0-9]{4}$/) };
+export const agentConnectionApprovalSchema = z.union([
+  modernGrant.safeExtend(approvalFields),
+  legacyGrant.safeExtend(approvalFields),
+]);
 export const agentConnectionStartedSchema = z.object({
   id: idSchema,
   token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
@@ -680,7 +761,33 @@ export const agentConnectionStatusSchema = z.object({
   expiresAt: timestampSchema,
   status: z.enum(['pending', 'approved', 'denied', 'cancelled', 'expired']),
   grant: z
-    .object({ id: idSchema, label: z.string(), ...agentScopeFields, expiresAt: timestampSchema })
+    .union([
+      z.object({ ...accessFields, id: idSchema, label: z.string(), expiresAt: timestampSchema }),
+      z.object({
+        ...agentScopeFields,
+        id: idSchema,
+        label: z.string(),
+        expiresAt: timestampSchema,
+      }),
+    ])
     .nullable(),
 });
 export type AgentConnectionStatus = z.infer<typeof agentConnectionStatusSchema>;
+
+export function describeAgentAccess(scope: GrantScope): string[] {
+  const planning = planningScope(scope),
+    history = historicalScope(scope);
+  return [
+    ...(history
+      ? [
+          `Historical review: ${history.from} through ${history.to}; ${history.categories.join(', ')}; ${history.includeNotes ? 'private notes included' : 'private notes excluded'}; weeks start ${history.weekStartsOn === 0 ? 'Sunday' : 'Monday'}.`,
+        ]
+      : []),
+    ...(planning
+      ? [
+          `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
+        ]
+      : ['Proposal submission is not permitted.']),
+    'Applying training changes requires your review and explicit approval in Athlete Panel.',
+  ];
+}

@@ -1,5 +1,6 @@
 import {
   createGrant,
+  proposalDetails,
   revokeGrant,
   applyProposal,
   rejectProposal,
@@ -11,6 +12,7 @@ import { inspectConnection, approveConnection, denyConnection } from './connecti
 export default {
   operations: {
     grant: createGrant,
+    details: proposalDetails,
     revoke: revokeGrant,
     apply: applyProposal,
     review: reviewProposal,

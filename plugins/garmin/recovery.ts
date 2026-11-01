@@ -211,8 +211,11 @@ export async function recordRecoveryStep(
   const stream = importStreamSchema.parse(coverage.stream);
   if (coverage.scanState === 'unavailable')
     await tx`update garmin.scan_state set unavailable=true,updated_at=now() where stream=${stream}`;
-  else if (coverage.scanState === 'scanned' && cursor.mode === 'recent')
+  else if (coverage.scanState === 'scanned' && cursor.mode === 'recent') {
     await tx`update garmin.scan_state set unavailable=false,updated_at=now() where stream=${stream}`;
+    await tx`update garmin.scan_state s set needs_retry=false,updated_at=now() where stream=${stream}
+      and not exists(select 1 from host.jobs j where j.plugin_id='garmin' and j.kind='garmin-catchup' and j.status='failed' and j.payload#>>'{recovery,stream}'=s.stream)`;
+  }
 }
 
 export async function recordRecoveryFailure(

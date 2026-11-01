@@ -71,7 +71,13 @@ export async function readWorkspaceResponse(range: {
       sql<
         ProposalRow[]
       >`select id,status,digest,created_at as "createdAt",jsonb_array_length(changes) as "affectedCount",summary,
-      (select jsonb_build_object('from',min(coalesce(c->>'afterEffectiveDate',c->>'beforeEffectiveDate')),'to',max(coalesce(c->>'afterEffectiveDate',c->>'beforeEffectiveDate'))) from jsonb_array_elements(changes) c) as "dateBounds" from host.proposals order by created_at desc limit 50`,
+      (select jsonb_build_object('from',min(d.date),'to',max(d.date))
+        from jsonb_array_elements(changes) c
+        cross join lateral (values
+          (c->>'beforeEffectiveDate'), (c->>'afterEffectiveDate'),
+          (case when c->>'entity'='plan' then c#>>'{before,startDate}' end),
+          (case when c->>'entity'='plan' then c#>>'{after,startDate}' end)
+        ) d(date)) as "dateBounds" from host.proposals order by created_at desc limit 50`,
       sql<
         GrantRow[]
       >`select id,label,expires_at as "expiresAt",revoked,scope from host.grants order by created_at desc limit 50`,

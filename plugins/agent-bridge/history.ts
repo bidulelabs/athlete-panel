@@ -26,6 +26,7 @@ import {
 } from './history-session';
 import { boundedHistoryPage } from './history-paging';
 import { historySummaryCache } from './history-summary-cache';
+import { historyRecordBounds } from './history-availability';
 async function* scan(tx: Transaction, q: HistorySelection, scope: HistoryScope) {
   let after = q.after;
   for (;;) {
@@ -102,8 +103,9 @@ export async function readHistory(
           to: string | null = null;
         for await (const row of scan(tx, { ...selection, category }, scope)) {
           count++;
-          from ??= row.date;
-          to = row.date;
+          const bounds = historyRecordBounds(row, selection);
+          if (bounds.from && (!from || bounds.from < from)) from = bounds.from;
+          if (bounds.to && (!to || bounds.to > to)) to = bounds.to;
         }
         response.availability.push({ category, count, from, to });
       }

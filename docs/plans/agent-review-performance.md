@@ -104,3 +104,26 @@ Affected links, anchors and placeholders were checked with the documentation val
 The source release requires host API 1.3.0, Training 2.1.1 and Agent bridge 2.1.3, with matching composition pins and generated registry. No public JSON schema, cursor format, stored grant, stored proposal, SQL table or applied migration changes. Existing credentials, approved scopes and proposal snapshots retain their meaning. Deploy matching app/web/worker/CLI source and refresh the installed composition through the canonical coordinated upgrade. This follow-up adds no database-data conversion; the base historical feature still requires its four additive migrations and matched-backup rollback when upgrading older binaries.
 
 No production data, provider credentials or VPS deployment is part of this work.
+
+## Final-review corrections — 2026-11-01
+
+Authority: the owner requested implementation of the two confirmed PR #70 review findings. Discovery previously treated a record's ordering date as its complete extent: a workout scheduled January 10 and completed December 20 advertised January only, and a year-long scan window advertised its first day. Proposal lists previously selected only the resulting date of a move and omitted plan start dates; the opened overview also omitted plan dates.
+
+Discovery now reduces all permitted date facts from the existing sanitized historical DTOs, including clipped interval endpoints supplied by the owning readers. Counts and deterministic keyset ordering are unchanged, and no extra database queries or workspace loads are introduced. A narrower discovery request cannot reveal dates outside its selection. This does not convert scan coverage into measurement availability or treat an open injury as resolved.
+
+Proposal list SQL now aggregates both effective dates and before/after plan starts, retaining the 50-proposal limit and metadata-only response. The opened overview includes the same plan dates; grouping and exact diffs are unchanged. Stored proposals, digests, grants, cursors, application approval and atomicity are not rewritten. Agent bridge is coordinated at 2.1.4 with the composition and generated registry; no migration or public schema change is needed.
+
+Regression coverage includes scheduled/performed dates in either order, dates outside the grant, narrower requests, empty categories, overlapping and open-ended intervals, forward/backward workout moves, plan creation/rescheduling/deletion, undated overview compatibility, and a plan-only browser review in both themes. Initial focused tests exposed two new fixture mistakes (an omitted nullable activity ID and an intentionally undated new plan that correctly failed scope validation); the fixtures were corrected without relaxing application validation.
+
+Actual local verification on this correction:
+
+- Focused regression run: **31 passed**. The original synthetic reproducer now reports workout bounds January 10–December 20, coverage January 1–December 31, move bounds January 15–December 10, and the plan-only date October 15.
+- `pnpm check`: passed, **312 unit tests**, types, boundaries, generated registry/contracts/adapters and documentation checks; 160 lint warnings, zero errors.
+- `pnpm test:integration`: **201 passed across 16 files**, including the existing maximum-command, permission and concurrency cases.
+- `pnpm build`: web and worker passed.
+- Full `pnpm test:e2e`: **163 passed, three intentional device-specific skips**, zero failures, in **6.3 minutes**. Includes desktop planning, phone logging, connection approval/revocation, annual review/apply/undo and the new plan-only date display. The new review captures were visually inspected on desktop and phone in both themes; Apply remains disabled before acknowledgement.
+- Synthetic preview on port 3017 rebuilt/restarted successfully. Before/after inspection confirmed unchanged 5,481 activities, 20,219 health records, 5,481 workouts, one plan/event/note, and the pending **367-command** proposal. Browser verification ran in separate disposable storage on port 3018.
+
+The five-year performance benchmarks above were **not rerun** for these metadata corrections; their previous measurements remain labelled separately. The corrections add no source query or full-diff list transfer. All new captures, logs and reproduction output stay ignored under `.runtime/`.
+
+Framework validation: the feature specification now defines date-extents and proposal-bound semantics with linked acceptance cases; actual evidence above matches the tests. Documentation content/local links and whitespace checks passed. Architecture ownership and ADR consistency decisions remain unchanged, so no new ADR or architecture change is warranted. No shared visual conventions or operational commands change. Activation still requires the matched 2.1.4 composition/build/restart; no production deployment was performed.

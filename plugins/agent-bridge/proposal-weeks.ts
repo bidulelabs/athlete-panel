@@ -50,9 +50,15 @@ export function groupChangesByMonth<Change extends EntityChange>(changes: readon
 export function summarizeProposal(changes: readonly EntityChange[]) {
   const dates = changes
     .flatMap((change) =>
-      [change.beforeEffectiveDate, change.afterEffectiveDate].filter((date): date is string =>
-        Boolean(date),
-      ),
+      [
+        change.beforeEffectiveDate,
+        change.afterEffectiveDate,
+        ...(change.entity === 'plan'
+          ? [change.before, change.after].map((record) =>
+              record && 'startDate' in record ? record.startDate : null,
+            )
+          : []),
+      ].filter((date): date is string => Boolean(date)),
     )
     .sort();
   const sports = new Set<string>();

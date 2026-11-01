@@ -14,6 +14,7 @@ import {
 import { readHistory } from '../../plugins/agent-bridge/history';
 import { syntheticDay, historyId } from '../fixtures/historical';
 import { addDays } from '../../plugins/training/dates';
+import { workoutSchema } from '@athlete-panel/contracts';
 const database = isolatedDatabaseUrl();
 beforeAll(async () => {
   await closeDatabase();
@@ -118,6 +119,113 @@ it('pages deterministically, rejects cursor tampering/query changes and invalida
   await sql`update activity_records.records set data=data||'{"durationSeconds":999}'::jsonb where id=${data.activities[0]!.id}`;
   await expect(readHistory(token, 'records', next)).rejects.toMatchObject({
     code: 'history_changed',
+  });
+});
+it('discovers every permitted scheduled/performed date without widening a narrowed selection', async () => {
+  const sql = connection();
+  // Deliberately order the earliest-keyed record's completion after the last record.
+  for (const [scheduled, performed] of [
+    ['2024-01-10', '2024-12-20'],
+    ['2024-11-15', '2024-02-05'],
+    ['2023-12-31', '2024-06-15'],
+    ['2024-07-15', '2025-01-01'],
+  ]) {
+    const workout = workoutSchema.parse({
+      id: randomUUID(),
+      revision: 1,
+      title: 'Synthetic dated completion',
+      sport: 'running',
+      schedule: { kind: 'independent', date: scheduled },
+      completion: {
+        status: 'completed',
+        source: 'manual',
+        activityId: null,
+        performedDate: performed,
+      },
+    });
+    await sql`insert into training.records(kind,id,revision,data) values('workout',${workout.id},1,${sql.json(workout)})`;
+  }
+  const { token } = await createGrant({
+    label: 'Dated discovery',
+    version: 2,
+    planning: null,
+    history: { from: '2024-01-01', to: '2024-12-31', categories: ['training'], weekStartsOn: 1 },
+  });
+  const discovery = await readHistory(token, 'discover');
+  expect(discovery.availability).toContainEqual({
+    category: 'workouts',
+    count: 4,
+    from: '2024-01-10',
+    to: '2024-12-20',
+  });
+  expect(discovery.availability).toContainEqual({
+    category: 'plans',
+    count: 0,
+    from: null,
+    to: null,
+  });
+  for (const [from, to, count, first, last] of [
+    ['2024-12-01', '2024-12-31', 1, '2024-12-20', '2024-12-20'],
+    ['2024-06-01', '2024-07-31', 2, '2024-06-15', '2024-07-15'],
+    ['2024-03-01', '2024-03-31', 0, null, null],
+  ] as const) {
+    const query = { from, to, reviewToken: discovery.reviewToken };
+    const narrowed = await readHistory(token, 'discover', query);
+    expect(narrowed.availability).toContainEqual({
+      category: 'workouts',
+      count,
+      from: first,
+      to: last,
+    });
+    const details = await readHistory(token, 'records', { ...query, category: 'workouts' });
+    expect(details.records).toHaveLength(count);
+  }
+});
+it('discovers full coverage and injury intervals clipped to both query and grant boundaries', async () => {
+  const sql = connection();
+  await sql`insert into garmin.coverage(stream,start_date,end_date,status,scan_state,scanned_at)
+    values('activities','2023-12-01','2025-01-31','complete','scanned',now()),
+      ('activities','2024-06-01','2024-06-30','complete','scanned',now()),
+      ('sleep','2023-01-01','2025-12-31','complete','scanned',now())`;
+  for (const endDate of ['2024-12-20', null]) {
+    const injury = {
+      id: randomUUID(),
+      revision: 1,
+      bodyPart: 'Synthetic knee',
+      startDate: '2023-12-01',
+      endDate,
+      notes: 'PRIVATE_INJURY_NOTE',
+    };
+    await sql`insert into athlete.records(kind,id,revision,data) values('injury',${injury.id},1,${sql.json(injury)})`;
+  }
+  const { token } = await createGrant({
+    label: 'Interval discovery',
+    version: 2,
+    planning: null,
+    history: {
+      from: '2024-01-01',
+      to: '2024-12-31',
+      categories: ['activities', 'context'],
+      weekStartsOn: 1,
+    },
+  });
+  for (const range of [
+    { from: '2024-01-01', to: '2024-12-31' },
+    { from: '2024-06-01', to: '2024-06-30' },
+  ]) {
+    const discovery = await readHistory(token, 'discover', range);
+    expect(discovery.availability).toContainEqual({ category: 'coverage', count: 2, ...range });
+    expect(discovery.availability).toContainEqual({ category: 'injuries', count: 2, ...range });
+    expect(discovery.availability?.some((row) => row.category === 'health')).toBe(false);
+    expect(JSON.stringify(discovery)).not.toContain('PRIVATE_');
+  }
+  await sql`delete from athlete.records where data->>'endDate' is null`;
+  const closedOnly = await readHistory(token, 'discover');
+  expect(closedOnly.availability).toContainEqual({
+    category: 'injuries',
+    count: 1,
+    from: '2024-01-01',
+    to: '2024-12-20',
   });
 });
 it('rechecks revoked, expired and cross-grant review access on each page', async () => {

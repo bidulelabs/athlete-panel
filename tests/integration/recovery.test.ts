@@ -36,6 +36,7 @@ const url = isolatedDatabaseUrl();
 let context: RecoveryContext,
   fetcher: ReturnType<typeof vi.fn>,
   deniedSleep: boolean,
+  invalidJsonSleep: boolean,
   throttle: boolean;
 beforeAll(async () => {
   await closeDatabase();
@@ -58,6 +59,7 @@ beforeEach(async () => {
     timeZone: 'UTC',
   };
   deniedSleep = false;
+  invalidJsonSleep = false;
   throttle = false;
   fetcher = vi.fn(async (input: URL | string) => {
     const target = new URL(input);
@@ -88,7 +90,7 @@ beforeEach(async () => {
       return response(rows.slice(Number(target.searchParams.get('start') ?? 0)));
     }
     if (target.pathname.includes('dailySleepSummaries'))
-      return response([], deniedSleep ? 403 : 200);
+      return invalidJsonSleep ? new Response('not json') : response([], deniedSleep ? 403 : 200);
     if (target.pathname.includes('dailysummaries')) return response({ data: [] });
     if (target.pathname.includes('/hrv/'))
       return response({ userProfilePk: '555', hrvSummaries: [] });
@@ -104,6 +106,19 @@ async function covered(through = context.today) {
   const sql = connection();
   for (const stream of RECOVERY_STREAMS)
     await sql`insert into garmin.coverage(stream,start_date,end_date,status,scan_state,scanned_at) values(${stream},${stream === 'activities' ? '0001-01-01' : context.earliestDate},${through},'no-data','scanned',now())`;
+}
+async function enqueueRecentSleepImport() {
+  const cursor = {
+    ...windowCursor('sleep', { from: addDays(context.today, -6), to: context.today }, context),
+    mode: 'recent' as const,
+  };
+  await transaction((tx) =>
+    enqueue(tx, 'garmin', 'garmin-recent', { cursor, generation: context.generation }, 30),
+  );
+}
+async function readNeedsRetry() {
+  const states = await connection()`select stream,needs_retry from garmin.scan_state`;
+  return Object.fromEntries(states.map((state) => [state.stream, state.needs_retry]));
 }
 async function step() {
   const job = await claimJob(randomUUID());
@@ -295,18 +310,39 @@ it('suspends forbidden historical streams until a successful recent probe and ke
   await transaction((tx) => scheduleRecovery(tx, context));
   expect((await step()).payload.recovery.stream).not.toBe('sleep');
   deniedSleep = false;
-  const cursor = {
-    ...windowCursor('sleep', { from: addDays(context.today, -6), to: context.today }, context),
-    mode: 'recent' as const,
-  };
-  await transaction((tx) =>
-    enqueue(tx, 'garmin', 'garmin-recent', { cursor, generation: context.generation }, 30),
-  );
+  await enqueueRecentSleepImport();
   await step();
   expect(
     (await connection()`select unavailable from garmin.scan_state where stream='sleep'`)[0]
       .unavailable,
   ).toBe(false);
+});
+it('clears needs_retry for its own stream after a successful recent import', async () => {
+  await covered();
+  await transaction((tx) => scheduleRecovery(tx, context));
+  await connection()`update garmin.scan_state set needs_retry=true where stream='steps'`;
+  invalidJsonSleep = true;
+  await enqueueRecentSleepImport();
+  await step();
+  expect(await readNeedsRetry()).toMatchObject({ sleep: true, steps: true });
+  invalidJsonSleep = false;
+  await enqueueRecentSleepImport();
+  await step();
+  expect(await readNeedsRetry()).toMatchObject({ sleep: false, steps: true });
+});
+it('keeps needs_retry after a successful recent import while a catch-up job has failed', async () => {
+  await covered();
+  const payload = {
+    cursor: windowCursor('sleep', { from: '2025-01-01', to: '2025-01-28' }, context),
+    generation: context.generation,
+    recovery: { mode: 'catchup', stream: 'sleep' },
+  };
+  await connection()`insert into host.jobs(id,plugin_id,kind,status,payload) values(${randomUUID()},'garmin','garmin-catchup','failed',${connection().json(payload)})`;
+  await transaction((tx) => scheduleRecovery(tx, context));
+  expect(await readNeedsRetry()).toMatchObject({ sleep: true });
+  await enqueueRecentSleepImport();
+  await step();
+  expect(await readNeedsRetry()).toMatchObject({ sleep: true });
 });
 it('honours provider backoff across job kinds and preserves pause controls', async () => {
   await covered(addDays(context.today, -30));
@@ -317,13 +353,7 @@ it('honours provider backoff across job kinds and preserves pause controls', asy
     (await connection()`select attempts from host.jobs where id=${rejected.id}`)[0].attempts,
   ).toBe(1);
   const calls = fetcher.mock.calls.length;
-  const cursor = {
-    ...windowCursor('sleep', { from: addDays(context.today, -6), to: context.today }, context),
-    mode: 'recent' as const,
-  };
-  await transaction((tx) =>
-    enqueue(tx, 'garmin', 'garmin-recent', { cursor, generation: context.generation }, 30),
-  );
+  await enqueueRecentSleepImport();
   await step();
   expect(fetcher.mock.calls).toHaveLength(calls);
   expect(

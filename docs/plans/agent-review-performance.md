@@ -1,5 +1,7 @@
 # Agent review performance and reliability — 2026-10-31
 
+Final pre-release integration: see the [simplification record](agent-history-simplification.md) for the consolidated migration sequence, final contracts/versions and latest verification. Measurements below describe the earlier revisions when they were recorded.
+
 ## Authority and scope
 
 The owner requested implementation of the three ranked improvements discussed in this chat: make large annual proposals reliably fast, avoid recalculating historical summaries on every page, and separate code responsibilities. The request includes a completion report and findings. This work uses the current Athlete Panel checkout, pnpm and isolated synthetic databases only. Existing history/planning permissions, owner approval, exact proposal digests, atomic apply/undo and manual-operation limits remain authoritative.

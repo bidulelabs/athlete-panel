@@ -13,52 +13,63 @@ export function historicalCategories(scope: HistoryScope) {
     (k) => scope.categories.includes(permissions[k]!) && (k !== 'notes' || scope.includeNotes),
   ) as NonNullable<HistoryQuery['category']>[];
 }
-export function sanitizeHistoryRecord(r: HistoryRecord, scope: HistoryScope) {
-  const data = { ...r.data },
-    within = (d: string | null | undefined) => Boolean(d && d >= scope.from && d <= scope.to);
-  if (!scope.includeNotes) {
-    for (const field of ['notes', 'body', 'reason', 'completionNotes'])
-      delete data[field as keyof typeof data];
-    if (r.category === 'plans') delete data.description;
-    if (data.part) {
-      const redact = (v: unknown): unknown =>
-        Array.isArray(v)
-          ? v.map(redact)
-          : v && typeof v === 'object'
-            ? Object.fromEntries(
-                Object.entries(v)
-                  .filter(([k]) => k !== 'notes' && k !== 'instructions')
-                  .map(([k, x]) => [k, redact(x)]),
-              )
-            : v;
-      data.part = redact(data.part) as Record<string, unknown>;
+function redactPrescription(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactPrescription);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => key !== 'notes' && key !== 'instructions')
+      .map(([key, child]) => [key, redactPrescription(child)]),
+  );
+}
+export function sanitizeHistoryRecord(r: HistoryRecord, scope: HistoryScope): HistoryRecord {
+  if (r.category !== 'workouts') {
+    if (scope.includeNotes) return r;
+    switch (r.category) {
+      case 'plans':
+        return { ...r, data: { ...r.data, description: undefined } };
+      case 'notes':
+        return { ...r, data: { ...r.data, body: undefined } };
+      case 'events':
+        return { ...r, data: { ...r.data, notes: undefined } };
+      case 'injuries':
+        return { ...r, data: { ...r.data, notes: undefined } };
+      default:
+        return r;
     }
   }
-  if (r.category === 'workouts') {
-    if (!within(data.scheduledDate)) {
-      delete data.scheduledDate;
-      delete data.durationSeconds;
-      delete data.distanceMeters;
-      delete data.elevationMeters;
-    }
-    const completionOutsideScope = Boolean(data.completionStatus && !within(data.performedDate));
-    if (!within(data.performedDate))
-      for (const field of [
-        'performedDate',
-        'completionStatus',
-        'completionSource',
-        'activityId',
-        'actualDurationSeconds',
-        'actualDistanceMeters',
-        'rpe',
-        'reason',
-        'completionNotes',
-      ])
-        delete data[field as keyof typeof data];
-    if (completionOutsideScope) data.completionStatus = 'unknown';
-    if (data.completionSource === 'garmin' && !scope.categories.includes('activities'))
-      for (const field of ['activityId', 'actualDurationSeconds', 'actualDistanceMeters'])
-        delete data[field as keyof typeof data];
+  const data = { ...r.data };
+  const within = (date: string | null | undefined) =>
+    Boolean(date && date >= scope.from && date <= scope.to);
+  if (!scope.includeNotes) {
+    delete data.notes;
+    delete data.reason;
+    delete data.completionNotes;
+    if (data.part) data.part = redactPrescription(data.part) as Record<string, unknown>;
+  }
+  if (!within(data.scheduledDate)) {
+    delete data.scheduledDate;
+    delete data.durationSeconds;
+    delete data.distanceMeters;
+    delete data.elevationMeters;
+  }
+  const completionOutsideScope = Boolean(data.completionStatus && !within(data.performedDate));
+  if (!within(data.performedDate)) {
+    delete data.performedDate;
+    delete data.completionStatus;
+    delete data.completionSource;
+    delete data.activityId;
+    delete data.actualDurationSeconds;
+    delete data.actualDistanceMeters;
+    delete data.rpe;
+    delete data.reason;
+    delete data.completionNotes;
+  }
+  if (completionOutsideScope) data.completionStatus = 'unknown';
+  if (data.completionSource === 'garmin' && !scope.categories.includes('activities')) {
+    delete data.activityId;
+    delete data.actualDurationSeconds;
+    delete data.actualDistanceMeters;
   }
   return { ...r, data };
 }

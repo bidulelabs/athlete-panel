@@ -9,7 +9,7 @@ import {
   agentGrantValuesSchema,
   type Command,
   proposalApplyInputSchema,
-  proposalSummarySchema,
+  proposalDetailsSchema,
   proposalExpiresAt,
 } from '../../packages/contracts/src';
 import { connection, transaction, type Transaction } from '../../packages/host/src/db';
@@ -275,11 +275,10 @@ export async function proposalDetails(body: unknown) {
     await connection()`select id,status,digest,created_at,summary,changes from host.proposals where id=${id}`;
   const row = rows[0];
   assert(row, 'not_found', 'This proposal is unavailable.', 404);
-  return proposalSummarySchema.parse({
+  return proposalDetailsSchema.parse({
     ...row,
     createdAt: row.created_at.toISOString(),
     expiresAt: proposalExpiresAt(row.created_at),
-    affectedCount: row.changes.length,
     warnings: [],
   });
 }

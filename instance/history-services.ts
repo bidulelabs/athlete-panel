@@ -7,14 +7,45 @@ import {
   recordsHistoryVersion,
   recordsHistoryAvailability,
 } from '../plugins/activity-records/public/server';
-import { readTrainingHistory, trainingHistoryVersion } from '../plugins/training/public/server';
+import {
+  readTrainingHistory,
+  trainingHistoryVersion,
+  trainingHistoryAvailability,
+} from '../plugins/training/public/server';
 import {
   readAthleteHistory,
   athleteHistoryVersion,
   historicalProfile,
+  athleteHistoryAvailability,
 } from '../plugins/athlete/public/server';
-import { readHistoryCoverage, garminHistoryVersion } from '../plugins/garmin/public/server';
-export { historicalProfile, recordsHistoryAvailability };
+import {
+  readHistoryCoverage,
+  garminHistoryVersion,
+  garminHistoryAvailability,
+} from '../plugins/garmin/public/server';
+export { historicalProfile };
+function coverageStreams(scope: HistoryScope) {
+  return [
+    ...(scope.categories.includes('activities') ? ['activities'] : []),
+    ...(scope.categories.includes('health')
+      ? ['sleep', 'daily', 'hrv', 'steps', 'stress', 'bodyBattery']
+      : []),
+  ];
+}
+export async function historicalAvailability(
+  tx: Transaction,
+  q: Pick<HistorySelection, 'category' | 'from' | 'to'>,
+  scope: HistoryScope,
+) {
+  if (q.category === 'activities' || q.category === 'health')
+    return recordsHistoryAvailability(tx, q);
+  if (q.category === 'injuries') return athleteHistoryAvailability(tx, q);
+  if (q.category === 'coverage')
+    return pluginEnabled('garmin')
+      ? garminHistoryAvailability(tx, q, coverageStreams(scope))
+      : { category: 'coverage' as const, count: 0, from: null, to: null };
+  return trainingHistoryAvailability(tx, q);
+}
 export async function historyVersions(tx: Transaction, scope: HistoryScope) {
   const versions: Record<string, string> = {};
   if (scope.categories.some((c) => c === 'activities' || c === 'health')) {
@@ -31,13 +62,7 @@ export async function historicalRecords(tx: Transaction, q: HistorySelection, sc
   if (q.category === 'injuries') return readAthleteHistory(tx, q);
   if (q.category === 'coverage') {
     if (!pluginEnabled('garmin')) return [];
-    const streams = [
-      ...(scope.categories.includes('activities') ? ['activities'] : []),
-      ...(scope.categories.includes('health')
-        ? ['sleep', 'daily', 'hrv', 'steps', 'stress', 'bodyBattery']
-        : []),
-    ];
-    return readHistoryCoverage(tx, q, streams);
+    return readHistoryCoverage(tx, q, coverageStreams(scope));
   }
   return readTrainingHistory(tx, q);
 }

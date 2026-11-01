@@ -20,6 +20,7 @@ import {
 } from '../plugins/agent-bridge/service';
 import { readHistory } from '../plugins/agent-bridge/history';
 import { mutate } from '../plugins/training/service';
+import type { HistoryQuery } from '@athlete-panel/contracts';
 const historyOnly = process.argv.includes('--history-only');
 const requested = Number(process.argv[2] ?? 30000);
 const label = process.argv[3] ?? 'current';
@@ -33,6 +34,8 @@ url.pathname = `/${name}`;
 let queries = 0,
   historyQueries = 0;
 let onHistoryScan: (() => void) | undefined;
+let captureRead = false;
+let readQuery: { text: string; parameters: postgres.SerializableParameter[] } | undefined;
 const samples: Record<string, unknown> = {};
 async function measure<T>(key: string, fn: () => Promise<T>, runs = 1): Promise<T> {
   const timings: number[] = [],
@@ -92,10 +95,19 @@ try {
     postgres(url.toString(), {
       max: 8,
       onnotice: () => {},
-      debug: (_id, text) => {
+      debug: (_id, text, parameters) => {
         queries++;
-        if (/with dated as|select.*data.*from|select.*localDate/s.test(text)) {
+        if (
+          /^\s*(?:select|with)\b/i.test(text) &&
+          /\bfrom\s+(?:activity_records\.records|training\.records|athlete\.records|garmin\.coverage)\b/i.test(
+            text,
+          )
+        ) {
           historyQueries++;
+          if (captureRead) {
+            readQuery = { text, parameters };
+            captureRead = false;
+          }
           onHistoryScan?.();
           onHistoryScan = undefined;
         }
@@ -116,7 +128,7 @@ try {
     },
     planning: annualRange,
   });
-  const discovery = await readHistory(token, 'discover');
+  const discovery = await measure('discovery', () => readHistory(token, 'discover'), 4);
   const first = await measure('summaryFirstPage', () =>
     readHistory(token, 'summary', { reviewToken: discovery.reviewToken, limit: 100 }),
   );
@@ -171,6 +183,69 @@ try {
   await measure('summaryFreshCompleteExport', () =>
     exportSummary(freshGrant.token, freshDiscovery.reviewToken!),
   );
+  // Include the CLI's automatic discovery in a complete first export, with a fresh grant/cache key.
+  const workflowGrant = await createGrant({
+    label: 'Synthetic automatic export',
+    version: 2,
+    planning: null,
+    history: {
+      ...historicalRange,
+      categories: ['activities', 'health', 'training', 'context'],
+      weekStartsOn: 1,
+    },
+  });
+  await measure('automaticCompleteExport', async () => {
+    const start = await readHistory(workflowGrant.token, 'discover');
+    return exportSummary(workflowGrant.token, start.reviewToken);
+  });
+  await measure(
+    'selectedMonthRecords',
+    () =>
+      readHistory(token, 'records', {
+        reviewToken: discovery.reviewToken,
+        category: 'activities',
+        sport: 'running',
+        from: '2025-10-01',
+        to: '2025-10-31',
+        limit: 100,
+      }),
+    4,
+  );
+  const detailPage = await readHistory(token, 'records', { category: 'activities', limit: 100 });
+  await measure(
+    'nextDetailPage',
+    () =>
+      readHistory(token, 'records', {
+        ...detailPage.query,
+        reviewToken: detailPage.reviewToken,
+        cursor: detailPage.nextCursor!,
+      }),
+    4,
+  );
+  const queryPlans: Record<string, unknown> = {};
+  for (const [label, query] of [
+    [
+      'activitiesMonth',
+      { category: 'activities', sport: 'running', from: '2025-10-01', to: '2025-10-31' },
+    ],
+    ['healthMonth', { category: 'health', metric: 'steps', from: '2025-10-01', to: '2025-10-31' }],
+    ['workoutsMonth', { category: 'workouts', from: '2025-10-01', to: '2025-10-31' }],
+    ['workoutsFiveYears', { category: 'workouts' }],
+    ['plans', { category: 'plans' }],
+    ['events', { category: 'events' }],
+  ] as [string, Partial<HistoryQuery>][]) {
+    readQuery = undefined;
+    captureRead = true;
+    await readHistory(token, 'records', { ...query, limit: 100 });
+    if (!readQuery) throw new Error(`No query captured for ${label}`);
+    const captured = readQuery as { text: string; parameters: postgres.SerializableParameter[] };
+    queryPlans[label] = (
+      await connection().unsafe(
+        `explain (analyze,buffers,format json) ${captured.text}`,
+        captured.parameters,
+      )
+    )[0];
+  }
   let snapshot: postgres.Row[] = [];
   let requestBytes = 0;
   if (!historyOnly) {
@@ -280,6 +355,7 @@ try {
     snapshot: snapshot[0],
     concurrent: { workoutSaveMs: concurrentSaveMs, summary: concurrentRead },
     representativeRecordQueryPlan: plans[0],
+    queryPlans,
     resources: process.resourceUsage(),
     limitations: [
       'Synthetic local service execution, not production capacity or browser/HTTP latency.',
@@ -289,7 +365,7 @@ try {
   };
   await mkdir('.runtime/review-performance', { recursive: true });
   const path = `.runtime/review-performance/${label}-${requested}.json`;
-  await writeFile(path, JSON.stringify(result, null, 2) + '\n');
+  await writeFile(path, JSON.stringify(result, null, 2) + '\n', { mode: 0o600 });
   console.log(`Report: ${path}`);
 } finally {
   await closeDatabase();

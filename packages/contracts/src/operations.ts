@@ -18,7 +18,7 @@ import {
   mutationResponseSchema,
   coveragePageSchema,
   grantSummarySchema,
-  proposalSummarySchema,
+  proposalDetailsSchema,
 } from './responses';
 const id = z.object({ id: z.uuid() });
 const undo = id.extend({ idempotencyKey: z.uuid() }).strict();
@@ -78,7 +78,7 @@ export const operationContracts = {
     ),
   },
   'agent-bridge': {
-    details: operation(id, proposalSummarySchema),
+    details: operation(id, proposalDetailsSchema),
     grant: operation(
       agentGrantValuesSchema,
       z.object({ grant: grantSummarySchema, token: z.string() }),

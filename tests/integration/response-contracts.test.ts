@@ -145,8 +145,8 @@ describe('typed database responses', () => {
         status: 'pending',
         affectedCount: 1,
         dateBounds: { from, to },
-        changes: [],
       });
+      expect(item).not.toHaveProperty('changes');
       const detail = await proposalDetails({ id: submitted.id });
       const overview = summarizeProposal(detail.changes);
       expect({ from: overview.from ?? null, to: overview.to ?? null }).toEqual(item.dateBounds);

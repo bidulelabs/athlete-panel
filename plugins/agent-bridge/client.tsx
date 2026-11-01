@@ -101,8 +101,8 @@ export default function AgentBridgePage(_: PluginPageProps) {
                   <div>
                     <strong>{item.summary || 'Training adjustment'}</strong>
                     <p>
-                      {item.affectedCount ?? item.changes.length} change
-                      {(item.affectedCount ?? item.changes.length) === 1 ? '' : 's'} ·{' '}
+                      {item.affectedCount} change
+                      {item.affectedCount === 1 ? '' : 's'} ·{' '}
                       {new Date(item.createdAt).toLocaleString('en-GB')}
                     </p>
                   </div>

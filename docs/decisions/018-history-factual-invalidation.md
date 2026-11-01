@@ -12,19 +12,19 @@ Statement-level triggers advanced versions even for zero-row updates or cleanup 
 
 ## Decision and rationale
 
-Use additive migrations in Activity Records, Training, Athlete and Garmin. INSERT/UPDATE/DELETE triggers inspect transition tables and advance once per changed statement/event. Record UPDATE comparisons include kind, identity, revision, JSON data and deleted state, excluding only the operational update time. Inserts/deletes with no affected rows and identical updates do not advance. BEFORE TRUNCATE checks for existing rows. All counter updates remain in the mutation transaction and roll back together. The [PostgreSQL 17 trigger contract](https://www.postgresql.org/docs/17/sql-createtrigger.html) supplies statement transition relations, including the separate INSERT/UPDATE sets for upserts.
+Use one final additive history migration per owning plugin: Activity Records, Training, Athlete and Garmin. Before release, the owner explicitly authorized folding intermediate PR trigger corrections into those four migrations; all migrations already on main remain immutable. INSERT/UPDATE/DELETE triggers inspect transition tables and advance once per changed statement/event. Record UPDATE comparisons include kind, identity, revision, JSON data and deleted state, excluding only the operational update time. Inserts/deletes with no affected rows and identical updates do not advance. BEFORE TRUNCATE checks for existing rows. All counter updates remain in the mutation transaction and roll back together. The [PostgreSQL 17 trigger contract](https://www.postgresql.org/docs/17/sql-createtrigger.html) supplies statement transition relations, including the separate INSERT/UPDATE sets for upserts.
 
 Garmin versions the stable historical coverage projection: stream, date window, status, whether a scan has completed, and scan state. An in-progress rescan with prior completed evidence projects as scanned; a first scan remains in progress. Failures and unavailable states remain visible, including after an earlier completed scan. Operational record/rejection counts, diagnostics and live timestamps are not exported as historical facts and do not themselves invalidate. Normalized activity/health corrections still advance their own counters.
 
-The historical DTO adds optional `hasCompletedScan` and omits the volatile `lastScannedAt` field from new responses. Garmin's owner-facing live status continues using the actual timestamp/progress unchanged. Summary scan-day counts use the flag, accepting older timestamp-based exported shapes only as a compatibility fallback. This makes records and cached summaries stable during an unchanged rescan without freezing or inventing a timestamp.
+The final category-specific coverage DTO requires `hasCompletedScan` and omits the volatile `lastScannedAt` field. Garmin's owner-facing live status continues using the actual timestamp/progress unchanged. Summary scan-day counts use the flag. Intermediate branch-only timestamp-based history exports must be regenerated. This makes records and cached summaries stable during an unchanged rescan without freezing or inventing a timestamp.
 
-The migrations bump each counter once so old review tokens restart across the coordinated upgrade. Applied migrations and stored grants/proposals are not rewritten. True changes anywhere in a participating collection still require restart; this is not range-specific invalidation, import-tolerant proposal submission under issue #68, or a durable snapshot implementation.
+Counters begin at zero on upgrade from main, which has no historical review tokens. Main migrations and stored grants/proposals are not rewritten. Only disposable databases from intermediate PR revisions are recreated. True changes anywhere in a participating collection still require restart; this is not range-specific invalidation, import-tolerant proposal submission under issue #68, or a durable snapshot implementation.
 
 ## Consequences
 
 - Benefits: unchanged polling, no-op mutations and cleanup can coexist with a long review; meaningful changes still fail closed. Bulk changes avoid one counter write per row.
 - Costs and risks: UPDATE transition comparisons inspect changed row sets; large bulk statements require measured verification. Future historical projection fields must be included in the owning counter comparison. No historical last-checked time is returned; the owner retains that operational information in Garmin status.
-- Compatibility: optional legacy fields remain readable. Deploy matching contracts, reader/aggregator, plugin manifests, composition, registry and migrations; restart web/worker. Old reviews restart once; grants and pending proposals retain their permissions and exact data. Older binaries require their matched pre-upgrade backup.
+- Compatibility: main-era grants, CLI configurations and unversioned/v2 proposal snapshots remain readable. Intermediate PR history formats/migration chains are not supported. Deploy matching contracts, reader/aggregator, plugin manifests, composition, registry and migrations; restart web/worker. Older binaries require their matched pre-upgrade backup.
 - Reconsider when: collection-wide invalidation on actual unrelated changes materially interrupts reviews. Durable snapshots or range-aware versions remain separate decisions.
 
 ## Alternatives
@@ -37,3 +37,5 @@ Row triggers with distinct-row predicates detect no-ops but write the same count
 - Requirements: [Agent training](../features/agent-training.md#historical-read-protocol).
 - Ownership: [Architecture](../architecture.md#historical-agent-reads-and-annual-proposals).
 - Actual verification and activation: [Execution record](../plans/agent-history-review-fixes.md).
+
+Pre-release consolidation authority and final verification: [Simplification execution record](../plans/agent-history-simplification.md).

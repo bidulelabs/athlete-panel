@@ -52,6 +52,8 @@ Store another recovery copy of this key and of `ENCRYPTION_KEY` in your password
 
 Production source also passes `pnpm typecheck:strict` (`noUncheckedIndexedAccess`); scripts/tests retain the existing strict configuration. Run `pnpm format` after source edits; `pnpm format:check` and `pnpm lint` run in `pnpm check`. Complexity, function length and existing explicit `any` usage initially warn. Generated files, applied migrations and documentation history are excluded from formatting.
 
+After changing contracts, manifests/composition or canonical skills, run `pnpm generate` once to refresh all derived artifacts. `pnpm check` validates freshness without rewriting them. Final feature versions are selected relative to `main`; unreleased intermediate branch revisions do not need additional version bumps.
+
 `pnpm boundaries:check` resolves imports through TypeScript, including browser roots, re-exports and aliases. Cross-plugin imports use declared public shared/client/server entries and required manifest dependencies; optional UI integrations use enabled contributions.
 
 ## Local development
@@ -132,6 +134,8 @@ Run these from the repository root. Setup/local load their own `.env`; advanced 
 | `pnpm db:migrate` | Verifies immutable applied migration checksums, applies pending enabled-plugin migrations and records the installed composition. Use maintenance for an existing instance. |
 | `pnpm run owner bootstrap --password-stdin` | Creates the single owner from stdin. No public signup. |
 | `pnpm run owner recover --password-stdin` | Replaces an existing owner's password and revokes all sessions and agent grants. Requires server/database control. |
+| `pnpm generate` | Refreshes registry, contract reference and generated skill adapters together. |
+| `pnpm preview:history [port]` | Starts a disposable five-year/annual-review preview on loopback (default 3017); requires a build and guarded `TEST_DATABASE_URL`. Creates its own database and drops only that database on shutdown. |
 | `pnpm registry:generate` | Validates pinned manifests/dependencies and rewrites derived client/server/metadata registries. |
 | `pnpm registry:generate --check` | Rejects drift without writing registry files. |
 | `pnpm plugins stage` | Writes validated desired enable/disable settings from the database into the source composition. It does not activate them. |
@@ -240,16 +244,9 @@ pnpm agent context --out /secure/planning-context.json
 
 With the default proposal period starting today and recorded measurements ending today, planning `health` includes at most today and `healthWeeks` is empty. Future-only proposals contain no past measurements. If history is disabled, a category is excluded or earlier dates are outside approved access, explain the context gap and clarify only material questions under the coaching guidance; do not silently widen proposal dates or treat missing data as inactivity. History review tokens and planning context digests have distinct purposes.
 
-Unchanged rescans, empty writes and operational timestamp updates do not invalidate history. Historical coverage uses stable `hasCompletedScan` evidence; live last-scan times remain in the owner's Garmin status and are omitted from new historical responses. A repeat scan in progress retains the prior completed coverage evidence; first scans, changed results/status or record corrections still require restart. The coordinated counter migration invalidates old review tokens once. See [the consistency decision](decisions/018-history-factual-invalidation.md).
+Unchanged rescans, empty writes and operational timestamp updates do not invalidate history. Historical coverage uses stable `hasCompletedScan` evidence; live last-scan times remain in the owner's Garmin status and are omitted from new historical responses. A repeat scan in progress retains the prior completed coverage evidence; first scans, changed results/status or record corrections still require restart. See [the consistency decision](decisions/018-history-factual-invalidation.md).
 
 For annual planning use the existing planning context/proposal commands above. One proposal supports 1,500 commands and 4 MiB; oversized requests fail with guidance. Submission does not change training. Review the complete proposal and explicitly apply it in Agent workspace. There is no CLI apply command.
-
-Synthetic performance measurement (requires the explicit loopback `_test` URL from Verification) creates/drops its own temporary database and saves reports in `.runtime/history/`:
-
-```sh
-pnpm exec tsx scripts/benchmark-history.ts 30000
-pnpm exec tsx scripts/benchmark-history.ts 100000
-```
 
 The populated-year and complete-export benchmark uses a separate temporary database under the same guarded test server:
 
@@ -258,7 +255,7 @@ pnpm exec tsx scripts/benchmark-review.ts 30000 current
 pnpm exec tsx scripts/benchmark-review.ts 100000 current --history-only
 ```
 
-It adds 1,000 existing interval workouts and a plan to the five-year fixture, then measures a single 1,500-command proposal (500 creates, 500 moves/edits, 500 deletions), review, application and undo. History measurements include first/next pages, complete sequential exports with an already cached selection and a fresh grant, a concurrent owner workout save, and a representative bounded record query plan with buffers. `--history-only` omits annual mutation measurements but still exercises the concurrent save. An optional lowercase report label distinguishes local runs; results stay under ignored `.runtime/review-performance/`. First calls and fresh grants are not cold-database-cache results. Warm page/review quantiles have only three samples; exports have two observations. Compare the same fixture and environment rather than treating local measurements as a production capacity guarantee.
+It adds 1,000 existing interval workouts and a plan to the five-year fixture, then measures a single 1,500-command proposal (500 creates, 500 moves/edits, 500 deletions), review, application and undo. History measurements include SQL discovery, first/next pages, selected-month details, complete sequential exports with cached and fresh selections, the full automatic discovery-plus-export workflow, a concurrent owner workout save, and actual activity/health/training read query plans with buffers. `--history-only` omits annual mutation measurements but still exercises the concurrent save. An optional lowercase report label distinguishes local runs; results stay under ignored `.runtime/review-performance/`. First calls and fresh grants are not cold-database-cache results. Warm page/review quantiles have only three samples; exports have two observations. Compare the same fixture and environment rather than treating local measurements as a production capacity guarantee.
 
 To profile the smaller workload with the same instrumentation used by its recorded before/after comparison:
 
@@ -269,6 +266,24 @@ node --cpu-prof --cpu-prof-dir=.runtime/review-performance --import tsx scripts/
 Create the ignored report directory first if it does not yet exist. Keep profiles and raw JSON outside Git.
 
 The first fixture contains at least 30,000 representative records spanning five calendar years; the second adds explicitly synthetic activity stress records. Reports include actual counts, environment, first/warm timings, query counts/plans, response bytes, memory and annual proposal timings. Caches are not forcibly cleared; these are local measurements, not production-capacity guarantees.
+
+### Disposable historical preview
+
+After `pnpm build`, with the explicit loopback `_test` `TEST_DATABASE_URL` from Verification:
+
+```sh
+pnpm preview:history 3017
+```
+
+This creates a uniquely named synthetic database, seeds five-year history, a synthetic owner/profile, and a 1,500-command pending annual proposal, and starts the built web app and worker. Sign in using `AthletePanel-demo-only-2026`. Use `pnpm agent connect --url http://127.0.0.1:3017` to exercise ordinary browser approval with protected CLI credentials. Tokens are never printed. The seeded proposal is for reviewing the UI, not a training recommendation; no proposal is automatically applied.
+
+The command ignores `.env` and ambient application/admin credentials. It saves its own configuration privately under `.runtime/history-preview/`, copies the built web artifact so later builds cannot overwrite it, and binds only loopback. Ctrl+C stops both processes and drops only the database created by that invocation. It does not reset an existing preview or personal database. Stop the prior preview before reusing its port. The PostgreSQL test server must remain running while the preview is in use.
+
+### PR #70 pre-release migration boundary
+
+The final feature adds four owning-plugin migrations: Activity Records/Training `003-history-reads.sql`, Athlete `004-history-reads.sql`, Garmin `005-history-reads.sql`. The 16 migrations already on main revision `09770bda9119a380982284726ad5364a4c5b13dd` remain byte-for-byte unchanged. The upgrade test lists those baseline files and verifies the upgrade preserves existing data; it stores no additional file fingerprints. Each new migration installs its final counter, transition triggers and indexes directly. Final versions are Athlete 1.3.0 and Training, Activity Records, Garmin and Agent bridge 2.1.0, with host API 1.3.0.
+
+The owner explicitly authorized replacing intermediate, unreleased PR migrations and formats. Disposable databases created by earlier PR revisions must be recreated; they are not an upgrade source. This exception does not apply to deployed or main-era databases. Existing main grants, CLI credentials and legacy proposal digests/snapshots retain their meanings. New history records use category-specific fields and required completed-scan evidence; prior branch-only history exports need regeneration. Upgrade CLI, web, worker, manifests/composition and generated contracts together using the coordinated procedure. Rollback after new grant/snapshot data requires the matching pre-upgrade backup. No deployment is part of local verification.
 
 ## Verification
 

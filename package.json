@@ -25,6 +25,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "owner": "tsx scripts/owner.ts",
     "registry:generate": "tsx scripts/registry.ts",
+    "generate": "pnpm registry:generate && pnpm contracts:generate && pnpm skills:sync",
+    "preview:history": "tsx scripts/preview-history.ts",
     "plugins": "tsx scripts/plugins.ts",
     "agent": "tsx scripts/agent.ts",
     "check": "pnpm format:check && pnpm lint && pnpm registry:generate --check && pnpm contracts:generate --check && pnpm skills:sync --check && pnpm boundaries:check && pnpm typecheck && pnpm typecheck:strict && pnpm test:unit && pnpm docs:check",

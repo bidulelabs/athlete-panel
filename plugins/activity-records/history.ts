@@ -9,15 +9,20 @@ export async function readRecordsHistory(tx: Transaction, q: HistorySelection) {
   const kind = q.category === 'health' ? 'health' : 'activity';
   const rows = await tx<{ id: string; date: string; data: Record<string, unknown> }[]>`
     select id,data->>'localDate' as date,
-    jsonb_build_object('revision',revision,'title',data->'title','sport',data->'sport',
+    jsonb_build_object('revision',revision,
+      'source',coalesce(data#>>'{provenance,sourceAccountId}','unknown'),
+      'sourceStream',data#>'{provenance,source}','externalId',data->'externalId') ||
+    ${
+      kind === 'activity'
+        ? tx`jsonb_build_object('title',data->'title','sport',data->'sport',
       'subgroup',data->'sportSubgroup','sportResolution',data->'sportResolution',
       'durationSeconds',data->'durationSeconds','distanceMeters',data->'distanceMeters',
       'elevationMeters',data->'elevationMeters','averageHeartRateBpm',data->'averageHeartRateBpm',
-      'startedAt',data->'startedAt','dateSource',data->'dateSource',
-      'source',coalesce(data#>>'{provenance,sourceAccountId}','unknown'),
-      'sourceStream',data#>'{provenance,source}','externalId',data->'externalId',
+      'startedAt',data->'startedAt','dateSource',data->'dateSource')`
+        : tx`jsonb_build_object(
       'metric',data->'metric','value',data->'value','measuredAt',data->'measuredAt',
-      'restingHeartRateMayBeMinimum',data#>'{provenance,restingHeartRateMayBeMinimum}') as data
+      'restingHeartRateMayBeMinimum',data#>'{provenance,restingHeartRateMayBeMinimum}')`
+    } as data
     from activity_records.records where kind=${kind} and deleted=false
       and data->>'localDate'>=${q.from} and data->>'localDate'<=${q.to}
       ${q.after ? tx`and (data->>'localDate',id)>(${q.after.date},${q.after.id})` : tx``}
@@ -48,7 +53,10 @@ export async function readRecordsHistory(tx: Transaction, q: HistorySelection) {
     ),
   );
 }
-export async function recordsHistoryAvailability(tx: Transaction, q: HistorySelection) {
+export async function recordsHistoryAvailability(
+  tx: Transaction,
+  q: Pick<HistorySelection, 'from' | 'to' | 'category'>,
+) {
   const kind = q.category === 'health' ? 'health' : 'activity';
   const rows = await tx<
     { count: number; from: string | null; to: string | null }[]

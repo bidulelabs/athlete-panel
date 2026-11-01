@@ -80,21 +80,28 @@ export const garminStatusSchema = garminConnectionSchema.extend({
   status: z.string(),
   coverage: z.array(coverageRowSchema),
 });
-export const proposalSummarySchema = z.object({
+const proposalFields = {
   expiresAt: z.iso.datetime().optional(),
   id: z.uuid(),
   status: z.enum(['pending', 'applied', 'rejected']),
   digest: z.string(),
   createdAt: z.iso.datetime(),
-  changes: z.array(entityChangeSchema).default([]),
-  affectedCount: z.number().int().nonnegative().optional(),
-  dateBounds: z.object({ from: dateSchema.nullable(), to: dateSchema.nullable() }).optional(),
   summary: z.string(),
   warnings: z.array(
     z.union([z.string(), z.object({ message: z.string().optional() }).passthrough()]),
   ),
+};
+export const proposalSummarySchema = z.object({
+  ...proposalFields,
+  affectedCount: z.number().int().nonnegative(),
+  dateBounds: z.object({ from: dateSchema.nullable(), to: dateSchema.nullable() }),
 });
 export type ProposalSummary = z.infer<typeof proposalSummarySchema>;
+export const proposalDetailsSchema = z.object({
+  ...proposalFields,
+  changes: z.array(entityChangeSchema),
+});
+export type ProposalDetails = z.infer<typeof proposalDetailsSchema>;
 export const grantSummarySchema = agentConnectionStatusSchema.shape.grant
   .unwrap()
   .and(z.object({ revoked: z.boolean() }));

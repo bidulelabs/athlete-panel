@@ -1,6 +1,7 @@
 import {
   healthMetricSchema,
-  type HistoryQuery,
+  type HistorySummarySelection,
+  type HistoryRecordOf,
   type HistoryRecord,
   type HistoryScope,
   type HistorySummary,
@@ -50,7 +51,8 @@ export function historyPeriods(
   }
   return periods;
 }
-type Volume = { row: HistorySummary; days: Set<string> };
+type SummaryFacts = Omit<HistorySummary, 'reference' | 'detailReferences'>;
+type PeriodFor = (date: string) => Period | undefined;
 const measurement = () => ({ value: null as number | null, knownCount: 0, missingCount: 0 });
 function addMeasure(target: ReturnType<typeof measurement>, value: number | null | undefined) {
   if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
@@ -58,177 +60,207 @@ function addMeasure(target: ReturnType<typeof measurement>, value: number | null
     target.knownCount++;
   } else target.missingCount++;
 }
-export function historySummaryAccumulator(
-  scope: HistoryScope,
-  q: HistoryQuery & { from: string; to: string },
+function volumeRow(
+  p: Period,
+  category: 'activities' | 'planned' | 'actual',
+  sport: string,
+  subgroup: string | null,
 ) {
-  const periods = historyPeriods(q.from, q.to, q.period, scope.weekStartsOn);
+  return {
+    ...p,
+    category,
+    sport,
+    subgroup,
+    count: 0,
+    activeDays: 0,
+    sessionsPerSevenDays: 0,
+    durationSeconds: measurement(),
+    distanceMeters: measurement(),
+    elevationMeters: measurement(),
+    statuses: {} as Record<string, number>,
+    possibleDuplicateCount: 0,
+    unsupportedRecords: 0,
+  };
+}
+/** Imported activities and manual completions share this calculation so linked snapshots cannot double count. */
+function trainingTotals(periodFor: PeriodFor) {
+  type Volume = { row: ReturnType<typeof volumeRow>; days: Set<string> };
+  type Facts = Pick<
+    HistoryRecordOf<'activities'>['data'],
+    | 'sport'
+    | 'subgroup'
+    | 'durationSeconds'
+    | 'distanceMeters'
+    | 'elevationMeters'
+    | 'unsupportedFields'
+  >;
   const volumes = new Map<string, Volume>(),
-    health = new Map<string, { record: HistoryRecord; count: number }>();
-  const scans: HistoryRecord[] = [];
-  const activityDays = new Set<string>(),
-    manualDays: { key: string; volume: Volume }[] = [];
-  const periodFor = (date: string) => periods.find((p) => date >= p.from && date <= p.to);
-  function volume(
+    activityDays = new Set<string>();
+  const manualDays: { key: string; volume: Volume }[] = [];
+  function add(
     category: 'activities' | 'planned' | 'actual',
     date: string,
-    r: HistoryRecord,
-    manual = false,
+    facts: Facts,
+    status?: string,
   ) {
     const p = periodFor(date);
     if (!p) return;
-    const sport = r.data.sport ?? 'unknown',
-      subgroup = r.data.subgroup ?? null;
+    const sport = facts.sport ?? 'unknown',
+      subgroup = facts.subgroup ?? null;
     const key = JSON.stringify([p.periodStart, category, sport, subgroup]);
-    let v = volumes.get(key);
-    if (!v) {
-      v = {
-        days: new Set(),
-        row: {
-          ...p,
-          category,
-          sport,
-          subgroup,
-          count: 0,
-          activeDays: 0,
-          sessionsPerSevenDays: 0,
-          durationSeconds: measurement(),
-          distanceMeters: measurement(),
-          elevationMeters: measurement(),
-          statuses: {},
-          possibleDuplicateCount: 0,
-          unsupportedRecords: 0,
-          reference: {
-            ...q,
-            from: p.from,
-            to: p.to,
-            cursor: undefined,
-            reviewToken: undefined,
-            category:
-              category === 'activities'
-                ? 'activities'
-                : category === 'planned'
-                  ? 'workouts'
-                  : undefined,
-          },
-        },
-      };
-      volumes.set(key, v);
-    }
+    const v = volumes.get(key) ?? {
+      row: volumeRow(p, category, sport, subgroup),
+      days: new Set<string>(),
+    };
+    volumes.set(key, v);
     v.row.count++;
     v.days.add(date);
     v.row.activeDays = v.days.size;
     v.row.sessionsPerSevenDays = (v.row.count * 7) / p.calendarDays;
-    addMeasure(
-      v.row.durationSeconds!,
-      manual ? r.data.actualDurationSeconds : r.data.durationSeconds,
-    );
-    addMeasure(v.row.distanceMeters!, manual ? r.data.actualDistanceMeters : r.data.distanceMeters);
-    addMeasure(v.row.elevationMeters!, manual ? null : r.data.elevationMeters);
-    if (category === 'planned') {
-      const status = r.data.completionStatus ?? 'pending';
-      v.row.statuses![status] = (v.row.statuses![status] ?? 0) + 1;
-    }
-    if (r.data.unsupportedFields?.length) v.row.unsupportedRecords!++;
-    if (manual) manualDays.push({ key: `${date}:${sport}`, volume: v });
+    addMeasure(v.row.durationSeconds, facts.durationSeconds);
+    addMeasure(v.row.distanceMeters, facts.distanceMeters);
+    addMeasure(v.row.elevationMeters, facts.elevationMeters);
+    if (status) v.row.statuses[status] = (v.row.statuses[status] ?? 0) + 1;
+    if (facts.unsupportedFields?.length) v.row.unsupportedRecords++;
+    return v;
   }
-  function ingest(r: HistoryRecord) {
-    if (r.category === 'activities') {
-      volume('activities', r.date, r);
-      volume('actual', r.date, r);
-      activityDays.add(`${r.date}:${r.data.sport ?? 'unknown'}`);
-    } else if (r.category === 'workouts' && r.data.kind !== 'rest') {
-      if (r.data.scheduledDate) volume('planned', r.data.scheduledDate, r);
-      if (
-        r.data.completionSource === 'manual' &&
-        r.data.completionStatus !== 'skipped' &&
-        r.data.performedDate
-      )
-        volume('actual', r.data.performedDate, r, true);
-    } else if (r.category === 'health') {
-      const key = JSON.stringify([
-        r.data.source ?? 'unknown',
-        r.data.sourceStream ?? 'unknown',
-        r.date,
-        r.data.metric ?? 'unknown',
-      ]);
-      const old = health.get(key),
-        a = r.data,
+  return {
+    ingest(r: HistoryRecordOf<'activities' | 'workouts'>) {
+      if (r.category === 'activities') {
+        add('activities', r.date, r.data);
+        add('actual', r.date, r.data);
+        activityDays.add(`${r.date}:${r.data.sport ?? 'unknown'}`);
+      } else if (r.data.kind !== 'rest') {
+        const d = r.data;
+        if (d.scheduledDate) add('planned', d.scheduledDate, d, d.completionStatus ?? 'pending');
+        if (
+          d.completionSource === 'manual' &&
+          d.completionStatus !== 'skipped' &&
+          d.performedDate
+        ) {
+          const volume = add('actual', d.performedDate, {
+            ...d,
+            durationSeconds: d.actualDurationSeconds,
+            distanceMeters: d.actualDistanceMeters,
+            elevationMeters: null,
+          });
+          if (volume)
+            manualDays.push({ key: `${d.performedDate}:${d.sport ?? 'unknown'}`, volume });
+        }
+      }
+    },
+    finish(): SummaryFacts[] {
+      for (const { key, volume } of manualDays)
+        if (activityDays.has(key)) volume.row.possibleDuplicateCount++;
+      return [...volumes.values()].map((v) => v.row);
+    },
+  };
+}
+
+type HealthRecord = HistoryRecordOf<'health'>;
+const seriesKey = (r: HealthRecord) =>
+  JSON.stringify([
+    r.data.metric ?? 'unknown',
+    r.data.source ?? 'unknown',
+    r.data.sourceStream ?? 'unknown',
+  ]);
+function healthTotals(periodFor: PeriodFor) {
+  const daily = new Map<string, { record: HealthRecord; count: number }>();
+  return {
+    ingest(record: HealthRecord) {
+      const key = `${seriesKey(record)}:${record.date}`,
+        old = daily.get(key);
+      const a = record.data,
         b = old?.record.data;
       const newer =
         !b ||
         (a.revision ?? 0) > (b.revision ?? 0) ||
         ((a.revision ?? 0) === (b.revision ?? 0) &&
-          `${a.measuredAt ?? ''}:${r.id}` > `${b.measuredAt ?? ''}:${old!.record.id}`);
-      health.set(key, { record: newer ? r : old!.record, count: (old?.count ?? 0) + 1 });
-    } else if (r.category === 'coverage') scans.push(r);
-  }
-  function finish(): HistorySummary[] {
-    for (const m of manualDays) if (activityDays.has(m.key)) m.volume.row.possibleDuplicateCount!++;
-    const rows = [...volumes.values()].map((v) => v.row);
-    const groupedHealth = new Map<string, { record: HistoryRecord; count: number }[]>(),
-      dailySources = new Map<string, Set<string>>();
-    for (const h of health.values()) {
-      const p = periodFor(h.record.date);
-      if (!p) continue;
-      const key = JSON.stringify([
-        p.periodStart,
-        h.record.data.metric ?? 'unknown',
-        h.record.data.source ?? 'unknown',
-        h.record.data.sourceStream ?? 'unknown',
-      ]);
-      const bucket = groupedHealth.get(key) ?? [];
-      bucket.push(h);
-      groupedHealth.set(key, bucket);
-      if (typeof h.record.data.value === 'number') {
-        const dayKey = `${h.record.date}:${h.record.data.metric}`;
-        const accounts = dailySources.get(dayKey) ?? new Set<string>();
-        accounts.add(
-          JSON.stringify([
-            h.record.data.source ?? 'unknown',
-            h.record.data.sourceStream ?? 'unknown',
-          ]),
-        );
-        dailySources.set(dayKey, accounts);
+          `${a.measuredAt ?? ''}:${record.id}` > `${b.measuredAt ?? ''}:${old!.record.id}`);
+      daily.set(key, { record: newer ? record : old!.record, count: (old?.count ?? 0) + 1 });
+    },
+    finish(periods: Period[], metricFilter?: HistorySummarySelection['metric']): SummaryFacts[] {
+      // Resolve corrections first, then visit each corrected day once. Cells retain totals, not duplicate record arrays.
+      const sources = new Map<
+        string,
+        { metric: string; source: string; sourceStream: string; supported: boolean }
+      >();
+      const cells = new Map<
+        string,
+        {
+          count: number;
+          days: number;
+          known: Set<string>;
+          sum: number;
+          min: number | null;
+          max: number | null;
+          unsupported: number;
+          uncertain: number;
+        }
+      >();
+      const dailySources = new Map<string, Set<string>>();
+      const unsupportedMetrics = new Set<string>();
+      for (const { record: r, count } of daily.values()) {
+        const key = seriesKey(r),
+          d = r.data;
+        const metric = d.metric ?? 'unknown',
+          source = d.source ?? 'unknown',
+          sourceStream = d.sourceStream ?? 'unknown';
+        const series = sources.get(key) ?? {
+          metric,
+          source,
+          sourceStream,
+          supported: healthMetricSchema.safeParse(metric).success,
+        };
+        sources.set(key, series);
+        if (!series.supported) unsupportedMetrics.add(metric);
+        const p = periodFor(r.date);
+        if (!p) continue;
+        const cellKey = `${p.periodStart}:${key}`;
+        const cell = cells.get(cellKey) ?? {
+          count: 0,
+          days: 0,
+          known: new Set<string>(),
+          sum: 0,
+          min: null,
+          max: null,
+          unsupported: 0,
+          uncertain: 0,
+        };
+        cells.set(cellKey, cell);
+        cell.count += count;
+        cell.days++;
+        if (!series.supported || d.unsupportedFields?.length) cell.unsupported += count;
+        if (typeof d.value === 'number') {
+          const dayKey = `${r.date}:${metric}`,
+            accounts = dailySources.get(dayKey) ?? new Set<string>();
+          accounts.add(JSON.stringify([source, sourceStream]));
+          dailySources.set(dayKey, accounts);
+          if (series.supported) {
+            cell.known.add(r.date);
+            cell.sum += d.value;
+            cell.min = cell.min === null ? d.value : Math.min(cell.min, d.value);
+            cell.max = cell.max === null ? d.value : Math.max(cell.max, d.value);
+            if (d.restingHeartRateMayBeMinimum) cell.uncertain++;
+          }
+        }
       }
-    }
-    const sources = new Map<
-      string,
-      { source: string; sourceStream: string; metrics: Set<string> }
-    >();
-    const unsupportedMetrics = new Set<string>();
-    for (const h of health.values()) {
-      const source = h.record.data.source ?? 'unknown';
-      const sourceStream = h.record.data.sourceStream ?? 'unknown';
-      const key = JSON.stringify([source, sourceStream]);
-      const series = sources.get(key) ?? { source, sourceStream, metrics: new Set<string>() };
-      series.metrics.add(h.record.data.metric ?? 'unknown');
-      sources.set(key, series);
-      if (!healthMetricSchema.safeParse(h.record.data.metric).success)
-        unsupportedMetrics.add(h.record.data.metric ?? 'unknown');
-    }
-    const sourcesFor = (metric: string) => {
-      const matching = [...sources.values()].filter((s) => s.metrics.has(metric));
-      return matching.length ? matching : [{ source: 'unknown', sourceStream: 'unknown' }];
-    };
-    const metrics = q.metric ? [q.metric] : [...healthMetricSchema.options, ...unsupportedMetrics];
-    if (scope.categories.includes('health') && (!q.category || q.category === 'health'))
-      for (const p of periods)
-        for (const metric of metrics)
-          for (const { source, sourceStream } of sourcesFor(metric)) {
-            const candidates =
-              groupedHealth.get(JSON.stringify([p.periodStart, metric, source, sourceStream])) ??
-              [];
-            const supportedMetric = healthMetricSchema.safeParse(metric);
-            if (!supportedMetric.success && !candidates.length) continue;
-            const known = supportedMetric.success
-              ? candidates.filter((h) => typeof h.record.data.value === 'number')
-              : [];
-            const values = known.map((h) => h.record.data.value!);
-            const ambiguous = known.filter(
-              (h) => (dailySources.get(`${h.record.date}:${metric}`)?.size ?? 0) > 1,
-            ).length;
-            const unit = !supportedMetric.success
+      const metrics = metricFilter
+        ? [metricFilter]
+        : [...healthMetricSchema.options, ...unsupportedMetrics];
+      const rows: SummaryFacts[] = [];
+      for (const metric of metrics) {
+        const matching = [...sources.values()].filter((s) => s.metric === metric);
+        const series = matching.length
+          ? matching
+          : [{ metric, source: 'unknown', sourceStream: 'unknown', supported: true }];
+        for (const s of series)
+          for (const p of periods) {
+            const key = JSON.stringify([metric, s.source, s.sourceStream]),
+              cell = cells.get(`${p.periodStart}:${key}`);
+            if (!s.supported && !cell) continue;
+            const known = cell?.known.size ?? 0;
+            const unit = !s.supported
               ? 'unknown'
               : metric.endsWith('Seconds')
                 ? 'seconds'
@@ -242,63 +274,64 @@ export function historySummaryAccumulator(
             rows.push({
               ...p,
               category: 'health',
-              source,
-              sourceStream,
+              source: s.source,
+              sourceStream: s.sourceStream,
               metric,
               unit,
-              count: candidates.reduce((n, h) => n + h.count, 0),
-              mean: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
-              min: values.length ? Math.min(...values) : null,
-              max: values.length ? Math.max(...values) : null,
-              ...(metric === 'steps'
-                ? { sum: values.length ? values.reduce((a, b) => a + b, 0) : null }
-                : {}),
-              contributingRecords: known.length,
-              contributingDays: known.length,
-              missingDays: p.calendarDays - known.length,
-              unknownDays: candidates.length - known.length,
-              ambiguousDays: ambiguous,
-              uncertainRecords: known.filter((h) => h.record.data.restingHeartRateMayBeMinimum)
-                .length,
-              unsupportedRecords: candidates
-                .filter((h) => !supportedMetric.success || h.record.data.unsupportedFields?.length)
-                .reduce((total, h) => total + h.count, 0),
-              reference: {
-                ...q,
-                from: p.from,
-                to: p.to,
-                category: 'health',
-                metric: supportedMetric.success ? supportedMetric.data : undefined,
-                sport: undefined,
-                subgroup: undefined,
-                cursor: undefined,
-                reviewToken: undefined,
-              },
+              count: cell?.count ?? 0,
+              mean: known ? cell!.sum / known : null,
+              min: cell?.min ?? null,
+              max: cell?.max ?? null,
+              ...(metric === 'steps' ? { sum: known ? cell!.sum : null } : {}),
+              contributingRecords: known,
+              contributingDays: known,
+              missingDays: p.calendarDays - known,
+              unknownDays: (cell?.days ?? 0) - known,
+              ambiguousDays: [...(cell?.known ?? [])].filter(
+                (date) => (dailySources.get(`${date}:${metric}`)?.size ?? 0) > 1,
+              ).length,
+              uncertainRecords: cell?.uncertain ?? 0,
+              unsupportedRecords: cell?.unsupported ?? 0,
             });
           }
-    if (!q.category || q.category === 'coverage')
+      }
+      return rows;
+    },
+  };
+}
+function coverageTotals() {
+  const windows = new Map<string, HistoryRecordOf<'coverage'>[]>();
+  return {
+    ingest(r: HistoryRecordOf<'coverage'>) {
+      const stream = windows.get(r.data.stream) ?? [];
+      stream.push(r);
+      windows.set(r.data.stream, stream);
+    },
+    finish(periods: Period[], scope: HistoryScope): SummaryFacts[] {
+      const rows: SummaryFacts[] = [];
+      const streams = [
+        ...(scope.categories.includes('activities') ? ['activities'] : []),
+        ...(scope.categories.includes('health')
+          ? ['sleep', 'daily', 'hrv', 'steps', 'stress', 'bodyBattery']
+          : []),
+      ];
       for (const p of periods)
-        for (const stream of [
-          ...(scope.categories.includes('activities') ? ['activities'] : []),
-          ...(scope.categories.includes('health')
-            ? ['sleep', 'daily', 'hrv', 'steps', 'stress', 'bodyBattery']
-            : []),
-        ]) {
-          const relevant = scans.filter(
-            (r) => r.data.stream === stream && r.data.from! <= p.to && r.data.to! >= p.from,
+        for (const stream of streams) {
+          const relevant = (windows.get(stream) ?? []).filter(
+            (r) => r.data.from <= p.to && r.data.to >= p.from,
           );
           const scanned = new Set<string>(),
             failed = new Set<string>(),
             unavailable = new Set<string>();
-          for (const r of relevant)
+          for (const { data: d } of relevant)
             for (
-              let date = r.data.from! < p.from ? p.from : r.data.from!;
-              date <= (r.data.to! > p.to ? p.to : r.data.to!);
+              let date = d.from < p.from ? p.from : d.from;
+              date <= (d.to > p.to ? p.to : d.to);
               date = addDays(date, 1)
             ) {
-              if (r.data.hasCompletedScan ?? Boolean(r.data.lastScannedAt)) scanned.add(date);
-              if (r.data.scanState === 'failed') failed.add(date);
-              if (r.data.scanState === 'unavailable') unavailable.add(date);
+              if (d.hasCompletedScan) scanned.add(date);
+              if (d.scanState === 'failed') failed.add(date);
+              if (d.scanState === 'unavailable') unavailable.add(date);
             }
           rows.push({
             ...p,
@@ -309,62 +342,110 @@ export function historySummaryAccumulator(
             failedDays: failed.size,
             unavailableDays: unavailable.size,
             unscannedDays: p.calendarDays - scanned.size,
-            reference: {
-              ...q,
-              from: p.from,
-              to: p.to,
-              category: 'coverage',
-              sport: undefined,
-              subgroup: undefined,
-              cursor: undefined,
-              reviewToken: undefined,
-            },
           });
         }
-    // Include explicit empty recorded periods. Zero records never asserts no training happened.
-    for (const p of periods)
-      for (const category of ['activities', 'planned', 'actual'] as const) {
-        const allowed =
-          category === 'planned'
-            ? scope.categories.includes('training')
-            : scope.categories.includes('activities') ||
-              (category === 'actual' && scope.categories.includes('training'));
-        if (
-          allowed &&
-          !q.category &&
-          !rows.some((r) => r.periodStart === p.periodStart && r.category === category)
-        )
-          rows.push({
-            ...p,
-            category,
-            count: 0,
-            activeDays: 0,
-            sessionsPerSevenDays: 0,
-            durationSeconds: measurement(),
-            distanceMeters: measurement(),
-            elevationMeters: measurement(),
-            reference: { ...q, from: p.from, to: p.to, cursor: undefined, reviewToken: undefined },
-          });
+      return rows;
+    },
+  };
+}
+function evidence(
+  row: SummaryFacts,
+  q: HistorySummarySelection,
+  scope: HistoryScope,
+): HistorySummary {
+  const category: HistoryRecord['category'] | undefined =
+    row.category === 'activities'
+      ? 'activities'
+      : row.category === 'planned'
+        ? 'workouts'
+        : row.category === 'actual'
+          ? undefined
+          : row.category;
+  const reference = {
+    from: row.from,
+    to: row.to,
+    category,
+    period: q.period,
+    limit: 100,
+    section: 'core' as const,
+    sport: category === 'health' || category === 'coverage' ? undefined : q.sport,
+    subgroup: category === 'health' || category === 'coverage' ? undefined : q.subgroup,
+    metric: category === 'health' ? healthMetricSchema.safeParse(row.metric).data : undefined,
+    recordId: q.recordId,
+  };
+  const kinds =
+    row.category === 'actual'
+      ? [
+          ...(scope.categories.includes('activities') ? ['activities' as const] : []),
+          ...(scope.categories.includes('training') ? ['workouts' as const] : []),
+        ]
+      : [category!];
+  return {
+    ...row,
+    reference,
+    detailReferences: kinds.map((category) => ({ ...reference, category })),
+  };
+}
+export function historySummaryAccumulator(scope: HistoryScope, q: HistorySummarySelection) {
+  const periods = historyPeriods(q.from, q.to, q.period, scope.weekStartsOn),
+    dates = new Map<string, Period>();
+  for (const p of periods)
+    for (let date = p.from; date <= p.to; date = addDays(date, 1)) dates.set(date, p);
+  const periodFor: PeriodFor = (date) => dates.get(date);
+  const training = trainingTotals(periodFor),
+    health = healthTotals(periodFor),
+    coverage = coverageTotals();
+  return {
+    ingest(r: HistoryRecord) {
+      switch (r.category) {
+        case 'activities':
+        case 'workouts':
+          training.ingest(r);
+          break;
+        case 'health':
+          health.ingest(r);
+          break;
+        case 'coverage':
+          coverage.ingest(r);
+          break;
       }
-    for (const row of rows) {
-      const kinds =
-        row.category === 'actual'
-          ? [
-              ...(scope.categories.includes('activities') ? ['activities' as const] : []),
-              ...(scope.categories.includes('training') ? ['workouts' as const] : []),
-            ]
-          : [row.category === 'planned' ? ('workouts' as const) : row.category];
-      row.detailReferences = kinds.map((category) => ({
-        ...row.reference,
-        category,
-        metric: category === 'health' ? healthMetricSchema.safeParse(row.metric).data : undefined,
-      }));
-    }
-    return rows.sort((a, b) =>
-      summaryKey(a) < summaryKey(b) ? -1 : summaryKey(a) > summaryKey(b) ? 1 : 0,
-    );
-  }
-  return { ingest, finish };
+    },
+    finish(): HistorySummary[] {
+      const rows = training.finish();
+      if (scope.categories.includes('health') && (!q.category || q.category === 'health'))
+        rows.push(...health.finish(periods, q.metric));
+      if (!q.category || q.category === 'coverage') rows.push(...coverage.finish(periods, scope));
+      // Zero recorded sessions never asserts that no training happened.
+      if (!q.category)
+        for (const p of periods)
+          for (const category of ['activities', 'planned', 'actual'] as const) {
+            const allowed =
+              category === 'planned'
+                ? scope.categories.includes('training')
+                : scope.categories.includes('activities') ||
+                  (category === 'actual' && scope.categories.includes('training'));
+            if (
+              allowed &&
+              !rows.some((r) => r.periodStart === p.periodStart && r.category === category)
+            )
+              rows.push({
+                ...p,
+                category,
+                count: 0,
+                activeDays: 0,
+                sessionsPerSevenDays: 0,
+                durationSeconds: measurement(),
+                distanceMeters: measurement(),
+                elevationMeters: measurement(),
+              });
+          }
+      return rows
+        .map((row) => evidence(row, q, scope))
+        .sort((a, b) =>
+          summaryKey(a) < summaryKey(b) ? -1 : summaryKey(a) > summaryKey(b) ? 1 : 0,
+        );
+    },
+  };
 }
 export function summaryKey(row: HistorySummary) {
   return JSON.stringify([

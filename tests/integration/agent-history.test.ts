@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, beforeEach, afterAll, it, expect } from 'vitest';
+import { beforeAll, beforeEach, afterAll, afterEach, it, expect, vi } from 'vitest';
 import { isolatedDatabaseUrl } from '../support/test-database';
 import { connection, closeDatabase } from '../../packages/host/src/db';
 import { migrate } from '../../packages/host/src/migrations';
@@ -15,6 +15,7 @@ import { readHistory } from '../../plugins/agent-bridge/history';
 import { syntheticDay, historyId } from '../fixtures/historical';
 import { addDays, todayInTimeZone } from '../../plugins/training/dates';
 import { workoutSchema } from '@athlete-panel/contracts';
+import * as sources from '../../instance/history-services';
 const database = isolatedDatabaseUrl();
 beforeAll(async () => {
   await closeDatabase();
@@ -27,6 +28,7 @@ beforeEach(async () => {
   await connection()`delete from host.settings where key='maintenance'`;
 });
 afterAll(closeDatabase);
+afterEach(() => vi.restoreAllMocks());
 const access = (
   categories: string[] = ['activities', 'health', 'training', 'context'],
   includeNotes = false,
@@ -51,6 +53,29 @@ async function seed() {
     await sql`insert into training.records(kind,id,revision,data) values('workout',${record.id},1,${sql.json(record)})`;
   return data;
 }
+it('preserves category-specific event and calendar-note facts without unrelated workout fields', async () => {
+  const sql = connection();
+  await sql`insert into training.records(kind,id,revision,data) values
+    ('event',${randomUUID()},1,'{"title":"Synthetic race","date":"2024-01-01","kind":"race","notes":"PRIVATE_EVENT"}'::jsonb),
+    ('note',${randomUUID()},1,'{"title":"Travel week","schedule":{"kind":"independent","date":"2024-01-02"},"body":"PRIVATE_NOTE"}'::jsonb)`;
+  const { token } = await access(['training', 'context'], true);
+  const event = (await readHistory(token, 'records', { category: 'events' })).records![0]!;
+  const note = (await readHistory(token, 'records', { category: 'notes' })).records![0]!;
+  expect(event.data).toMatchObject({
+    title: 'Synthetic race',
+    kind: 'race',
+    notes: 'PRIVATE_EVENT',
+  });
+  expect(note.data).toMatchObject({ title: 'Travel week', body: 'PRIVATE_NOTE' });
+  for (const record of [event, note]) {
+    expect(record.data).not.toHaveProperty('durationSeconds');
+    expect(record.data).not.toHaveProperty('stepCount');
+  }
+  const restricted = await access(['context']);
+  expect(
+    JSON.stringify(await readHistory(restricted.token, 'records', { category: 'events' })),
+  ).not.toContain('PRIVATE_EVENT');
+});
 it('historical-only access cannot get planning context or submit a proposal; legacy access has no history', async () => {
   const { token } = await access();
   await expect(contextForToken(token)).rejects.toMatchObject({ status: 403 });
@@ -215,7 +240,9 @@ it('discovers every permitted scheduled/performed date without widening a narrow
     planning: null,
     history: { from: '2024-01-01', to: '2024-12-31', categories: ['training'], weekStartsOn: 1 },
   });
+  const records = vi.spyOn(sources, 'historicalRecords');
   const discovery = await readHistory(token, 'discover');
+  expect(records).not.toHaveBeenCalled();
   expect(discovery.availability).toContainEqual({
     category: 'workouts',
     count: 4,
@@ -460,9 +487,10 @@ it('pages prescriptions, excludes nested notes, and keeps out-of-grant completio
   });
   await connection()`update training.records set data=jsonb_set(data,'{completion,performedDate}','"2025-01-01"') where id=${data.workouts[1]!.id}`;
   const result = await readHistory(narrowed.token, 'records', { category: 'workouts' });
-  expect(
-    result.records!.find((r) => r.id === data.workouts[1]!.id)!.data.performedDate,
-  ).toBeUndefined();
+  const historicalWorkout = result.records!.find((r) => r.id === data.workouts[1]!.id)!;
+  expect(historicalWorkout.category).toBe('workouts');
+  if (historicalWorkout.category !== 'workouts') throw new Error('Expected a workout');
+  expect(historicalWorkout.data.performedDate).toBeUndefined();
 });
 it('reports unsupported older measurement fields and excludes provider payloads', async () => {
   const data = await seed();
@@ -484,7 +512,11 @@ it('reports unsupported older measurement fields and excludes provider payloads'
     ...unsupported.detailReferences![0],
     reviewToken: summary.reviewToken,
   });
-  expect(supporting.records!.some((r) => r.data.metric === 'legacyUnknownMetric')).toBe(true);
+  expect(
+    supporting.records!.some(
+      (r) => r.category === 'health' && r.data.metric === 'legacyUnknownMetric',
+    ),
+  ).toBe(true);
 });
 it('agent HTTP accepts up to 4 MiB while the generic/manual reader keeps 256 KiB', async () => {
   const { POST } = await import('../../apps/web/app/api/agent/[operation]/route');

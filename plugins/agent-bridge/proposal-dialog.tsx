@@ -18,6 +18,7 @@ import {
   proposalReviewSchema,
   type ProposalReview,
   type ProposalSummary,
+  type ProposalDetails,
 } from '@athlete-panel/contracts';
 import { summarizeProposal, planTitlesById } from './proposal-weeks';
 import { ProposedEdits, ReviewChange } from './proposal-changes';
@@ -29,9 +30,7 @@ export function ProposalLoader({
   onClose: () => void;
 }) {
   const { request } = useWorkspace();
-  const [details, setDetails] = useState<ProposalSummary | null>(
-    proposal.changes.length ? proposal : null,
-  );
+  const [details, setDetails] = useState<ProposalDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -60,7 +59,7 @@ export function ProposalLoader({
   );
 }
 
-function ProposalDialog({ proposal, onClose }: { proposal: ProposalSummary; onClose: () => void }) {
+function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onClose: () => void }) {
   const { request, data } = useWorkspace();
   const planTitles = planTitlesById(data.plans, proposal.changes);
   const action = useAction();

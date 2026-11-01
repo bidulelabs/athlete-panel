@@ -4,6 +4,17 @@ export async function garminHistoryVersion(tx: Transaction): Promise<string> {
   return (await tx`select revision::text from garmin.history_version where singleton=true`)[0]!
     .revision;
 }
+export async function garminHistoryAvailability(
+  tx: Transaction,
+  q: Pick<HistorySelection, 'from' | 'to' | 'category'>,
+  streams: string[],
+) {
+  const rows = await tx<{ count: number; from: string | null; to: string | null }[]>`
+    select count(*)::int as count, min(greatest(start_date,${q.from}::date))::text as "from",
+      max(least(end_date,${q.to}::date))::text as "to"
+    from garmin.coverage where stream=any(${streams}) and start_date<=${q.to}::date and end_date>=${q.from}::date`;
+  return { category: 'coverage' as const, ...rows[0]! };
+}
 export async function readHistoryCoverage(tx: Transaction, q: HistorySelection, streams: string[]) {
   const rows = await tx<
     { id: string; date: string; data: Record<string, unknown> }[]

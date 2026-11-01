@@ -23,3 +23,14 @@ export async function readAthleteHistory(tx: Transaction, q: HistorySelection) {
     order by date,id limit ${q.take}`;
   return rows.map((r) => historicalRecord('injuries', r.id, r.date, r.data));
 }
+export async function athleteHistoryAvailability(
+  tx: Transaction,
+  q: Pick<HistorySelection, 'from' | 'to' | 'category'>,
+) {
+  const rows = await tx<{ count: number; from: string | null; to: string | null }[]>`
+    select count(*)::int as count, min(greatest(data->>'startDate',${q.from})) as "from",
+      max(least(coalesce(data->>'endDate',${q.to}),${q.to})) as "to"
+    from athlete.records where kind='injury' and deleted=false and data->>'startDate'<=${q.to}
+      and (data->>'endDate' is null or data->>'endDate'>=${q.from})`;
+  return { category: 'injuries' as const, ...rows[0]! };
+}

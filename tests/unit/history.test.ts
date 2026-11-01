@@ -6,6 +6,7 @@ import {
   addCalendarYears,
   agentCommandsSchema,
   commandsSchema,
+  historicalRecord,
   type HistoryScope,
   type HistoryQuery,
 } from '../../packages/contracts/src';
@@ -13,6 +14,7 @@ import {
   historyPeriods,
   historySummaryAccumulator,
 } from '../../plugins/agent-bridge/history-summary';
+import { historyReadSelection } from '../../plugins/agent-bridge/history-query';
 const scope: HistoryScope = {
   from: '2024-01-01',
   to: '2024-01-31',
@@ -26,6 +28,44 @@ const q: HistoryQuery & { from: string; to: string } = {
   limit: 100,
   section: 'core',
 };
+it('uses category allowlists and reports unsupported older fields without fabricating facts', () => {
+  expect(
+    historicalRecord('health', 'reading', '2024-01-01', {
+      metric: 'steps',
+      value: 'old-number',
+      durationSeconds: 99,
+      gps: [1, 2],
+      raw: { secret: 'excluded' },
+    }).data,
+  ).toEqual({ metric: 'steps', unsupportedFields: ['value'] });
+  expect(
+    historicalRecord('activities', 'activity', '2024-01-01', {
+      durationSeconds: 0,
+      distanceMeters: null,
+      metric: 'steps',
+      value: 20,
+    }).data,
+  ).toEqual({ durationSeconds: 0, distanceMeters: null });
+  expect(() =>
+    historicalRecord('coverage', 'window', '2024-01-01', {
+      stream: 'sleep',
+      from: '2024-01-01',
+      to: '2024-01-31',
+      lastScannedAt: '2024-02-01',
+    }),
+  ).toThrow();
+});
+it('keeps encrypted transport values out of owning database selections', () => {
+  const selected = historyReadSelection(
+    { ...q, reviewToken: 'private-review', cursor: 'private-cursor' },
+    { take: 101, facts: false },
+  );
+  expect(selected).toMatchObject({ from: q.from, to: q.to, take: 101, facts: false });
+  expect(selected).not.toHaveProperty('reviewToken');
+  expect(selected).not.toHaveProperty('cursor');
+  expect(selected).not.toHaveProperty('limit');
+  expect(selected).not.toHaveProperty('period');
+});
 it('uses inclusive calendar anniversaries without widening legacy scopes', () => {
   expect(
     historyScopeSchema.safeParse({ ...scope, from: '2021-10-31', to: '2026-10-31' }).success,
@@ -128,40 +168,35 @@ it('allows 1500 agent commands while manual commands remain capped at 200', () =
   expect(agentCommandsSchema.safeParse([...commands, commands[0]]).success).toBe(false);
   expect(commandsSchema.safeParse(commands).success).toBe(false);
 });
-it.each(['current', 'legacy'] as const)(
-  'unions overlapping %s scan windows without confusing scans with measurement days',
-  (shape) => {
-    const aggregate = historySummaryAccumulator(scope, q);
-    for (const [id, from, to] of [
-      ['a', '2023-12-01', '2024-01-20'],
-      ['b', '2024-01-10', '2024-02-10'],
-    ])
-      aggregate.ingest({
-        category: 'coverage',
-        id: id!,
-        date: '2024-01-01',
-        data: {
-          stream: 'sleep',
-          from: from!,
-          to: to!,
-          scanState: 'scanned',
-          ...(shape === 'current'
-            ? { hasCompletedScan: true }
-            : { lastScannedAt: '2024-02-10T00:00:00Z' }),
-        },
-      });
-    const rows = aggregate.finish();
-    expect(rows.find((r) => r.category === 'coverage' && r.source === 'sleep')).toMatchObject({
-      count: 2,
-      scannedDays: 31,
-      unscannedDays: 0,
+it('unions overlapping scan windows without confusing scans with measurement days', () => {
+  const aggregate = historySummaryAccumulator(scope, q);
+  for (const [id, from, to] of [
+    ['a', '2023-12-01', '2024-01-20'],
+    ['b', '2024-01-10', '2024-02-10'],
+  ])
+    aggregate.ingest({
+      category: 'coverage',
+      id: id!,
+      date: '2024-01-01',
+      data: {
+        stream: 'sleep',
+        from: from!,
+        to: to!,
+        scanState: 'scanned',
+        hasCompletedScan: true,
+      },
     });
-    expect(
-      rows.find((r) => r.category === 'health' && r.metric === 'sleepDurationSeconds'),
-    ).toMatchObject({ contributingDays: 0, missingDays: 31, mean: null });
-  },
-);
-it('keeps an explicitly unscanned window unknown even if an older timestamp field is present', () => {
+  const rows = aggregate.finish();
+  expect(rows.find((r) => r.category === 'coverage' && r.source === 'sleep')).toMatchObject({
+    count: 2,
+    scannedDays: 31,
+    unscannedDays: 0,
+  });
+  expect(
+    rows.find((r) => r.category === 'health' && r.metric === 'sleepDurationSeconds'),
+  ).toMatchObject({ contributingDays: 0, missingDays: 31, mean: null });
+});
+it('keeps an explicitly unscanned window unknown', () => {
   const aggregate = historySummaryAccumulator(scope, q);
   aggregate.ingest({
     category: 'coverage',
@@ -173,7 +208,6 @@ it('keeps an explicitly unscanned window unknown even if an older timestamp fiel
       to: q.to,
       scanState: 'in-progress',
       hasCompletedScan: false,
-      lastScannedAt: '2024-02-10T00:00:00Z',
     },
   });
   expect(

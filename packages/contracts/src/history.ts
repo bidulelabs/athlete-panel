@@ -35,75 +35,148 @@ export const historyQuerySchema = z
   })
   .strict();
 export type HistoryQuery = z.infer<typeof historyQuerySchema>;
-export type HistorySelection = HistoryQuery & {
+/** Database filters contain facts and positions, never credentials or transport cursors. */
+export type HistoryFilters = Pick<
+  HistoryQuery,
+  'category' | 'sport' | 'subgroup' | 'metric' | 'recordId'
+> & {
   from: string;
   to: string;
+};
+export type HistorySelection = HistoryFilters & {
+  section: HistoryQuery['section'];
   after?: { date: string; id: string };
   take: number;
-  facts?: boolean;
+  facts: boolean;
 };
+export type HistorySummarySelection = HistoryFilters & { period: HistoryQuery['period'] };
 const number = z.number().finite().nonnegative().nullable();
-/** Deliberately flat historical facts; provider payloads and unrelated workspace fields have no representation. */
-export const historyDataSchema = z.object({
+const identity = {
   revision: z.number().optional(),
-  title: z.string().optional(),
+  unsupportedFields: z.array(z.string()).optional(),
+};
+const sport = {
   sport: z.string().nullable().optional(),
   subgroup: z.string().nullable().optional(),
-  sportResolution: z.string().nullable().optional(),
-  kind: z.string().nullable().optional(),
+};
+const volume = {
   durationSeconds: number.optional(),
   distanceMeters: number.optional(),
   elevationMeters: number.optional(),
-  averageHeartRateBpm: number.optional(),
-  startedAt: z.string().nullable().optional(),
-  dateSource: z.string().nullable().optional(),
+};
+const source = {
   source: z.string().optional(),
   sourceStream: z.string().nullable().optional(),
   externalId: z.string().optional(),
-  metric: z.string().optional(),
-  value: number.optional(),
-  measuredAt: z.string().nullable().optional(),
-  restingHeartRateMayBeMinimum: z.boolean().optional(),
-  scheduledDate: z.string().nullable().optional(),
-  performedDate: z.string().nullable().optional(),
-  planId: z.string().nullable().optional(),
-  completionStatus: z.string().nullable().optional(),
-  completionSource: z.string().nullable().optional(),
-  activityId: z.string().nullable().optional(),
-  actualDurationSeconds: number.optional(),
-  actualDistanceMeters: number.optional(),
-  rpe: number.optional(),
-  notes: z.string().optional(),
-  description: z.string().optional(),
-  body: z.string().optional(),
-  reason: z.string().optional(),
-  completionNotes: z.string().optional(),
-  startDate: z.string().nullable().optional(),
-  endDate: z.string().nullable().optional(),
-  bodyPart: z.string().optional(),
-  severity: z.string().optional(),
-  stepCount: z.number().int().optional(),
-  exerciseCount: z.number().int().optional(),
-  // Prescription parts remain individual bounded items; their schema is validated by the owning service.
-  part: z.record(z.string(), z.unknown()).optional(),
-  stream: z.string().optional(),
-  scanState: z.string().optional(),
-  // Stable scan evidence; live scan times belong to Garmin's operational status.
-  hasCompletedScan: z.boolean().optional(),
-  // Accepted for older exports; new historical readers omit this volatile timestamp.
-  lastScannedAt: z.string().nullable().optional(),
-  from: dateSchema.optional(),
-  to: dateSchema.optional(),
-  status: z.string().optional(),
-  unsupportedFields: z.array(z.string()).optional(),
-});
-export const historyRecordSchema = z.object({
-  category: historyKindSchema,
-  id: z.string(),
-  date: dateSchema,
-  data: historyDataSchema,
-});
+};
+/** Owning readers normalize older optional fields; each category has an explicit allowlist. */
+const historyDataSchemas = {
+  activities: z.object({
+    ...identity,
+    ...sport,
+    ...volume,
+    ...source,
+    title: z.string().optional(),
+    sportResolution: z.string().nullable().optional(),
+    averageHeartRateBpm: number.optional(),
+    startedAt: z.string().nullable().optional(),
+    dateSource: z.string().nullable().optional(),
+  }),
+  health: z.object({
+    ...identity,
+    ...source,
+    metric: z.string().optional(),
+    value: number.optional(),
+    measuredAt: z.string().nullable().optional(),
+    restingHeartRateMayBeMinimum: z.boolean().optional(),
+  }),
+  workouts: z.object({
+    ...identity,
+    ...sport,
+    ...volume,
+    title: z.string().optional(),
+    kind: z.string().nullable().optional(),
+    scheduledDate: z.string().nullable().optional(),
+    performedDate: z.string().nullable().optional(),
+    planId: z.string().nullable().optional(),
+    completionStatus: z.string().nullable().optional(),
+    completionSource: z.string().nullable().optional(),
+    activityId: z.string().nullable().optional(),
+    actualDurationSeconds: number.optional(),
+    actualDistanceMeters: number.optional(),
+    rpe: number.optional(),
+    notes: z.string().optional(),
+    reason: z.string().optional(),
+    completionNotes: z.string().optional(),
+    stepCount: z.number().int().optional(),
+    exerciseCount: z.number().int().optional(),
+    // Parts are validated against the training prescription schema by the owning reader.
+    part: z.record(z.string(), z.unknown()).optional(),
+  }),
+  plans: z.object({
+    ...identity,
+    title: z.string().optional(),
+    startDate: z.string().nullable().optional(),
+    scheduledDate: z.string().nullable().optional(),
+    description: z.string().optional(),
+  }),
+  notes: z.object({
+    ...identity,
+    title: z.string().optional(),
+    scheduledDate: z.string().nullable().optional(),
+    planId: z.string().nullable().optional(),
+    body: z.string().optional(),
+  }),
+  events: z.object({
+    ...identity,
+    title: z.string().optional(),
+    kind: z.string().nullable().optional(),
+    scheduledDate: z.string().nullable().optional(),
+    notes: z.string().optional(),
+  }),
+  injuries: z.object({
+    ...identity,
+    bodyPart: z.string().optional(),
+    description: z.string().optional(),
+    severity: z.string().optional(),
+    startDate: z.string().nullable().optional(),
+    endDate: z.string().nullable().optional(),
+    from: dateSchema,
+    to: dateSchema,
+    notes: z.string().optional(),
+  }),
+  coverage: z.object({
+    stream: z.string(),
+    from: dateSchema,
+    to: dateSchema,
+    hasCompletedScan: z.boolean(),
+    scanState: z.string().optional(),
+    status: z.string().optional(),
+    unsupportedFields: z.array(z.string()).optional(),
+  }),
+};
+const record = <C extends keyof typeof historyDataSchemas>(category: C) =>
+  z.object({
+    category: z.literal(category),
+    id: z.string(),
+    date: dateSchema,
+    data: historyDataSchemas[category],
+  });
+export const historyRecordSchema = z.discriminatedUnion('category', [
+  record('activities'),
+  record('health'),
+  record('workouts'),
+  record('plans'),
+  record('notes'),
+  record('events'),
+  record('injuries'),
+  record('coverage'),
+]);
 export type HistoryRecord = z.infer<typeof historyRecordSchema>;
+export type HistoryRecordOf<C extends HistoryRecord['category']> = Extract<
+  HistoryRecord,
+  { category: C }
+>;
 export const historyMeasureSchema = z.object({
   value: number,
   knownCount: z.number().int(),
@@ -185,20 +258,20 @@ export const historyResponseSchema = z.object({
 });
 export type HistoryResponse = z.infer<typeof historyResponseSchema>;
 /** Invalid optional legacy fields are visible diagnostics, never fabricated measurements. */
-export function historicalRecord(
-  category: HistoryRecord['category'],
+export function historicalRecord<C extends HistoryRecord['category']>(
+  category: C,
   id: string,
   date: string,
   input: Record<string, unknown>,
-): HistoryRecord {
+): HistoryRecordOf<C> {
   const data: Record<string, unknown> = {},
     unsupported: string[] = [];
-  for (const [name, schema] of Object.entries(historyDataSchema.shape)) {
+  for (const [name, schema] of Object.entries(historyDataSchemas[category].shape)) {
     if (input[name] === undefined) continue;
     const parsed = schema.safeParse(input[name]);
     if (parsed.success) data[name] = parsed.data;
     else unsupported.push(name);
   }
   if (unsupported.length) data.unsupportedFields = unsupported;
-  return historyRecordSchema.parse({ category, id, date, data });
+  return historyRecordSchema.parse({ category, id, date, data }) as HistoryRecordOf<C>;
 }

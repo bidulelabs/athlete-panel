@@ -3,7 +3,7 @@ import { assert } from '../../packages/host/src/errors';
 import {
   historicalRecords,
   historicalProfile,
-  recordsHistoryAvailability,
+  historicalAvailability,
 } from '../../instance/history-services';
 import { grantForToken } from './service';
 import {
@@ -26,7 +26,7 @@ import {
 } from './history-session';
 import { boundedHistoryPage } from './history-paging';
 import { historySummaryCache } from './history-summary-cache';
-import { historyRecordBounds } from './history-availability';
+import { historyReadSelection } from './history-query';
 async function* scan(tx: Transaction, q: HistorySelection, scope: HistoryScope) {
   let after = q.after;
   for (;;) {
@@ -72,7 +72,7 @@ export async function readHistory(
       response.warnings.push(
         'Recorded activity comparison is unavailable: activities access is excluded. Actual totals include eligible manual completions only; linked activity snapshots are excluded.',
       );
-    const selection = { ...q, take: 1000, facts: true };
+    const selection = historyReadSelection(q, { take: 1000, facts: true });
     if (operation === 'discover') {
       response.categories = scope.categories;
       response.availability = [];
@@ -88,26 +88,9 @@ export async function readHistory(
           ? ['coverage' as const]
           : []),
       ]) {
-        if (category === 'activities' || category === 'health') {
-          const available = await recordsHistoryAvailability(tx, { ...selection, category });
-          response.availability.push({
-            category,
-            count: Number(available.count),
-            from: available.from as string | null,
-            to: available.to as string | null,
-          });
-          continue;
-        }
-        let count = 0,
-          from: string | null = null,
-          to: string | null = null;
-        for await (const row of scan(tx, { ...selection, category }, scope)) {
-          count++;
-          const bounds = historyRecordBounds(row, selection);
-          if (bounds.from && (!from || bounds.from < from)) from = bounds.from;
-          if (bounds.to && (!to || bounds.to > to)) to = bounds.to;
-        }
-        response.availability.push({ category, count, from, to });
+        response.availability.push(
+          await historicalAvailability(tx, { category, from: q.from, to: q.to }, scope),
+        );
       }
     } else if (operation === 'context') {
       response.profile = await historicalProfile(tx);
@@ -119,7 +102,7 @@ export async function readHistory(
       assert(q.category, 'validation', 'Choose a category from history discover.', 400);
       const rows = await historicalRecords(
         tx,
-        { ...q, take: q.limit + 1, after: cursor?.after, facts: false },
+        { ...selection, take: q.limit + 1, after: cursor?.after, facts: false },
         scope,
       );
       const page = boundedHistoryPage(

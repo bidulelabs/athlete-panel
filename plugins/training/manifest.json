@@ -2,7 +2,7 @@
   "id": "training",
   "name": "Training",
   "description": "Plans, workouts and recorded completion",
-  "version": "2.1.2",
+  "version": "2.1.0",
   "hostApi": "^1.3.0",
   "dependencies": {},
   "required": true,
@@ -16,8 +16,7 @@
   "migrations": [
     "migrations/001-initial.sql",
     "migrations/002-identity-index.sql",
-    "migrations/003-history-reads.sql",
-    "migrations/004-history-change-detection.sql"
+    "migrations/003-history-reads.sql"
   ],
   "services": [],
   "jobs": [],

@@ -1,5 +1,7 @@
 # Historical review reliability and planning guidance — 2026-11-01
 
+Final pre-release integration: see the [simplification record](agent-history-simplification.md) for the consolidated migration sequence, final contracts/versions and latest verification. Measurements below describe the earlier revisions when they were recorded.
+
 ## Authority and scope
 
 The owner requested implementation of the two PR #70 review findings after an explanation of their practical effects: [unnecessary restarts](https://github.com/bidulelabs/athlete-panel/pull/70#discussion_r4434799395) and [recent-context guidance](https://github.com/bidulelabs/athlete-panel/pull/70#discussion_r4434799389). Work stays in the current checkout with pnpm and isolated synthetic storage. Production data, provider calls, VPS deployment, merging and broader issue #68 changes are outside this correction.

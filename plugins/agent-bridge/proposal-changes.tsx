@@ -15,7 +15,7 @@ import {
   sportLabel,
   useWorkspace,
 } from '@athlete-panel/ui';
-import type { Entity, ProposalSummary } from '@athlete-panel/contracts';
+import type { Entity, ProposalDetails } from '@athlete-panel/contracts';
 import { proposalRows } from './proposal-diff';
 import { calendarDate, groupChangesByWeek, groupChangesByMonth } from './proposal-weeks';
 function recordLabel(record: Entity | null): string | undefined {
@@ -30,7 +30,7 @@ export function ProposedEdits({
   changes,
   planTitles,
 }: {
-  changes: ProposalSummary['changes'];
+  changes: ProposalDetails['changes'];
   planTitles: Record<string, string>;
 }) {
   const months = groupChangesByMonth(changes);
@@ -49,7 +49,7 @@ function ProposalMonth({
   month,
   planTitles,
 }: {
-  month: { month: string | null; changes: ProposalSummary['changes'] };
+  month: { month: string | null; changes: ProposalDetails['changes'] };
   planTitles: Record<string, string>;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -75,7 +75,7 @@ function ProposedEditsByWeek({
   collapsed = false,
 }: {
   collapsed?: boolean;
-  changes: ProposalSummary['changes'];
+  changes: ProposalDetails['changes'];
   planTitles: Record<string, string>;
 }) {
   const { weekStartsOn } = useWorkspace();
@@ -112,7 +112,7 @@ export function ReviewChange({
   planTitles,
   caption,
 }: {
-  change: ProposalSummary['changes'][number];
+  change: ProposalDetails['changes'][number];
   planTitles: Record<string, string>;
   caption: string;
 }) {

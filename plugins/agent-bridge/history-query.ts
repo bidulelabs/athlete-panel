@@ -1,7 +1,28 @@
-import type { HistoryQuery, HistoryScope, HistoryResponse } from '@athlete-panel/contracts';
+import type {
+  HistoryQuery,
+  HistoryScope,
+  HistoryResponse,
+  HistorySelection,
+} from '@athlete-panel/contracts';
 import { assert } from '../../packages/host/src/errors';
 import { historicalCategories } from './history-policy';
 export type ResolvedHistoryQuery = HistoryQuery & { from: string; to: string };
+export function historyReadSelection(
+  q: ResolvedHistoryQuery,
+  page: Pick<HistorySelection, 'take' | 'facts' | 'after'>,
+): HistorySelection {
+  return {
+    from: q.from,
+    to: q.to,
+    category: q.category,
+    sport: q.sport,
+    subgroup: q.subgroup,
+    metric: q.metric,
+    recordId: q.recordId,
+    section: q.section,
+    ...page,
+  };
+}
 export function resolveHistoryQuery(
   input: HistoryQuery,
   scope: HistoryScope,

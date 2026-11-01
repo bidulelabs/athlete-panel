@@ -1,5 +1,7 @@
 # Historical agent review and annual proposals — execution record
 
+Final pre-release integration: see the [simplification record](agent-history-simplification.md) for the consolidated migration sequence, final contracts/versions and latest verification. Measurements below describe the earlier revisions when they were recorded.
+
 ## Authority and ownership
 
 On 2026-10-31 the owner explicitly requested implementation of the approved five-year history / one-year proposal plan in this chat. Historical categories are selectable; changes during a review require a restart; weeks use the profile preference resolved at approval; future dates are permitted; a representative annual program uses one atomic owner-reviewed proposal. No durable conversation URL is available.

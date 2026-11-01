@@ -12,10 +12,16 @@ import { claimJob } from '../../packages/host/src/jobs';
 import { migrate } from '../../packages/host/src/migrations';
 import { checkSchema } from '../../packages/host/src/schema';
 import { hostMigrationFiles } from '../../packages/host/src/migration-files';
-import { createGrant, contextForToken, submitProposal } from '../../plugins/agent-bridge/service';
+import {
+  createGrant,
+  contextForToken,
+  submitProposal,
+  reviewProposal,
+} from '../../plugins/agent-bridge/service';
 import { readHistory } from '../../plugins/agent-bridge/history';
 import { syntheticDay } from '../fixtures/historical';
 import { provisionApplicationRole } from '../../packages/host/src/database-access';
+import mainMigrations from '../fixtures/main-migrations.json';
 
 const suppliedUrl = isolatedDatabaseUrl();
 const base = new URL(suppliedUrl);
@@ -90,14 +96,14 @@ describe('transactional migration and source lifecycle', () => {
     await expect(checkSchema()).resolves.toBeUndefined();
   });
 
-  it('upgrades prior history triggers without rewriting records, grants or pending proposals', async () => {
+  it('upgrades the main schema without rewriting its records, grants or proposal snapshots', async () => {
     process.env.ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
     const sql = connection();
     await sql`create schema host`;
     await sql`create table host.migrations(plugin_id text not null,name text not null,checksum text not null,applied_at timestamptz not null default now(),primary key(plugin_id,name))`;
-    for (const file of migrationFiles.filter(
-      (file) => !file.endsWith('-history-change-detection.sql'),
-    )) {
+    const baseline = migrationFiles.filter((file) => mainMigrations.files.includes(file));
+    expect(baseline).toHaveLength(mainMigrations.files.length);
+    for (const file of baseline) {
       const body = await readFile(file, 'utf8');
       await sql.unsafe(body);
       const pluginId = file.startsWith('packages/host/') ? 'host' : file.split('/')[1]!;
@@ -108,17 +114,11 @@ describe('transactional migration and source lifecycle', () => {
     await sql`insert into garmin.coverage(stream,start_date,end_date,status,scan_state,scanned_at) values('activities','2024-01-01','2024-01-31','complete','scanned',now())`;
     const access = await createGrant({
       label: 'Pre-upgrade access',
-      version: 2,
-      history: {
-        from: '2024-01-01',
-        to: '2024-12-31',
-        categories: ['activities'],
-        weekStartsOn: 1,
-      },
-      planning: { from: '2024-01-01', to: '2024-12-31' },
+      from: '2024-01-01',
+      to: '2024-03-31',
     });
     const context = await contextForToken(access.token);
-    await submitProposal(access.token, {
+    const proposal = await submitProposal(access.token, {
       summary: 'Pending before upgrade',
       contextDigest: context.contextDigest,
       idempotencyKey: randomUUID(),
@@ -129,20 +129,45 @@ describe('transactional migration and source lifecycle', () => {
         },
       ],
     });
-    const review = await readHistory(access.token, 'records', { category: 'activities' });
+    const [snapshot] = await sql`select context from host.proposals where id=${proposal.id}`;
+    expect(snapshot.context.version).toBe(2);
+    const legacyId = randomUUID();
+    await sql`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest)
+      select ${legacyId},grant_id,status,summary,commands,changes,context-'version'-'snapshot',digest
+      from host.proposals where id=${proposal.id}`;
     const before = {
       records: await sql`select * from activity_records.records`,
       grants: await sql`select * from host.grants`,
-      proposals: await sql`select * from host.proposals`,
+      proposals: await sql`select * from host.proposals order by id`,
+      migrations: await sql`select name,checksum from host.migrations order by name`,
     };
     await migrate(root);
     expect(await sql`select * from activity_records.records`).toEqual(before.records);
     expect(await sql`select * from host.grants`).toEqual(before.grants);
-    expect(await sql`select * from host.proposals`).toEqual(before.proposals);
-    await expect(
-      readHistory(access.token, 'records', { ...review.query, reviewToken: review.reviewToken }),
-    ).rejects.toMatchObject({ code: 'history_changed' });
-    const restarted = await readHistory(access.token, 'records', { category: 'activities' });
+    expect(await sql`select * from host.proposals order by id`).toEqual(before.proposals);
+    expect(
+      await sql`select name,checksum from host.migrations where name=any(${baseline}) order by name`,
+    ).toEqual(before.migrations);
+    expect((await contextForToken(access.token)).scope).toEqual({
+      from: '2024-01-01',
+      to: '2024-03-31',
+      includeNotes: false,
+    });
+    for (const id of [proposal.id, legacyId])
+      expect((await reviewProposal({ id, digest: proposal.digest })).applicability).toBe('ready');
+    await expect(readHistory(access.token, 'discover')).rejects.toMatchObject({ status: 403 });
+    const historyAccess = await createGrant({
+      label: 'Fresh history',
+      version: 2,
+      planning: null,
+      history: {
+        from: '2024-01-01',
+        to: '2024-12-31',
+        categories: ['activities'],
+        weekStartsOn: 1,
+      },
+    });
+    const restarted = await readHistory(historyAccess.token, 'records', { category: 'activities' });
     const currentVersion = (await sql`select revision from activity_records.history_version`)[0]!
       .revision;
     const role = `history_runtime_${randomUUID().replaceAll('-', '')}`;
@@ -159,14 +184,14 @@ describe('transactional migration and source lifecycle', () => {
         currentVersion,
       );
       await expect(
-        readHistory(access.token, 'records', {
+        readHistory(historyAccess.token, 'records', {
           ...restarted.query,
           reviewToken: restarted.reviewToken,
         }),
       ).resolves.toBeDefined();
       await runtime`update activity_records.records set revision=revision+1`;
       await expect(
-        readHistory(access.token, 'records', {
+        readHistory(historyAccess.token, 'records', {
           ...restarted.query,
           reviewToken: restarted.reviewToken,
         }),

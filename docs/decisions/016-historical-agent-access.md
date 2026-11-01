@@ -31,6 +31,8 @@ Increasing the old shared date bound would silently couple history to proposal p
 
 ## Relationships
 
+- [ADR 018](018-history-factual-invalidation.md) refines counter triggers and historical coverage metadata so unchanged writes/rescans do not force restarts; real collection changes still do.
+
 - Read-concurrency and disposable summary reuse are extended by [ADR 017](017-historical-read-reuse.md); the independent permission and explicit restart decisions remain unchanged.
 
 - Requirements: [Agent training](../features/agent-training.md).

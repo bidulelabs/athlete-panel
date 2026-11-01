@@ -296,7 +296,7 @@ export function historySummaryAccumulator(
               date <= (r.data.to! > p.to ? p.to : r.data.to!);
               date = addDays(date, 1)
             ) {
-              if (r.data.lastScannedAt) scanned.add(date);
+              if (r.data.hasCompletedScan ?? Boolean(r.data.lastScannedAt)) scanned.add(date);
               if (r.data.scanState === 'failed') failed.add(date);
               if (r.data.scanState === 'unavailable') unavailable.add(date);
             }

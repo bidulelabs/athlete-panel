@@ -37658,6 +37658,9 @@
                   "scanState": {
                     "type": "string"
                   },
+                  "hasCompletedScan": {
+                    "type": "boolean"
+                  },
                   "lastScannedAt": {
                     "type": [
                       "string",

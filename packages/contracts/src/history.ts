@@ -88,6 +88,9 @@ export const historyDataSchema = z.object({
   part: z.record(z.string(), z.unknown()).optional(),
   stream: z.string().optional(),
   scanState: z.string().optional(),
+  // Stable scan evidence; live scan times belong to Garmin's operational status.
+  hasCompletedScan: z.boolean().optional(),
+  // Accepted for older exports; new historical readers omit this volatile timestamp.
   lastScannedAt: z.string().nullable().optional(),
   from: dateSchema.optional(),
   to: dateSchema.optional(),

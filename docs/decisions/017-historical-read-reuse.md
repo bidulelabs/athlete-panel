@@ -32,6 +32,8 @@ Period-by-period aggregation would reduce first-request work but must preserve h
 
 ## Relationships
 
+- [ADR 018](018-history-factual-invalidation.md) refines the original trigger policy to compare source facts, excluding no-op writes and operational metadata; cache authorization and final fresh version checks remain unchanged.
+
 - Extends [independent historical access](016-historical-agent-access.md); its permission and restart decisions remain in force.
 - Requirements: [Agent training](../features/agent-training.md#historical-read-protocol).
 - Ownership: [Architecture](../architecture.md#historical-agent-reads-and-annual-proposals).

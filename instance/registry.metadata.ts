@@ -3,12 +3,12 @@ export const registry = [
   {
     "path": "plugins/athlete",
     "enabled": true,
-    "version": "1.3.0",
+    "version": "1.3.1",
     "manifest": {
       "id": "athlete",
       "name": "Athlete",
       "description": "Profile, preferences and training constraints",
-      "version": "1.3.0",
+      "version": "1.3.1",
       "hostApi": "^1.1.0",
       "dependencies": {
         "training": "^2.0.0"
@@ -42,7 +42,8 @@ export const registry = [
         "migrations/001-initial.sql",
         "migrations/002-identity-index.sql",
         "migrations/003-onboarding.sql",
-        "migrations/004-history-reads.sql"
+        "migrations/004-history-reads.sql",
+        "migrations/005-history-change-detection.sql"
       ],
       "services": [],
       "jobs": [],
@@ -53,12 +54,12 @@ export const registry = [
   {
     "path": "plugins/training",
     "enabled": true,
-    "version": "2.1.1",
+    "version": "2.1.2",
     "manifest": {
       "id": "training",
       "name": "Training",
       "description": "Plans, workouts and recorded completion",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "hostApi": "^1.3.0",
       "dependencies": {},
       "optionalDependencies": {},
@@ -82,7 +83,8 @@ export const registry = [
       "migrations": [
         "migrations/001-initial.sql",
         "migrations/002-identity-index.sql",
-        "migrations/003-history-reads.sql"
+        "migrations/003-history-reads.sql",
+        "migrations/004-history-change-detection.sql"
       ],
       "services": [],
       "jobs": [],
@@ -93,12 +95,12 @@ export const registry = [
   {
     "path": "plugins/activity-records",
     "enabled": true,
-    "version": "2.1.0",
+    "version": "2.1.1",
     "manifest": {
       "id": "activity-records",
       "name": "Activity history",
       "description": "Normalized activities and health history",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "hostApi": "^1.1.0",
       "dependencies": {
         "training": "^2.0.0"
@@ -123,7 +125,8 @@ export const registry = [
       "migrations": [
         "migrations/001-initial.sql",
         "migrations/002-identity-index.sql",
-        "migrations/003-history-reads.sql"
+        "migrations/003-history-reads.sql",
+        "migrations/004-history-change-detection.sql"
       ],
       "services": [],
       "jobs": [],
@@ -168,12 +171,12 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "2.1.0",
+    "version": "2.1.1",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "hostApi": "^1.2.0",
       "dependencies": {
         "activity-records": "^2.0.0"
@@ -205,7 +208,8 @@ export const registry = [
         "migrations/002-coverage-quality.sql",
         "migrations/003-scan-diagnostics.sql",
         "migrations/004-recovery-scheduling.sql",
-        "migrations/005-history-reads.sql"
+        "migrations/005-history-reads.sql",
+        "migrations/006-history-change-detection.sql"
       ],
       "services": [],
       "jobs": [
@@ -256,17 +260,17 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "2.1.4",
+    "version": "2.1.5",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "2.1.4",
+      "version": "2.1.5",
       "hostApi": "^1.3.0",
       "dependencies": {
-        "training": "^2.1.0",
-        "athlete": "^1.3.0",
-        "activity-records": "^2.1.0"
+        "training": "^2.1.2",
+        "athlete": "^1.3.1",
+        "activity-records": "^2.1.1"
       },
       "optionalDependencies": {},
       "required": false,
@@ -324,4 +328,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="88f626da028f423bfa22f40afcd86872f0c4d35a673813cbbd788b264fc08b7d";
+export const schemaSignature="792a6576cde616bfb8247c4086b0564e54bb8bfe51a53282632122580d292531";

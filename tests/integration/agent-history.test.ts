@@ -13,7 +13,7 @@ import {
 } from '../../plugins/agent-bridge/service';
 import { readHistory } from '../../plugins/agent-bridge/history';
 import { syntheticDay, historyId } from '../fixtures/historical';
-import { addDays } from '../../plugins/training/dates';
+import { addDays, todayInTimeZone } from '../../plugins/training/dates';
 import { workoutSchema } from '@athlete-panel/contracts';
 const database = isolatedDatabaseUrl();
 beforeAll(async () => {
@@ -68,6 +68,70 @@ it('historical-only access cannot get planning context or submit a proposal; leg
     from: '2026-10-01',
     to: '2026-10-31',
   });
+});
+it('keeps recent health in separately approved history under the default and future-only proposal dates', async () => {
+  const sql = connection(),
+    today = todayInTimeZone();
+  for (let day = 0; day < 21; day++) {
+    const data = syntheticDay(addDays(today, day - 20), day);
+    for (const [kind, records] of [
+      ['activity', data.activities],
+      ['health', data.health],
+    ] as const)
+      for (const record of records)
+        await sql`insert into activity_records.records(kind,id,revision,data) values(${kind},${record.id},1,${sql.json(record)})`;
+  }
+  const history = {
+    from: addDays(today, -27),
+    to: today,
+    categories: ['activities', 'health'],
+    weekStartsOn: 1,
+  };
+  const planning = { from: today, to: addDays(today, 13) };
+  const combined = await createGrant({ label: 'Default combined', version: 2, history, planning });
+  const planningOnly = await createGrant({
+    label: 'No history',
+    version: 2,
+    history: null,
+    planning,
+  });
+  for (const grant of [combined, planningOnly]) {
+    const context = await contextForToken(grant.token);
+    expect(context.scope).toMatchObject(planning);
+    expect(new Set(context.context.health.map((record) => record.localDate))).toEqual(
+      new Set([today]),
+    );
+    expect(context.context.healthWeeks).toEqual([]);
+    expect(context.context.activities).toHaveLength(3);
+  }
+  const recent = await readHistory(combined.token, 'summary', {
+    from: addDays(today, -20),
+    to: addDays(today, -1),
+    category: 'health',
+    metric: 'steps',
+    period: 'week',
+  });
+  expect(recent.summaries!.some((row) => row.contributingDays! > 0 && row.mean !== null)).toBe(
+    true,
+  );
+  await expect(readHistory(planningOnly.token, 'discover')).rejects.toMatchObject({ status: 403 });
+  const future = await createGrant({
+    label: 'Future-only',
+    version: 2,
+    history: null,
+    planning: { from: addDays(today, 1), to: addDays(today, 14) },
+  });
+  const futureContext = await contextForToken(future.token);
+  expect(futureContext.context).toMatchObject({ health: [], healthWeeks: [], activities: [] });
+  const legacy = await createGrant({
+    label: 'Legacy dates',
+    from: addDays(today, -28),
+    to: addDays(today, 14),
+  });
+  const oldContext = await contextForToken(legacy.token);
+  expect(new Set(oldContext.context.health.map((record) => record.localDate)).size).toBe(7);
+  expect(oldContext.context.healthWeeks.length).toBeGreaterThan(0);
+  expect(oldContext.context.activities).toHaveLength(63);
 });
 it('enforces categories, dates, filters and default private-note exclusions', async () => {
   await seed();

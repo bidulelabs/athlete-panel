@@ -231,6 +231,17 @@ All history commands accept `--review-file` to explicitly select source versions
 
 Read recent or long-term facts through `history` when granted; `context` contains records only within the separate proposal period, plus permitted current profile context. Keep its digest for proposal submission. History access never authorizes copying or editing a source outside proposal dates.
 
+Before choosing or adapting upcoming training, read the approved recent weeks as well as planning context. For example, if these dates and relevant categories are shared:
+
+```sh
+pnpm agent history summary --from 2026-10-04 --to 2026-10-31 --period week --out /secure/recent-history.json
+pnpm agent context --out /secure/planning-context.json
+```
+
+With the default proposal period starting today and recorded measurements ending today, planning `health` includes at most today and `healthWeeks` is empty. Future-only proposals contain no past measurements. If history is disabled, a category is excluded or earlier dates are outside approved access, explain the context gap and clarify only material questions under the coaching guidance; do not silently widen proposal dates or treat missing data as inactivity. History review tokens and planning context digests have distinct purposes.
+
+Unchanged rescans, empty writes and operational timestamp updates do not invalidate history. Historical coverage uses stable `hasCompletedScan` evidence; live last-scan times remain in the owner's Garmin status and are omitted from new historical responses. A repeat scan in progress retains the prior completed coverage evidence; first scans, changed results/status or record corrections still require restart. The coordinated counter migration invalidates old review tokens once. See [the consistency decision](decisions/018-history-factual-invalidation.md).
+
 For annual planning use the existing planning context/proposal commands above. One proposal supports 1,500 commands and 4 MiB; oversized requests fail with guidance. Submission does not change training. Review the complete proposal and explicitly apply it in Agent workspace. There is no CLI apply command.
 
 Synthetic performance measurement (requires the explicit loopback `_test` URL from Verification) creates/drops its own temporary database and saves reports in `.runtime/history/`:

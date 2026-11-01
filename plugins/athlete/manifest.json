@@ -2,7 +2,7 @@
   "id": "athlete",
   "name": "Athlete",
   "description": "Profile, preferences and training constraints",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "hostApi": "^1.1.0",
   "dependencies": {
     "training": "^2.0.0"
@@ -19,7 +19,8 @@
     "migrations/001-initial.sql",
     "migrations/002-identity-index.sql",
     "migrations/003-onboarding.sql",
-    "migrations/004-history-reads.sql"
+    "migrations/004-history-reads.sql",
+    "migrations/005-history-change-detection.sql"
   ],
   "services": [],
   "jobs": [],

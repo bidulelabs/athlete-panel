@@ -12,6 +12,10 @@ import { claimJob } from '../../packages/host/src/jobs';
 import { migrate } from '../../packages/host/src/migrations';
 import { checkSchema } from '../../packages/host/src/schema';
 import { hostMigrationFiles } from '../../packages/host/src/migration-files';
+import { createGrant, contextForToken, submitProposal } from '../../plugins/agent-bridge/service';
+import { readHistory } from '../../plugins/agent-bridge/history';
+import { syntheticDay } from '../fixtures/historical';
+import { provisionApplicationRole } from '../../packages/host/src/database-access';
 
 const suppliedUrl = isolatedDatabaseUrl();
 const base = new URL(suppliedUrl);
@@ -83,6 +87,95 @@ describe('transactional migration and source lifecycle', () => {
     await connection()`update host.settings set value='[]'::jsonb where key='composition'`;
     await expect(checkSchema()).rejects.toThrow('composition/schema differs');
     await connection()`update host.settings set value=${connection().json(installed.value)} where key='composition'`;
+    await expect(checkSchema()).resolves.toBeUndefined();
+  });
+
+  it('upgrades prior history triggers without rewriting records, grants or pending proposals', async () => {
+    process.env.ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
+    const sql = connection();
+    await sql`create schema host`;
+    await sql`create table host.migrations(plugin_id text not null,name text not null,checksum text not null,applied_at timestamptz not null default now(),primary key(plugin_id,name))`;
+    for (const file of migrationFiles.filter(
+      (file) => !file.endsWith('-history-change-detection.sql'),
+    )) {
+      const body = await readFile(file, 'utf8');
+      await sql.unsafe(body);
+      const pluginId = file.startsWith('packages/host/') ? 'host' : file.split('/')[1]!;
+      await sql`insert into host.migrations(plugin_id,name,checksum) values(${pluginId},${file},${createHash('sha256').update(body).digest('hex')})`;
+    }
+    const activity = syntheticDay('2024-01-02', 0).activities[0]!;
+    await sql`insert into activity_records.records(kind,id,revision,data) values('activity',${activity.id},1,${sql.json(activity)})`;
+    await sql`insert into garmin.coverage(stream,start_date,end_date,status,scan_state,scanned_at) values('activities','2024-01-01','2024-01-31','complete','scanned',now())`;
+    const access = await createGrant({
+      label: 'Pre-upgrade access',
+      version: 2,
+      history: {
+        from: '2024-01-01',
+        to: '2024-12-31',
+        categories: ['activities'],
+        weekStartsOn: 1,
+      },
+      planning: { from: '2024-01-01', to: '2024-12-31' },
+    });
+    const context = await contextForToken(access.token);
+    await submitProposal(access.token, {
+      summary: 'Pending before upgrade',
+      contextDigest: context.contextDigest,
+      idempotencyKey: randomUUID(),
+      commands: [
+        {
+          action: 'plan.create',
+          values: { title: 'Synthetic pending plan', startDate: '2024-03-01' },
+        },
+      ],
+    });
+    const review = await readHistory(access.token, 'records', { category: 'activities' });
+    const before = {
+      records: await sql`select * from activity_records.records`,
+      grants: await sql`select * from host.grants`,
+      proposals: await sql`select * from host.proposals`,
+    };
+    await migrate(root);
+    expect(await sql`select * from activity_records.records`).toEqual(before.records);
+    expect(await sql`select * from host.grants`).toEqual(before.grants);
+    expect(await sql`select * from host.proposals`).toEqual(before.proposals);
+    await expect(
+      readHistory(access.token, 'records', { ...review.query, reviewToken: review.reviewToken }),
+    ).rejects.toMatchObject({ code: 'history_changed' });
+    const restarted = await readHistory(access.token, 'records', { category: 'activities' });
+    const currentVersion = (await sql`select revision from activity_records.history_version`)[0]!
+      .revision;
+    const role = `history_runtime_${randomUUID().replaceAll('-', '')}`;
+    const password = randomUUID().replaceAll('-', '');
+    let runtime: ReturnType<typeof postgres> | undefined;
+    try {
+      await provisionApplicationRole(sql, password, role);
+      const target = new URL(process.env.DATABASE_URL!);
+      target.username = role;
+      target.password = password;
+      runtime = postgres(target.href, { max: 1, onnotice: () => {} });
+      await runtime`update activity_records.records set data=data`;
+      expect((await sql`select revision from activity_records.history_version`)[0]!.revision).toBe(
+        currentVersion,
+      );
+      await expect(
+        readHistory(access.token, 'records', {
+          ...restarted.query,
+          reviewToken: restarted.reviewToken,
+        }),
+      ).resolves.toBeDefined();
+      await runtime`update activity_records.records set revision=revision+1`;
+      await expect(
+        readHistory(access.token, 'records', {
+          ...restarted.query,
+          reviewToken: restarted.reviewToken,
+        }),
+      ).rejects.toMatchObject({ code: 'history_changed' });
+    } finally {
+      await runtime?.end();
+      await sql`drop owned by ${sql(role)}`;
+      await admin`drop role if exists ${admin(role)}`;
+    }
     await expect(checkSchema()).resolves.toBeUndefined();
   });
 

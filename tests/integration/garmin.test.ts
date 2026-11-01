@@ -31,6 +31,8 @@ import {
 } from '../../plugins/garmin/sync';
 import { GARMIN_HEALTH_HISTORY_START } from '../../plugins/garmin/history-policy';
 import { GARMIN_ORIGIN, GARMIN_TOKEN_PATH } from '../../plugins/garmin/transport';
+import { createGrant } from '../../plugins/agent-bridge/service';
+import { readHistory } from '../../plugins/agent-bridge/history';
 
 // Pacing has dedicated transport unit coverage. Keep this DB suite deterministic and fast.
 vi.mock('../../plugins/garmin/transport', async (original) => {
@@ -175,6 +177,49 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     expect(job.payload.cursor.earliestHealthDate).toBe(GARMIN_HEALTH_HISTORY_START);
     expect(job.payload.cursor).not.toHaveProperty('activityFrom');
     expect((await sync({ mode: 'full' })).id).toBe(job.id);
+  });
+
+  it('keeps an active history review across an unchanged recent worker rescan', async () => {
+    activities = [
+      activityRow(),
+      activityRow({ activityId: '9007199254740993124' }),
+      activityRow({ activityId: '9007199254740993125' }),
+    ];
+    await bootstrap();
+    await takeStep();
+    await takeStep();
+    await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null where plugin_id='garmin'`;
+    await connection()`update garmin.coverage set scanned_at='2024-01-01T00:00:00Z' where scanned_at is not null`;
+    const { token: grantToken } = await createGrant({
+      label: 'Unchanged sync review',
+      version: 2,
+      planning: null,
+      history: { from: '2026-10-01', to: day, categories: ['activities'], weekStartsOn: 1 },
+    });
+    const first = await readHistory(grantToken, 'records', { category: 'activities', limit: 1 });
+    expect(first.nextCursor).not.toBeNull();
+    const input = { ...first.query, reviewToken: first.reviewToken, cursor: first.nextCursor! };
+    const expected = await readHistory(grantToken, 'records', input);
+    const coverageBefore = await readHistory(grantToken, 'records', {
+      category: 'coverage',
+      reviewToken: first.reviewToken,
+    });
+    await scheduleCursor({ phase: 'recent-activities' });
+    for (let page = 0; page < 2; page++) {
+      expect((await takeStep()).saved.status).toBe('queued');
+      expect((await readHistory(grantToken, 'records', input)).records).toEqual(expected.records);
+      expect(
+        (
+          await readHistory(grantToken, 'records', {
+            category: 'coverage',
+            reviewToken: first.reviewToken,
+          })
+        ).records,
+      ).toEqual(coverageBefore.records);
+    }
+    expect((await coveragePage({ filter: 'all' })).rows[0].lastScannedAt).not.toBe(
+      '2024-01-01T00:00:00.000Z',
+    );
   });
 
   it('schedules recent imports at the hourly boundary and preserves active retry work', async () => {

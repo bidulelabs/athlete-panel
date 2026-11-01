@@ -52,7 +52,7 @@ Store another recovery copy of this key and of `ENCRYPTION_KEY` in your password
 
 Production source also passes `pnpm typecheck:strict` (`noUncheckedIndexedAccess`); scripts/tests retain the existing strict configuration. Run `pnpm format` after source edits; `pnpm format:check` and `pnpm lint` run in `pnpm check`. Complexity, function length and existing explicit `any` usage initially warn. Generated files, applied migrations and documentation history are excluded from formatting.
 
-After changing contracts, manifests/composition or canonical skills, run `pnpm generate` once to refresh all derived artifacts. `pnpm check` validates freshness without rewriting them. Final feature versions are selected relative to `main`; unreleased intermediate branch revisions do not need additional version bumps.
+After changing contracts, manifests/composition or canonical skills, run `pnpm generate` once to refresh all derived artifacts. `pnpm check` validates freshness without rewriting them. Final feature versions are selected relative to `main`; unreleased intermediate branch revisions do not need additional version bumps. PR #70 also replaces workspace audit arrays with summary metadata plus an owner-only detail operation; rebuild/restart the matched web/worker artifacts and reload older browser tabs together. Stored audit rows and main migrations require no rewrite for this response change.
 
 `pnpm boundaries:check` resolves imports through TypeScript, including browser roots, re-exports and aliases. Cross-plugin imports use declared public shared/client/server entries and required manifest dependencies; optional UI integrations use enabled contributions.
 

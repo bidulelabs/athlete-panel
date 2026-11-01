@@ -143,7 +143,18 @@ export async function readHistory(
         summaries = aggregate.finish();
         computed = summaries;
       }
-      const rows = summaries.filter((row) => !cursor?.key || summaryKey(row) > cursor.key);
+      // Cached aggregates are token-free. Bind every emitted reference to this review
+      // before sizing the page, without mutating results reused by another review.
+      const rows = summaries
+        .filter((row) => !cursor?.key || summaryKey(row) > cursor.key)
+        .map((row) => ({
+          ...row,
+          reference: { ...row.reference, reviewToken },
+          detailReferences: row.detailReferences?.map((reference) => ({
+            ...reference,
+            reviewToken,
+          })),
+        }));
       const page = boundedHistoryPage(
         rows,
         response,

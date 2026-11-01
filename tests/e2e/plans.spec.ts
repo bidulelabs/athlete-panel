@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { plansFixture } from '../fixtures/plans';
 import { trainingHistoryFixture } from '../fixtures/training-history';
+import { auditTitle } from '../../plugins/training/history-title';
 import type { AuditEntry } from '@athlete-panel/contracts';
 
 const password = process.env.E2E_PASSWORD;
@@ -12,15 +13,40 @@ async function preview(page: Page, changes: AuditEntry[] = []) {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('request', (request) => {
-    if (request.method() === 'POST' && request.url().includes('/api/plugins/')) writes++;
+    if (
+      request.method() === 'POST' &&
+      request.url().includes('/api/plugins/') &&
+      !request.url().endsWith('/history-details')
+    )
+      writes++;
   });
   await page.clock.setFixedTime(new Date('2030-10-29T12:00:00Z'));
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('**/api/plugins/training/history-details', async (route) => {
+    const entry = changes.find((entry) => entry.id === route.request().postDataJSON().id);
+    await route.fulfill({ json: entry });
+  });
   await page.route('**/api/workspace?**', async (route) => {
     const response = await route.fetch();
     await route.fulfill({
       response,
-      json: { ...(await response.json()), state: data, changes },
+      json: {
+        ...(await response.json()),
+        state: data,
+        changes: changes.map(({ changes: records, ...entry }) => {
+          const subject = records.find((record) => record.entity === entry.summary.split('.')[0]);
+          const value = subject?.after ?? subject?.before;
+          return {
+            ...entry,
+            title: auditTitle(entry.summary, value && 'title' in value ? value.title : undefined),
+            affectedCount: records.filter(
+              (record) =>
+                JSON.stringify({ ...record.before, revision: 0 }) !==
+                JSON.stringify({ ...record.after, revision: 0 }),
+            ).length,
+          };
+        }),
+      },
     });
   });
   await page.goto('/login');
@@ -51,6 +77,10 @@ test('recent changes opens on demand with readable details in both themes', asyn
 }, info) => {
   const changes = trainingHistoryFixture();
   const { writes, errors } = await preview(page, changes);
+  let detailRequests = 0;
+  page.on('request', (request) => {
+    if (request.url().endsWith('/history-details')) detailRequests++;
+  });
   const trigger = page.getByRole('button', { name: 'Recent changes', exact: true });
   const sheet = page.getByRole('dialog', { name: 'Recent changes', exact: true });
   for (const theme of ['dark', 'light']) {
@@ -59,7 +89,9 @@ test('recent changes opens on demand with readable details in both themes', asyn
     }, theme);
     await expect(sheet).toHaveCount(0);
     await expect(page.getByText('Updated Easy endurance ride', { exact: true })).toHaveCount(0);
+    const requestsBefore = detailRequests;
     await trigger.click();
+    expect(detailRequests).toBe(requestsBefore);
     await expect(sheet.getByRole('button', { name: 'Close recent changes' })).toBeFocused();
     await expect(sheet).not.toContainText('workout.update');
     await expect(sheet).toContainText('Duplicated Autumn endurance block copy');
@@ -79,6 +111,7 @@ test('recent changes opens on demand with readable details in both themes', asyn
       'true',
     );
     await expect(entry.locator('dl')).toContainText('45m');
+    expect(detailRequests).toBe(requestsBefore + 1);
     await expect(entry.locator('dl')).toContainText('After: 1h');
     await expect(entry.locator('dt')).toContainText(['Duration', 'Workout description']);
     await expect(entry).toContainText('**Extend** the ride only if recovery feels good.');
@@ -462,4 +495,40 @@ test('long content, narrow layouts and empty plans remain usable', async ({ page
   await expect(page.getByRole('button', { name: 'Create your first plan' })).toBeVisible();
   expect(writes()).toBe(0);
   expect(errors).toEqual([]);
+});
+
+test('recent-change detail failures can be retried without refreshing or saving the workspace', async ({
+  page,
+}) => {
+  const { writes } = await preview(page, trainingHistoryFixture());
+  let workspaceReads = 0;
+  let detailReads = 0;
+  page.on('request', (request) => {
+    if (request.url().includes('/api/workspace?')) workspaceReads++;
+  });
+  await page.route('**/api/plugins/training/history-details', async (route) => {
+    detailReads++;
+    if (detailReads === 1)
+      await route.fulfill({
+        status: 503,
+        json: { error: { message: 'Synthetic details unavailable' } },
+      });
+    else await route.fallback();
+  });
+  await page.getByRole('button', { name: 'Recent changes', exact: true }).click();
+  expect(detailReads).toBe(0);
+  const entry = page
+    .getByRole('dialog', { name: 'Recent changes', exact: true })
+    .locator('.training-history-entry')
+    .first();
+  await entry.getByRole('button', { name: 'View details' }).click();
+  await expect(entry).toContainText('Synthetic details unavailable');
+  await entry.getByRole('button', { name: 'Retry details' }).click();
+  await expect(entry.locator('dl')).toContainText('45m');
+  await entry.getByRole('button', { name: 'Hide details' }).click();
+  await entry.getByRole('button', { name: 'View details' }).click();
+  await expect(entry.locator('dl')).toContainText('45m');
+  expect(detailReads).toBe(2);
+  expect(workspaceReads).toBe(0);
+  expect(writes()).toBe(0);
 });

@@ -272,6 +272,9 @@ export function historicalRecord<C extends HistoryRecord['category']>(
     if (parsed.success) data[name] = parsed.data;
     else unsupported.push(name);
   }
-  if (unsupported.length) data.unsupportedFields = unsupported;
+  if (unsupported.length)
+    data.unsupportedFields = [
+      ...new Set([...((data.unsupportedFields as string[] | undefined) ?? []), ...unsupported]),
+    ];
   return historyRecordSchema.parse({ category, id, date, data }) as HistoryRecordOf<C>;
 }

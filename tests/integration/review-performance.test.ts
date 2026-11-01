@@ -21,6 +21,8 @@ import { readHistory } from '../../plugins/agent-bridge/history';
 import * as sources from '../../instance/history-services';
 import { annualRange, annualId, seedAnnualReview } from '../fixtures/annual-review';
 import { syntheticDay } from '../fixtures/historical';
+import { readWorkspaceResponse } from '../../instance/workspace-response';
+import { changeDetails } from '../../plugins/training/history-read';
 import { profileSchema } from '../../packages/contracts/src';
 
 beforeAll(async () => {
@@ -238,7 +240,21 @@ it('handles 1500 mixed annual commands with stale review, mid-write rollback, id
   const applied = await applyProposal(acknowledged);
   expect(await applyProposal(acknowledged)).toEqual(applied);
   expect(applied.changes).toHaveLength(1500);
-  await undoChange({ id: applied.id, idempotencyKey: randomUUID() });
+  const appliedWorkspace = await readWorkspaceResponse(annualRange);
+  expect(appliedWorkspace.changes).toHaveLength(1);
+  expect(appliedWorkspace.changes[0]).toMatchObject({
+    affectedCount: 1500,
+    title: 'Maximum mixed year',
+  });
+  expect(appliedWorkspace.changes[0]).not.toHaveProperty('changes');
+  expect(Buffer.byteLength(JSON.stringify(appliedWorkspace.changes))).toBeLessThan(1024);
+  expect((await changeDetails({ id: applied.id })).changes).toEqual(applied.changes);
+  const undone = await undoChange({ id: applied.id, idempotencyKey: randomUUID() });
+  const undoneWorkspace = await readWorkspaceResponse(annualRange);
+  expect(undoneWorkspace.changes).toHaveLength(2);
+  expect(undoneWorkspace.changes.map((entry) => entry.affectedCount)).toEqual([1500, 1500]);
+  expect(Buffer.byteLength(JSON.stringify(undoneWorkspace.changes))).toBeLessThan(2048);
+  expect((await changeDetails({ id: undone.id })).changes).toEqual(undone.changes);
   const restored =
     await connection()`select id,data from training.records where deleted=false order by id`;
   const withoutRevision = (rows: typeof restored) =>

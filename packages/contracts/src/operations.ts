@@ -19,6 +19,7 @@ import {
   coveragePageSchema,
   grantSummarySchema,
   proposalDetailsSchema,
+  auditEntrySchema,
 } from './responses';
 const id = z.object({ id: z.uuid() });
 const undo = id.extend({ idempotencyKey: z.uuid() }).strict();
@@ -41,6 +42,7 @@ export const operationContracts = {
       mutationResponseSchema,
     ),
     undo: operation(undo, mutationResponseSchema),
+    'history-details': operation(id.strict(), auditEntrySchema),
   },
   garmin: {
     configure: operation(

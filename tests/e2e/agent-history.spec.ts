@@ -84,6 +84,12 @@ test('historical browser approval explains read-only access, validates dates and
     const saved = JSON.parse(await readFile(config, 'utf8'));
     expect(output).not.toContain(saved.token);
     const headers = { Authorization: `Bearer ${saved.token}` };
+    const deniedAudit = await fetch(`${baseURL}/api/plugins/training/history-details`, {
+      method: 'POST',
+      headers: { ...headers, Origin: baseURL!, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: randomUUID() }),
+    });
+    expect(deniedAudit.status).toBe(401);
     expect((await page.request.get('/api/agent/context', { headers })).status()).toBe(403);
     const history = await page.request.post('/api/agent/history-summary', {
       headers,
@@ -233,7 +239,10 @@ test('one annual proposal stays pending until owner acknowledgement and applies 
       await page.request.get('/api/workspace?from=2027-11-01&to=2027-11-07')
     ).json();
     const audit = envelope.changes.find((entry: { summary: string }) => entry.summary === summary);
-    expect(audit.changes).toHaveLength(1500);
+    expect(audit.affectedCount).toBe(1500);
+    expect(audit).not.toHaveProperty('changes');
+    const details = await owner('training/history-details', { id: audit.id });
+    expect((await details.json()).changes).toHaveLength(1500);
     const undoStarted = performance.now();
     expect(
       (await owner('agent-bridge/undo', { id: audit.id, idempotencyKey: randomUUID() })).ok(),

@@ -115,6 +115,11 @@ export const auditEntrySchema = z.object({
   changes: z.array(entityChangeSchema),
 });
 export type AuditEntry = z.infer<typeof auditEntrySchema>;
+export const auditSummarySchema = auditEntrySchema.omit({ changes: true }).extend({
+  title: z.string(),
+  affectedCount: z.number().int().nonnegative(),
+});
+export type AuditSummary = z.infer<typeof auditSummarySchema>;
 export const jobSummarySchema = z.object({
   id: z.uuid(),
   status: z.string(),
@@ -183,7 +188,7 @@ export const workspaceEnvelopeSchema = z.object({
   garmin: garminStatusSchema,
   proposals: z.array(proposalSummarySchema),
   grants: z.array(grantSummarySchema),
-  changes: z.array(auditEntrySchema),
+  changes: z.array(auditSummarySchema),
   jobs: z.array(jobSummarySchema),
   operational: z.array(operationalEntrySchema).optional(),
 });

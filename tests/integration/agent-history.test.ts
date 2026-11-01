@@ -659,3 +659,131 @@ it('enforces the byte ceiling without losing large prescription parts between pa
     }),
   ).rejects.toMatchObject({ status: 413, code: 'summary_too_large' });
 });
+
+it('embeds the exact review in summary evidence, including cache reuse, and rejects stale drill-down', async () => {
+  const data = await seed();
+  const { token } = await access();
+  const query = { category: 'activities', from: '2024-01-01', to: '2024-01-31' };
+  const first = await readHistory(token, 'summary', query);
+  const second = await readHistory(token, 'summary', query);
+  expect(second.reviewToken).not.toBe(first.reviewToken);
+  for (const response of [first, second]) {
+    expect(Buffer.byteLength(JSON.stringify(response))).toBeLessThanOrEqual(1024 * 1024);
+    for (const summary of response.summaries!) {
+      expect(summary.reference.reviewToken).toBe(response.reviewToken);
+      expect((await readHistory(token, 'summary', summary.reference)).reviewToken).toBe(
+        response.reviewToken,
+      );
+      for (const ref of summary.detailReferences ?? []) {
+        expect(ref.reviewToken).toBe(response.reviewToken);
+        expect((await readHistory(token, 'records', ref)).reviewToken).toBe(response.reviewToken);
+      }
+    }
+  }
+  await connection()`update activity_records.records set revision=revision+1 where id=${data.activities[0]!.id}`;
+  for (const summary of second.summaries!) {
+    await expect(readHistory(token, 'summary', summary.reference)).rejects.toMatchObject({
+      code: 'history_changed',
+      status: 409,
+    });
+    for (const ref of summary.detailReferences ?? [])
+      await expect(readHistory(token, 'records', ref)).rejects.toMatchObject({
+        code: 'history_changed',
+        status: 409,
+      });
+  }
+});
+
+it.each(['steps', 'exercises'] as const)(
+  'distinguishes missing, empty and unsupported historical %s collections',
+  async (section) => {
+    const sql = connection();
+    const id = randomUUID();
+    const count = section === 'steps' ? 'stepCount' : 'exerciseCount';
+    const { token } = await access(['training']);
+    const query = { category: 'workouts', recordId: id };
+    await sql`insert into training.records(kind,id,revision,data) values('workout',${id},1,${sql.json({ title: 'Synthetic legacy', schedule: { kind: 'independent', date: '2024-01-01' }, notes: 'PRIVATE_LEGACY' })})`;
+    const missing = (await readHistory(token, 'records', query)).records![0]!;
+    expect(missing.data).not.toHaveProperty(count);
+    expect((await readHistory(token, 'records', { ...query, section })).records).toEqual([]);
+    for (const collection of [null, 'old text', 12, { legacyItems: [{ durationSeconds: 60 }] }]) {
+      await sql`update training.records set data=data||${sql.json({ [section]: collection, durationSeconds: 'invalid legacy duration' })} where id=${id}`;
+      const core = await readHistory(token, 'records', query);
+      expect(core.records![0]!.data).not.toHaveProperty(count);
+      expect(core.records![0]!.data.unsupportedFields).toEqual(
+        expect.arrayContaining([section, 'durationSeconds']),
+      );
+      const parts = await readHistory(token, 'records', {
+        ...query,
+        section,
+        limit: 1,
+        reviewToken: core.reviewToken,
+      });
+      expect(parts.records).toEqual([
+        {
+          category: 'workouts',
+          id: `${id}:0`,
+          date: '2024-01-01',
+          data: { unsupportedFields: [section] },
+        },
+      ]);
+      expect(parts.nextCursor).toBeNull();
+      expect(JSON.stringify(parts)).not.toContain('PRIVATE_LEGACY');
+      expect(
+        (await readHistory(token, 'records', { ...query, section, from: '2024-02-01' })).records,
+      ).toEqual([]);
+    }
+    await sql`update training.records set data=data||${sql.json({ [section]: [] })} where id=${id}`;
+    expect((await readHistory(token, 'records', query)).records![0]!.data).toHaveProperty(count, 0);
+    expect((await readHistory(token, 'records', { ...query, section })).records).toEqual([]);
+  },
+);
+
+it.each(['records', 'summary'] as const)(
+  'rejects unsupported coverage identity filters in %s',
+  async (operation) => {
+    const { token } = await access(['activities']);
+    await expect(readHistory(token, operation, { recordId: randomUUID() })).rejects.toMatchObject({
+      code: 'validation',
+      status: 400,
+      message: expect.stringContaining('Choose a record category'),
+    });
+    await expect(
+      readHistory(token, operation, { category: 'coverage', recordId: randomUUID() }),
+    ).rejects.toMatchObject({
+      code: 'validation',
+      status: 400,
+      message: expect.stringContaining('Remove recordId'),
+    });
+  },
+);
+
+it('returns history_changed if a collection changes shape between its core and section reads', async () => {
+  const data = await seed();
+  const id = data.workouts[0]!.id;
+  const { token } = await access(['training']);
+  const original = sources.historicalRecords;
+  let changed = false;
+  vi.spyOn(sources, 'historicalRecords').mockImplementationOnce((tx, query, scope) =>
+    original(
+      new Proxy(tx, {
+        apply(target, receiver, args) {
+          const result = Reflect.apply(target, receiver, args);
+          if (Array.isArray(args[0]) && args[0].join('').includes('select id,date,'))
+            return result.then(async (rows: unknown) => {
+              changed = true;
+              await connection()`update training.records set revision=revision+1,data=data||'{"steps":{"legacyItems":[]}}'::jsonb where id=${id}`;
+              return rows;
+            });
+          return result;
+        },
+      }),
+      query,
+      scope,
+    ),
+  );
+  await expect(
+    readHistory(token, 'records', { category: 'workouts', recordId: id, section: 'steps' }),
+  ).rejects.toMatchObject({ code: 'history_changed', status: 409 });
+  expect(changed).toBe(true);
+});

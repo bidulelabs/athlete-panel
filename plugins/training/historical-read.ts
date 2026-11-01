@@ -58,8 +58,12 @@ export async function readTrainingHistory(tx: Transaction, q: HistorySelection) 
       'completionStatus',data#>'{completion,status}','completionSource',data#>'{completion,source}',
       'activityId',data#>'{completion,activityId}','actualDurationSeconds',data#>'{completion,durationSeconds}',
       'actualDistanceMeters',data#>'{completion,distanceMeters}','rpe',data#>'{completion,rpe}',
-      'stepCount',case when jsonb_typeof(data->'steps')='array' then jsonb_array_length(data->'steps') else 0 end,
-      'exerciseCount',case when jsonb_typeof(data->'exercises')='array' then jsonb_array_length(data->'exercises') else 0 end)
+      'stepCount',case when jsonb_typeof(data->'steps')='array' then jsonb_array_length(data->'steps') end,
+      'exerciseCount',case when jsonb_typeof(data->'exercises')='array' then jsonb_array_length(data->'exercises') end,
+      'unsupportedFields',to_jsonb(array_remove(array[
+        case when data ? 'steps' and jsonb_typeof(data->'steps')<>'array' then 'steps' end,
+        case when data ? 'exercises' and jsonb_typeof(data->'exercises')<>'array' then 'exercises' end
+      ],null)))
       ${q.facts ? tx`` : tx`|| jsonb_build_object('notes',data->'notes','reason',data#>'{completion,reason}','completionNotes',data#>'{completion,notes}')`}`
       : q.category === 'plans'
         ? tx`jsonb_build_object('revision',revision,'title',data->'title','startDate',scheduled,'scheduledDate',scheduled,'description',data->'description')`
@@ -89,9 +93,20 @@ export async function readTrainingHistory(tx: Transaction, q: HistorySelection) 
     core[0].data.scheduledDate > q.to
   )
     return [];
+  // Older collection shapes are unknown, not empty. A retrievable diagnostic
+  // occupies one stable page item; never pass an object/scalar/null to SQL's array reader.
+  if (core[0].data.unsupportedFields?.includes(q.section))
+    return q.after
+      ? []
+      : [
+          historicalRecord('workouts', `${q.recordId}:0`, core[0].date, {
+            unsupportedFields: [q.section],
+          }),
+        ];
   // One repeat block has at most 50 bounded steps; each part fits the byte budget independently.
   const parts = await tx<{ part: unknown; index: number }[]>`select part,ordinality::int as index
-    from training.records r, jsonb_array_elements(r.data->${q.section}) with ordinality as items(part,ordinality)
+    from training.records r, jsonb_array_elements(case when jsonb_typeof(r.data->${q.section})='array'
+      then r.data->${q.section} else '[]'::jsonb end) with ordinality as items(part,ordinality)
     where r.kind='workout' and r.deleted=false and r.id=${q.recordId!}
     and ordinality > ${Number(q.after?.id.split(':').at(-1) ?? 0)} order by ordinality limit ${q.take}`;
   return parts.map((row) => {

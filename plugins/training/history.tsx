@@ -1,6 +1,11 @@
 'use client';
 
-import type { AuditEntry } from '@athlete-panel/contracts';
+import {
+  operationContracts,
+  responseError,
+  type AuditEntry,
+  type AuditSummary,
+} from '@athlete-panel/contracts';
 import {
   Badge,
   Button,
@@ -20,8 +25,8 @@ import {
   useWorkspace,
 } from '@athlete-panel/ui';
 import { ChevronDown, History, RotateCcw, X } from 'lucide-react';
-import { useState } from 'react';
-import { historyFields, historyRecords, historyTitle, recordName } from './history-summary';
+import { useEffect, useState } from 'react';
+import { historyFields, historyRecords, recordName } from './history-summary';
 import './history.css';
 
 function HistoryEntry({
@@ -29,17 +34,41 @@ function HistoryEntry({
   busy,
   onUndo,
 }: {
-  entry: AuditEntry;
+  entry: AuditSummary;
   busy: boolean;
-  onUndo: (entry: AuditEntry) => void;
+  onUndo: (entry: AuditSummary) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [details, setDetails] = useState<AuditEntry | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    if (!expanded || details) return;
+    const controller = new AbortController();
+    setError(null);
+    void (async () => {
+      const response = await fetch('/api/plugins/training/history-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: entry.id }),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+      });
+      const result: unknown = await response.json();
+      if (!response.ok) throw new Error(responseError(result, 'Could not load change details.'));
+      const value = operationContracts.training['history-details'].output.parse(result);
+      if (!controller.signal.aborted) setDetails(value);
+    })().catch((cause: unknown) => {
+      if (!controller.signal.aborted)
+        setError(cause instanceof Error ? cause.message : 'Could not load change details.');
+    });
+    return () => controller.abort();
+  }, [expanded, details, entry.id, retry]);
   const { data } = useWorkspace();
-  const records = historyRecords(entry);
+  const records = details ? historyRecords(details) : [];
   const units = data.profile?.units ?? 'metric';
   // Include historical plans so deleted or renamed plans still have useful context.
   const plans = [
-    ...entry.changes.flatMap((change) =>
+    ...(details?.changes ?? []).flatMap((change) =>
       change.entity === 'plan' && (change.after ?? change.before)
         ? [change.after ?? change.before!]
         : [],
@@ -49,7 +78,7 @@ function HistoryEntry({
   return (
     <li className="training-history-entry">
       <Collapsible open={expanded} onOpenChange={setExpanded}>
-        <h3>{historyTitle(entry)}</h3>
+        <h3>{entry.title}</h3>
         <div className="training-history-meta">
           <time dateTime={entry.createdAt}>
             {new Date(entry.createdAt).toLocaleString('en-GB', {
@@ -62,11 +91,11 @@ function HistoryEntry({
             })}
           </time>
           <span>
-            {records.length} {records.length === 1 ? 'item' : 'items'}
+            {entry.affectedCount} {entry.affectedCount === 1 ? 'item' : 'items'}
           </span>
         </div>
         <div className="training-history-actions">
-          {records.length > 0 && (
+          {entry.affectedCount > 0 && (
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm">
                 {expanded ? 'Hide details' : 'View details'}
@@ -86,6 +115,15 @@ function HistoryEntry({
           )}
         </div>
         <CollapsibleContent className="training-history-details">
+          {!details && !error && <p role="status">Loading change details…</p>}
+          {error && (
+            <div>
+              <ErrorMessage error={error} />
+              <Button variant="outline" size="sm" onClick={() => setRetry((value) => value + 1)}>
+                Retry details
+              </Button>
+            </div>
+          )}
           {records.map((record) => (
             <section key={`${record.entity}-${record.id}`} className="training-history-record">
               <h4>{recordName(record)}</h4>
@@ -135,10 +173,10 @@ export function TrainingHistory() {
   const [open, setOpen] = useState(false);
   const confirming = () =>
     Boolean(document.querySelector('[role="alertdialog"][data-state="open"]'));
-  async function undo(entry: AuditEntry) {
+  async function undo(entry: AuditSummary) {
     if (
       await confirm(
-        `Undo “${historyTitle(entry)}”? This restores the entire change. If a later edit conflicts, nothing will be changed.`,
+        `Undo “${entry.title}”? This restores the entire change. If a later edit conflicts, nothing will be changed.`,
         'Undo change',
       )
     )

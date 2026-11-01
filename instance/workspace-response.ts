@@ -10,6 +10,7 @@ import { pluginStatus, pluginEnabled } from '../packages/host/src/plugins';
 import { readOnboarding } from '../packages/host/src/onboarding';
 import { status } from '../plugins/garmin/public/server';
 import { loadWorkspace } from './services';
+import { recentChanges } from '../plugins/training/public/server';
 
 type ProposalRow = {
   id: string;
@@ -26,13 +27,6 @@ type GrantRow = {
   expiresAt: Date;
   revoked: boolean;
   scope: unknown;
-};
-type AuditRow = {
-  id: string;
-  createdAt: Date;
-  summary: string;
-  undoneAt: Date | null;
-  changes: unknown;
 };
 type JobRow = {
   id: string;
@@ -81,9 +75,7 @@ export async function readWorkspaceResponse(range: {
       sql<
         GrantRow[]
       >`select id,label,expires_at as "expiresAt",revoked,scope from host.grants order by created_at desc limit 50`,
-      sql<
-        AuditRow[]
-      >`select id,created_at as "createdAt",summary,undone_at as "undoneAt",changes from host.changes order by created_at desc limit 50`,
+      recentChanges(),
       sql<
         JobRow[]
       >`select id,status,kind,progress,error,next_run_at as "nextRunAt",attempts from host.jobs order by created_at desc limit 50`,
@@ -111,11 +103,7 @@ export async function readWorkspaceResponse(range: {
       ...grantScopeSchema.parse(scope),
       expiresAt: row.expiresAt.toISOString(),
     })),
-    changes: changes.map((row) => ({
-      ...row,
-      createdAt: row.createdAt.toISOString(),
-      undoneAt: row.undoneAt?.toISOString() ?? null,
-    })),
+    changes,
     jobs: jobs.map((row) => ({
       ...row,
       nextRunAt: row.nextRunAt.toISOString(),

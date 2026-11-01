@@ -139,8 +139,8 @@ export default function AgentBridgePage(_: PluginPageProps) {
                   <div>
                     <strong>{change.summary || 'Training data updated'}</strong>
                     <p>
-                      {change.changes?.length ?? 0} change{change.changes?.length === 1 ? '' : 's'}{' '}
-                      · {new Date(change.createdAt).toLocaleString('en-GB')}
+                      {change.affectedCount} change{change.affectedCount === 1 ? '' : 's'} ·{' '}
+                      {new Date(change.createdAt).toLocaleString('en-GB')}
                     </p>
                   </div>
                   <Badge className="badge">{change.undoneAt ? 'Undone' : 'Applied'}</Badge>

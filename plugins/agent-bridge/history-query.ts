@@ -68,6 +68,18 @@ export function resolveHistoryQuery(
     400,
   );
   assert(
+    !q.recordId || q.category,
+    'validation',
+    'Choose a record category with recordId; coverage only supports date ranges.',
+    400,
+  );
+  assert(
+    !(q.category === 'coverage' && q.recordId),
+    'validation',
+    'Coverage supports date ranges, not recordId. Remove recordId and select a period.',
+    400,
+  );
+  assert(
     !q.metric || q.category === 'health',
     'validation',
     'Use category health with a metric filter.',

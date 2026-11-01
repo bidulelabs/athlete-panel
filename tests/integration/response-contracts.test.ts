@@ -180,3 +180,34 @@ describe('typed database responses', () => {
     expect(await connection()`select id from host.changes`).toEqual([]);
   });
 });
+
+describe('audit summaries and owner details', () => {
+  beforeAll(async () => {
+    await closeDatabase();
+    process.env.DATABASE_URL = supplied;
+    await migrate();
+  });
+  afterAll(closeDatabase);
+  it('keeps readable headings and visible counts while excluding stored diffs from workspace responses', async () => {
+    const { trainingHistoryFixture } = await import('../fixtures/training-history');
+    const { recentChanges, changeDetails } = await import('../../plugins/training/history-read');
+    const sql = connection();
+    await sql`truncate host.changes`;
+    const entries = trainingHistoryFixture();
+    for (const entry of entries)
+      await sql`insert into host.changes(id,created_at,summary,undone_at,changes,actor) values(${entry.id},${entry.createdAt},${entry.summary},${entry.undoneAt},${sql.json(entry.changes as never)},'owner')`;
+    const summaries = await recentChanges();
+    expect(summaries.map((entry) => [entry.title, entry.affectedCount])).toEqual([
+      ['Updated Easy endurance ride', 1],
+      ['Duplicated Autumn endurance block copy', 2],
+      ['Deleted Winter strength & mobility', 1],
+      ['Created Easy endurance ride', 1],
+    ]);
+    for (const summary of summaries) expect(summary).not.toHaveProperty('changes');
+    expect((await changeDetails({ id: entries[0]!.id })).changes).toEqual(entries[0]!.changes);
+    await expect(changeDetails({ id: randomUUID() })).rejects.toMatchObject({
+      code: 'not_found',
+      status: 404,
+    });
+  });
+});

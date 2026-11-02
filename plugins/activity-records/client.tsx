@@ -32,7 +32,19 @@ import {
 } from '@athlete-panel/ui';
 import { mutate } from '../training/public/client';
 import { effectiveDate } from '../training/public/shared';
+import { activityMetricSummary } from './summary';
 import './client.css';
+
+function metricCoverage(
+  summary: ReturnType<typeof activityMetricSummary>,
+  metric: 'duration' | 'distance',
+) {
+  const { knownCount, missingCount } = summary;
+  if (!knownCount && !missingCount) return undefined;
+  if (!missingCount)
+    return knownCount === 1 ? '1 activity recorded' : `All ${knownCount} activities recorded`;
+  return `${knownCount ? 'Partial · ' : ''}${missingCount} ${missingCount === 1 ? 'activity' : 'activities'} missing ${metric}`;
+}
 
 export default function ActivitiesPage({ data }: PluginPageProps) {
   const { from, to, navigate } = useWorkspace();
@@ -57,8 +69,8 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
         .sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
     [data.activities, from, to, sport, subgroup, search],
   );
-  const knownDuration = activities.filter((activity) => activity.durationSeconds != null);
-  const knownDistance = activities.filter((activity) => activity.distanceMeters != null);
+  const time = activityMetricSummary(activities, 'durationSeconds');
+  const length = activityMetricSummary(activities, 'distanceMeters');
   return (
     <>
       <PageHeader
@@ -71,31 +83,24 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
           </Button>
         }
       />
-      <div className="summary-strip">
-        <Stat label="Imported sessions" value={activities.length} />
+      <section className="summary-strip activity-summary" aria-label="Activity summary">
         <Stat
-          label="Total time"
-          value={duration(
-            knownDuration.length
-              ? knownDuration.reduce((sum, activity) => sum + activity.durationSeconds!, 0)
-              : activities.length
-                ? null
-                : 0,
-          )}
+          label="Imported sessions"
+          value={activities.length}
+          hint={activities.length ? undefined : 'No activities in this selection'}
         />
         <Stat
-          label="Total distance"
-          value={distance(
-            knownDistance.length
-              ? knownDistance.reduce((sum, activity) => sum + activity.distanceMeters!, 0)
-              : activities.length
-                ? null
-                : 0,
-            data.profile?.units,
-          )}
+          label="Recorded time"
+          value={duration(time.value)}
+          hint={metricCoverage(time, 'duration')}
+        />
+        <Stat
+          label="Recorded distance"
+          value={distance(length.value, data.profile?.units)}
+          hint={metricCoverage(length, 'distance')}
         />
         <DateNavigation />
-      </div>
+      </section>
       <div className="section-toolbar activity-filters" style={{ paddingBottom: 15 }}>
         <div className="filter-row">
           <NativeSelect

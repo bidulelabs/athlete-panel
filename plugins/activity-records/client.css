@@ -1,3 +1,20 @@
+.activity-summary {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.activity-summary .stat {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+.activity-summary .stat:nth-child(3) {
+  border-right: 0;
+}
+.activity-summary .stat-hint {
+  max-width: 25ch;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
 .activity-filters .filter-row [data-slot='native-select-wrapper'] {
   width: 200px;
   min-width: 0;
@@ -7,6 +24,14 @@
   min-width: 0;
 }
 @media (max-width: 640px) {
+  .activity-summary .stat {
+    flex: 1 1 0;
+  }
+  .activity-summary .stat:first-child {
+    flex-basis: 100%;
+    border-right: 0;
+    padding-right: 0;
+  }
   .activity-filters {
     flex-wrap: wrap;
     align-items: stretch;

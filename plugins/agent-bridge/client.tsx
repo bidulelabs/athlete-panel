@@ -21,6 +21,8 @@ import { ConnectAgentDialog, ConnectionApproval } from './connections-client';
 import { ConnectedAgents } from './connections-list';
 import { ProposalLoader } from './proposal-dialog';
 import './review.css';
+const isPending = ({ status }: { status: string }) =>
+  ['pending', 'validated', 'proposed', 'ready'].includes(status);
 export default function AgentBridgePage(_: PluginPageProps) {
   const confirm = useConfirm();
   const { envelope, request } = useWorkspace();
@@ -33,8 +35,28 @@ export default function AgentBridgePage(_: PluginPageProps) {
     setConnectionId(new URLSearchParams(window.location.search).get('connect'));
   }, []);
   const proposal = envelope.proposals.find((item) => item.id === proposalId);
-  const pending = envelope.proposals.filter((item) =>
-    ['pending', 'validated', 'proposed', 'ready'].includes(item.status),
+  const pending = envelope.proposals.filter(isPending);
+  const past = envelope.proposals.filter((item) => !isPending(item));
+  const proposalRow = (item: (typeof envelope.proposals)[number]) => (
+    <div className="proposal-row" key={item.id}>
+      <div>
+        <strong>{item.summary || 'Training adjustment'}</strong>
+        <p>
+          {item.affectedCount} change
+          {item.affectedCount === 1 ? '' : 's'} · {new Date(item.createdAt).toLocaleString('en-GB')}
+        </p>
+      </div>
+      <Badge className={`badge ${isPending(item) ? 'accent' : ''}`}>{item.status}</Badge>
+      <Button
+        variant="outline"
+        size="sm"
+        className="button small"
+        onClick={() => setProposalId(item.id)}
+      >
+        <Eye size={14} />
+        Review
+      </Button>
+    </div>
   );
   if (connectionId)
     return (
@@ -94,43 +116,27 @@ export default function AgentBridgePage(_: PluginPageProps) {
         </TabsList>
         <TabsContent value={tab}>
           <ErrorMessage error={action.error} />
-          {tab === 'proposals' &&
-            (envelope.proposals.length ? (
-              envelope.proposals.map((item) => (
-                <div className="proposal-row" key={item.id}>
-                  <div>
-                    <strong>{item.summary || 'Training adjustment'}</strong>
-                    <p>
-                      {item.affectedCount} change
-                      {item.affectedCount === 1 ? '' : 's'} ·{' '}
-                      {new Date(item.createdAt).toLocaleString('en-GB')}
-                    </p>
-                  </div>
-                  <Badge
-                    className={`badge ${['pending', 'validated', 'proposed', 'ready'].includes(item.status) ? 'accent' : ''}`}
-                  >
-                    {item.status}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="button small"
-                    onClick={() => setProposalId(item.id)}
-                  >
-                    <Eye size={14} />
-                    Review
-                  </Button>
-                </div>
-              ))
-            ) : (
-              <EmptyState
-                icon={<FileCheck2 size={26} />}
-                title="Your next adjustment starts with context"
-              >
-                Connect your agent, then ask it to adjust next week’s training. Its proposal will
-                appear here for review.
-              </EmptyState>
-            ))}
+          {tab === 'proposals' && (
+            <>
+              {pending.length ? (
+                pending.map(proposalRow)
+              ) : (
+                <EmptyState
+                  icon={<FileCheck2 size={26} />}
+                  title="Your next adjustment starts with context"
+                >
+                  Connect your agent, then ask it to adjust next week’s training. Its proposal will
+                  appear here for review.
+                </EmptyState>
+              )}
+              {past.length > 0 && (
+                <details className="schema-details">
+                  <summary>Past proposals · {past.length}</summary>
+                  {past.map(proposalRow)}
+                </details>
+              )}
+            </>
+          )}
           {tab === 'grants' && <ConnectedAgents onConnect={() => setConnectOpen(true)} />}
           {tab === 'history' &&
             (envelope.changes.length ? (

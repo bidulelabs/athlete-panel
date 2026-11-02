@@ -80,6 +80,110 @@ test('a plan-only proposal shows its date before owner approval in both themes',
   }
 });
 
+test('pending proposals are listed and applied or rejected ones sit under Past proposals', async ({
+  page,
+  request,
+}, info) => {
+  await page.goto('/login');
+  await page.getByLabel('Password', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  const origin = new URL(page.url()).origin;
+  const owner = (operation: string, data: unknown) =>
+    page.request.post(`/api/plugins/agent-bridge/${operation}`, {
+      headers: { Origin: origin },
+      data,
+    });
+  const access = await owner('grant', {
+    label: 'Synthetic proposal list',
+    version: 2,
+    history: null,
+    planning: { from: '2026-11-01', to: '2026-11-30' },
+  });
+  expect(access.ok()).toBe(true);
+  const { token, grant } = await access.json();
+  const headers = { Authorization: `Bearer ${token}` };
+  const summarySuffix = `${info.project.name} ${randomUUID().slice(0, 6)}`;
+  const propose = async (summary: string, startDate: string) => {
+    const context = await (await request.get('/api/agent/context', { headers })).json();
+    const proposed = await request.post('/api/agent/propose', {
+      headers,
+      data: {
+        summary,
+        contextDigest: context.contextDigest,
+        idempotencyKey: randomUUID(),
+        commands: [{ action: 'plan.create', values: { title: summary, startDate } }],
+      },
+    });
+    expect(proposed.ok(), await proposed.text()).toBe(true);
+    return proposed.json();
+  };
+  let pendingId: string | undefined;
+  let appliedChangeId: string | undefined;
+  try {
+    const applied = await propose(`Applied ${summarySuffix}`, '2026-11-10');
+    const applyResponse = await owner('apply', {
+      id: applied.id,
+      digest: applied.digest,
+      idempotencyKey: randomUUID(),
+    });
+    expect(applyResponse.ok(), await applyResponse.text()).toBe(true);
+    appliedChangeId = (await applyResponse.json()).id;
+    const rejected = await propose(`Rejected ${summarySuffix}`, '2026-11-11');
+    expect((await owner('reject', { id: rejected.id })).ok()).toBe(true);
+    pendingId = (await propose(`Pending ${summarySuffix}`, '2026-11-12')).id;
+
+    await page.goto('/agent');
+    const pastSection = page.locator('details').filter({ hasText: 'Past proposals' });
+    const rowFor = (summary: string) => page.locator('.proposal-row').filter({ hasText: summary });
+    const pastRowFor = (summary: string) =>
+      pastSection.locator('.proposal-row').filter({ hasText: summary });
+    await expect(rowFor(`Pending ${summarySuffix}`)).toBeVisible();
+    await expect(pastRowFor(`Pending ${summarySuffix}`)).toHaveCount(0);
+    for (const summary of [`Applied ${summarySuffix}`, `Rejected ${summarySuffix}`]) {
+      await expect(rowFor(summary)).toHaveCount(1);
+      await expect(pastRowFor(summary)).toBeHidden();
+    }
+    await pastSection.locator('summary').click();
+    await expect(pastRowFor(`Applied ${summarySuffix}`)).toBeVisible();
+    await pastRowFor(`Rejected ${summarySuffix}`)
+      .getByRole('button', { name: 'Review', exact: true })
+      .click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+
+    await page.route('**/api/workspace?*', async (route) => {
+      const response = await route.fetch();
+      const envelope = await response.json();
+      await route.fulfill({
+        response,
+        json: {
+          ...envelope,
+          proposals: envelope.proposals.filter(
+            (proposal: { status: string }) => proposal.status !== 'pending',
+          ),
+        },
+      });
+    });
+    await page.reload();
+    await expect(
+      page.getByRole('heading', { name: 'Your next adjustment starts with context' }),
+    ).toBeVisible();
+    await expect(rowFor(`Pending ${summarySuffix}`)).toHaveCount(0);
+    await expect(pastSection.locator('summary')).toBeVisible();
+    await pastSection.locator('summary').click();
+    await expect(pastRowFor(`Rejected ${summarySuffix}`)).toBeVisible();
+  } finally {
+    if (pendingId) expect((await owner('reject', { id: pendingId })).ok()).toBe(true);
+    if (appliedChangeId)
+      expect(
+        (await owner('undo', { id: appliedChangeId, idempotencyKey: randomUUID() })).ok(),
+      ).toBe(true);
+    expect((await owner('revoke', { id: grant.id })).ok()).toBe(true);
+  }
+});
+
 test('owner reviews readable changes and applies the exact stored proposal', async ({
   page,
   request,

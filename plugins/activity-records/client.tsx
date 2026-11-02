@@ -12,7 +12,7 @@ import {
   sportSelectionLabel,
   type Activity as ActivityRecord,
 } from '@athlete-panel/contracts';
-import { Activity, ArrowUpRight, Link2, Unlink } from 'lucide-react';
+import { Activity, ArrowUpRight, Link2, Search, Unlink } from 'lucide-react';
 import {
   dateLabel,
   DateNavigation,
@@ -43,7 +43,13 @@ function metricCoverage(
   if (!knownCount && !missingCount) return undefined;
   if (!missingCount)
     return knownCount === 1 ? '1 activity recorded' : `All ${knownCount} activities recorded`;
-  return `${knownCount ? 'Partial · ' : ''}${missingCount} ${missingCount === 1 ? 'activity' : 'activities'} missing ${metric}`;
+  return (
+    <>
+      {knownCount > 0 && <span className="activity-partial">Partial</span>}
+      {knownCount > 0 && ' · '}
+      {missingCount} {missingCount === 1 ? 'activity' : 'activities'} missing {metric}
+    </>
+  );
 }
 
 export default function ActivitiesPage({ data }: PluginPageProps) {
@@ -71,10 +77,15 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
   );
   const time = activityMetricSummary(activities, 'durationSeconds');
   const length = activityMetricSummary(activities, 'distanceMeters');
+  const hasFilters = Boolean(search || sport !== 'all');
+  const clearFilters = () => {
+    setSearch('');
+    setSport('all');
+    setSubgroup('');
+  };
   return (
-    <>
+    <div className="activities-page">
       <PageHeader
-        eyebrow="THE WORK YOU HAVE DONE"
         title="Activities"
         description="Your imported sessions, linked to the training you planned."
         actions={
@@ -101,7 +112,16 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
         />
         <DateNavigation />
       </section>
-      <div className="section-toolbar activity-filters" style={{ paddingBottom: 15 }}>
+      <div className="activity-filters" role="search" aria-label="Filter activities">
+        <div className="activity-search">
+          <Search size={16} aria-hidden="true" />
+          <Input
+            aria-label="Search activities"
+            placeholder="Search activities"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
         <div className="filter-row">
           <NativeSelect
             aria-label="Filter activities by sport"
@@ -134,63 +154,93 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
             </NativeSelect>
           )}
         </div>
-        <Input
-          className="search-input"
-          aria-label="Search activities"
-          placeholder="Search activities"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
+        {hasFilters && (
+          <Button variant="ghost" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        )}
       </div>
       {activities.length ? (
-        <div className="data-table">
-          <div className="data-table-header activities">
-            <span>Activity</span>
-            <span>Date</span>
-            <span>Duration</span>
-            <span>Distance</span>
-            <span>Planned session</span>
-            <span />
-          </div>
-          {activities.map((activity) => {
-            const linked = data.workouts.find(
-              (workout) => workout.completion?.activityId === activity.id,
-            );
-            return (
-              <div className="data-table-row activities" key={activity.id}>
-                <div className="row-main">
-                  <SportIcon sport={activity.sport} size={23} />
-                  <div>
-                    <strong>{activity.title || `${sportSelectionLabel(activity)} activity`}</strong>
-                    <small>{sportSelectionLabel(activity)} · Garmin</small>
-                  </div>
-                </div>
-                <span>{dateLabel(activity.localDate)}</span>
-                <span>{duration(activity.durationSeconds)}</span>
-                <span>{distance(activity.distanceMeters, data.profile?.units)}</span>
-                <span>
-                  {linked ? (
-                    <Badge className="badge success">
-                      <Link2 size={10} style={{ marginRight: 4 }} />
-                      Linked
-                    </Badge>
-                  ) : (
-                    <span className="muted-text" style={{ fontSize: 10 }}>
-                      Unlinked
+        <table className="activity-table">
+          <caption className="sr-only">Imported activities in this selection</caption>
+          <thead>
+            <tr>
+              <th scope="col">Activity</th>
+              <th scope="col">Date</th>
+              <th scope="col">Duration</th>
+              <th scope="col">Distance</th>
+              <th scope="col">Planned session</th>
+              <th scope="col">
+                <span className="sr-only">Details</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {activities.map((activity) => {
+              const linked = data.workouts.find(
+                (workout) => workout.completion?.activityId === activity.id,
+              );
+              const title = activity.title || `${sportSelectionLabel(activity)} activity`;
+              return (
+                <tr key={activity.id}>
+                  <td className="activity-name">
+                    <SportIcon sport={activity.sport} size={21} />
+                    <div>
+                      <strong>{title}</strong>
+                      <small>{sportSelectionLabel(activity)} · Garmin</small>
+                    </div>
+                  </td>
+                  <td className="activity-date">
+                    <time dateTime={activity.localDate}>{dateLabel(activity.localDate)}</time>
+                  </td>
+                  <td className="activity-measurement">
+                    <span className="activity-mobile-label" aria-hidden="true">
+                      Duration
                     </span>
-                  )}
-                </span>
-                <Button
-                  variant="link"
-                  className="text-button"
-                  onClick={() => setSelected(activity)}
-                >
-                  View <ArrowUpRight size={12} />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
+                    <span
+                      className={activity.durationSeconds === null ? 'activity-unknown' : undefined}
+                    >
+                      {activity.durationSeconds === null
+                        ? 'Not recorded'
+                        : duration(activity.durationSeconds)}
+                    </span>
+                  </td>
+                  <td className="activity-measurement">
+                    <span className="activity-mobile-label" aria-hidden="true">
+                      Distance
+                    </span>
+                    <span
+                      className={activity.distanceMeters === null ? 'activity-unknown' : undefined}
+                    >
+                      {activity.distanceMeters === null
+                        ? 'Not recorded'
+                        : distance(activity.distanceMeters, data.profile?.units)}
+                    </span>
+                  </td>
+                  <td className="activity-link-status">
+                    {linked ? (
+                      <Badge className="badge success">
+                        <Link2 size={12} aria-hidden="true" />
+                        Linked
+                      </Badge>
+                    ) : (
+                      <span>Unlinked</span>
+                    )}
+                  </td>
+                  <td className="activity-details-action">
+                    <Button
+                      variant="link"
+                      aria-label={`View ${title}`}
+                      onClick={() => setSelected(activity)}
+                    >
+                      View <ArrowUpRight size={14} aria-hidden="true" />
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       ) : (
         <EmptyState
           icon={<Activity size={26} />}
@@ -198,7 +248,11 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
             search || sport !== 'all' ? 'No matching activities' : 'Your next session belongs here'
           }
           action={
-            !search && sport === 'all' ? (
+            hasFilters ? (
+              <Button variant="outline" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            ) : (
               <Button
                 variant="default"
                 className="button primary"
@@ -206,7 +260,7 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
               >
                 Connect Garmin <ArrowUpRight size={15} />
               </Button>
-            ) : undefined
+            )
           }
         >
           {search || sport !== 'all'
@@ -215,7 +269,7 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
         </EmptyState>
       )}
       {selected && <ActivityDetail activity={selected} onClose={() => setSelected(null)} />}
-    </>
+    </div>
   );
 }
 

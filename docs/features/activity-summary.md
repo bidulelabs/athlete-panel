@@ -17,6 +17,8 @@ Specification status: approved scope. Requirement source: [issue #75](https://gi
 
 Presentation choices: the headings are **Recorded time** and **Recorded distance**. A mixed selection shows the sum with **Partial · N activities missing duration/distance**. An all-unknown metric shows a dash with its missing count. A fully measured metric shows its value and recorded-activity count. An empty selection shows zero imported sessions, **No activities in this selection**, and dashes for the two measurements. Singular counts use **activity**. The existing empty list and filters remain available.
 
+The Activities page uses the shared heading without an eyebrow, readable coverage text with **Partial** emphasized, and a compact session count on phones. Search and sport/subgroup controls stay together. **Clear filters** resets search, sport and subgroup while preserving the selected date range; it is also available in the filtered empty state. Desktop activities use a semantic table. Narrow layouts show each activity's title, sport, date, labeled measurements, linking status and a 44px **View** action without horizontal scrolling. Missing row measurements say **Not recorded**; known zero retains its formatted value. View buttons name their activity for assistive technology and retain the existing detail dialog and focus restoration.
+
 ## Acceptance scenarios
 
 | Situation | Expected observable result | Verification |
@@ -28,10 +30,12 @@ Presentation choices: the headings are **Recorded time** and **Recorded distance
 | Empty or fully measured selection | Empty state with no invented measurement, or complete sum with recorded count | Calculation and browser tests |
 | Change dates, sport, subgroup or search | Counts and sums update from the same filtered activities, excluding records outside either date boundary | Browser tests |
 | Desktop/phone, light/dark, metric/imperial | Visible coverage, correct units and no horizontal overflow, including 320px phones | Browser tests and rendered inspection |
+| Narrow activity list with long titles and missing values | Measurements and the View action remain reachable without sideways scrolling; keyboard inspection restores focus when closed | Browser tests and rendered inspection |
+| Filtered empty selection | Clear filters restores all sports and title matches without changing dates | Browser tests |
 
 ## Observed implementation
 
-[ActivitiesPage](../../plugins/activity-records/client.tsx) passes its existing filtered list to the plugin-local [metric summary](../../plugins/activity-records/summary.ts). The helper returns the known sum (or null), known count and missing count independently for each metric. Existing shared formatters and `Stat` hints render the result. [Plugin-local styles](../../plugins/activity-records/client.css) let the explanation wrap and give the two measurements a shared row on phones.
+[ActivitiesPage](../../plugins/activity-records/client.tsx) passes its existing filtered list to the plugin-local [metric summary](../../plugins/activity-records/summary.ts). The helper returns the known sum (or null), known count and missing count independently for each metric. Existing shared formatters and `Stat` hints render the result. [Plugin-local styles](../../plugins/activity-records/client.css) let the explanation wrap, give the two measurements a shared row on phones and reflow the activity table at narrow widths.
 
 No host, shared contract, registry, migration, storage or provider change is introduced. Existing authenticated workspace reads, activity rows, detail dialogs and explicit workout-linking actions retain their behavior. Summarizing and filtering perform no mutation or new request.
 

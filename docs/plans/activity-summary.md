@@ -21,6 +21,14 @@ Environment: Node 22.23.4, pnpm 11.28.8, macOS, isolated PostgreSQL 17 and Chrom
 
 The first browser attempt rejected the new fixture because two required nullable fields were omitted. The fixture now supplies null elevation and average heart rate; all subsequent browser checks passed. No production data or provider access was involved.
 
+## Activities interface refinement
+
+The owner requested an Impeccable UI/UX pass on 2026-11-02. The page retains the precise training notebook styling and both themes. The heading drops the eyebrow, coverage uses readable text with an emphasized Partial label, and the phone session count is compact. Search and sport controls form one group, with Clear filters in both the toolbar and filtered empty state. A semantic activity table reflows into labeled rows at narrow widths; titles wrap, missing measurements say Not recorded, and each View action has an activity-specific accessible name and a 44px target. Existing details and linking behavior are preserved.
+
+Verification after refinement: the repository check passed (321 unit tests), all 230 integration tests passed, and web/worker production builds passed. All 14 selected browser scenarios passed across desktop/phone, both themes and both unit systems, covering existing Calendar review/logging plus filter reset, long titles, visible measurements, internal table overflow, action size and keyboard dialog focus restoration. Rendered desktop and phone inspection included light/dark themes and a 320px phone; no browser console errors were observed. The first responsive run found a shared link-button rule overriding the local touch size at intermediate widths; the scoped selector was corrected before the passing run. Impeccable's source scan flagged one off-scale phone type size; that override was removed in favor of the existing shared size.
+
+These are plugin-local presentation and filtering affordances. No shared design convention, public contract, stored behavior, import semantics or deployment changed.
+
 ## Documentation coverage
 
 | Topic | Canonical document | Coverage | Remaining gaps |

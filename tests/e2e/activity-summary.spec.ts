@@ -16,7 +16,14 @@ async function preview(page: Page, units: 'metric' | 'imperial') {
     units,
   });
   state.activities = [
-    ['Complete ride', 'cycling', 'road_biking', '2030-01-07', 5400, 42000],
+    [
+      'Complete ride — endurance along the river with a steady climb home',
+      'cycling',
+      'road_biking',
+      '2030-01-07',
+      5400,
+      42000,
+    ],
     ['Unmeasured ride', 'cycling', 'mountain_biking', '2030-01-08', null, null],
     ['Trail run', 'running', 'trail_running', '2030-01-09', 1200, null],
     ['Zero run', 'running', 'street_running', '2030-01-10', 0, 0],
@@ -65,6 +72,33 @@ async function preview(page: Page, units: 'metric' | 'imperial') {
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Activities', exact: true })).toBeVisible();
   return () => mutations;
+}
+
+async function checkResponsiveRows(page: Page, measuredDistance: string) {
+  const measuredRow = page.getByRole('row').filter({ hasText: 'Complete ride' });
+  await expect(measuredRow.getByText('1h 30m', { exact: true })).toBeVisible();
+  await expect(measuredRow.getByText(measuredDistance, { exact: true })).toBeVisible();
+  const unknownRow = page.getByRole('row').filter({ hasText: 'Unmeasured ride' });
+  await expect(unknownRow.getByText('Not recorded', { exact: true })).toHaveCount(2);
+  // The list itself must not hide measurements or actions in an inner horizontal scroller.
+  expect(
+    await page
+      .locator('.activity-table')
+      .evaluate((table) => table.scrollWidth <= table.clientWidth),
+  ).toBe(true);
+  const view = unknownRow.getByRole('button', { name: 'View Unmeasured ride', exact: true });
+  await view.scrollIntoViewIfNeeded();
+  const bounds = await view.boundingBox();
+  expect(bounds!.height).toBeGreaterThanOrEqual(44);
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await view.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Unmeasured ride', exact: true });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close dialog', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(view).toBeFocused();
 }
 
 for (const theme of ['dark', 'light'] as const) {
@@ -138,8 +172,10 @@ for (const theme of ['dark', 'light'] as const) {
       await expect(summary).not.toContainText('missing');
       await expect(page.getByRole('heading', { name: 'No matching activities' })).toBeVisible();
 
-      await search.fill('');
-      await sport.selectOption('all');
+      await page.getByRole('button', { name: 'Clear filters', exact: true }).last().click();
+      await expect(search).toHaveValue('');
+      await expect(sport).toHaveValue('all');
+      await expect(sessions.locator('strong')).toHaveText('4');
       await page.getByLabel('Go to date').fill('2030-01-28');
       await expect(sessions.locator('strong')).toHaveText('1');
       await expect(time.locator('strong')).toHaveText('15m');
@@ -157,6 +193,7 @@ for (const theme of ['dark', 'light'] as const) {
       );
       await expect(time.locator('.stat-hint')).toBeVisible();
       await expect(distance.locator('.stat-hint')).toBeVisible();
+      await checkResponsiveRows(page, measuredDistance);
       expect(mutations()).toBe(0);
     });
   }

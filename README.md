@@ -306,6 +306,7 @@ Workout libraries, automatic activity matching, advanced training-load/recovery 
 | [Garmin sport planning](docs/features/garmin-sport-planning.md) | Sport hierarchy, rest, elevation, strength, notes and recorded metrics |
 | [Training workspace](docs/features/training-workspace.md)       | Planning, calendar, completion, linking, cards and weekly summaries                                  |
 | [Garmin import and health](docs/features/garmin-import.md)      | Authentication, normalized records, history traversal, coverage and limits                           |
+| [Activity summary coverage](docs/features/activity-summary.md) | Recorded duration/distance, missing measurements and filtered totals |
 | [Reviewed agent training](docs/features/agent-training.md)      | Grants, context, proposal review, atomic apply and undo                                              |
 | [Plugins and skills](docs/features/plugins.md)                  | Source extensions, templates, compatibility and agent workflows                                      |
 | [Runtime contract reference](docs/reference/contracts.json)     | Generated command and data schemas                                                                   |

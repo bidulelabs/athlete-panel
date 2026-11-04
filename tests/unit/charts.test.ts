@@ -315,7 +315,7 @@ describe('charts climbing and heart rate', () => {
     return data;
   };
 
-  it('returns elevation per sport, running distance and the sessions of the selected weeks', () => {
+  it('returns elevation per sport, the running climb inputs and the sessions of the selected weeks', () => {
     const summary = chartsSummary(climbingData(), selection);
     expect(summary.weeks[0]!.recordedElevationMetersBySport.running).toEqual({
       value: 200,
@@ -327,10 +327,11 @@ describe('charts climbing and heart rate', () => {
       knownCount: 1,
       missingCount: 0,
     });
-    expect(summary.weeks[0]!.recordedRunningDistanceMeters).toEqual({
-      value: 15000,
-      knownCount: 2,
-      missingCount: 0,
+    expect(summary.weeks[0]!.runningClimb).toEqual({
+      sessionCount: 2,
+      measuredSessionCount: 1,
+      elevationMeters: 200,
+      distanceMeters: 10000,
     });
     expect(summary.sessions.map(({ sport, date }) => [sport, date])).toEqual([
       ['running', '2029-10-23'],
@@ -350,9 +351,9 @@ describe('charts climbing and heart rate', () => {
         running: '200 m (1 of 2 sessions without elevation)',
         cycling: '500 m',
       },
-      runningClimbLabel: '13 m/km (partial)',
+      runningClimbLabel: '20 m/km (partial)',
     });
-    expect(metric[0]!.runningClimb).toBeCloseTo(13.33, 2);
+    expect(metric[0]!.runningClimb).toBeCloseTo(20, 2);
     expect(metric[1]).toMatchObject({
       elevationBySport: { running: null },
       elevationLabelBySport: { running: 'Elevation missing' },
@@ -361,7 +362,7 @@ describe('charts climbing and heart rate', () => {
     });
     expect(metric[2]).toMatchObject({
       elevationBySport: { hiking: 0, cycling: null },
-      elevationLabelBySport: { hiking: '0 m', cycling: 'No sessions' },
+      elevationLabelBySport: { hiking: '0 m', cycling: 'No sessions recorded' },
       runningClimbLabel: 'No running',
     });
     expect(metric[13]).toMatchObject({
@@ -370,8 +371,35 @@ describe('charts climbing and heart rate', () => {
     });
     expect(climbingWeeks(summary, chartsToday, 'imperial')[0]).toMatchObject({
       elevationLabelBySport: { running: '656 ft (1 of 2 sessions without elevation)' },
-      runningClimbLabel: '70 ft/mi (partial)',
+      runningClimbLabel: '106 ft/mi (partial)',
     });
+  });
+
+  it('measures running climb only on runs with both elevation and distance', () => {
+    const data = emptyWorkspace();
+    data.activities = [
+      activityWithMeasures(910, 1, 'running', {
+        distanceMeters: null,
+        elevationMeters: 200,
+        averageHeartRateBpm: null,
+      }),
+      activityWithMeasures(911, 2, 'running', {
+        distanceMeters: 10000,
+        elevationMeters: null,
+        averageHeartRateBpm: null,
+      }),
+    ];
+    const [unmeasured] = climbingWeeks(chartsSummary(data, selection), chartsToday, 'metric');
+    expect(unmeasured).toMatchObject({ runningClimb: null, runningClimbLabel: 'Not measured' });
+    data.activities.push(
+      activityWithMeasures(912, 3, 'running', {
+        distanceMeters: 5000,
+        elevationMeters: 60,
+        averageHeartRateBpm: null,
+      }),
+    );
+    const [partial] = climbingWeeks(chartsSummary(data, selection), chartsToday, 'metric');
+    expect(partial!.runningClimbLabel).toBe('12 m/km (partial)');
   });
 
   it('lists a manual session on its performed date without heart rate, and a linked workout once', () => {
@@ -413,6 +441,10 @@ describe('charts climbing and heart rate', () => {
       [chartsId(920), '2029-10-27', 'No heart rate'],
       [chartsId(903), '2029-10-30', '148 bpm'],
     ]);
+    expect(summary.weeks[0]!.runningClimb).toMatchObject({
+      sessionCount: 3,
+      measuredSessionCount: 1,
+    });
   });
 
   it('picks the sport with the most heart rate sessions and keeps sessions without heart rate in the table', () => {

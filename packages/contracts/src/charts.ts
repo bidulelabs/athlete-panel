@@ -21,7 +21,12 @@ export const chartsWeekSchema = z.object({
   recordedSeconds: historyMeasureSchema,
   recordedSecondsBySport: z.record(z.enum(chartsSports), historyMeasureSchema),
   recordedElevationMetersBySport: z.record(z.enum(chartsSports), historyMeasureSchema),
-  recordedRunningDistanceMeters: historyMeasureSchema,
+  runningClimb: z.object({
+    sessionCount: z.number().int(),
+    measuredSessionCount: z.number().int(),
+    elevationMeters: z.number(),
+    distanceMeters: z.number(),
+  }),
 });
 export const chartsRaceSchema = z.object({ id: idSchema, date: dateSchema, title: z.string() });
 export const chartsSessionSchema = z.object({

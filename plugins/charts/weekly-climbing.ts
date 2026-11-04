@@ -28,14 +28,17 @@ function elevationLabel(measure: MetricTotal, units: UnitSystem) {
   return `${elevation} (${measure.missingCount} of ${sessionCount(measure)} sessions without elevation)`;
 }
 
-function measureRunningClimb(elevation: MetricTotal, distance: MetricTotal, units: UnitSystem) {
-  if (!sessionCount(distance)) return { value: null, label: 'No running' };
-  if (elevation.value === null || !distance.value) return { value: null, label: 'Not measured' };
+function measureRunningClimb(
+  climb: ChartsSummary['weeks'][number]['runningClimb'],
+  units: UnitSystem,
+) {
+  if (!climb.sessionCount) return { value: null, label: 'No running' };
+  if (!climb.measuredSessionCount) return { value: null, label: 'Not measured' };
   const value =
     units === 'imperial'
-      ? (elevation.value * feetPerMeter) / (distance.value / 1609.344)
-      : elevation.value / (distance.value / 1000);
-  const partial = elevation.missingCount || distance.missingCount ? ' (partial)' : '';
+      ? (climb.elevationMeters * feetPerMeter) / (climb.distanceMeters / 1609.344)
+      : climb.elevationMeters / (climb.distanceMeters / 1000);
+  const partial = climb.measuredSessionCount < climb.sessionCount ? ' (partial)' : '';
   return { value, label: `${Math.round(value)} ${climbUnitLabel(units)}${partial}` };
 }
 
@@ -51,15 +54,11 @@ export function climbingWeeks(
 ): ClimbingWeek[] {
   const sports = sportsWithElevation(summary);
   return trainingHoursWeeks(summary, today, String).map((week, index) => {
-    const { recordedElevationMetersBySport, recordedRunningDistanceMeters } = summary.weeks[index]!;
+    const { recordedElevationMetersBySport, runningClimb } = summary.weeks[index]!;
     const upcoming = week.weekStart > today;
     const noSessions = (sport: ChartsSport) =>
       sessionCount(recordedElevationMetersBySport[sport]) === 0;
-    const climb = measureRunningClimb(
-      recordedElevationMetersBySport.running,
-      recordedRunningDistanceMeters,
-      units,
-    );
+    const climb = measureRunningClimb(runningClimb, units);
     return {
       ...week,
       sessionSports: sports.filter(
@@ -75,7 +74,7 @@ export function climbingWeeks(
         upcoming
           ? 'Upcoming'
           : noSessions(sport)
-            ? 'No sessions'
+            ? 'No sessions recorded'
             : elevationLabel(recordedElevationMetersBySport[sport], units),
       ),
       runningClimb: upcoming ? null : climb.value,

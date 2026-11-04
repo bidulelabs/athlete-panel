@@ -55,6 +55,7 @@ export function chartsSummary(
   const recordedSessions = (week: CalendarWeek) =>
     week.recordedSessions.map((session) => {
       const activity = session.kind === 'activity' ? activitiesById.get(session.id)! : null;
+      const completion = activity ? null : workoutsById.get(session.id)!.completion!;
       return {
         id: session.id,
         date: session.localDate,
@@ -62,6 +63,8 @@ export function chartsSummary(
         sport: toChartsSport(activity ?? workoutsById.get(session.id)!),
         averageHeartRateBpm: activity?.averageHeartRateBpm ?? null,
         durationSeconds: session.durationSeconds,
+        distanceMeters: activity ? activity.distanceMeters : completion!.distanceMeters,
+        elevationMeters: activity?.elevationMeters ?? null,
       };
     });
   const calendarWeeks = Array.from({ length: weeks }, (_, index) =>
@@ -69,6 +72,10 @@ export function chartsSummary(
   );
   return {
     weeks: calendarWeeks.map((week) => {
+      const runs = recordedSessions(week).filter((session) => session.sport === 'running');
+      const measuredRuns = runs.filter(
+        (run) => run.elevationMeters !== null && !!run.distanceMeters,
+      );
       return {
         weekStart: week.startDate,
         plannedSeconds: week.planned.durationSeconds,
@@ -81,16 +88,27 @@ export function chartsSummary(
           week.sportBreakdown,
           (recorded) => recorded.elevationMeters,
         ),
-        recordedRunningDistanceMeters: sumBySport(
-          week.sportBreakdown,
-          (recorded) => recorded.distanceMeters,
-        ).running,
+        runningClimb: {
+          sessionCount: runs.length,
+          measuredSessionCount: measuredRuns.length,
+          elevationMeters: measuredRuns.reduce((sum, run) => sum + run.elevationMeters!, 0),
+          distanceMeters: measuredRuns.reduce((sum, run) => sum + run.distanceMeters!, 0),
+        },
       };
     }),
     races: state.events
       .filter((event) => event.kind === 'race' && event.date >= weekStart && event.date <= lastDay)
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
       .map(({ id, date, title }) => ({ id, date, title })),
-    sessions: calendarWeeks.flatMap(recordedSessions),
+    sessions: calendarWeeks
+      .flatMap(recordedSessions)
+      .map(({ id, date, title, sport, averageHeartRateBpm, durationSeconds }) => ({
+        id,
+        date,
+        title,
+        sport,
+        averageHeartRateBpm,
+        durationSeconds,
+      })),
   };
 }

@@ -58,7 +58,7 @@ it('returns the recorded duration of every chart sport', async () => {
   });
 });
 
-it('returns elevation, running distance and heart rate sessions from stored activities', async () => {
+it('returns elevation, running climb inputs and heart rate sessions from stored activities', async () => {
   const sql = connection();
   const run = {
     ...activity(6, '2029-01-10', 3600),
@@ -71,7 +71,12 @@ it('returns elevation, running distance and heart rate sessions from stored acti
   expect(chartsSummarySchema.parse(summary)).toEqual(summary);
   expect(summary.weeks[0]).toMatchObject({
     recordedElevationMetersBySport: { running: { value: 250, knownCount: 1, missingCount: 0 } },
-    recordedRunningDistanceMeters: { value: 10000, knownCount: 1, missingCount: 0 },
+    runningClimb: {
+      sessionCount: 1,
+      measuredSessionCount: 1,
+      elevationMeters: 250,
+      distanceMeters: 10000,
+    },
   });
   expect(summary.sessions).toEqual([
     {

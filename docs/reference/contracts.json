@@ -29426,35 +29426,31 @@
                       "other"
                     ]
                   },
-                  "recordedRunningDistanceMeters": {
+                  "runningClimb": {
                     "type": "object",
                     "properties": {
-                      "value": {
-                        "anyOf": [
-                          {
-                            "type": "number",
-                            "minimum": 0
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "knownCount": {
+                      "sessionCount": {
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
                       },
-                      "missingCount": {
+                      "measuredSessionCount": {
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
+                      },
+                      "elevationMeters": {
+                        "type": "number"
+                      },
+                      "distanceMeters": {
+                        "type": "number"
                       }
                     },
                     "required": [
-                      "value",
-                      "knownCount",
-                      "missingCount"
+                      "sessionCount",
+                      "measuredSessionCount",
+                      "elevationMeters",
+                      "distanceMeters"
                     ],
                     "additionalProperties": false
                   }
@@ -29465,7 +29461,7 @@
                   "recordedSeconds",
                   "recordedSecondsBySport",
                   "recordedElevationMetersBySport",
-                  "recordedRunningDistanceMeters"
+                  "runningClimb"
                 ],
                 "additionalProperties": false
               }

@@ -338,6 +338,12 @@ for (const theme of ['dark', 'light'] as const)
       /^\d+ ms$/,
       /^\d+ to \d+ ms$/,
     ]);
+    await expect(night('22 Dec').getByRole('cell')).toHaveText([
+      '22 Dec',
+      'No measure',
+      /^\d+ ms \(6 of 7 nights\)$/,
+      /^\d+ to \d+ ms$/,
+    ]);
     await expect(hrv.locator('.recharts-area-area')).toHaveCount(1);
     await takeScreenshots(page, 'resting-heart-rate-hrv', info.project.name, theme);
   });

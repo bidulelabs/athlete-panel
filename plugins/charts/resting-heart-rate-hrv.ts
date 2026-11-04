@@ -22,7 +22,7 @@ export const usualRangeStandardDeviations = 0.75;
 export const mean = (values: number[]) =>
   values.reduce((sum, value) => sum + value, 0) / values.length;
 
-export function nightRows(summary: ChartsSummary, metric: NightMetric): NightRow[] {
+export function nightRows(summary: ChartsSummary, metric: NightMetric, today: string): NightRow[] {
   const unit = metricUnit[metric];
   const measured = summary.nights.filter((night) => night[metric] !== null);
   const valuesBetween = (from: string, to: string) =>
@@ -32,6 +32,17 @@ export function nightRows(summary: ChartsSummary, metric: NightMetric): NightRow
   const firstDay = summary.weeks[0]!.weekStart;
   return Array.from({ length: summary.weeks.length * 7 }, (_, index) => {
     const date = addDays(firstDay, index);
+    if (date > today)
+      return {
+        date,
+        value: null,
+        mayBeMinimum: false,
+        average: null,
+        usualRange: null,
+        valueLabel: 'Upcoming',
+        averageLabel: 'Upcoming',
+        usualRangeLabel: 'Upcoming',
+      };
     const night = measured.find((item) => item.date === date);
     const value = night?.[metric] ?? null;
     const mayBeMinimum = metric === 'restingHeartRateBpm' && !!night?.restingHeartRateMayBeMinimum;
@@ -59,7 +70,10 @@ export function nightRows(summary: ChartsSummary, metric: NightMetric): NightRow
         value === null
           ? 'No measure'
           : `${Math.round(value)} ${unit}${mayBeMinimum ? ' (daily minimum)' : ''}`,
-      averageLabel: average === null ? 'Not enough nights' : `${Math.round(average)} ${unit}`,
+      averageLabel:
+        average === null
+          ? 'Not enough nights'
+          : `${Math.round(average)} ${unit}${lastNights.length < averageNights ? ` (${lastNights.length} of ${averageNights} nights)` : ''}`,
       usualRangeLabel: usualRange
         ? `${Math.round(usualRange[0])} to ${Math.round(usualRange[1])} ${unit}`
         : 'Not enough nights',

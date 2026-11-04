@@ -23,13 +23,15 @@ const nightMetrics: { metric: NightMetric; title: string; name: string }[] = [
 
 export function RestingHeartRateHrvFigure({
   summary,
+  today,
   loading,
 }: {
   summary: ChartsSummary;
+  today: string;
   loading: boolean;
 }) {
   const figures = nightMetrics
-    .map((item) => ({ ...item, rows: nightRows(summary, item.metric) }))
+    .map((item) => ({ ...item, rows: nightRows(summary, item.metric, today) }))
     .filter((item) => item.rows.some((row) => row.value !== null));
   if (!figures.length)
     return (
@@ -38,8 +40,7 @@ export function RestingHeartRateHrvFigure({
       </EmptyState>
     );
   return figures.map(({ metric, title, name, rows }) => {
-    const measuredRows = rows.filter((row) => row.value !== null);
-    const mayBeMinimumCount = measuredRows.filter((row) => row.mayBeMinimum).length;
+    const mayBeMinimumCount = rows.filter((row) => row.mayBeMinimum).length;
     return (
       <ChartFigure
         key={metric}
@@ -57,7 +58,7 @@ export function RestingHeartRateHrvFigure({
           </Suspense>
         }
         headers={['Night', title, '7-day average', 'Usual range']}
-        rows={measuredRows.map((row) => ({
+        rows={rows.map((row) => ({
           key: row.date,
           cells: [dateLabel(row.date), row.valueLabel, row.averageLabel, row.usualRangeLabel],
         }))}

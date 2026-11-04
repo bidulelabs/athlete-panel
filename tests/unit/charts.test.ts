@@ -507,9 +507,47 @@ describe('charts resting heart rate and HRV', () => {
   it('averages the last 7 nights only from 4 measured nights', () => {
     const data = emptyWorkspace();
     data.health = hrvRecords([60, null, null, 65, null, 70, 85], addDays(chartsFirstWeek, 1));
-    const [first, second] = nightRows(chartsSummary(data, selection), 'hrvMilliseconds');
+    const [first, second] = nightRows(
+      chartsSummary(data, selection),
+      'hrvMilliseconds',
+      chartsToday,
+    );
     expect(first).toMatchObject({ value: 70, average: null, averageLabel: 'Not enough nights' });
-    expect(second).toMatchObject({ value: 85, average: 70, averageLabel: '70 ms' });
+    expect(second).toMatchObject({ value: 85, average: 70, averageLabel: '70 ms (4 of 7 nights)' });
+  });
+
+  it('keeps a night without a value with its 7-night average and usual range, and later nights as Upcoming', () => {
+    const data = emptyWorkspace();
+    data.health = hrvRecords(
+      [
+        ...Array.from({ length: 60 }, (_, index) => (index % 2 ? 60 : 50)),
+        60,
+        60,
+        60,
+        60,
+        60,
+        60,
+        null,
+      ],
+      addDays(chartsFirstWeek, 6),
+    );
+    const rows = nightRows(chartsSummary(data, selection), 'hrvMilliseconds', chartsToday);
+    expect(rows).toHaveLength(98);
+    expect(rows[6]).toMatchObject({
+      date: addDays(chartsFirstWeek, 6),
+      value: null,
+      valueLabel: 'No measure',
+      average: 60,
+      averageLabel: '60 ms (6 of 7 nights)',
+      usualRangeLabel: expect.stringMatching(/^\d+ to \d+ ms$/),
+    });
+    expect(rows.find((row) => row.date === addDays(chartsToday, 1))).toMatchObject({
+      average: null,
+      usualRange: null,
+      valueLabel: 'Upcoming',
+      averageLabel: 'Upcoming',
+      usualRangeLabel: 'Upcoming',
+    });
   });
 
   it('shows a usual range only from 30 nights in the previous 60', () => {
@@ -518,10 +556,12 @@ describe('charts resting heart rate and HRV', () => {
       Array.from({ length: 30 }, (_, index) => (index % 2 ? 60 : 50)),
       addDays(chartsFirstWeek, -1),
     );
-    const rows = nightRows(chartsSummary(data, selection), 'hrvMilliseconds');
+    const rows = nightRows(chartsSummary(data, selection), 'hrvMilliseconds', chartsToday);
     expect(rows[0]).toMatchObject({ usualRange: [51.25, 58.75], usualRangeLabel: '51 to 59 ms' });
     data.health.shift();
-    expect(nightRows(chartsSummary(data, selection), 'hrvMilliseconds')[0]).toMatchObject({
+    expect(
+      nightRows(chartsSummary(data, selection), 'hrvMilliseconds', chartsToday)[0],
+    ).toMatchObject({
       usualRange: null,
       usualRangeLabel: 'Not enough nights',
     });
@@ -533,7 +573,7 @@ describe('charts resting heart rate and HRV', () => {
       nightRecord(1600, chartsFirstWeek, 'restingHeartRateBpm', 47, true),
       nightRecord(1601, addDays(chartsFirstWeek, 1), 'restingHeartRateBpm', 49),
     ];
-    const rows = nightRows(chartsSummary(data, selection), 'restingHeartRateBpm');
+    const rows = nightRows(chartsSummary(data, selection), 'restingHeartRateBpm', chartsToday);
     expect(rows.slice(0, 3).map((row) => row.valueLabel)).toEqual([
       '47 bpm (daily minimum)',
       '49 bpm',

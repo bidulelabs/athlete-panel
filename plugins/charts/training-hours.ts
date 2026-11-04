@@ -11,8 +11,8 @@ export type TrainingHoursWeek = {
   races: string[];
 };
 
-const sessionCount = (measure: MetricTotal) => measure.knownCount + measure.missingCount;
-function durationLabel(measure: MetricTotal, format: (seconds: number) => string) {
+export const sessionCount = (measure: MetricTotal) => measure.knownCount + measure.missingCount;
+export function durationLabel(measure: MetricTotal, format: (seconds: number) => string) {
   if (measure.value === null) return 'Duration missing';
   if (!measure.missingCount) return format(measure.value);
   return `${format(measure.value)} (${measure.missingCount} of ${sessionCount(measure)} sessions without duration)`;

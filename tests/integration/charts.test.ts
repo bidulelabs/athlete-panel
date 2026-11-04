@@ -4,7 +4,7 @@ import { isolatedDatabaseUrl } from '../support/test-database';
 import { closeDatabase, connection } from '../../packages/host/src/db';
 import { migrate } from '../../packages/host/src/migrations';
 import charts from '../../plugins/charts/server';
-import { activity, chartsId, plannedWorkout, trainingEvent } from '../fixtures/charts';
+import { activity, chartsId, nightRecord, plannedWorkout, trainingEvent } from '../fixtures/charts';
 
 beforeAll(async () => {
   await closeDatabase();
@@ -88,6 +88,18 @@ it('returns elevation, running climb inputs and heart rate sessions from stored 
       durationSeconds: 3600,
     },
   ]);
+});
+
+it('reads nights from 60 days before the period for the usual range', async () => {
+  const sql = connection();
+  for (const night of [
+    nightRecord(7, '2028-11-09', 'hrvMilliseconds', 51),
+    nightRecord(8, '2028-11-08', 'hrvMilliseconds', 54),
+    nightRecord(9, '2029-01-09', 'restingHeartRateBpm', 47),
+  ])
+    await sql`insert into activity_records.records(kind,id,revision,data) values('health',${night.id},1,${sql.json(night)})`;
+  const summary = await charts.operations.summary({ weekStart: '2029-01-08', weeks: 1 });
+  expect(summary.nights.map((night) => night.date)).toEqual(['2028-11-09', '2029-01-09']);
 });
 
 it('refuses a selection longer than 53 weeks', async () => {

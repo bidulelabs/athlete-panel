@@ -6,6 +6,7 @@ import {
   planSchema,
   workoutSchema,
 } from '@athlete-panel/contracts';
+import { nightRows } from '../../plugins/charts/resting-heart-rate-hrv';
 import { seasonStart } from '../../plugins/charts/season';
 import { chartsSummary } from '../../plugins/charts/summary';
 import { hasSessions, trainingHoursWeeks } from '../../plugins/charts/training-hours';
@@ -24,6 +25,7 @@ import {
   chartsFirstWeek,
   chartsId,
   chartsToday,
+  nightRecord,
   trainingEvent,
 } from '../fixtures/charts';
 
@@ -470,5 +472,80 @@ describe('charts climbing and heart rate', () => {
       }),
     );
     expect(sportWithMostHeartRate(chartsSummary(cyclingWeek, selection), sports)).toBe('cycling');
+  });
+});
+
+describe('charts resting heart rate and HRV', () => {
+  const hrvRecords = (values: (number | null)[], lastNight: string) =>
+    values.map((value, index) =>
+      nightRecord(
+        1500 + index,
+        addDays(lastNight, index - values.length + 1),
+        'hrvMilliseconds',
+        value,
+      ),
+    );
+
+  it('returns each night from 60 days before the period, both metrics on one night', () => {
+    const data = emptyWorkspace();
+    data.health = [
+      nightRecord(1400, addDays(chartsFirstWeek, -60), 'hrvMilliseconds', 52),
+      nightRecord(1401, addDays(chartsFirstWeek, -61), 'hrvMilliseconds', 50),
+      nightRecord(1402, chartsFirstWeek, 'hrvMilliseconds', 55),
+      nightRecord(1403, chartsFirstWeek, 'restingHeartRateBpm', 48, true),
+      nightRecord(1404, addDays(chartsFirstWeek, 1), 'hrvMilliseconds', null),
+      nightRecord(1405, addDays(chartsFirstWeek, 14 * 7), 'hrvMilliseconds', 60),
+    ];
+    expect(chartsSummary(data, selection).nights).toEqual([
+      {
+        date: addDays(chartsFirstWeek, -60),
+        restingHeartRateBpm: null,
+        restingHeartRateMayBeMinimum: false,
+        hrvMilliseconds: 52,
+      },
+      {
+        date: chartsFirstWeek,
+        restingHeartRateBpm: 48,
+        restingHeartRateMayBeMinimum: true,
+        hrvMilliseconds: 55,
+      },
+    ]);
+  });
+
+  it('averages the last 7 nights only from 4 measured nights', () => {
+    const data = emptyWorkspace();
+    data.health = hrvRecords([60, null, null, 65, null, 70, 85], addDays(chartsFirstWeek, 1));
+    const [first, second] = nightRows(chartsSummary(data, selection), 'hrvMilliseconds');
+    expect(first).toMatchObject({ value: 70, average: null, averageLabel: 'Not enough nights' });
+    expect(second).toMatchObject({ value: 85, average: 70, averageLabel: '70 ms' });
+  });
+
+  it('shows a usual range only from 30 nights in the previous 60', () => {
+    const data = emptyWorkspace();
+    data.health = hrvRecords(
+      Array.from({ length: 30 }, (_, index) => (index % 2 ? 60 : 50)),
+      addDays(chartsFirstWeek, -1),
+    );
+    const rows = nightRows(chartsSummary(data, selection), 'hrvMilliseconds');
+    expect(rows[0]).toMatchObject({ usualRange: [51.25, 58.75], usualRangeLabel: '51 to 59 ms' });
+    data.health.shift();
+    expect(nightRows(chartsSummary(data, selection), 'hrvMilliseconds')[0]).toMatchObject({
+      usualRange: null,
+      usualRangeLabel: 'Not enough nights',
+    });
+  });
+
+  it('marks a resting heart rate that Garmin took as the daily minimum', () => {
+    const data = emptyWorkspace();
+    data.health = [
+      nightRecord(1600, chartsFirstWeek, 'restingHeartRateBpm', 47, true),
+      nightRecord(1601, addDays(chartsFirstWeek, 1), 'restingHeartRateBpm', 49),
+    ];
+    const rows = nightRows(chartsSummary(data, selection), 'restingHeartRateBpm');
+    expect(rows.slice(0, 3).map((row) => row.valueLabel)).toEqual([
+      '47 bpm (daily minimum)',
+      '49 bpm',
+      'No measure',
+    ]);
   });
 });

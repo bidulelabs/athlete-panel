@@ -2,6 +2,7 @@ import {
   activitySchema,
   emptyWorkspace,
   eventSchema,
+  healthRecordSchema,
   profileSchema,
   workoutSchema,
 } from '@athlete-panel/contracts';
@@ -131,5 +132,51 @@ export function elevationAndHeartRateWorkspace() {
           : averageHeartRateBySport[item.sport]! + (index % 5) * 2,
     }),
   );
+  return data;
+}
+
+export function nightRecord(
+  id: number,
+  localDate: string,
+  metric: 'restingHeartRateBpm' | 'hrvMilliseconds',
+  value: number | null,
+  restingHeartRateMayBeMinimum = false,
+) {
+  return healthRecordSchema.parse({
+    id: chartsId(id),
+    revision: 1,
+    provider: 'garmin',
+    externalId: `synthetic-night-${id}`,
+    metric,
+    localDate,
+    measuredAt: null,
+    value,
+    provenance: { sourceAccountId: 'synthetic', source: 'garmin', restingHeartRateMayBeMinimum },
+  });
+}
+
+export function nightsWorkspace() {
+  const data = chartsWorkspace();
+  const firstNight = addDays(chartsFirstWeek, -60);
+  for (let day = 0; addDays(firstNight, day) <= chartsToday; day++) {
+    if (day % 9 === 4) continue;
+    const date = addDays(firstNight, day);
+    const illness = date >= '2029-12-18' && date <= '2029-12-23';
+    data.health.push(
+      nightRecord(
+        1000 + day * 2,
+        date,
+        'hrvMilliseconds',
+        58 + ((day * 7) % 11) - 5 - (illness ? 14 : 0),
+      ),
+      nightRecord(
+        1001 + day * 2,
+        date,
+        'restingHeartRateBpm',
+        47 + ((day * 3) % 4) + (illness ? 6 : 0),
+        day % 5 === 0,
+      ),
+    );
+  }
   return data;
 }

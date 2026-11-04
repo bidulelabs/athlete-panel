@@ -5,6 +5,7 @@ import {
   chartsWorkspace,
   elevationAndHeartRateWorkspace,
   mixedSportsWorkspace,
+  nightsWorkspace,
 } from '../fixtures/charts';
 
 const password = process.env.E2E_PASSWORD;
@@ -303,4 +304,39 @@ test('workout heart rate explains an empty period', async ({ page }) => {
   await page.getByRole('button', { name: /^Workout heart rate/ }).click();
   await expect(page.getByRole('heading', { name: 'No heart rate in this period' })).toBeVisible();
   await expect(page.getByText('20 recorded sessions have no average heart rate.')).toBeVisible();
+});
+
+for (const theme of ['dark', 'light'] as const)
+  test(`resting heart rate and HRV show nights, average and usual range (${theme})`, async ({
+    page,
+  }, info) => {
+    await openTrainingHours(page, theme, nightsWorkspace());
+    await page.getByRole('button', { name: 'All templates' }).click();
+    await page.getByRole('button', { name: /^Resting heart rate and HRV/ }).click();
+    const resting = page.getByRole('figure').filter({ hasText: 'Resting heart rate' }).first();
+    const hrv = page.getByRole('figure').filter({ hasText: 'Heart rate variability (HRV)' });
+    await expect(resting.getByRole('list', { name: 'Legend' })).toHaveText(
+      /^Night\s*7-day average\s*Usual range$/,
+    );
+    await expect(resting).toContainText('Garmin reported the lowest heart rate of the day');
+    await hrv.getByText('View values', { exact: true }).click();
+    const night = (date: string) =>
+      hrv.getByRole('row').filter({ has: page.getByRole('cell', { name: date, exact: true }) });
+    await expect(night('20 Dec').getByRole('cell')).toHaveText([
+      '20 Dec',
+      /^\d+ ms$/,
+      /^\d+ ms$/,
+      /^\d+ to \d+ ms$/,
+    ]);
+    await expect(hrv.locator('.recharts-area-area')).toHaveCount(1);
+    await takeScreenshots(page, 'resting-heart-rate-hrv', info.project.name, theme);
+  });
+
+test('resting heart rate and HRV show an empty state without nights', async ({ page }) => {
+  await openTrainingHours(page, 'dark', chartsWorkspace());
+  await page.getByRole('button', { name: 'All templates' }).click();
+  await page.getByRole('button', { name: /^Resting heart rate and HRV/ }).click();
+  await expect(
+    page.getByRole('heading', { name: 'No overnight data in this period' }),
+  ).toBeVisible();
 });

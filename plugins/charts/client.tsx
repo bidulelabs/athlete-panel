@@ -16,6 +16,7 @@ import {
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
+import { RestingHeartRateHrvFigure } from './resting-heart-rate-hrv-figure';
 import { seasonStart } from './season';
 import { TrainingBySportFigure } from './training-by-sport-figure';
 import { TrainingHoursFigure } from './training-hours-figure';
@@ -48,6 +49,12 @@ const templates = [
     title: 'Weekly climbing',
     description: 'See elevation gain per sport, and how steep your running is.',
     Figure: WeeklyClimbingFigure,
+  },
+  {
+    id: 'resting-heart-rate-hrv',
+    title: 'Resting heart rate and HRV',
+    description: 'Compare each night with its 7-day average and your usual range.',
+    Figure: RestingHeartRateHrvFigure,
   },
 ] as const;
 type Template = (typeof templates)[number];

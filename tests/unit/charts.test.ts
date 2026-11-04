@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { chartsSummaryInputSchema, emptyWorkspace } from '@athlete-panel/contracts';
+import {
+  chartsSummaryInputSchema,
+  emptyWorkspace,
+  planSchema,
+  workoutSchema,
+} from '@athlete-panel/contracts';
+import { seasonStart } from '../../plugins/charts/season';
 import { chartsSummary } from '../../plugins/charts/summary';
 import { hasSessions, trainingHoursWeeks } from '../../plugins/charts/training-hours';
 import { addDays, weeklySummary } from '../../plugins/training/public/shared';
@@ -7,6 +13,7 @@ import {
   activity,
   chartsWorkspace,
   chartsFirstWeek,
+  chartsId,
   chartsToday,
   trainingEvent,
 } from '../fixtures/charts';
@@ -89,5 +96,37 @@ describe('charts weekly summary', () => {
       expect(chartsSummaryInputSchema.safeParse({ weekStart: chartsToday, weeks }).success).toBe(
         false,
       );
+  });
+});
+
+describe('charts season', () => {
+  const planWithLastDay = (id: number, startDate: string, lastDay: number) => {
+    const data = emptyWorkspace();
+    data.plans = [
+      planSchema.parse({ id: chartsId(id), revision: 1, title: 'Spring trail', startDate }),
+    ];
+    data.workouts = [
+      workoutSchema.parse({
+        id: chartsId(id + 1),
+        revision: 1,
+        title: 'Long run',
+        sport: 'running',
+        schedule: { kind: 'plan', planId: chartsId(id), day: lastDay },
+      }),
+    ];
+    return data;
+  };
+
+  it('starts on the start date of the plan running today', () => {
+    expect(seasonStart(planWithLastDay(800, '2029-11-05', 120), chartsToday)).toBe('2029-11-05');
+  });
+
+  it('starts on 1 January without a plan', () => {
+    expect(seasonStart(emptyWorkspace(), chartsToday)).toBe('2030-01-01');
+  });
+
+  it('starts on 1 January when the plan starts later or has already ended', () => {
+    expect(seasonStart(planWithLastDay(810, '2030-02-01', 120), chartsToday)).toBe('2030-01-01');
+    expect(seasonStart(planWithLastDay(820, '2029-09-03', 60), chartsToday)).toBe('2030-01-01');
   });
 });

@@ -14,7 +14,7 @@ Requirement source: [issue #79](https://github.com/bidulelabs/athlete-panel/issu
 - **Charts** is a built-in, optional plugin with one page. It opens on a template list; choosing a template opens that chart, and **All templates** returns to the list.
 - **Training hours** shows recorded hours per week as bars and planned hours per week as a dashed line. Each `race` event in the period is a vertical line in the event colour with its title; goals and other events are not drawn.
 - Weeks are the Calendar's weeks: the same week start preference, the same planned and recorded duration totals (the Calendar [weekly summary](training-workspace.md) calculation, run on the server for every week), and the same duration format.
-- **Period** offers the last 4, 12 or 52 weeks ending with the current week, or custom dates. Custom dates expand to whole weeks and accept at most 53 weeks; an end date before the start date shows an error and sends no request.
+- **Period** offers the last 4, 12 or 52 weeks ending with the current week, **This season**, or custom dates. This season runs from the start date of the active training plan to the current week; a plan is active when today falls between its start date and its last planned day, and the latest start wins when several are. Without an active plan (none, not started yet, or already ended), the season starts on 1 January. A season longer than 53 weeks shows the same error as custom dates. Custom dates expand to whole weeks and accept at most 53 weeks; an end date before the start date shows an error and sends no request.
 - A week with no recorded session is a measured zero: no bar above the axis and `0m` in the table. A week whose recorded sessions all lack a duration shows no bar and **Duration missing**. A partly measured week shows the known sum with how many sessions lack a duration. A week without planned sessions has no point on the planned line and reads **No plan**.
 - The current week is marked **in progress**: its bar is drawn as an outline. Weeks after today show no recorded value and read **Upcoming**.
 - A period with no planned and no recorded session shows an empty state instead of empty axes.
@@ -31,6 +31,7 @@ Requirement source: [issue #79](https://github.com/bidulelabs/athlete-panel/issu
 | Current week, later week, week without plan | **(in progress)**; **Upcoming**; **No plan** | Unit and browser tests |
 | Race, goal and race outside the period | Only the race inside the period is drawn and listed | Unit tests |
 | Empty period | Empty state, no figure | Browser tests |
+| Active plan; no plan; plan starting later or already ended | Season from the plan start; from 1 January; from 1 January | Unit and browser tests |
 | Custom dates, then a reversed range | Request for the covering whole weeks; then an error and no request | Browser tests |
 | Keyboard on the chart | Arrow key shows the week's values in the tooltip | Browser tests |
 | Desktop, Pixel 7 and 320px, both themes | No page-level horizontal scroll; the table scrolls inside its own region | Browser tests and screenshots |

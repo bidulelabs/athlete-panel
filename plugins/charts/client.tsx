@@ -20,6 +20,7 @@ import {
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
+import { seasonStart } from './season';
 import { TrainingHoursFigure } from './training-hours-figure';
 import './charts.css';
 
@@ -36,6 +37,7 @@ const periods = {
   '4': 'Last 4 weeks',
   '12': 'Last 12 weeks',
   '52': 'Last 52 weeks',
+  season: 'This season',
   custom: 'Custom dates',
 } as const;
 type Period = keyof typeof periods;
@@ -45,10 +47,12 @@ const weekCount = (from: string, to: string) =>
 
 export default function ChartsPage({ data, request }: PluginPageProps) {
   const [template, setTemplate] = useState<Template | null>(null);
+  const today = localDate(new Date(), data.profile?.timezone);
   return template ? (
     <TemplatePage
       template={template}
-      today={localDate(new Date(), data.profile?.timezone)}
+      today={today}
+      season={seasonStart(data, today)}
       request={request}
       onBack={() => setTemplate(null)}
     />
@@ -82,11 +86,13 @@ export default function ChartsPage({ data, request }: PluginPageProps) {
 function TemplatePage({
   template,
   today,
+  season,
   request,
   onBack,
 }: {
   template: Template;
   today: string;
+  season: string;
   request: PluginPageProps['request'];
   onBack: () => void;
 }) {
@@ -99,16 +105,23 @@ function TemplatePage({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const selection: ChartsSummaryInput | string = useMemo(() => {
-    if (period !== 'custom')
-      return { weekStart: addDays(currentWeek, -7 * (Number(period) - 1)), weeks: Number(period) };
-    if (!customFrom || !customTo || customTo < customFrom)
+    if (period === 'custom' && (!customFrom || !customTo || customTo < customFrom))
       return 'Choose an end date on or after the start date.';
-    const weekStart = startOfWeek(customFrom, weekStartsOn);
-    const weeks = weekCount(weekStart, startOfWeek(customTo, weekStartsOn));
+    const from =
+      period === 'custom'
+        ? customFrom
+        : period === 'season'
+          ? season
+          : addDays(currentWeek, -7 * (Number(period) - 1));
+    const weekStart = startOfWeek(from, weekStartsOn);
+    const weeks = weekCount(
+      weekStart,
+      period === 'custom' ? startOfWeek(customTo, weekStartsOn) : currentWeek,
+    );
     return weeks > chartsMaxWeeks
       ? `Choose a period of at most ${chartsMaxWeeks} weeks.`
       : { weekStart, weeks };
-  }, [period, currentWeek, customFrom, customTo, weekStartsOn]);
+  }, [period, currentWeek, season, customFrom, customTo, weekStartsOn]);
   useEffect(() => {
     if (typeof selection === 'string') return;
     let current = true;

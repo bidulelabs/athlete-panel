@@ -332,7 +332,7 @@ describe('charts climbing and heart rate', () => {
       knownCount: 2,
       missingCount: 0,
     });
-    expect(summary.activities.map(({ sport, date }) => [sport, date])).toEqual([
+    expect(summary.sessions.map(({ sport, date }) => [sport, date])).toEqual([
       ['running', '2029-10-23'],
       ['running', '2029-10-24'],
       ['cycling', '2029-10-25'],
@@ -372,6 +372,47 @@ describe('charts climbing and heart rate', () => {
       elevationLabelBySport: { running: '656 ft (1 of 2 sessions without elevation)' },
       runningClimbLabel: '70 ft/mi (partial)',
     });
+  });
+
+  it('lists a manual session on its performed date without heart rate, and a linked workout once', () => {
+    const data = climbingData();
+    const completedWorkout = (id: number, completion: Record<string, unknown>) =>
+      workoutSchema.parse({
+        id: chartsId(id),
+        revision: 1,
+        title: `Synthetic workout ${id}`,
+        sport: 'running',
+        schedule: { kind: 'independent', date: addDays(chartsFirstWeek, 4) },
+        durationSeconds: 3600,
+        completion: {
+          status: 'completed',
+          durationSeconds: 2700,
+          distanceMeters: 8000,
+          rpe: null,
+          reason: '',
+          ...completion,
+        },
+      });
+    data.workouts = [
+      completedWorkout(920, {
+        source: 'manual',
+        activityId: null,
+        performedDate: addDays(chartsFirstWeek, 5),
+      }),
+      completedWorkout(921, {
+        source: 'garmin',
+        activityId: chartsId(900),
+        performedDate: addDays(chartsFirstWeek, 1),
+      }),
+    ];
+    const summary = chartsSummary(data, selection);
+    const running = heartRateSessions(summary, 'running', minutes);
+    expect(running.map(({ id, date, heartRateLabel }) => [id, date, heartRateLabel])).toEqual([
+      [chartsId(900), '2029-10-23', '150 bpm'],
+      [chartsId(901), '2029-10-24', 'No heart rate'],
+      [chartsId(920), '2029-10-27', 'No heart rate'],
+      [chartsId(903), '2029-10-30', '148 bpm'],
+    ]);
   });
 
   it('picks the sport with the most heart rate sessions and keeps sessions without heart rate in the table', () => {

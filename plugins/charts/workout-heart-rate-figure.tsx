@@ -25,8 +25,8 @@ export function WorkoutHeartRateFigure({
   if (!sports.length)
     return (
       <EmptyState icon={<HeartPulse size={25} />} title="No heart rate in this period">
-        {summary.activities.length
-          ? `${summary.activities.length} recorded sessions have no average heart rate.`
+        {summary.sessions.length
+          ? `${summary.sessions.length} recorded sessions have no average heart rate.`
           : 'Recorded sessions with an average heart rate will appear here.'}
       </EmptyState>
     );

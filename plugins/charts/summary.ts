@@ -24,7 +24,7 @@ function addMetricTotals(a: MetricTotal, b: MetricTotal): MetricTotal {
   };
 }
 
-const toChartsSport = (item: SportSelection & { sport: string }): ChartsSport =>
+const toChartsSport = (item: SportSelection): ChartsSport =>
   !isUnresolvedActivitySport(item) && chartsSports.includes(item.sport as ChartsSport)
     ? (item.sport as ChartsSport)
     : 'other';
@@ -43,14 +43,32 @@ function sumBySport(
   return bySport;
 }
 
+type CalendarWeek = ReturnType<typeof weeklySummary>;
+
 export function chartsSummary(
   state: WorkspaceState,
   { weekStart, weeks }: ChartsSummaryInput,
 ): ChartsSummary {
   const lastDay = addDays(weekStart, weeks * 7 - 1);
+  const activitiesById = new Map(state.activities.map((activity) => [activity.id, activity]));
+  const workoutsById = new Map(state.workouts.map((workout) => [workout.id, workout]));
+  const recordedSessions = (week: CalendarWeek) =>
+    week.recordedSessions.map((session) => {
+      const activity = session.kind === 'activity' ? activitiesById.get(session.id)! : null;
+      return {
+        id: session.id,
+        date: session.localDate,
+        title: session.title,
+        sport: toChartsSport(activity ?? workoutsById.get(session.id)!),
+        averageHeartRateBpm: activity?.averageHeartRateBpm ?? null,
+        durationSeconds: session.durationSeconds,
+      };
+    });
+  const calendarWeeks = Array.from({ length: weeks }, (_, index) =>
+    weeklySummary(state, addDays(weekStart, index * 7)),
+  );
   return {
-    weeks: Array.from({ length: weeks }, (_, index) => {
-      const week = weeklySummary(state, addDays(weekStart, index * 7));
+    weeks: calendarWeeks.map((week) => {
       return {
         weekStart: week.startDate,
         plannedSeconds: week.planned.durationSeconds,
@@ -73,16 +91,6 @@ export function chartsSummary(
       .filter((event) => event.kind === 'race' && event.date >= weekStart && event.date <= lastDay)
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
       .map(({ id, date, title }) => ({ id, date, title })),
-    activities: state.activities
-      .filter((activity) => activity.localDate >= weekStart && activity.localDate <= lastDay)
-      .sort((a, b) => a.localDate.localeCompare(b.localDate) || a.id.localeCompare(b.id))
-      .map((activity) => ({
-        id: activity.id,
-        date: activity.localDate,
-        title: activity.title,
-        sport: toChartsSport(activity),
-        averageHeartRateBpm: activity.averageHeartRateBpm,
-        durationSeconds: activity.durationSeconds,
-      })),
+    sessions: calendarWeeks.flatMap(recordedSessions),
   };
 }

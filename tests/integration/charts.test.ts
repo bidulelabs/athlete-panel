@@ -73,7 +73,7 @@ it('returns elevation, running distance and heart rate sessions from stored acti
     recordedElevationMetersBySport: { running: { value: 250, knownCount: 1, missingCount: 0 } },
     recordedRunningDistanceMeters: { value: 10000, knownCount: 1, missingCount: 0 },
   });
-  expect(summary.activities).toEqual([
+  expect(summary.sessions).toEqual([
     {
       id: chartsId(6),
       date: '2029-01-10',

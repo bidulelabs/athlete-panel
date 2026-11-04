@@ -29496,7 +29496,7 @@
                 "additionalProperties": false
               }
             },
-            "activities": {
+            "sessions": {
               "type": "array",
               "items": {
                 "type": "object",
@@ -29552,7 +29552,7 @@
           "required": [
             "weeks",
             "races",
-            "activities"
+            "sessions"
           ],
           "additionalProperties": false
         }

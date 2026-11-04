@@ -1,19 +1,19 @@
 import {
   chartsSports,
-  type ChartsActivity,
+  type ChartsSession,
   type ChartsSport,
   type ChartsSummary,
 } from '@athlete-panel/contracts';
 
-export type HeartRateSession = ChartsActivity & {
+export type HeartRateSession = ChartsSession & {
   time: number;
   heartRateLabel: string;
   durationLabel: string;
 };
 
 const heartRateSessionCount = (summary: ChartsSummary, sport: ChartsSport) =>
-  summary.activities.filter(
-    (activity) => activity.sport === sport && activity.averageHeartRateBpm !== null,
+  summary.sessions.filter(
+    (session) => session.sport === sport && session.averageHeartRateBpm !== null,
   ).length;
 
 export const sportsWithHeartRate = (summary: ChartsSummary) =>
@@ -31,16 +31,16 @@ export function heartRateSessions(
   sport: ChartsSport,
   format: (seconds: number) => string,
 ): HeartRateSession[] {
-  return summary.activities
-    .filter((activity) => activity.sport === sport)
-    .map((activity) => ({
-      ...activity,
-      time: Date.parse(`${activity.date}T12:00:00Z`),
+  return summary.sessions
+    .filter((session) => session.sport === sport)
+    .map((session) => ({
+      ...session,
+      time: Date.parse(`${session.date}T12:00:00Z`),
       heartRateLabel:
-        activity.averageHeartRateBpm === null
+        session.averageHeartRateBpm === null
           ? 'No heart rate'
-          : `${Math.round(activity.averageHeartRateBpm)} bpm`,
+          : `${Math.round(session.averageHeartRateBpm)} bpm`,
       durationLabel:
-        activity.durationSeconds === null ? 'Duration missing' : format(activity.durationSeconds),
+        session.durationSeconds === null ? 'Duration missing' : format(session.durationSeconds),
     }));
 }

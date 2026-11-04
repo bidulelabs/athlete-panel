@@ -24,7 +24,7 @@ export const chartsWeekSchema = z.object({
   recordedRunningDistanceMeters: historyMeasureSchema,
 });
 export const chartsRaceSchema = z.object({ id: idSchema, date: dateSchema, title: z.string() });
-export const chartsActivitySchema = z.object({
+export const chartsSessionSchema = z.object({
   id: idSchema,
   date: dateSchema,
   title: z.string(),
@@ -35,8 +35,8 @@ export const chartsActivitySchema = z.object({
 export const chartsSummarySchema = z.object({
   weeks: z.array(chartsWeekSchema),
   races: z.array(chartsRaceSchema),
-  activities: z.array(chartsActivitySchema),
+  sessions: z.array(chartsSessionSchema),
 });
 export type ChartsSummaryInput = z.infer<typeof chartsSummaryInputSchema>;
 export type ChartsSummary = z.infer<typeof chartsSummarySchema>;
-export type ChartsActivity = z.infer<typeof chartsActivitySchema>;
+export type ChartsSession = z.infer<typeof chartsSessionSchema>;

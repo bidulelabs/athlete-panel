@@ -552,6 +552,41 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     await connection()`update activity_records.records set data = data - 'elevationLossMeters' - 'maxHeartRateBpm' - 'heartRateZoneSeconds' where kind='activity'`;
     const before = (await loadWorkspace()).activities[0];
     expect(before).not.toHaveProperty('elevationLossMeters');
+    const workoutId = randomUUID();
+    await mutate({
+      idempotencyKey: randomUUID(),
+      commands: [
+        {
+          action: 'workout.create',
+          values: {
+            id: workoutId,
+            title: 'Planned ride',
+            sport: 'cycling',
+            schedule: { kind: 'independent', date: day },
+          },
+        },
+        { action: 'workout.link', id: workoutId, expectedRevision: 1, activityId: before.id },
+      ],
+    });
+    const refreshActivities = async () => {
+      await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null where plugin_id='garmin'`;
+      await sync({ mode: 'full', from: day, to: day, scope: 'activities' });
+      await takeStep();
+      await takeStep();
+      await takeStep();
+      return loadWorkspace();
+    };
+
+    let state = await refreshActivities();
+    expect(state.activities[0]).toMatchObject({
+      id: before.id,
+      revision: before.revision + 1,
+      elevationLossMeters: null,
+      maxHeartRateBpm: null,
+      heartRateZoneSeconds: null,
+    });
+    expect(state.workouts[0].revision).toBe(1);
+
     activities = [
       activityRow({
         elevationLoss: 640,
@@ -563,19 +598,22 @@ describe('durable Garmin worker with synthetic Personal API', () => {
         hrTimeInZone_5: 0,
       }),
     ];
-    await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null where plugin_id='garmin'`;
-    await sync({ mode: 'full', from: day, to: day, scope: 'activities' });
-    await takeStep();
-    await takeStep();
-    await takeStep();
-    const state = await loadWorkspace();
+    state = await refreshActivities();
     expect(state.activities).toHaveLength(1);
     expect(state.activities[0]).toMatchObject({
       id: before.id,
-      revision: before.revision + 1,
+      revision: before.revision + 2,
       elevationLossMeters: 640,
       maxHeartRateBpm: 181,
       heartRateZoneSeconds: [900, 1800, 700, 200, 0],
+    });
+    expect(state.workouts[0].revision).toBe(1);
+
+    activities = [activityRow({ duration: 4200 })];
+    state = await refreshActivities();
+    expect(state.workouts[0]).toMatchObject({
+      revision: 2,
+      completion: { durationSeconds: 4200 },
     });
   });
 

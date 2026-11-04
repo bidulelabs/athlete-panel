@@ -70,6 +70,15 @@
 .charts-filters input {
   min-height: 44px;
 }
+.charts-sport-filter {
+  padding-top: 16px;
+}
+.charts-sport-filter .field {
+  width: min(100%, 180px);
+}
+.charts-sport-filter select {
+  min-height: 44px;
+}
 .charts-figure {
   margin: 0;
   padding: 24px 0;

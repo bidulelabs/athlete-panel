@@ -1,7 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 import { chartsSummaryInputSchema, emptyWorkspace } from '@athlete-panel/contracts';
 import { chartsSummary } from '../../plugins/charts/summary';
-import { chartsWorkspace, mixedSportsWorkspace } from '../fixtures/charts';
+import {
+  chartsWorkspace,
+  elevationAndHeartRateWorkspace,
+  mixedSportsWorkspace,
+} from '../fixtures/charts';
 
 const password = process.env.E2E_PASSWORD;
 if (!password) throw new Error('Set E2E_PASSWORD for the isolated synthetic instance.');
@@ -211,4 +215,92 @@ test('training by sport lists the sports of the focused week in its tooltip', as
   await expect(page.locator('.charts-tooltip')).toHaveText(
     'Week of 12 NovRunning3h 30mCycling3h 30mRecorded7hPlanned7h',
   );
+});
+
+async function openChartTemplate(page: Page, theme: 'dark' | 'light', name: string) {
+  await openTrainingHours(page, theme, elevationAndHeartRateWorkspace());
+  await page.getByRole('button', { name: 'All templates' }).click();
+  await page.getByRole('button', { name: new RegExp(`^${name}`) }).click();
+}
+async function takeWholePageScreenshot(page: Page, path: string) {
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({
+    width: viewport.width,
+    height: await page.evaluate(() => document.documentElement.scrollHeight),
+  });
+  await page.waitForTimeout(500);
+  await page.screenshot({ path });
+  await page.setViewportSize(viewport);
+}
+async function takeScreenshots(page: Page, name: string, project: string, theme: string) {
+  await page.mouse.move(-1, -1);
+  await takeWholePageScreenshot(page, `.runtime/charts/${name}-${project}-${theme}.png`);
+  if (project !== 'mobile') return;
+  await page.setViewportSize({ width: 320, height: 900 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await takeWholePageScreenshot(page, `.runtime/charts/${name}-320-${theme}.png`);
+}
+
+for (const theme of ['dark', 'light'] as const)
+  test(`weekly climbing shows elevation per sport and running climb (${theme})`, async ({
+    page,
+  }, info) => {
+    await openChartTemplate(page, theme, 'Weekly climbing');
+    const elevation = page
+      .getByRole('figure')
+      .filter({ hasText: 'Weekly elevation gain by sport' });
+    const climb = page.getByRole('figure').filter({ hasText: 'Running climb per kilometre' });
+    await expect(elevation.getByRole('list', { name: 'Legend' })).toHaveText(
+      /^Running\s*Cycling\s*Winter sports\s*Hiking\s*Race$/,
+    );
+    await expect(elevation.locator('.recharts-bar-rectangle')).toHaveCount(16);
+    await expect(climb.locator('.recharts-line-dots circle')).toHaveCount(7);
+    await elevation.getByText('View values', { exact: true }).click();
+    await expect(elevation.getByRole('columnheader')).toHaveText([
+      'Week',
+      'Running',
+      'Cycling',
+      'Winter sports',
+      'Hiking',
+      'Races',
+    ]);
+    await expect(valueRow(page, 'Week of 12 Nov').first().getByRole('cell').nth(1)).toHaveText(
+      'Elevation missing',
+    );
+    await climb.getByText('View values', { exact: true }).click();
+    const climbRow = (week: string) =>
+      climb.getByRole('row').filter({ has: page.getByRole('cell', { name: week, exact: true }) });
+    await expect(climbRow('Week of 5 Nov').getByRole('cell').nth(1)).toHaveText('No running');
+    await expect(climbRow('Week of 12 Nov').getByRole('cell').nth(1)).toHaveText('Not measured');
+    await expect(climbRow('Week of 29 Oct').getByRole('cell').nth(1)).toHaveText(/^\d+ m\/km$/);
+    await takeScreenshots(page, 'weekly-climbing', info.project.name, theme);
+  });
+
+for (const theme of ['dark', 'light'] as const)
+  test(`workout heart rate shows one sport at a time (${theme})`, async ({ page }, info) => {
+    await openChartTemplate(page, theme, 'Workout heart rate');
+    const sport = page.getByRole('combobox', { name: 'Sport' });
+    await expect(sport).toHaveValue('running');
+    const figure = page.getByRole('figure');
+    await expect(
+      figure.getByRole('heading', { name: 'Running heart rate per session' }),
+    ).toBeVisible();
+    await expect(figure.locator('.recharts-scatter-symbol')).toHaveCount(8);
+    await figure.getByText('View values', { exact: true }).click();
+    await expect(
+      figure.getByRole('row').filter({ hasText: '30 Oct' }).getByRole('cell').nth(2),
+    ).toHaveText('No heart rate');
+    await takeScreenshots(page, 'workout-heart-rate', info.project.name, theme);
+    await sport.selectOption('cycling');
+    await expect(
+      figure.getByRole('heading', { name: 'Cycling heart rate per session' }),
+    ).toBeVisible();
+  });
+
+test('workout heart rate explains an empty period', async ({ page }) => {
+  await openTrainingHours(page, 'dark', mixedSportsWorkspace());
+  await page.getByRole('button', { name: 'All templates' }).click();
+  await page.getByRole('button', { name: /^Workout heart rate/ }).click();
+  await expect(page.getByRole('heading', { name: 'No heart rate in this period' })).toBeVisible();
+  await expect(page.getByText('20 recorded sessions have no average heart rate.')).toBeVisible();
 });

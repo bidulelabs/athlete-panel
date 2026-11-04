@@ -59,11 +59,30 @@ export function chartsSummary(
           week.sportBreakdown,
           (recorded) => recorded.durationSeconds,
         ),
+        recordedElevationMetersBySport: sumBySport(
+          week.sportBreakdown,
+          (recorded) => recorded.elevationMeters,
+        ),
+        recordedRunningDistanceMeters: sumBySport(
+          week.sportBreakdown,
+          (recorded) => recorded.distanceMeters,
+        ).running,
       };
     }),
     races: state.events
       .filter((event) => event.kind === 'race' && event.date >= weekStart && event.date <= lastDay)
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
       .map(({ id, date, title }) => ({ id, date, title })),
+    activities: state.activities
+      .filter((activity) => activity.localDate >= weekStart && activity.localDate <= lastDay)
+      .sort((a, b) => a.localDate.localeCompare(b.localDate) || a.id.localeCompare(b.id))
+      .map((activity) => ({
+        id: activity.id,
+        date: activity.localDate,
+        title: activity.title,
+        sport: toChartsSport(activity),
+        averageHeartRateBpm: activity.averageHeartRateBpm,
+        durationSeconds: activity.durationSeconds,
+      })),
   };
 }

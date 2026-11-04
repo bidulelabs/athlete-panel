@@ -20,11 +20,23 @@ export const chartsWeekSchema = z.object({
   plannedSeconds: historyMeasureSchema,
   recordedSeconds: historyMeasureSchema,
   recordedSecondsBySport: z.record(z.enum(chartsSports), historyMeasureSchema),
+  recordedElevationMetersBySport: z.record(z.enum(chartsSports), historyMeasureSchema),
+  recordedRunningDistanceMeters: historyMeasureSchema,
 });
 export const chartsRaceSchema = z.object({ id: idSchema, date: dateSchema, title: z.string() });
+export const chartsActivitySchema = z.object({
+  id: idSchema,
+  date: dateSchema,
+  title: z.string(),
+  sport: z.enum(chartsSports),
+  averageHeartRateBpm: z.number().nullable(),
+  durationSeconds: z.number().nullable(),
+});
 export const chartsSummarySchema = z.object({
   weeks: z.array(chartsWeekSchema),
   races: z.array(chartsRaceSchema),
+  activities: z.array(chartsActivitySchema),
 });
 export type ChartsSummaryInput = z.infer<typeof chartsSummaryInputSchema>;
 export type ChartsSummary = z.infer<typeof chartsSummarySchema>;
+export type ChartsActivity = z.infer<typeof chartsActivitySchema>;

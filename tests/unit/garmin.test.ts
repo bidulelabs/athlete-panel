@@ -287,6 +287,93 @@ describe('Garmin normalization', () => {
     );
     expect(() => normalizeActivities([activity({ startTimeGMT: undefined })])).toThrow(GarminError);
   });
+  it('keeps elevation loss, max heart rate and time in heart-rate zones when Garmin sends them', () => {
+    expect(
+      normalizeActivities([
+        activity({
+          elevationLoss: 812.4,
+          maxHR: 178,
+          hrTimeInZone_1: 600.5,
+          hrTimeInZone_2: 1200,
+          hrTimeInZone_3: 300,
+          hrTimeInZone_4: 0,
+          hrTimeInZone_5: 0,
+        }),
+      ])[0],
+    ).toMatchObject({
+      elevationLossMeters: 812.4,
+      maxHeartRateBpm: 178,
+      heartRateZoneSeconds: [600.5, 1200, 300, 0, 0],
+    });
+  });
+  it('stores null, not zero, when Garmin omits elevation loss, max heart rate or zones', () => {
+    expect(normalizeActivities([activity()])[0]).toMatchObject({
+      elevationLossMeters: null,
+      maxHeartRateBpm: null,
+      heartRateZoneSeconds: null,
+    });
+    expect(
+      normalizeActivities([
+        activity({ elevationLoss: null, maxHR: null, hrTimeInZone_1: null }),
+      ])[0],
+    ).toMatchObject({
+      elevationLossMeters: null,
+      maxHeartRateBpm: null,
+      heartRateZoneSeconds: null,
+    });
+  });
+  it('keeps a zero from Garmin as 0, not null', () => {
+    expect(
+      normalizeActivities([
+        activity({
+          elevationLoss: 0,
+          hrTimeInZone_1: 0,
+          hrTimeInZone_2: 0,
+          hrTimeInZone_3: 0,
+          hrTimeInZone_4: 0,
+          hrTimeInZone_5: 0,
+        }),
+      ])[0],
+    ).toMatchObject({
+      elevationLossMeters: 0,
+      maxHeartRateBpm: null,
+      heartRateZoneSeconds: [0, 0, 0, 0, 0],
+    });
+  });
+  it('keeps the zones Garmin sends and leaves the missing ones null', () => {
+    expect(
+      normalizeActivities([
+        activity({ hrTimeInZone_1: 900, hrTimeInZone_2: 0, hrTimeInZone_6: 50 }),
+      ])[0].heartRateZoneSeconds,
+    ).toEqual([900, 0, null, null, null]);
+    expect(
+      normalizeActivities([activity({ hrTimeInZone_5: 120 })])[0].heartRateZoneSeconds,
+    ).toEqual([null, null, null, null, 120]);
+  });
+  it('stores null for negative or non-numeric elevation loss, max heart rate and zone values', () => {
+    expect(
+      normalizeActivities([
+        activity({
+          elevationLoss: -12,
+          maxHR: 'fast',
+          hrTimeInZone_1: -1,
+          hrTimeInZone_2: '300',
+          hrTimeInZone_3: true,
+          hrTimeInZone_4: { seconds: 10 },
+          hrTimeInZone_5: '1e9',
+        }),
+      ])[0],
+    ).toMatchObject({
+      elevationLossMeters: null,
+      maxHeartRateBpm: null,
+      heartRateZoneSeconds: [null, 300, null, null, null],
+    });
+    expect(
+      normalizeActivities([
+        activity({ maxHR: [180], hrTimeInZone_1: 'NaN', hrTimeInZone_2: -0.5 }),
+      ])[0],
+    ).toMatchObject({ maxHeartRateBpm: null, heartRateZoneSeconds: null });
+  });
   it('normalizes selected sleep duration/stages/score while retaining unknowns and known zero', () => {
     const rows = normalizeHealth('sleep', [
       {

@@ -127,6 +127,13 @@ export function assertAccountBinding(expected: string | null, ids: string[]): st
   return expected ?? ids[0] ?? null;
 }
 
+function readHeartRateZoneSeconds(row: Row): (number | null)[] | null {
+  const secondsPerZone = [1, 2, 3, 4, 5].map((zoneNumber) =>
+    knownNumber(row[`hrTimeInZone_${zoneNumber}`]),
+  );
+  return secondsPerZone.some((seconds) => seconds !== null) ? secondsPerZone : null;
+}
+
 export function normalizeActivities(payload: unknown, timeZone = 'UTC'): ImportedActivity[] {
   return array(payload).map((row) => {
     const externalId = providerId(row.activityId);
@@ -163,7 +170,10 @@ export function normalizeActivities(payload: unknown, timeZone = 'UTC'): Importe
       durationSeconds: knownNumber(row.duration),
       distanceMeters: knownNumber(row.distance),
       elevationMeters: knownNumber(row.elevationGain),
+      elevationLossMeters: knownNumber(row.elevationLoss),
       averageHeartRateBpm: knownNumber(row.averageHR),
+      maxHeartRateBpm: knownNumber(row.maxHR),
+      heartRateZoneSeconds: readHeartRateZoneSeconds(row),
     };
   });
 }

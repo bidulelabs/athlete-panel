@@ -546,6 +546,39 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     expect(state.workouts[0].revision).toBe(2);
   });
 
+  it('fills elevation loss, max heart rate and zones on an older activity through an activities refresh', async () => {
+    await bootstrap();
+    await takeStep();
+    await connection()`update activity_records.records set data = data - 'elevationLossMeters' - 'maxHeartRateBpm' - 'heartRateZoneSeconds' where kind='activity'`;
+    const before = (await loadWorkspace()).activities[0];
+    expect(before).not.toHaveProperty('elevationLossMeters');
+    activities = [
+      activityRow({
+        elevationLoss: 640,
+        maxHR: 181,
+        hrTimeInZone_1: 900,
+        hrTimeInZone_2: 1800,
+        hrTimeInZone_3: 700,
+        hrTimeInZone_4: 200,
+        hrTimeInZone_5: 0,
+      }),
+    ];
+    await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null where plugin_id='garmin'`;
+    await sync({ mode: 'full', from: day, to: day, scope: 'activities' });
+    await takeStep();
+    await takeStep();
+    await takeStep();
+    const state = await loadWorkspace();
+    expect(state.activities).toHaveLength(1);
+    expect(state.activities[0]).toMatchObject({
+      id: before.id,
+      revision: before.revision + 1,
+      elevationLossMeters: 640,
+      maxHeartRateBpm: 181,
+      heartRateZoneSeconds: [900, 1800, 700, 200, 0],
+    });
+  });
+
   it.each(['activities', 'health', 'both'] as const)(
     'rejects unbounded %s refreshes before changing recovery state or queuing work',
     async (scope) => {

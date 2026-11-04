@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
+  activitySchema,
   agentCommandSchema,
   agentCommandsSchema,
   commandSchema,
@@ -38,6 +39,37 @@ describe('versioned domain contracts', () => {
       expect(commandSchema.safeParse(create(value)).success).toBe(true);
     for (const value of [-1, NaN, Infinity, '3600', ''])
       expect(commandSchema.safeParse(create(value)).success).toBe(false);
+  });
+  it('reads activities imported before elevation loss, max heart rate and zones were kept', () => {
+    const imported = {
+      id,
+      revision: 1,
+      provider: 'garmin',
+      externalId: '1',
+      title: 'Ride',
+      sport: 'cycling',
+      startedAt: '2026-10-24T06:00:00.000Z',
+      localDate: '2026-10-24',
+      dateSource: 'provider',
+      durationSeconds: 3600,
+      distanceMeters: null,
+      elevationMeters: null,
+      averageHeartRateBpm: null,
+    };
+    expect(activitySchema.safeParse(imported).success).toBe(true);
+    for (const heartRateZoneSeconds of [null, [0, 0, 0, 0, 0], [60, null, null, null, null]])
+      expect(activitySchema.safeParse({ ...imported, heartRateZoneSeconds }).success).toBe(true);
+    for (const heartRateZoneSeconds of [
+      [],
+      [60, 60, 60, 60],
+      [60, 60, 60, 60, 60, 60],
+      [-1, 0, 0, 0, 0],
+    ])
+      expect(activitySchema.safeParse({ ...imported, heartRateZoneSeconds }).success).toBe(false);
+    for (const field of ['elevationLossMeters', 'maxHeartRateBpm']) {
+      expect(activitySchema.safeParse({ ...imported, [field]: 0 }).success).toBe(true);
+      expect(activitySchema.safeParse({ ...imported, [field]: -1 }).success).toBe(false);
+    }
   });
   it('prohibits conflicting scheduling representations', () => {
     expect(

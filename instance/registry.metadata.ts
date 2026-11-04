@@ -168,12 +168,12 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "2.1.0",
+    "version": "2.2.0",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "hostApi": "^1.2.0",
       "dependencies": {
         "activity-records": "^2.0.0"

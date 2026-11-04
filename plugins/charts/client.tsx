@@ -139,8 +139,8 @@ function TemplatePage({
     );
     return weeks > chartsMaxWeeks
       ? `Choose a period of at most ${chartsMaxWeeks} weeks.`
-      : { weekStart, weeks };
-  }, [period, currentWeek, season, customFrom, customTo, weekStartsOn]);
+      : { template: template.id, weekStart, weeks };
+  }, [template.id, period, currentWeek, season, customFrom, customTo, weekStartsOn]);
   const chart = useChartsSummary(typeof selection === 'string' ? null : selection);
   return (
     <>

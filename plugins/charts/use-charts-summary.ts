@@ -14,7 +14,8 @@ export function useChartsSummary(selection: ChartsSummaryInput | null) {
     error?: string;
   } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const requestKey = selection && `${selection.weekStart}:${selection.weeks}:${retryCount}`;
+  const requestKey =
+    selection && `${selection.template}:${selection.weekStart}:${selection.weeks}:${retryCount}`;
   useEffect(() => {
     if (requestKey === null) return;
     const controller = new AbortController();

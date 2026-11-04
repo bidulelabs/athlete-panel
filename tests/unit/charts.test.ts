@@ -30,7 +30,7 @@ import {
 } from '../fixtures/charts';
 
 const minutes = (seconds: number) => `${seconds / 60}m`;
-const selection = { weekStart: chartsFirstWeek, weeks: 14 };
+const selection = { template: 'training-hours', weekStart: chartsFirstWeek, weeks: 14 } as const;
 
 describe('charts weekly summary', () => {
   it('returns the same planned and recorded duration as each Calendar week', () => {
@@ -107,13 +107,9 @@ describe('charts weekly summary', () => {
 
   it('accepts one to 53 weeks', () => {
     for (const weeks of [1, 53])
-      expect(chartsSummaryInputSchema.safeParse({ weekStart: chartsToday, weeks }).success).toBe(
-        true,
-      );
+      expect(chartsSummaryInputSchema.safeParse({ ...selection, weeks }).success).toBe(true);
     for (const weeks of [0, 54, 1.5])
-      expect(chartsSummaryInputSchema.safeParse({ weekStart: chartsToday, weeks }).success).toBe(
-        false,
-      );
+      expect(chartsSummaryInputSchema.safeParse({ ...selection, weeks }).success).toBe(false);
   });
 });
 
@@ -212,11 +208,7 @@ describe('charts training by sport', () => {
       activityWithSport(702, 'hiking', null),
       activityWithSport(703, 'hiking', 1800),
     ];
-    const weeks = trainingBySportWeeks(
-      chartsSummary(data, { weekStart: chartsFirstWeek, weeks: 14 }),
-      chartsToday,
-      minutes,
-    );
+    const weeks = trainingBySportWeeks(chartsSummary(data, selection), chartsToday, minutes);
     expect(weeks[0]).toMatchObject({
       sessionSports: ['running', 'cycling', 'hiking'],
       hoursBySport: { running: null, cycling: 0, hiking: 0.5, swimming: null },
@@ -238,7 +230,7 @@ describe('charts training by sport', () => {
     const data = emptyWorkspace();
     data.activities = [activityWithSport(710, 'running', 0)];
     const [zeroWeek, emptyWeek] = trainingBySportWeeks(
-      chartsSummary(data, { weekStart: chartsFirstWeek, weeks: 2 }),
+      chartsSummary(data, { ...selection, weeks: 2 }),
       chartsToday,
       minutes,
     );

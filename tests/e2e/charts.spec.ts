@@ -46,7 +46,9 @@ for (const theme of ['dark', 'light'] as const)
   }, info) => {
     const selections = await openTrainingHours(page, theme);
     await expect(page.getByRole('heading', { name: 'Weekly training hours' })).toBeVisible();
-    expect(selections).toEqual([{ weekStart: '2029-10-29', weeks: 12 }]);
+    expect(selections).toEqual([
+      { template: 'training-hours', weekStart: '2029-10-29', weeks: 12 },
+    ]);
     const figure = page.getByRole('figure');
     await expect(figure.locator('.recharts-bar-rectangle')).toHaveCount(10);
     await figure.getByText('View values', { exact: true }).click();
@@ -91,11 +93,15 @@ test('training hours asks the server for the season and custom weeks and refuses
 }) => {
   const selections = await openTrainingHours(page, 'dark');
   await page.getByRole('combobox', { name: 'Period' }).selectOption('season');
-  await expect.poll(() => selections.at(-1)).toEqual({ weekStart: '2029-12-31', weeks: 3 });
+  await expect
+    .poll(() => selections.at(-1))
+    .toEqual({ template: 'training-hours', weekStart: '2029-12-31', weeks: 3 });
   await page.getByRole('combobox', { name: 'Period' }).selectOption('custom');
   await page.getByRole('textbox', { name: 'From' }).fill('2029-12-05');
   await page.getByRole('textbox', { name: 'To' }).fill('2030-01-02');
-  await expect.poll(() => selections.at(-1)).toEqual({ weekStart: '2029-12-03', weeks: 5 });
+  await expect
+    .poll(() => selections.at(-1))
+    .toEqual({ template: 'training-hours', weekStart: '2029-12-03', weeks: 5 });
   await page.getByRole('textbox', { name: 'To' }).fill('2029-11-01');
   await expect(page.getByText('Choose an end date on or after the start date.')).toBeVisible();
   await expect(page.getByRole('figure')).toHaveCount(0);
@@ -131,7 +137,11 @@ test('a failed period change shows Try again and hides the old weeks', async ({ 
   await page.getByRole('button', { name: 'Try again', exact: true }).click();
   await page.getByText('View values', { exact: true }).click();
   await expect(table.getByRole('row')).toHaveCount(5);
-  expect(selections.at(-1)).toEqual({ weekStart: '2029-12-24', weeks: 4 });
+  expect(selections.at(-1)).toEqual({
+    template: 'training-hours',
+    weekStart: '2029-12-24',
+    weeks: 4,
+  });
   await expect(page.getByText('This chart could not load for these dates.')).toHaveCount(0);
 });
 

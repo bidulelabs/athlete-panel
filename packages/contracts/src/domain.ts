@@ -80,6 +80,8 @@ const weeklyAvailability = z
   .strict();
 const heartRateZones = z.object({ cycling: zoneBounds, running: zoneBounds }).strict();
 const ftpWatts = z.number().int().min(1).max(3000).nullable();
+const restingHeartRateBpm = z.number().int().min(25).max(120).nullable();
+const maxHeartRateBpm = z.number().int().min(100).max(240).nullable();
 export const profileValuesSchema = z
   .object({
     displayName: text.default('Athlete'),
@@ -100,6 +102,8 @@ export const profileValuesSchema = z
     }),
     heartRateZones: heartRateZones.default({ cycling: [], running: [] }),
     ftpWatts: ftpWatts.default(null),
+    restingHeartRateBpm: restingHeartRateBpm.optional(),
+    maxHeartRateBpm: maxHeartRateBpm.optional(),
   })
   .strict();
 export const profileSchema = profileValuesSchema.extend({
@@ -500,6 +504,8 @@ const profilePatchSchema = z
     weeklyAvailability,
     heartRateZones,
     ftpWatts,
+    restingHeartRateBpm,
+    maxHeartRateBpm,
   })
   .strict()
   .partial();

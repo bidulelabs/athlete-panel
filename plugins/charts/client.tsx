@@ -20,6 +20,7 @@ import { RestingHeartRateHrvFigure } from './resting-heart-rate-hrv-figure';
 import { seasonStart } from './season';
 import { TrainingBySportFigure } from './training-by-sport-figure';
 import { TrainingHoursFigure } from './training-hours-figure';
+import { TrainingLoadFigure } from './training-load-figure';
 import { useChartsSummary } from './use-charts-summary';
 import { WeeklyClimbingFigure } from './weekly-climbing-figure';
 import { WorkoutHeartRateFigure } from './workout-heart-rate-figure';
@@ -55,6 +56,12 @@ const templates = [
     title: 'Resting heart rate and HRV',
     description: 'Compare each night with its 7-day average and your usual range.',
     Figure: RestingHeartRateHrvFigure,
+  },
+  {
+    id: 'estimated-training-load',
+    title: 'Estimated training load',
+    description: 'Estimate the daily load of your sessions from their heart rate.',
+    Figure: TrainingLoadFigure,
   },
 ] as const;
 type Template = (typeof templates)[number];

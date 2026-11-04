@@ -180,3 +180,27 @@ export function nightsWorkspace() {
   }
   return data;
 }
+
+export function trainingLoadWorkspace() {
+  const data = chartsWorkspace();
+  data.profile = profileSchema.parse({
+    ...data.profile,
+    restingHeartRateBpm: 47,
+    maxHeartRateBpm: 196,
+  });
+  data.activities = [];
+  const firstDay = addDays(chartsFirstWeek, -48);
+  for (let day = 0; addDays(firstDay, day) <= chartsToday; day++) {
+    const date = addDays(firstDay, day);
+    const restDay = day % 7 === 3 || (date >= '2029-12-18' && date <= '2029-12-24');
+    if (restDay) continue;
+    const longDay = day % 7 === 5;
+    data.activities.push(
+      activitySchema.parse({
+        ...activity(6000 + day, date, (longDay ? 110 : 40 + (day % 4) * 12) * 60),
+        averageHeartRateBpm: day % 17 === 8 ? null : 126 + (day % 5) * 7 + (longDay ? 4 : 0),
+      }),
+    );
+  }
+  return data;
+}

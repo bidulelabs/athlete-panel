@@ -18,6 +18,9 @@ export function handleProfile(
         id: 'owner',
         revision: currentRevision ?? 1,
       });
+      const { restingHeartRateBpm, maxHeartRateBpm } = state.profile;
+      if (restingHeartRateBpm && maxHeartRateBpm && restingHeartRateBpm >= maxHeartRateBpm)
+        fail('INVALID_HEART_RATE', 'Resting heart rate must be lower than maximum heart rate.');
       break;
     }
   }

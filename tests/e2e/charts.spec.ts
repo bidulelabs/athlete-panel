@@ -6,6 +6,7 @@ import {
   elevationAndHeartRateWorkspace,
   mixedSportsWorkspace,
   nightsWorkspace,
+  trainingLoadWorkspace,
 } from '../fixtures/charts';
 
 const password = process.env.E2E_PASSWORD;
@@ -359,4 +360,55 @@ test('resting heart rate and HRV show an empty state without nights', async ({ p
   await expect(
     page.getByRole('heading', { name: 'No overnight data in this period' }),
   ).toBeVisible();
+});
+
+for (const theme of ['dark', 'light'] as const)
+  test(`estimated training load shows daily load and its averages (${theme})`, async ({
+    page,
+  }, info) => {
+    await openTrainingHours(page, theme, trainingLoadWorkspace());
+    await page.getByRole('button', { name: 'All templates' }).click();
+    await page.getByRole('button', { name: /^Estimated training load/ }).click();
+    const figure = page.getByRole('figure');
+    await expect(figure.getByRole('list', { name: 'Legend' })).toHaveText(
+      /^Daily load\s*7-day average\s*42-day average$/,
+    );
+    await expect(figure).toContainText('An estimate, not a measurement');
+    await expect(figure).toContainText('between your resting 47 and maximum 196 bpm');
+    await figure.getByText('View values', { exact: true }).click();
+    const day = (date: string) =>
+      figure.getByRole('row').filter({ has: page.getByRole('cell', { name: date, exact: true }) });
+    await expect(day('29 Oct').getByRole('cell')).toHaveText([
+      '29 Oct',
+      /^\d+$/,
+      /^\d+$/,
+      /^\d+ \(40 of 42 days\)$/,
+    ]);
+    await expect(day('20 Dec').getByRole('cell').nth(1)).toHaveText('No sessions recorded');
+    await expect(day('19 Nov').getByRole('cell')).toHaveText([
+      '19 Nov',
+      'No heart rate',
+      /^\d+ \(6 of 7 days\)$/,
+      /^\d+ \(40 of 42 days\)$/,
+    ]);
+    await expect(day('17 Jan').getByRole('cell')).toHaveText([
+      '17 Jan',
+      'Upcoming',
+      'Upcoming',
+      'Upcoming',
+    ]);
+    await expect(figure.getByRole('row')).toHaveCount(85);
+    await takeScreenshots(page, 'estimated-training-load', info.project.name, theme);
+  });
+
+test('estimated training load asks for resting and maximum heart rate first', async ({ page }) => {
+  await openTrainingHours(page, 'dark', elevationAndHeartRateWorkspace());
+  await page.getByRole('button', { name: 'All templates' }).click();
+  await page.getByRole('button', { name: /^Estimated training load/ }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Set your resting and maximum heart rate in Settings' }),
+  ).toBeVisible();
+  await expect(page.getByRole('figure')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
+  await expect(page.getByRole('spinbutton', { name: /Resting heart rate/ })).toBeVisible();
 });

@@ -27,13 +27,20 @@ export function trainingHoursWeeks(
     const weekEnd = addDays(weekStart, 6);
     const upcoming = weekStart > today;
     const noPlan = sessionCount(plannedSeconds) === 0;
+    const noSessions = sessionCount(recordedSeconds) === 0;
     return {
       weekStart,
       inProgress: weekStart <= today && today <= weekEnd,
       recordedHours:
-        upcoming || recordedSeconds.value === null ? null : recordedSeconds.value / 3600,
+        upcoming || noSessions || recordedSeconds.value === null
+          ? null
+          : recordedSeconds.value / 3600,
       plannedHours: noPlan || plannedSeconds.value === null ? null : plannedSeconds.value / 3600,
-      recordedLabel: upcoming ? 'Upcoming' : durationLabel(recordedSeconds, format),
+      recordedLabel: upcoming
+        ? 'Upcoming'
+        : noSessions
+          ? 'No sessions recorded'
+          : durationLabel(recordedSeconds, format),
       plannedLabel: noPlan ? 'No plan' : durationLabel(plannedSeconds, format),
       races: summary.races
         .filter((race) => race.date >= weekStart && race.date <= weekEnd)

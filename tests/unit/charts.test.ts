@@ -45,11 +45,11 @@ describe('charts weekly summary', () => {
     ]);
   });
 
-  it('tells a measured zero from a missing duration, a partial week and an upcoming week', () => {
+  it('tells a week without sessions from a missing duration, a partial week and an upcoming week', () => {
     const data = chartsWorkspace();
     data.activities.push(activity(400, addDays(chartsFirstWeek, 12 * 7 + 1), 3600));
     const weeks = trainingHoursWeeks(chartsSummary(data, selection), chartsToday, minutes);
-    expect(weeks[2]).toMatchObject({ recordedHours: 0, recordedLabel: '0m' });
+    expect(weeks[2]).toMatchObject({ recordedHours: null, recordedLabel: 'No sessions recorded' });
     expect(weeks[10]).toMatchObject({
       recordedHours: 0.5,
       recordedLabel: '30m (1 of 2 sessions without duration)',
@@ -73,6 +73,13 @@ describe('charts weekly summary', () => {
       plannedLabel: '480m',
       races: ['Hill 15 km'],
     });
+  });
+
+  it('reports a session measured at zero as 0m, not as a week without sessions', () => {
+    const data = chartsWorkspace();
+    data.activities.push(activity(401, addDays(chartsFirstWeek, 2 * 7 + 2), 0));
+    const weeks = trainingHoursWeeks(chartsSummary(data, selection), chartsToday, minutes);
+    expect(weeks[2]).toMatchObject({ recordedHours: 0, recordedLabel: '0m' });
   });
 
   it('reports a week where every recorded duration is missing as missing, not zero', () => {

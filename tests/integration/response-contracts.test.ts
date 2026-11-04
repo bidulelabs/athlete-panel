@@ -27,7 +27,7 @@ describe('typed database responses', () => {
     await migrate();
   });
   beforeEach(async () => {
-    await connection()`truncate host.proposals,host.grants,host.changes,host.idempotency,host.jobs,athlete.records,training.records,activity_records.records,garmin.coverage`;
+    await connection()`truncate host.proposals,agent_bridge.planning_reads,host.grants,host.changes,host.idempotency,host.jobs,athlete.records,training.records,activity_records.records,garmin.coverage`;
     await connection()`delete from host.settings where key in ('maintenance','garmin','onboarding','worker','lastBackup','backupAttempt','backupSchedule')`;
   });
   afterAll(closeDatabase);

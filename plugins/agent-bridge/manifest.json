@@ -2,7 +2,7 @@
   "id": "agent-bridge",
   "name": "Agent workspace",
   "description": "Review training changes from your external agent",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "hostApi": "^1.3.0",
   "dependencies": {
     "training": "^2.1.0",
@@ -18,7 +18,7 @@
     }
   ],
   "schema": "agent_bridge",
-  "migrations": ["migrations/001-connections.sql"],
+  "migrations": ["migrations/001-connections.sql", "migrations/002-planning-reads.sql"],
   "services": [],
   "jobs": [],
   "capabilities": [],

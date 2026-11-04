@@ -20,6 +20,7 @@ import { applyCommands } from '../training/public/server';
 import { idempotent, undoChange } from '../training/public/server';
 import { todayInTimeZone } from '../training/public/shared';
 import { recentHealthAndWeeklyAverages } from './health-weeks';
+import { proposalBaseline, rememberPlanningRead } from './planning-reads';
 
 import {
   boundedContext,
@@ -86,7 +87,7 @@ export async function contextForToken(token: string) {
           todayInTimeZone(context.profile?.timezone),
         ),
       },
-      contextDigest: digest(canonical(context)),
+      contextDigest: await rememberPlanningRead(tx, grant.id, context),
       expiresAt: grant.expires_at,
     };
   });
@@ -137,12 +138,7 @@ export async function submitProposal(token: string, body: unknown) {
       async () => {
         const before = await loadWorkspace(tx, scope),
           context = boundedContext(before, scope);
-        assert(
-          digest(canonical(context)) === input.contextDigest,
-          'stale_context',
-          'Training context changed. Read it again and review your proposal.',
-          409,
-        );
+        const snapshot = await proposalBaseline(tx, grant.id, input.contextDigest, context);
         const commands = assignIds(input.commands);
         assertReadableSources(commands, before, scope);
         const result = applyCommands(before, commands, { actor: 'agent' });
@@ -214,7 +210,7 @@ export async function submitProposal(token: string, body: unknown) {
             summary: input.summary,
           }),
         );
-        await tx`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest) values(${id},${grant.id},'pending',${input.summary},${tx.json(commands as never)},${tx.json(result.changes as never)},${tx.json({ version: 'version' in grant.scope ? 3 : 2, scope, digest: input.contextDigest, snapshot: context } as never)},${proposalDigest})`;
+        await tx`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest) values(${id},${grant.id},'pending',${input.summary},${tx.json(commands as never)},${tx.json(result.changes as never)},${tx.json({ version: 'version' in grant.scope ? 3 : 2, scope, digest: input.contextDigest, snapshot } as never)},${proposalDigest})`;
         return {
           id,
           digest: proposalDigest,

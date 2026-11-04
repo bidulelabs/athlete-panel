@@ -256,12 +256,12 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "2.1.0",
+    "version": "2.2.0",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "hostApi": "^1.3.0",
       "dependencies": {
         "training": "^2.1.0",
@@ -283,7 +283,8 @@ export const registry = [
       "slots": [],
       "schema": "agent_bridge",
       "migrations": [
-        "migrations/001-connections.sql"
+        "migrations/001-connections.sql",
+        "migrations/002-planning-reads.sql"
       ],
       "services": [],
       "jobs": [],
@@ -324,4 +325,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="cc769896aed0dad6d48b538da784780fbfb3470237018bde7da88f2b65631cd1";
+export const schemaSignature="561a156e9c683dda818c7d6befeea466eb9978cb7aafeca799bff91e32f25481";

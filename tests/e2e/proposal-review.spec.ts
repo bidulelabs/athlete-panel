@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
+import postgres from 'postgres';
+import { isolatedDatabaseUrl } from '../support/test-database';
+import { syntheticDay } from '../fixtures/historical';
 
 const password = process.env.E2E_PASSWORD;
 if (!password) throw new Error('Isolated E2E_PASSWORD required.');
@@ -220,10 +223,18 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
     includeNotes: true,
   });
   const { token, grant } = await grantResponse.json();
+  const sql = postgres(isolatedDatabaseUrl('E2E_DATABASE_URL'), { max: 1 });
+  const run = {
+    ...syntheticDay('2026-10-27', 1).activities[0]!,
+    id: randomUUID(),
+    externalId: randomUUID(),
+    title: 'Run imported while planning',
+  };
   try {
     const headers = { Authorization: `Bearer ${token}` };
     const context = await (await request.get('/api/agent/context', { headers })).json();
     const workout = context.context.workouts.find((value: { id: string }) => value.id === id);
+    await sql`insert into activity_records.records(kind,id,revision,data) values('activity',${run.id},1,${sql.json(run)})`;
     const proposed = await request.post('/api/agent/propose', {
       headers,
       data: {
@@ -301,14 +312,16 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
     await expect(dialog.locator('.review-technical pre').first()).not.toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Apply reviewed changes' })).toBeDisabled();
     await expect(
-      dialog.getByRole('heading', { name: 'Context changed since submission' }),
+      dialog.getByRole('heading', { name: 'What changed since the agent read your data' }),
     ).toBeVisible();
+    await expect(dialog.getByRole('region', { name: 'Changed context' })).toContainText(run.title);
     await expect(dialog.getByRole('region', { name: 'Changed context' })).toContainText(
       'Synthetic review context',
     );
     for (const theme of ['dark', 'light']) {
       await page.evaluate((value) => {
         document.documentElement.dataset.theme = value;
+        document.documentElement.classList.toggle('dark', value === 'dark');
       }, theme);
       await page.screenshot({
         path: `.runtime/browser/proposal-review-${info.project.name}-${theme}.png`,
@@ -341,6 +354,8 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
       updated.state.workouts.find((value: { id: string }) => value.id === id).durationSeconds,
     ).toBe(2700);
   } finally {
+    await sql`delete from activity_records.records where kind='activity' and id=${run.id}`;
+    await sql.end();
     await owner('agent-bridge/revoke', { id: grant.id });
     const state = await (
       await page.request.get('/api/workspace?from=2026-10-26&to=2026-11-01')

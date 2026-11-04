@@ -14,6 +14,8 @@ import {
   submitProposal,
 } from '../../plugins/agent-bridge/service';
 import { PROPOSAL_LIFETIME_MS } from '../../packages/contracts/src';
+import { syntheticDay } from '../fixtures/historical';
+import agentBridge from '../../plugins/agent-bridge/server';
 const url = isolatedDatabaseUrl();
 const workoutId = '00000000-0000-4000-8000-000000000002';
 beforeAll(async () => {
@@ -22,12 +24,12 @@ beforeAll(async () => {
   await migrate();
 });
 beforeEach(async () => {
-  await connection()`truncate host.proposals,host.grants,host.changes,host.idempotency,athlete.records,training.records,activity_records.records`;
+  await connection()`truncate host.proposals,agent_bridge.planning_reads,host.grants,host.changes,host.idempotency,athlete.records,training.records,activity_records.records`;
   await connection()`delete from host.settings where key='maintenance'`;
 });
 afterEach(() => vi.restoreAllMocks());
 afterAll(closeDatabase);
-async function proposal() {
+async function readBeforeProposal() {
   await mutate({
     idempotencyKey: randomUUID(),
     commands: [
@@ -46,19 +48,25 @@ async function proposal() {
   });
   const grant = await createGrant({ label: 'Review test', from: '2026-10-19', to: '2026-10-25' });
   const context = await contextForToken(grant.token);
-  const submitted = await submitProposal(grant.token, {
-    commands: [
-      {
-        action: 'workout.update',
-        id: workoutId,
-        expectedRevision: 1,
-        values: { durationSeconds: 1800 },
-      },
-    ],
-    summary: 'Shorten ride',
-    contextDigest: context.contextDigest,
-    idempotencyKey: randomUUID(),
-  });
+  const submit = (token = grant.token, contextDigest = context.contextDigest) =>
+    submitProposal(token, {
+      commands: [
+        {
+          action: 'workout.update',
+          id: workoutId,
+          expectedRevision: 1,
+          values: { durationSeconds: 1800 },
+        },
+      ],
+      summary: 'Shorten ride',
+      contextDigest,
+      idempotencyKey: randomUUID(),
+    });
+  return { grant, context, submit };
+}
+async function proposal() {
+  const { grant, context, submit } = await readBeforeProposal();
+  const submitted = await submit();
   return { grant, input: { id: submitted.id, digest: submitted.digest }, context };
 }
 async function health(value = 5000) {
@@ -75,6 +83,150 @@ async function health(value = 5000) {
   };
   await sql`insert into activity_records.records(kind,id,revision,data) values('health',${record.id},1,${sql.json(record)}) on conflict(kind,id) do update set data=excluded.data`;
 }
+async function importRun(date = '2026-10-24') {
+  const sql = connection();
+  const run = syntheticDay(date, 1).activities[0]!;
+  await sql`insert into activity_records.records(kind,id,revision,data) values('activity',${run.id},1,${sql.json(run)})`;
+}
+it.each(['activity', 'health'])(
+  'saves the agent’s original read when %s arrives before submission',
+  async (entity) => {
+    const { grant, context, submit } = await readBeforeProposal();
+    // A later read under the same grant must not replace the baseline for this draft.
+    if (entity === 'activity') await importRun();
+    else await health();
+    const newer = await contextForToken(grant.token);
+    expect(newer.contextDigest).not.toBe(context.contextDigest);
+    const submitted = await submit();
+    const input = { id: submitted.id, digest: submitted.digest };
+    const sql = connection();
+    const [stored] = await sql`select context from host.proposals where id=${input.id}`;
+    expect(stored.context).toMatchObject({
+      digest: context.contextDigest,
+      snapshot: { activities: [], health: [] },
+    });
+    expect(JSON.stringify(stored.context)).not.toContain('PRIVATE_WORKOUT_NOTE');
+    const review = await reviewProposal(input);
+    expect(review.applicability).toBe('review-required');
+    expect(review.contextChanges.map((c) => c.entity)).toEqual([entity]);
+    expect(review.currentContextDigest).toBe(newer.contextDigest);
+    const apply = { ...input, idempotencyKey: randomUUID() };
+    await expect(applyProposal(apply)).rejects.toMatchObject({
+      code: 'stale_context',
+      status: 409,
+    });
+    expect((await loadWorkspace()).workouts[0]?.durationSeconds).toBe(3600);
+    await applyProposal({ ...apply, reviewedContextDigest: review.currentContextDigest });
+    expect((await loadWorkspace()).workouts[0]?.durationSeconds).toBe(1800);
+  },
+);
+it('shows both unseen imports when another arrives between review and apply', async () => {
+  const { submit } = await readBeforeProposal();
+  await importRun();
+  const submitted = await submit();
+  const input = { id: submitted.id, digest: submitted.digest };
+  const first = await reviewProposal(input);
+  await health();
+  await expect(
+    applyProposal({
+      ...input,
+      idempotencyKey: randomUUID(),
+      reviewedContextDigest: first.currentContextDigest,
+    }),
+  ).rejects.toMatchObject({ code: 'stale_context', status: 409 });
+  const latest = await reviewProposal(input);
+  expect(latest.contextChanges.map((c) => c.entity)).toEqual(['activity', 'health']);
+  expect(latest.currentContextDigest).not.toBe(first.currentContextDigest);
+});
+it('keeps the daily health behind a weekly average in a version 3 proposal', async () => {
+  const { token, grant } = await createGrant({
+    label: 'Weekly health',
+    version: 2,
+    history: null,
+    planning: { from: '2026-10-01', to: '2026-11-20' },
+  });
+  await health(5000);
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-14T12:00:00Z'));
+  const read = await contextForToken(token).finally(() => vi.useRealTimers());
+  expect(read.context.health).toEqual([]);
+  expect(read.context.healthWeeks.map((w) => w.metrics.steps.average)).toContain(5000);
+  await health(6500);
+  const { id, digest } = await submitProposal(token, {
+    commands: [{ action: 'plan.create', values: { title: 'Weekly run', startDate: '2026-11-15' } }],
+    summary: 'Weekly plan',
+    contextDigest: read.contextDigest,
+    idempotencyKey: randomUUID(),
+  });
+  const sql = connection();
+  const [stored] = await sql`select context from host.proposals where id=${id}`;
+  expect(stored.context).toMatchObject({ version: 3, snapshot: { health: [{ value: 5000 }] } });
+  await sql`update host.grants set expires_at=now() where id=${grant.id}`;
+  await agentBridge.schedule();
+  const review = await reviewProposal({ id, digest });
+  expect(review).toMatchObject({
+    applicability: 'review-required',
+    contextChanges: [{ entity: 'health', before: { value: 5000 }, after: { value: 6500 } }],
+  });
+  await applyProposal({
+    id,
+    digest,
+    idempotencyKey: randomUUID(),
+    reviewedContextDigest: review.currentContextDigest,
+  });
+});
+it('does not require renewed review for an import outside planning dates', async () => {
+  const { submit } = await readBeforeProposal();
+  await importRun('2026-10-18');
+  const { id, digest } = await submit();
+  expect(await reviewProposal({ id, digest })).toMatchObject({
+    applicability: 'ready',
+    contextChanges: [],
+  });
+});
+it.each([
+  { action: 'workout.update', id: workoutId, expectedRevision: 1, values: { title: 'Owner edit' } },
+  {
+    action: 'profile.set',
+    expectedRevision: null,
+    values: { displayName: 'Synthetic owner', timezone: 'Europe/Paris' },
+  },
+])('refuses a draft after an import and $action', async (command) => {
+  const { submit } = await readBeforeProposal();
+  await health();
+  await mutate({ idempotencyKey: randomUUID(), commands: [command] });
+  await expect(submit()).rejects.toMatchObject({ code: 'stale_context', status: 409 });
+  expect(await connection()`select id from host.proposals`).toHaveLength(0);
+});
+it('rejects an unknown stale digest and one read only by another grant', async () => {
+  const { submit, grant } = await readBeforeProposal();
+  const other = await createGrant({ label: 'Other reader', from: '2026-10-19', to: '2026-10-25' });
+  // Identical scopes currently hash to the same digest. Only the first grant read it.
+  await expect(submit(other.token)).rejects.toMatchObject({ code: 'stale_context', status: 409 });
+  await health();
+  await contextForToken(other.token);
+  for (const request of [() => submit(other.token), () => submit(grant.token, '0'.repeat(64))])
+    await expect(request()).rejects.toMatchObject({ code: 'stale_context', status: 409 });
+});
+it('deduplicates redacted reads and discards temporary snapshots on revocation or expiry', async () => {
+  const { grant } = await readBeforeProposal();
+  const sql = connection();
+  const reads = (id: string) =>
+    sql`select snapshot from agent_bridge.planning_reads where grant_id=${id}`;
+  await contextForToken(grant.token);
+  const retained = await reads(grant.grant.id);
+  expect(retained).toHaveLength(1);
+  expect(JSON.stringify(retained)).not.toContain('PRIVATE_WORKOUT_NOTE');
+  const stillActive = await createGrant({ label: 'Active', from: '2026-10-19', to: '2026-10-25' });
+  await contextForToken(stillActive.token);
+  await revokeGrant({ id: grant.grant.id });
+  expect(await reads(grant.grant.id)).toHaveLength(0);
+  await agentBridge.schedule();
+  expect(await reads(stillActive.grant.id)).toHaveLength(1);
+  await sql`update host.grants set expires_at=now() where id=${stillActive.grant.id}`;
+  await agentBridge.schedule();
+  expect(await reads(stillActive.grant.id)).toHaveLength(0);
+});
 it('allows owner application after agent access expires, while denying further reads/submission', async () => {
   const { grant, input } = await proposal();
   await connection()`update host.grants set expires_at=now()-interval '1 hour' where id=${grant.grant.id}`;

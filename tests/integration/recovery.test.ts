@@ -45,7 +45,7 @@ beforeAll(async () => {
   await migrate();
 });
 beforeEach(async () => {
-  await connection()`truncate host.jobs,host.idempotency,host.changes,host.proposals,host.grants,athlete.records,training.records,activity_records.records,garmin.coverage,garmin.scan_state,garmin.scheduler`;
+  await connection()`truncate host.jobs,host.idempotency,host.changes,host.proposals,agent_bridge.planning_reads,host.grants,athlete.records,training.records,activity_records.records,garmin.coverage,garmin.scan_state,garmin.scheduler`;
   await connection()`delete from host.settings where key in ('garmin','garminToken','maintenance')`;
   await configure({ key: 'synthetic-recovery-key' });
   const config = (await getConfiguration())!;

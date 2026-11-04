@@ -21,7 +21,7 @@ beforeAll(async () => {
   await migrate();
 });
 beforeEach(async () => {
-  await connection()`truncate host.request_budgets, agent_bridge.connections, host.proposals, host.grants`;
+  await connection()`truncate host.request_budgets, agent_bridge.connections, host.proposals, agent_bridge.planning_reads,host.grants`;
   await connection()`delete from host.settings where key='maintenance'`;
 });
 afterAll(closeDatabase);

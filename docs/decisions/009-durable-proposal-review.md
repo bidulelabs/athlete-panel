@@ -20,4 +20,6 @@ Expected benefits: durable review without extending agent access. Costs: bounded
 
 ## Relationships
 
+[ADR 019](019-planning-read-baseline.md) extends renewed owner review to activity and health changes between the planning read and submission.
+
 Partially supersedes [ADR 003](003-reviewed-proposals.md), as specified above. [Feature](../features/agent-training.md), [database evidence](../../tests/integration/proposal-review.test.ts), [browser evidence](../../tests/e2e/proposal-review.spec.ts).

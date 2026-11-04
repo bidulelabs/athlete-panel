@@ -39,7 +39,7 @@ describe('transactional training and external-agent workflow', () => {
   });
   beforeEach(async () => {
     const sql = connection();
-    await sql`truncate host.proposals, host.grants, host.changes, host.idempotency, host.sessions, host.owner, host.login_attempts, athlete.records, training.records, activity_records.records`;
+    await sql`truncate host.proposals, agent_bridge.planning_reads,host.grants, host.changes, host.idempotency, host.sessions, host.owner, host.login_attempts, athlete.records, training.records, activity_records.records`;
     await sql`delete from host.settings where key='maintenance'`;
   });
   afterAll(async () => {

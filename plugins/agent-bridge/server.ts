@@ -9,7 +9,9 @@ import {
 } from './service';
 import type { ServerPlugin } from '../../packages/plugin-sdk/src';
 import { inspectConnection, approveConnection, denyConnection } from './connections';
+import { forgetExpiredReads } from './planning-reads';
 export default {
+  schedule: forgetExpiredReads,
   operations: {
     grant: createGrant,
     details: proposalDetails,

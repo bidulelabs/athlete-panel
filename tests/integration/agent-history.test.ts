@@ -24,7 +24,7 @@ beforeAll(async () => {
   await migrate();
 });
 beforeEach(async () => {
-  await connection()`truncate host.proposals,host.grants,host.changes,host.idempotency,athlete.records,training.records,activity_records.records,garmin.coverage`;
+  await connection()`truncate host.proposals,agent_bridge.planning_reads,host.grants,host.changes,host.idempotency,athlete.records,training.records,activity_records.records,garmin.coverage`;
   await connection()`delete from host.settings where key='maintenance'`;
 });
 afterAll(closeDatabase);

@@ -22,6 +22,12 @@ Retries with the same idempotency key and content return the original result. Re
 
 Whole-batch undo checks every affected current entity against its recorded after-state. Any later edit rejects the whole undo, as does a restore that would move a workout or note added later, leave one without its plan, or give a later workout's position in its day to a restored one. Edits of other records in the same plan do not block it. Deleted state remains recoverable; restored entities receive higher revisions and deleted UUIDs cannot be recycled. Undo is another audit event. It does not reverse provider synchronization, migrations or external actions.
 
+### Activity and health imports during planning
+
+The owner approved [issue #68](https://github.com/bidulelabs/athlete-panel/issues/68) on 2026-11-04. Each planning read saves the bounded, note-redacted data behind the returned digest. Submission requires a digest this grant read. If only activities or health records in the planning period have changed, the server can accept a pending proposal. It validates the commands against current training and keeps the original read as the proposal’s baseline. Changes to the profile, plans, workouts, notes, events or injuries require a new read. This includes a Garmin correction that updates a linked workout.
+
+Owner review lists the differences since the agent’s read, including changes before submission. The owner must acknowledge those differences before applying the draft. A further change requires another review. Records solely in the separate history window do not affect the planning digest. The temporary copy belongs to the grant. Revocation removes it immediately and the worker removes expired grants’ copies on its next cleanup. Each pending proposal keeps its own baseline for its existing lifetime.
+
 ### Adaptive coaching clarification
 
 Requirement source: the owner approved the adaptive clarification improvement with “implement this” on 2026-10-25 in the current chat, following examples of next-week adjustments and a three-month trail-running program. Scope and verification are preserved in the [execution record](../plans/mvp-execution.md#adaptive-coaching-clarification--2026-10-25).
@@ -38,6 +44,9 @@ This addition defines agent instructions, not a server-enforced questionnaire, n
 
 | Input or situation | Expected result | Verification |
 | --- | --- | --- |
+| Activity or steps arrive between planning read and submission | Pending draft shows the unseen record. Apply requires acknowledgement. A second import invalidates the first review and both changes appear. | [Integration cases](../../tests/integration/proposal-review.test.ts), [owner browser flow](../../tests/e2e/proposal-review.spec.ts) |
+| Import outside the planning window, changed workout/profile, or unrecognized digest | Outside-window import allows ordinary review. Changed training and unknown or other-grant reads return `409 stale_context`. | Integration cases and [linked Garmin correction](../../tests/integration/garmin.test.ts) |
+| Repeated planning reads, excluded notes, grant revocation or expiry | Identical reads share a row, private notes stay excluded and temporary copies are removed independently of proposal retention. | Integration cases |
 | Read/propose grant attempts apply | Endpoint denied; owner session is required | HTTP/browser suite |
 | Ordinary notes excluded | No private narrative field in context or submission response, including nested intervals and completion reasons; hidden interval notes cannot be overwritten | [Database cases](../../tests/integration/domain.test.ts) |
 | Invalid second command | No mutation, audit or idempotency partial result | Database cases |
@@ -68,6 +77,8 @@ This addition defines agent instructions, not a server-enforced questionnaire, n
 Coaching scenario walkthroughs inspect the instructions against synthetic requests and are not automated model evaluations. External-harness discovery, question rendering and live model adherence need separate demonstrations; individual results and remaining gaps belong in the execution record.
 
 ## Observed implementation
+
+Agent Bridge 2.2 adds [planning read storage](../../plugins/agent-bridge/migrations/002-planning-reads.sql) and [baseline selection](../../plugins/agent-bridge/planning-reads.ts). It preserves both versioned proposal formats. An in-flight draft whose read predates the migration needs one fresh read. Previously submitted proposals keep their original review behavior. See [ADR 019](../decisions/019-planning-read-baseline.md) and the [execution record](../plans/planning-read-baseline.md).
 
 The [bridge service](../../plugins/agent-bridge/service.ts) implements bounded reads, source checks, immutable proposals and apply; [training service](../../plugins/training/service.ts) implements shared mutation, audit and undo. Owner endpoints use secure session cookies and same-origin checks. Granted training endpoints expose only context and proposal submission. Separate pairing endpoints enroll, poll, and cancel a connection; they cannot approve access. Grants are hashed at rest. Credential preflight rejects invalid requests before the domain lock; transactional checks remain authoritative for identity, expiry, revocation and scope. Unknown cancellation credentials remain a no-op. The [CLI](../../scripts/agent.ts) is a small HTTP adapter.
 

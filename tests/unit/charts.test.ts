@@ -196,7 +196,7 @@ describe('charts training by sport', () => {
     });
   });
 
-  it('shows a zero, a missing and a partial duration per sport, No sessions for a sport not done, and Upcoming for later weeks', () => {
+  it('shows a zero, a missing and a partial duration per sport, No sessions recorded for a sport not done, and Upcoming for later weeks', () => {
     const data = emptyWorkspace();
     data.activities = [
       activityWithSport(700, 'running', null),
@@ -216,13 +216,33 @@ describe('charts training by sport', () => {
         running: 'Duration missing',
         cycling: '0m',
         hiking: '30m (1 of 2 sessions without duration)',
-        swimming: 'No sessions',
+        swimming: 'No sessions recorded',
       },
     });
     expect(weeks[13]).toMatchObject({
       sessionSports: [],
       hoursBySport: { running: null, cycling: null },
       labelBySport: { running: 'Upcoming', cycling: 'Upcoming' },
+    });
+  });
+
+  it('labels an empty week No sessions recorded and a week with a zero-minute run 0m, in total and per sport', () => {
+    const data = emptyWorkspace();
+    data.activities = [activityWithSport(710, 'running', 0)];
+    const [zeroWeek, emptyWeek] = trainingBySportWeeks(
+      chartsSummary(data, { weekStart: chartsFirstWeek, weeks: 2 }),
+      chartsToday,
+      minutes,
+    );
+    expect(zeroWeek).toMatchObject({
+      recordedLabel: '0m',
+      labelBySport: { running: '0m', cycling: 'No sessions recorded' },
+      hoursBySport: { running: 0, cycling: null },
+    });
+    expect(emptyWeek).toMatchObject({
+      recordedLabel: 'No sessions recorded',
+      labelBySport: { running: 'No sessions recorded', cycling: 'No sessions recorded' },
+      hoursBySport: { running: null, cycling: null },
     });
   });
 

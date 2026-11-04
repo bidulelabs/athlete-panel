@@ -43,7 +43,7 @@ export function trainingBySportWeeks(
         upcoming
           ? 'Upcoming'
           : noSessions(sport)
-            ? 'No sessions'
+            ? 'No sessions recorded'
             : durationLabel(bySport[sport], format),
       ),
     };

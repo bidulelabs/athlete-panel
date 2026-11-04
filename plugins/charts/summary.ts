@@ -1,5 +1,47 @@
-import type { ChartsSummary, ChartsSummaryInput, WorkspaceState } from '@athlete-panel/contracts';
-import { addDays, weeklySummary } from '../training/public/shared';
+import {
+  chartsSports,
+  isUnresolvedActivitySport,
+  type ChartsSport,
+  type ChartsSummary,
+  type ChartsSummaryInput,
+  type SportSelection,
+  type WorkspaceState,
+} from '@athlete-panel/contracts';
+import {
+  addDays,
+  weeklySummary,
+  type MetricTotal,
+  type SportBreakdown,
+} from '../training/public/shared';
+
+function addMetricTotals(a: MetricTotal, b: MetricTotal): MetricTotal {
+  const knownCount = a.knownCount + b.knownCount;
+  const missingCount = a.missingCount + b.missingCount;
+  return {
+    value: knownCount ? (a.value ?? 0) + (b.value ?? 0) : missingCount ? null : 0,
+    knownCount,
+    missingCount,
+  };
+}
+
+const toChartsSport = (item: SportSelection & { sport: string }): ChartsSport =>
+  !isUnresolvedActivitySport(item) && chartsSports.includes(item.sport as ChartsSport)
+    ? (item.sport as ChartsSport)
+    : 'other';
+
+function sumBySport(
+  breakdown: SportBreakdown[],
+  measure: (recorded: SportBreakdown['actual']) => MetricTotal,
+) {
+  const bySport = Object.fromEntries(
+    chartsSports.map((sport) => [sport, { value: 0, knownCount: 0, missingCount: 0 }]),
+  ) as Record<ChartsSport, MetricTotal>;
+  for (const entry of breakdown.filter((item) => item.sportSubgroup === null)) {
+    const sport = toChartsSport(entry);
+    bySport[sport] = addMetricTotals(bySport[sport], measure(entry.actual));
+  }
+  return bySport;
+}
 
 export function chartsSummary(
   state: WorkspaceState,
@@ -13,6 +55,10 @@ export function chartsSummary(
         weekStart: week.startDate,
         plannedSeconds: week.planned.durationSeconds,
         recordedSeconds: week.actual.durationSeconds,
+        recordedSecondsBySport: sumBySport(
+          week.sportBreakdown,
+          (recorded) => recorded.durationSeconds,
+        ),
       };
     }),
     races: state.events

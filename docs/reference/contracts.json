@@ -29317,12 +29317,67 @@
                       "missingCount"
                     ],
                     "additionalProperties": false
+                  },
+                  "recordedSecondsBySport": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "cycling",
+                        "winter_sports",
+                        "hiking",
+                        "swimming",
+                        "other"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "knownCount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "missingCount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "knownCount",
+                        "missingCount"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "required": [
+                      "running",
+                      "cycling",
+                      "winter_sports",
+                      "hiking",
+                      "swimming",
+                      "other"
+                    ]
                   }
                 },
                 "required": [
                   "weekStart",
                   "plannedSeconds",
-                  "recordedSeconds"
+                  "recordedSeconds",
+                  "recordedSecondsBySport"
                 ],
                 "additionalProperties": false
               }

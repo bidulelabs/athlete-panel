@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { chartsSummaryInputSchema, emptyWorkspace } from '@athlete-panel/contracts';
 import { chartsSummary } from '../../plugins/charts/summary';
-import { chartsWorkspace } from '../fixtures/charts';
+import { chartsWorkspace, mixedSportsWorkspace } from '../fixtures/charts';
 
 const password = process.env.E2E_PASSWORD;
 if (!password) throw new Error('Set E2E_PASSWORD for the isolated synthetic instance.');
@@ -135,4 +135,80 @@ test('training hours shows an empty state instead of empty axes', async ({ page 
   await expect(page.getByRole('heading', { name: 'No training in this period' })).toBeVisible();
   await expect(page.getByRole('figure')).toHaveCount(0);
   await page.screenshot({ path: `.runtime/charts/training-hours-empty-${info.project.name}.png` });
+});
+
+async function openTrainingBySport(page: Page, theme: 'dark' | 'light') {
+  await openTrainingHours(page, theme, mixedSportsWorkspace());
+  await page.getByRole('button', { name: 'All templates' }).click();
+  await page.getByRole('button', { name: /^Training by sport/ }).click();
+  await expect(page.getByRole('heading', { name: 'Weekly training by sport' })).toBeVisible();
+}
+
+for (const theme of ['dark', 'light'] as const)
+  test(`training by sport stacks each sport and shows exact values (${theme})`, async ({
+    page,
+  }, info) => {
+    await openTrainingBySport(page, theme);
+    const figure = page.getByRole('figure');
+    await expect(figure.getByRole('list', { name: 'Legend' })).toHaveText(
+      /^Running\s*Cycling\s*Winter sports\s*Hiking\s*Swimming\s*Other\s*Planned\s*Race$/,
+    );
+    await expect(figure.locator('.recharts-bar-rectangle')).toHaveCount(19);
+    await figure.getByText('View values', { exact: true }).click();
+    await expect(figure.getByRole('columnheader')).toHaveText([
+      'Week',
+      'Running',
+      'Cycling',
+      'Winter sports',
+      'Hiking',
+      'Swimming',
+      'Other',
+      'Recorded',
+      'Planned',
+      'Races',
+    ]);
+    await expect(valueRow(page, 'Week of 26 Nov').getByRole('cell')).toHaveText([
+      'Week of 26 Nov',
+      '4h',
+      'No sessions',
+      'No sessions',
+      'No sessions',
+      'No sessions',
+      '4h',
+      '8h',
+      '8h',
+      'Hill 15 km',
+    ]);
+    await expect(valueRow(page, 'Week of 31 Dec').getByRole('cell').nth(1)).toHaveText(
+      'Duration missing',
+    );
+    await expect(valueRow(page, 'Week of 31 Dec').getByRole('cell').nth(4)).toHaveText('30m');
+    await page.mouse.move(-1, -1);
+    await page.screenshot({
+      path: `.runtime/charts/training-by-sport-${info.project.name}-${theme}.png`,
+      fullPage: true,
+    });
+    if (info.project.name === 'mobile') {
+      await page.setViewportSize({ width: 320, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      await page.screenshot({
+        path: `.runtime/charts/training-by-sport-320-${theme}.png`,
+        fullPage: true,
+      });
+    }
+  });
+
+test('training by sport lists the sports of the focused week in its tooltip', async ({ page }) => {
+  await openTrainingBySport(page, 'dark');
+  await page.getByRole('application').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.charts-tooltip')).toHaveText(
+    'Week of 5 NovRecordedNo sessions recordedPlanned6h',
+  );
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.charts-tooltip')).toHaveText(
+    'Week of 12 NovRunning3h 30mCycling3h 30mRecorded7hPlanned7h',
+  );
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activitySchema,
   chartsSummaryInputSchema,
   emptyWorkspace,
   planSchema,
@@ -8,10 +9,12 @@ import {
 import { seasonStart } from '../../plugins/charts/season';
 import { chartsSummary } from '../../plugins/charts/summary';
 import { hasSessions, trainingHoursWeeks } from '../../plugins/charts/training-hours';
+import { recordedSports, trainingBySportWeeks } from '../../plugins/charts/training-by-sport';
 import { addDays, weeklySummary } from '../../plugins/training/public/shared';
 import {
   activity,
   chartsWorkspace,
+  mixedSportsWorkspace,
   chartsFirstWeek,
   chartsId,
   chartsToday,
@@ -135,5 +138,95 @@ describe('charts season', () => {
   it('starts on 1 January when the plan starts later or has already ended', () => {
     expect(seasonStart(planWithLastDay(810, '2030-02-01', 120), chartsToday)).toBe('2030-01-01');
     expect(seasonStart(planWithLastDay(820, '2029-09-03', 60), chartsToday)).toBe('2030-01-01');
+  });
+});
+
+describe('charts training by sport', () => {
+  const activityWithSport = (
+    id: number,
+    sport: string,
+    durationSeconds: number | null,
+    sportResolution = 'resolved',
+    sportSubgroup: string | null = null,
+  ) =>
+    activitySchema.parse({
+      ...activity(id, addDays(chartsFirstWeek, 1), durationSeconds),
+      sport,
+      sportSubgroup,
+      sportResolution,
+    });
+
+  it('adds up the sport totals of each week to the Calendar total', () => {
+    const summary = chartsSummary(mixedSportsWorkspace(), selection);
+    for (const week of summary.weeks) {
+      const sports = Object.values(week.recordedSecondsBySport);
+      expect(sports.reduce((sum, item) => sum + item.knownCount + item.missingCount, 0)).toBe(
+        week.recordedSeconds.knownCount + week.recordedSeconds.missingCount,
+      );
+      if (week.recordedSeconds.missingCount === 0)
+        expect(sports.reduce((sum, item) => sum + item.value!, 0)).toBe(week.recordedSeconds.value);
+    }
+    expect(recordedSports(summary)).toEqual([
+      'running',
+      'cycling',
+      'winter_sports',
+      'hiking',
+      'swimming',
+      'other',
+    ]);
+  });
+
+  it('counts a subgroup once and sends unknown or unresolved sports to Other', () => {
+    const data = emptyWorkspace();
+    data.activities = [
+      activityWithSport(600, 'running', 1800, 'resolved', 'trail_running'),
+      activityWithSport(601, 'running', 600, 'unresolved'),
+      activityWithSport(602, 'fitness_equipment', 1200),
+    ];
+    const [week] = chartsSummary(data, selection).weeks;
+    expect(week!.recordedSecondsBySport.running).toEqual({
+      value: 1800,
+      knownCount: 1,
+      missingCount: 0,
+    });
+    expect(week!.recordedSecondsBySport.other).toEqual({
+      value: 1800,
+      knownCount: 2,
+      missingCount: 0,
+    });
+  });
+
+  it('shows a zero, a missing and a partial duration per sport, No sessions for a sport not done, and Upcoming for later weeks', () => {
+    const data = emptyWorkspace();
+    data.activities = [
+      activityWithSport(700, 'running', null),
+      activityWithSport(701, 'cycling', 0),
+      activityWithSport(702, 'hiking', null),
+      activityWithSport(703, 'hiking', 1800),
+    ];
+    const weeks = trainingBySportWeeks(
+      chartsSummary(data, { weekStart: chartsFirstWeek, weeks: 14 }),
+      chartsToday,
+      minutes,
+    );
+    expect(weeks[0]).toMatchObject({
+      sessionSports: ['running', 'cycling', 'hiking'],
+      hoursBySport: { running: null, cycling: 0, hiking: 0.5, swimming: null },
+      labelBySport: {
+        running: 'Duration missing',
+        cycling: '0m',
+        hiking: '30m (1 of 2 sessions without duration)',
+        swimming: 'No sessions',
+      },
+    });
+    expect(weeks[13]).toMatchObject({
+      sessionSports: [],
+      hoursBySport: { running: null, cycling: null },
+      labelBySport: { running: 'Upcoming', cycling: 'Upcoming' },
+    });
+  });
+
+  it('lists no sport for an empty selection', () => {
+    expect(recordedSports(chartsSummary(emptyWorkspace(), selection))).toEqual([]);
   });
 });

@@ -1,10 +1,20 @@
 :root {
   --chart-recorded: #c3c8ce;
   --chart-race: #e3ad77;
+  --chart-running: #3987e5;
+  --chart-cycling: #199e70;
+  --chart-winter-sports: #9085e9;
+  --chart-hiking: #008300;
+  --chart-swimming: #d55181;
+  --chart-other: var(--muted);
 }
 :root[data-theme='light'] {
   --chart-recorded: #46525d;
   --chart-race: #864c17;
+  --chart-running: #2a78d6;
+  --chart-cycling: #1baf7a;
+  --chart-winter-sports: #6250d6;
+  --chart-swimming: #e87ba4;
 }
 .charts-templates {
   display: grid;
@@ -112,6 +122,24 @@
   height: 12px;
   background: var(--chart-race);
   border-radius: 0;
+}
+.charts-key-running {
+  background: var(--chart-running);
+}
+.charts-key-cycling {
+  background: var(--chart-cycling);
+}
+.charts-key-winter_sports {
+  background: var(--chart-winter-sports);
+}
+.charts-key-hiking {
+  background: var(--chart-hiking);
+}
+.charts-key-swimming {
+  background: var(--chart-swimming);
+}
+.charts-key-other {
+  background: var(--chart-other);
 }
 .charts-plot {
   width: 100%;

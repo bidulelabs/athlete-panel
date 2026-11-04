@@ -17,6 +17,7 @@ import {
   type PluginPageProps,
 } from '@athlete-panel/ui';
 import { seasonStart } from './season';
+import { TrainingBySportFigure } from './training-by-sport-figure';
 import { TrainingHoursFigure } from './training-hours-figure';
 import { useChartsSummary } from './use-charts-summary';
 import './charts.css';
@@ -27,6 +28,12 @@ const templates = [
     title: 'Training hours',
     description: 'Compare planned and recorded hours, with your races.',
     Figure: TrainingHoursFigure,
+  },
+  {
+    id: 'training-by-sport',
+    title: 'Training by sport',
+    description: 'See which sports fill your recorded hours, against the plan.',
+    Figure: TrainingBySportFigure,
   },
 ] as const;
 type Template = (typeof templates)[number];

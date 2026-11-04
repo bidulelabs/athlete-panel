@@ -73,3 +73,23 @@ export function chartsWorkspace() {
   ];
   return data;
 }
+
+const sportRotation = ['running', 'cycling', 'running', 'hiking'];
+export function mixedSportsWorkspace() {
+  const data = chartsWorkspace();
+  data.activities = data.activities.map((item, index) =>
+    activitySchema.parse({
+      ...item,
+      sport:
+        index === 6
+          ? 'swimming'
+          : index === 15
+            ? 'winter_sports'
+            : index === 9
+              ? 'paragliding'
+              : sportRotation[index % sportRotation.length],
+      sportResolution: index === 9 ? 'unresolved' : 'resolved',
+    }),
+  );
+  return data;
+}

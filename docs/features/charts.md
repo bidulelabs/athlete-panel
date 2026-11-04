@@ -2,13 +2,13 @@
 
 ## Purpose and scope
 
-The athlete sees how training built up over weeks and months, starting from a familiar chart template instead of a blank chart builder. The first template, **Training hours**, compares planned and recorded hours per week and marks the races entered in the calendar.
+The athlete sees how training built up over weeks and months, starting from a familiar chart template instead of a blank chart builder. The first template, **Training hours**, compares planned and recorded hours per week and marks the races entered in the calendar. **Training by sport** splits the same recorded hours by sport.
 
 Outside scope: other templates (each arrives in its own change, see [issue #79](https://github.com/bidulelabs/athlete-panel/issues/79)), day or month grouping, sport and category filters, an **Add metric** control, readiness scores, workload ratios and pace or power curves. Selecting a chart never grants an agent access or sends data anywhere.
 
 ## Intended behavior
 
-Specification status: approved scope for the template picker and Training hours.
+Specification status: approved scope for the template picker, Training hours and Training by sport.
 Requirement source: [issue #79](https://github.com/bidulelabs/athlete-panel/issues/79), proposal by the maintainer and agreement of 2026-11-04 (built-in plugin, shadcn Charts, dedicated read-only summary request, small changes in the stated order).
 
 - **Charts** is a built-in, optional plugin with one page. It opens on a template list; choosing a template opens that chart, and **All templates** returns to the list.
@@ -17,6 +17,7 @@ Requirement source: [issue #79](https://github.com/bidulelabs/athlete-panel/issu
 - **Period** offers the last 4, 12 or 52 weeks ending with the current week, **This season**, or custom dates. This season runs from the start date of the active training plan to the current week; a plan is active when today falls between its start date and its last planned day, and the latest start wins when several are. Without an active plan (none, not started yet, or already ended), the season starts on 1 January. A season longer than 53 weeks shows the same error as custom dates. Custom dates expand to whole weeks and accept at most 53 weeks; an end date before the start date shows an error and sends no request.
 - A week with no recorded session shows no bar and reads **No sessions recorded**, as in the Calendar. A session measured at zero minutes reads `0m`. A week whose recorded sessions all lack a duration shows no bar and **Duration missing**. A partly measured week shows the known sum with how many sessions lack a duration. A week without planned sessions has no point on the planned line and reads **No plan**.
 - The current week is marked **in progress**: its bar is drawn as an outline. Weeks after today show no recorded value and read **Upcoming**.
+- **Training by sport** stacks the recorded hours of each week by sport, in a fixed order from the baseline: running, cycling, winter sports, hiking, swimming, then **Other** on top. Other gathers every other sport group and every activity whose sport could not be identified. Each sport keeps its colour whatever the period; the legend and table list only sports recorded in the period. A subgroup (trail running) counts once, under its sport group. The planned line, races, current week outline and **Upcoming** weeks are the same as in Training hours. Per sport, a sport without sessions that week reads **No sessions**, a session measured at zero reads `0m`, and missing durations follow the Training hours rules.
 - A period with no planned and no recorded session shows an empty state instead of empty axes.
 - Choosing a period shows only that period's result. While it loads, the previous chart stays at reduced opacity; if the request fails, the chart is removed and an error with **Try again** replaces it. Opening or changing a chart reads only the chart: it does not reload the workspace or announce a save.
 - **View values** opens a native table with the same weeks, values and labels as the chart and tooltip. The chart has a legend, a caption describing the period, a tooltip that follows the pointer, and keyboard navigation (focus the chart, then the arrow keys).
@@ -33,6 +34,9 @@ Requirement source: [issue #79](https://github.com/bidulelabs/athlete-panel/issu
 | Race, goal and race outside the period | Only the race inside the period is drawn and listed | Unit tests |
 | Empty period | Empty state, no figure | Browser tests |
 | Active plan; no plan; plan starting later or already ended | Season from the plan start; from 1 January; from 1 January | Unit and browser tests |
+| Training by sport on any week | Sport durations add up to the Calendar recorded total | Unit tests |
+| Trail run, unresolved running activity, other sport group | Counted once under Running; Other; Other | Unit tests |
+| Sport with every duration missing, sport partly measured, sport measured at zero, sport not done that week | **Duration missing**; known sum with the missing count; `0m`; **No sessions** | Unit and browser tests |
 | Custom dates, then a reversed range | Request for the covering whole weeks; then an error, no request and no chart | Browser tests |
 | Period change | Only the chart is requested; no workspace reload and no save notice | Browser tests |
 | Period change whose request fails, then **Try again** | Error and retry instead of the previous weeks; then the new weeks | Browser tests |
@@ -42,15 +46,15 @@ Requirement source: [issue #79](https://github.com/bidulelabs/athlete-panel/issu
 
 ## Observed implementation
 
-The [manifest](../../plugins/charts/manifest.json) registers `/charts` and one server operation. [`summary`](../../plugins/charts/server.ts) validates the selection with the [public contract](../../packages/contracts/src/charts.ts), reads plans, workouts, events and the selected weeks' activities in one read-only repeatable-read transaction (one consistent snapshot, without the domain write lock that saves and imports take), and maps each week through [the shared weekly calculation](../../plugins/charts/summary.ts). It returns only weekly duration totals and race dates and titles. The [page](../../plugins/charts/client.tsx) builds the week rows in [one place](../../plugins/charts/training-hours.ts) for the chart, the tooltip and the table, and loads the [chart](../../plugins/charts/training-hours-chart.tsx) and Recharts only when a template opens. [`useChartsSummary`](../../plugins/charts/use-charts-summary.ts) calls the operation directly rather than through the workspace save helper, and keys each result by its weeks and retry count.
+The [manifest](../../plugins/charts/manifest.json) registers `/charts` and one server operation. [`summary`](../../plugins/charts/server.ts) validates the selection with the [public contract](../../packages/contracts/src/charts.ts), reads plans, workouts, events and the selected weeks' activities in one read-only repeatable-read transaction (one consistent snapshot, without the domain write lock that saves and imports take), and maps each week through [the shared weekly calculation](../../plugins/charts/summary.ts). It returns only weekly duration totals (overall and per chart sport, from the Calendar sport breakdown) and race dates and titles. The [page](../../plugins/charts/client.tsx) builds the week rows in [one place](../../plugins/charts/training-hours.ts) for the chart, the tooltip and the table, and loads the [chart](../../plugins/charts/training-hours-chart.tsx) and Recharts only when a template opens. [`useChartsSummary`](../../plugins/charts/use-charts-summary.ts) calls the operation directly rather than through the workspace save helper, and keys each result by its weeks and retry count. [Training by sport](../../plugins/charts/training-by-sport.ts) adds the sport split to those rows; both charts share the [weekly frame](../../plugins/charts/weekly-chart.tsx).
 
-The UI package adds the shadcn `chart` component on Recharts 3.10.1. Its dark selector follows `data-theme`, like the rest of the [shared UI](shared-ui.md). Series colours are plugin tokens in [charts CSS](../../plugins/charts/charts.css): a neutral graphite for recorded hours (not a sport colour, since the bar sums every sport) and the Calendar event amber for races.
+The UI package adds the shadcn `chart` component on Recharts 3.10.1. Its dark selector follows `data-theme`, like the rest of the [shared UI](shared-ui.md). Series colours are plugin tokens in [charts CSS](../../plugins/charts/charts.css): a neutral graphite for recorded hours (not a sport colour, since the bar sums every sport) and the Calendar event amber for races. Sport colours are fixed per sport and checked with the palette validator in both themes; in the light theme cycling and swimming sit below 3:1 against the surface, so the legend and table carry their values. Other uses the neutral muted colour.
 
 Evidence: unit, integration and browser tests linked above.
 Limits: the general `GET /api/workspace` keeps its 121-day limit. Accessibility checks are the keyboard and table browser tests; no automated axe scan runs, and text contrast inside the SVG is not measured automatically.
 
 ## Contracts and constraints
 
-- Contract: [`charts.summary`](../../packages/contracts/src/operations.ts) input `{ weekStart, weeks }` (1 to 53) and output `{ weeks, races }`.
+- Contract: [`charts.summary`](../../packages/contracts/src/operations.ts) input `{ weekStart, weeks }` (1 to 53) and output `{ weeks, races }`; each week carries `recordedSecondsBySport` for the six chart sports.
 - Architecture: [plugin boundaries](../architecture.md); the plugin depends on the public training calculation and has no schema or migration.
 - Rationale: [ADR 007](../decisions/007-shared-shadcn-ui.md) for shared shadcn components.

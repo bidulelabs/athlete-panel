@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
+import { chartsSummarySchema } from '@athlete-panel/contracts';
 import { isolatedDatabaseUrl } from '../support/test-database';
 import { closeDatabase, connection } from '../../packages/host/src/db';
 import { migrate } from '../../packages/host/src/migrations';
@@ -43,6 +44,18 @@ it('reads 52 weeks, beyond the 121-day workspace limit, without changing stored 
   expect(await sql`select id,revision,data from activity_records.records order by id`).toEqual(
     before,
   );
+});
+
+it('returns the recorded duration of every chart sport', async () => {
+  const sql = connection();
+  const ride = { ...activity(5, '2029-01-09', 4500), sport: 'cycling' };
+  await sql`insert into activity_records.records(kind,id,revision,data) values('activity',${ride.id},1,${sql.json(ride)})`;
+  const summary = await charts.operations.summary({ weekStart: '2029-01-08', weeks: 1 });
+  expect(chartsSummarySchema.parse(summary)).toEqual(summary);
+  expect(summary.weeks[0]!.recordedSecondsBySport).toMatchObject({
+    cycling: { value: 4500, knownCount: 1, missingCount: 0 },
+    running: { value: 0, knownCount: 0, missingCount: 0 },
+  });
 });
 
 it('refuses a selection longer than 53 weeks', async () => {

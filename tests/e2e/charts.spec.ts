@@ -47,7 +47,7 @@ for (const theme of ['dark', 'light'] as const)
     await figure.getByText('View values', { exact: true }).click();
     const table = figure.getByRole('table');
     await expect(table.getByRole('row')).toHaveCount(13);
-    await expect(valueRow(page, 'Week of 5 Nov')).toContainText('0m');
+    await expect(valueRow(page, 'Week of 5 Nov')).toContainText('No sessions recorded');
     await expect(valueRow(page, 'Week of 26 Nov')).toContainText('Hill 15 km');
     await expect(valueRow(page, 'Week of 31 Dec')).toContainText(
       '30m (1 of 2 sessions without duration)',

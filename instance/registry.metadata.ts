@@ -254,6 +254,39 @@ export const registry = [
     }
   },
   {
+    "path": "plugins/charts",
+    "enabled": true,
+    "version": "1.0.0",
+    "manifest": {
+      "id": "charts",
+      "name": "Charts",
+      "description": "Training trends across weeks and months",
+      "version": "1.0.0",
+      "hostApi": "^1.3.0",
+      "dependencies": {
+        "training": "^2.1.0"
+      },
+      "optionalDependencies": {},
+      "required": false,
+      "client": "client.tsx",
+      "server": "server.ts",
+      "public": {},
+      "routes": [
+        {
+          "path": "/charts",
+          "title": "Charts",
+          "icon": "ChartColumn"
+        }
+      ],
+      "slots": [],
+      "migrations": [],
+      "services": [],
+      "jobs": [],
+      "capabilities": [],
+      "configuration": {}
+    }
+  },
+  {
     "path": "plugins/agent-bridge",
     "enabled": true,
     "version": "2.2.0",

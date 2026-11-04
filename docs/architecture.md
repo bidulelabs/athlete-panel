@@ -26,6 +26,7 @@ Local operation uses the [persistent PostgreSQL container](../compose.local.yml)
 | Athlete/training | Profile, constraints, prescriptions, dates/order, completion and audit                     | [Athlete](../plugins/athlete), [training](../plugins/training)                |
 | Records/Garmin   | Normalized records and account-bound Personal import                                       | [Records](../plugins/activity-records), [Garmin](../plugins/garmin)           |
 | Calendar/health  | Workspace and factual daily projections                                                    | [Calendar](../plugins/calendar), [health](../plugins/health)                  |
+| Charts           | Chart templates over Calendar weekly totals for long periods                               | [Charts](../plugins/charts)                                                   |
 | Agent bridge     | Browser-approved CLI pairing, scoped exports, immutable proposal review, atomic apply/undo | [Bridge](../plugins/agent-bridge/service.ts)                                  |
 | Owner extension  | Weekly cycling duration and recorded sleep comparison                                      | [Personal plugin](../personal-plugins/cycling-sleep)                          |
 

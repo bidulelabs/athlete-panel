@@ -3,6 +3,7 @@ import { WorkspaceApp } from '../../../packages/ui/src';
 import { pages, slots } from '../../../instance/registry.client';
 const priority = [
   '/calendar',
+  '/charts',
   '/plans',
   '/activities',
   '/health',

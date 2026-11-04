@@ -49,6 +49,8 @@ The same package owns Markdown failure isolation: caught parsing/excerpt errors,
 
 Source was generated with shadcn CLI **4.22.1**, `radix-nova`, then adapted in [shared component source](../../packages/ui/src/components), [theme mapping](../../packages/ui/src/styles/shadcn.css) and [compatibility wrappers](../../packages/ui/src/primitives.tsx). [Web configuration](../../apps/web/components.json), [UI configuration](../../packages/ui/components.json) and package exports establish monorepo ownership. Package versions and their transitive resolutions are recorded in the pnpm lockfile.
 
+The `chart` component (Recharts 3.10.1) is not exported from the package root, so only pages that open a chart load Recharts. Its dark colours are generated under `[data-theme='dark']` instead of the shadcn `.dark` class. [Charts](charts.md) is its first consumer.
+
 The [provider](../../packages/ui/src/provider.tsx) supplies tooltip timing and owner confirmation. Feature calculations and backend operations remain in their original plugins. Individual actual checks, screenshot review and release limits are maintained in the execution record; source inspection alone is not runtime evidence.
 
 ## Contracts and constraints

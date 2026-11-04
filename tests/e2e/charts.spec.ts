@@ -81,10 +81,12 @@ test('training hours chart answers the keyboard with the focused week', async ({
   await expect(page.locator('.charts-tooltip')).toContainText('Week of');
 });
 
-test('training hours asks the server for the custom weeks and refuses a reversed range', async ({
+test('training hours asks the server for the season and custom weeks and refuses a reversed range', async ({
   page,
 }) => {
   const selections = await openTrainingHours(page, 'dark');
+  await page.getByRole('combobox', { name: 'Period' }).selectOption('season');
+  await expect.poll(() => selections.at(-1)).toEqual({ weekStart: '2029-12-31', weeks: 3 });
   await page.getByRole('combobox', { name: 'Period' }).selectOption('custom');
   await page.getByRole('textbox', { name: 'From' }).fill('2029-12-05');
   await page.getByRole('textbox', { name: 'To' }).fill('2030-01-02');

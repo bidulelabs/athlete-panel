@@ -7,3 +7,4 @@ export * from './import-recovery';
 export * from './proposal-review';
 export * from './sports';
 export * from './history';
+export * from './charts';

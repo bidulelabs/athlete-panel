@@ -1,0 +1,24 @@
+{
+  "id": "charts",
+  "name": "Charts",
+  "description": "Training trends across weeks and months",
+  "version": "1.0.0",
+  "hostApi": "^1.3.0",
+  "dependencies": {
+    "training": "^2.1.0"
+  },
+  "required": false,
+  "routes": [
+    {
+      "path": "/charts",
+      "title": "Charts",
+      "icon": "ChartColumn"
+    }
+  ],
+  "migrations": [],
+  "services": [],
+  "jobs": [],
+  "capabilities": [],
+  "client": "client.tsx",
+  "server": "server.ts"
+}

@@ -3,6 +3,7 @@ import { dateSchema, idSchema } from './domain';
 import { historyMeasureSchema } from './history';
 
 export const chartsMaxWeeks = 53;
+export const chartsUsualRangeLookbackNights = 60;
 export const chartsSummaryInputSchema = z
   .object({ weekStart: dateSchema, weeks: z.number().int().min(1).max(chartsMaxWeeks) })
   .strict();
@@ -37,11 +38,19 @@ export const chartsSessionSchema = z.object({
   averageHeartRateBpm: z.number().nullable(),
   durationSeconds: z.number().nullable(),
 });
+export const chartsNightSchema = z.object({
+  date: dateSchema,
+  restingHeartRateBpm: z.number().nullable(),
+  restingHeartRateMayBeMinimum: z.boolean(),
+  hrvMilliseconds: z.number().nullable(),
+});
 export const chartsSummarySchema = z.object({
   weeks: z.array(chartsWeekSchema),
   races: z.array(chartsRaceSchema),
   sessions: z.array(chartsSessionSchema),
+  nights: z.array(chartsNightSchema),
 });
 export type ChartsSummaryInput = z.infer<typeof chartsSummaryInputSchema>;
 export type ChartsSummary = z.infer<typeof chartsSummarySchema>;
 export type ChartsSession = z.infer<typeof chartsSessionSchema>;
+export type ChartsNight = z.infer<typeof chartsNightSchema>;

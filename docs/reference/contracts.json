@@ -29543,12 +29543,47 @@
                 ],
                 "additionalProperties": false
               }
+            },
+            "nights": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "restingHeartRateBpm": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "restingHeartRateMayBeMinimum": {
+                    "type": "boolean"
+                  },
+                  "hrvMilliseconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "date",
+                  "restingHeartRateBpm",
+                  "restingHeartRateMayBeMinimum",
+                  "hrvMilliseconds"
+                ],
+                "additionalProperties": false
+              }
             }
           },
           "required": [
             "weeks",
             "races",
-            "sessions"
+            "sessions",
+            "nights"
           ],
           "additionalProperties": false
         }

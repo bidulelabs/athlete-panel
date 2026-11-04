@@ -150,6 +150,20 @@
 .charts-key-other {
   background: var(--chart-other);
 }
+.charts-key-night {
+  border-radius: 50%;
+  background: var(--muted);
+}
+.charts-key-average {
+  width: 16px;
+  height: 0;
+  border-top: 2px solid var(--chart-recorded);
+  border-radius: 0;
+}
+.charts-key-usual-range {
+  width: 16px;
+  background: color-mix(in srgb, var(--chart-recorded) 14%, transparent);
+}
 .charts-plot {
   width: 100%;
   height: 260px;

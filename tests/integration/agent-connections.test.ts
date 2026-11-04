@@ -22,7 +22,7 @@ describe('browser-approved agent connections', () => {
     await migrate();
   });
   beforeEach(async () => {
-    await connection()`truncate agent_bridge.connections, host.proposals, host.grants, host.request_budgets`;
+    await connection()`truncate agent_bridge.connections, host.proposals, agent_bridge.planning_reads,host.grants, host.request_budgets`;
     await connection()`delete from host.settings where key='maintenance'`;
   });
   afterAll(closeDatabase);

@@ -173,16 +173,16 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onCl
         ))}
         {!!review?.contextChanges.length && (
           <section aria-label="Changed context">
-            <h3>Context changed since submission</h3>
+            <h3>What changed since the agent read your data</h3>
             <p>
-              These facts changed after the agent prepared this proposal. Review them before
-              deciding whether the proposed training still suits you.
+              The agent hadn’t seen these changes when it planned your training. Review them before
+              deciding whether to apply the proposed edits.
             </p>
             {review.contextChanges.map((change, index) => (
               <ReviewChange
                 change={change}
                 planTitles={planTitles}
-                caption="Context at submission and now"
+                caption="When the agent read your data and now"
                 key={index}
               />
             ))}

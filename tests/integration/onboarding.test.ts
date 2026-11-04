@@ -33,7 +33,7 @@ beforeAll(async () => {
 });
 beforeEach(async () => {
   const sql = connection();
-  await sql`truncate host.owner, host.sessions, host.grants, host.proposals, host.login_attempts, host.changes, host.idempotency, host.jobs, athlete.records, training.records, activity_records.records, garmin.coverage`;
+  await sql`truncate host.owner, host.sessions, agent_bridge.planning_reads,host.grants, host.proposals, host.login_attempts, host.changes, host.idempotency, host.jobs, athlete.records, training.records, activity_records.records, garmin.coverage`;
   await sql`delete from host.settings where key in ('onboarding','garmin','garminToken','maintenance')`;
 });
 afterAll(closeDatabase);

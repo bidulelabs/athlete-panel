@@ -31,7 +31,7 @@ import {
 } from '../../plugins/garmin/sync';
 import { GARMIN_HEALTH_HISTORY_START } from '../../plugins/garmin/history-policy';
 import { GARMIN_ORIGIN, GARMIN_TOKEN_PATH } from '../../plugins/garmin/transport';
-import { createGrant } from '../../plugins/agent-bridge/service';
+import { contextForToken, createGrant, submitProposal } from '../../plugins/agent-bridge/service';
 import { readHistory } from '../../plugins/agent-bridge/history';
 
 // Pacing has dedicated transport unit coverage. Keep this DB suite deterministic and fast.
@@ -80,7 +80,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     await migrate();
   });
   beforeEach(async () => {
-    await connection()`truncate host.jobs, host.proposals, host.grants, host.changes, host.idempotency, athlete.records, training.records, activity_records.records, garmin.coverage, garmin.scan_state, garmin.scheduler`;
+    await connection()`truncate host.jobs, host.proposals, agent_bridge.planning_reads,host.grants, host.changes, host.idempotency, athlete.records, training.records, activity_records.records, garmin.coverage, garmin.scan_state, garmin.scheduler`;
     await connection()`delete from host.settings where key in ('garmin','garminToken','maintenance')`;
     activities = [activityRow()];
     sleepRows = [];
@@ -504,6 +504,8 @@ describe('durable Garmin worker with synthetic Personal API', () => {
         { action: 'workout.link', id: workoutId, expectedRevision: 1, activityId: before.id },
       ],
     });
+    const { token } = await createGrant({ label: 'Plan around ride', from: day, to: day });
+    const { contextDigest } = await contextForToken(token);
     activities = [
       activityRow({
         duration: 4200,
@@ -544,6 +546,14 @@ describe('durable Garmin worker with synthetic Personal API', () => {
       distanceMeters: 22000,
     });
     expect(state.workouts[0].revision).toBe(2);
+    await expect(
+      submitProposal(token, {
+        commands: [{ action: 'plan.create', values: { title: 'Ride plan', startDate: day } }],
+        summary: 'Plan around ride',
+        contextDigest,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ code: 'stale_context', status: 409 });
   });
 
   it('fills elevation loss, max heart rate and zones on an older activity through an activities refresh', async () => {

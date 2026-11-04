@@ -7,17 +7,17 @@ import postgres from 'postgres';
 import { spawnSync } from 'node:child_process';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { registry, schemaSignature } from '../../instance/registry.metadata';
+import { loadWorkspace } from '../../instance/services';
+import { canonical, digest } from '../../packages/host/src/crypto';
+import { boundedContext } from '../../plugins/agent-bridge/proposal-validation';
+import { applyCommands } from '../../plugins/training/public/server';
+import { agentCommandsSchema } from '../../packages/contracts/src';
 import { closeDatabase, connection } from '../../packages/host/src/db';
 import { claimJob } from '../../packages/host/src/jobs';
 import { migrate } from '../../packages/host/src/migrations';
 import { checkSchema } from '../../packages/host/src/schema';
 import { hostMigrationFiles } from '../../packages/host/src/migration-files';
-import {
-  createGrant,
-  contextForToken,
-  submitProposal,
-  reviewProposal,
-} from '../../plugins/agent-bridge/service';
+import { createGrant, contextForToken, reviewProposal } from '../../plugins/agent-bridge/service';
 import { readHistory } from '../../plugins/agent-bridge/history';
 import { syntheticDay } from '../fixtures/historical';
 import { provisionApplicationRole } from '../../packages/host/src/database-access';
@@ -117,18 +117,26 @@ describe('transactional migration and source lifecycle', () => {
       from: '2024-01-01',
       to: '2024-03-31',
     });
-    const context = await contextForToken(access.token);
-    const proposal = await submitProposal(access.token, {
-      summary: 'Pending before upgrade',
-      contextDigest: context.contextDigest,
-      idempotencyKey: randomUUID(),
-      commands: [
-        {
-          action: 'plan.create',
-          values: { title: 'Synthetic pending plan', startDate: '2024-03-01' },
-        },
-      ],
-    });
+    // Seed the pre-upgrade v2 proposal on its own schema, before planning_reads exists.
+    const scope = { from: '2024-01-01', to: '2024-03-31', includeNotes: false };
+    const state = await loadWorkspace(undefined, scope);
+    const snapshotState = boundedContext(state, scope);
+    const readDigest = digest(canonical(snapshotState));
+    const summary = 'Pending before upgrade';
+    const commands = agentCommandsSchema.parse([
+      {
+        action: 'plan.create',
+        values: { id: randomUUID(), title: 'Synthetic pending plan', startDate: '2024-03-01' },
+      },
+    ]);
+    const { changes } = applyCommands(state, commands, { actor: 'agent' });
+    const proposal = {
+      id: randomUUID(),
+      digest: digest(canonical({ commands, changes, contextDigest: readDigest, summary })),
+    };
+    await sql`insert into host.proposals(id,grant_id,status,summary,commands,changes,context,digest)
+      values(${proposal.id},${access.grant.id},'pending',${summary},${sql.json(commands as never)},${sql.json(changes as never)},
+        ${sql.json({ version: 2, scope, digest: readDigest, snapshot: snapshotState } as never)},${proposal.digest})`;
     const [snapshot] = await sql`select context from host.proposals where id=${proposal.id}`;
     expect(snapshot.context.version).toBe(2);
     const legacyId = randomUUID();

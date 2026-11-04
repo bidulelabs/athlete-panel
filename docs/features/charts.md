@@ -18,6 +18,7 @@ Requirement source: [issue #79](https://github.com/bidulelabs/athlete-panel/issu
 - A week with no recorded session shows no bar and reads **No sessions recorded**, as in the Calendar. A session measured at zero minutes reads `0m`. A week whose recorded sessions all lack a duration shows no bar and **Duration missing**. A partly measured week shows the known sum with how many sessions lack a duration. A week without planned sessions has no point on the planned line and reads **No plan**.
 - The current week is marked **in progress**: its bar is drawn as an outline. Weeks after today show no recorded value and read **Upcoming**.
 - A period with no planned and no recorded session shows an empty state instead of empty axes.
+- Choosing a period shows only that period's result. While it loads, the previous chart stays at reduced opacity; if the request fails, the chart is removed and an error with **Try again** replaces it. Opening or changing a chart reads only the chart: it does not reload the workspace or announce a save.
 - **View values** opens a native table with the same weeks, values and labels as the chart and tooltip. The chart has a legend, a caption describing the period, a tooltip that follows the pointer, and keyboard navigation (focus the chart, then the arrow keys).
 
 ## Acceptance scenarios
@@ -32,14 +33,16 @@ Requirement source: [issue #79](https://github.com/bidulelabs/athlete-panel/issu
 | Race, goal and race outside the period | Only the race inside the period is drawn and listed | Unit tests |
 | Empty period | Empty state, no figure | Browser tests |
 | Active plan; no plan; plan starting later or already ended | Season from the plan start; from 1 January; from 1 January | Unit and browser tests |
-| Custom dates, then a reversed range | Request for the covering whole weeks; then an error and no request | Browser tests |
+| Custom dates, then a reversed range | Request for the covering whole weeks; then an error, no request and no chart | Browser tests |
+| Period change | Only the chart is requested; no workspace reload and no save notice | Browser tests |
+| Period change whose request fails, then **Try again** | Error and retry instead of the previous weeks; then the new weeks | Browser tests |
 | A save holds the domain write lock | The chart still loads | Integration test |
 | Keyboard on the chart | Arrow key shows the week's values in the tooltip | Browser tests |
 | Desktop, Pixel 7 and 320px, both themes | No page-level horizontal scroll; the table scrolls inside its own region | Browser tests and screenshots |
 
 ## Observed implementation
 
-The [manifest](../../plugins/charts/manifest.json) registers `/charts` and one server operation. [`summary`](../../plugins/charts/server.ts) validates the selection with the [public contract](../../packages/contracts/src/charts.ts), reads plans, workouts, events and the selected weeks' activities in one read-only repeatable-read transaction (one consistent snapshot, without the domain write lock that saves and imports take), and maps each week through [the shared weekly calculation](../../plugins/charts/summary.ts). It returns only weekly duration totals and race dates and titles. The [page](../../plugins/charts/client.tsx) builds the week rows in [one place](../../plugins/charts/training-hours.ts) for the chart, the tooltip and the table, and loads the [chart](../../plugins/charts/training-hours-chart.tsx) and Recharts only when a template opens. While a new period loads, the previous chart stays at reduced opacity.
+The [manifest](../../plugins/charts/manifest.json) registers `/charts` and one server operation. [`summary`](../../plugins/charts/server.ts) validates the selection with the [public contract](../../packages/contracts/src/charts.ts), reads plans, workouts, events and the selected weeks' activities in one read-only repeatable-read transaction (one consistent snapshot, without the domain write lock that saves and imports take), and maps each week through [the shared weekly calculation](../../plugins/charts/summary.ts). It returns only weekly duration totals and race dates and titles. The [page](../../plugins/charts/client.tsx) builds the week rows in [one place](../../plugins/charts/training-hours.ts) for the chart, the tooltip and the table, and loads the [chart](../../plugins/charts/training-hours-chart.tsx) and Recharts only when a template opens. [`useChartsSummary`](../../plugins/charts/use-charts-summary.ts) calls the operation directly rather than through the workspace save helper, and keys each result by its weeks and retry count.
 
 The UI package adds the shadcn `chart` component on Recharts 3.10.1. Its dark selector follows `data-theme`, like the rest of the [shared UI](shared-ui.md). Series colours are plugin tokens in [charts CSS](../../plugins/charts/charts.css): a neutral graphite for recorded hours (not a sport colour, since the bar sums every sport) and the Calendar event amber for races.
 

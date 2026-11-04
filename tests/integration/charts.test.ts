@@ -48,3 +48,24 @@ it('reads 52 weeks, beyond the 121-day workspace limit, without changing stored 
 it('refuses a selection longer than 53 weeks', async () => {
   await expect(charts.operations.summary({ weekStart: '2029-01-08', weeks: 54 })).rejects.toThrow();
 });
+
+it('loads the chart while a save holds the write lock', async () => {
+  const sql = connection();
+  const workout = plannedWorkout(1, '2029-01-09', 5400);
+  await sql`insert into training.records(kind,id,revision,data) values('workout',${workout.id},1,${sql.json(workout)})`;
+  await sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(736147001)`;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const summary = await Promise.race([
+        charts.operations.summary({ weekStart: '2029-01-08', weeks: 1 }),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('The chart waited for the write lock')), 2000);
+        }),
+      ]);
+      expect(summary.weeks[0]!.plannedSeconds.value).toBe(5400);
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+});

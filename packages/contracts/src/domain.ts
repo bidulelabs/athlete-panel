@@ -410,7 +410,10 @@ export const activitySchema = z
     durationSeconds: nullableNumber,
     distanceMeters: nullableNumber,
     elevationMeters: nullableNumber,
+    elevationLossMeters: nullableNumber.optional(),
     averageHeartRateBpm: nullableNumber,
+    maxHeartRateBpm: nullableNumber.optional(),
+    heartRateZoneSeconds: z.array(nullableNumber).length(5).nullable().optional(),
     provenance: importProvenanceSchema.optional(),
   })
   .strict();

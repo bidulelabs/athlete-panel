@@ -546,6 +546,77 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     expect(state.workouts[0].revision).toBe(2);
   });
 
+  it('fills elevation loss, max heart rate and zones on an older activity through an activities refresh', async () => {
+    await bootstrap();
+    await takeStep();
+    await connection()`update activity_records.records set data = data - 'elevationLossMeters' - 'maxHeartRateBpm' - 'heartRateZoneSeconds' where kind='activity'`;
+    const before = (await loadWorkspace()).activities[0];
+    expect(before).not.toHaveProperty('elevationLossMeters');
+    const workoutId = randomUUID();
+    await mutate({
+      idempotencyKey: randomUUID(),
+      commands: [
+        {
+          action: 'workout.create',
+          values: {
+            id: workoutId,
+            title: 'Planned ride',
+            sport: 'cycling',
+            schedule: { kind: 'independent', date: day },
+          },
+        },
+        { action: 'workout.link', id: workoutId, expectedRevision: 1, activityId: before.id },
+      ],
+    });
+    const refreshActivities = async () => {
+      await connection()`update host.jobs set status='completed',lease_owner=null,lease_until=null where plugin_id='garmin'`;
+      await sync({ mode: 'full', from: day, to: day, scope: 'activities' });
+      await takeStep();
+      await takeStep();
+      await takeStep();
+      return loadWorkspace();
+    };
+
+    let state = await refreshActivities();
+    expect(state.activities[0]).toMatchObject({
+      id: before.id,
+      revision: before.revision + 1,
+      elevationLossMeters: null,
+      maxHeartRateBpm: null,
+      heartRateZoneSeconds: null,
+    });
+    expect(state.workouts[0].revision).toBe(1);
+
+    activities = [
+      activityRow({
+        elevationLoss: 640,
+        maxHR: 181,
+        hrTimeInZone_1: 900,
+        hrTimeInZone_2: 1800,
+        hrTimeInZone_3: 700,
+        hrTimeInZone_4: 200,
+        hrTimeInZone_5: 0,
+      }),
+    ];
+    state = await refreshActivities();
+    expect(state.activities).toHaveLength(1);
+    expect(state.activities[0]).toMatchObject({
+      id: before.id,
+      revision: before.revision + 2,
+      elevationLossMeters: 640,
+      maxHeartRateBpm: 181,
+      heartRateZoneSeconds: [900, 1800, 700, 200, 0],
+    });
+    expect(state.workouts[0].revision).toBe(1);
+
+    activities = [activityRow({ duration: 4200 })];
+    state = await refreshActivities();
+    expect(state.workouts[0]).toMatchObject({
+      revision: 2,
+      completion: { durationSeconds: 4200 },
+    });
+  });
+
   it.each(['activities', 'health', 'both'] as const)(
     'rejects unbounded %s refreshes before changing recovery state or queuing work',
     async (scope) => {

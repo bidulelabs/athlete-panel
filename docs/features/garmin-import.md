@@ -51,6 +51,8 @@ Failed catch-up checkpoints remain inspectable until explicit retry. Forbidden h
 | Numeric ID larger than JavaScript's safe integer | Preserve exact decimal string from JSON parsing onward | Lossless-ID test |
 | Activity UTC date differs from provider local day | Calendar uses provider local date; UTC instant remains intact | Midnight/DST fixtures |
 | Missing or negative sentinel metric; actual zero | Missing becomes null; zero stays known | Health normalization tests |
+| Activity with elevation loss, max heart rate or time in heart-rate zones | Stored when supplied; a missing, negative or non-numeric value becomes null and a measured zero stays zero; missing zones stay null beside supplied ones | Activity normalization tests |
+| Activity imported before these fields were kept | Fields stay absent until an Activities refresh over its dates fills them in place, keeping its ID, links and annotations | Activities refresh integration test |
 | Undated sleep DTO with no overnight identity, timestamps or measurements | Ignore only the explicit empty overnight shape; nap/sleep-need metadata does not provide a date; coverage remains missing | Sleep placeholder regression tests |
 | Undated sleep DTO contains a measurement, identity, timestamp or unknown non-null field | Reject that record with sanitized diagnostics; import valid neighbours and advance the checkpoint | Record-validation regression tests |
 | Empty old health window | Record no-data coverage and continue to the internal boundary (or explicit repair bound) | Historical traversal test |
@@ -67,11 +69,15 @@ The official Personal Swagger 1.0.0 schema embedded in Garmin's public documenta
 
 ## Contracts and constraints
 
-Normalized data uses [shared Activity and HealthRecord contracts](../../packages/contracts/src/index.ts). The plugin returns records without local IDs/revisions; the host allocates stable IDs and revisions through idempotent upserts. Activity `duration` is seconds, distance/elevation are meters. Missing provider local dates fall back to the athlete's configured timezone and are marked inferred. GPS, activity descriptions and provider profile fields are not copied into these contracts.
+Normalized data uses [shared Activity and HealthRecord contracts](../../packages/contracts/src/index.ts). The plugin returns records without local IDs/revisions; the host allocates stable IDs and revisions through idempotent upserts. Activity `duration` is seconds, distance/elevation are meters. Missing provider local dates fall back to the athlete's configured timezone and are marked inferred.
+
+Activities also keep three optional values from the same list response: `elevationLossMeters` (`elevationLoss`), `maxHeartRateBpm` (`maxHR`, the peak recorded during the activity) and `heartRateZoneSeconds`, five seconds-in-zone values from `hrTimeInZone_1` to `hrTimeInZone_5`. The zones are Garmin's own heart-rate zones, not the athlete profile zones. Each value is null when Garmin omits it or sends a negative or non-numeric value; zero stays a measured zero. A zone Garmin omits is null beside the supplied ones; `heartRateZoneSeconds` is null when all five are missing. No extra provider call is made.
+
+Activities imported before these values were kept do not have the fields: unknown, never zero. The hourly recent import fills the latest seven days. For older history, the owner runs **Refresh date range** with **Activities** from the oldest imported activity to today. It reuses the activity-only reimport: activities keep their IDs, workout links and owner annotations, and their revision advances. No SQL migration rewrites stored records. GPS, activity descriptions and provider profile fields are not copied into these contracts.
 
 | Stream | Official Personal endpoint | Mapping and bounded request |
 | --- | --- | --- |
-| Activities | `/activitylist-service/activities/search/activities` | Lossless `activityId`; `ownerId` binding; `startTimeGMT` and `startTimeLocal`; actual page offset; request 99; finish on empty page |
+| Activities | `/activitylist-service/activities/search/activities` | Lossless `activityId`; `ownerId` binding; `startTimeGMT` and `startTimeLocal`; `elevationGain`, `elevationLoss`, `averageHR`, `maxHR` and `hrTimeInZone_1` to `hrTimeInZone_5`; actual page offset; request 99; finish on empty page |
 | Sleep | `/sleep-service/sleep/dailySleepSummariesByDate` | Date, seconds/stages and `sleepScores.overall.value`; 28-day windows within documented 31-day maximum |
 | Daily summaries | `/usersummary-service/v2/dailysummaries` | `data[].heartRate.restingValue`; 28-day windows within documented one-year maximum |
 | HRV | `/hrv-service/hrv/daily/{from}/{to}` | `hrvSummaries[].lastNightAvg`; 28-day windows; 204 means no data |

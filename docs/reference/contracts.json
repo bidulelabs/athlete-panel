@@ -1175,11 +1175,56 @@
                       }
                     ]
                   },
+                  "elevationLossMeters": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "averageHeartRateBpm": {
                     "anyOf": [
                       {
                         "type": "number",
                         "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "maxHeartRateBpm": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "heartRateZoneSeconds": {
+                    "anyOf": [
+                      {
+                        "minItems": 5,
+                        "maxItems": 5,
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
                       },
                       {
                         "type": "null"
@@ -7726,11 +7771,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -7955,11 +8045,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -10804,11 +10939,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -11033,11 +11213,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -13899,11 +14124,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -14128,11 +14398,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -17408,11 +17723,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -17637,11 +17997,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -20894,11 +21299,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -21123,11 +21573,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -24001,11 +24496,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -24230,11 +24770,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -27119,11 +27704,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -27348,11 +27978,56 @@
                                   }
                                 ]
                               },
+                              "elevationLossMeters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "averageHeartRateBpm": {
                                 "anyOf": [
                                   {
                                     "type": "number",
                                     "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "heartRateZoneSeconds": {
+                                "anyOf": [
+                                  {
+                                    "minItems": 5,
+                                    "maxItems": 5,
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
                                   },
                                   {
                                     "type": "null"
@@ -33579,11 +34254,56 @@
                 }
               ]
             },
+            "elevationLossMeters": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "averageHeartRateBpm": {
               "anyOf": [
                 {
                   "type": "number",
                   "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "maxHeartRateBpm": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "heartRateZoneSeconds": {
+              "anyOf": [
+                {
+                  "minItems": 5,
+                  "maxItems": 5,
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
                 },
                 {
                   "type": "null"

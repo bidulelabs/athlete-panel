@@ -561,6 +561,12 @@ export async function runGarminJob(job: Job) {
               (w) => w.completion?.activityId === next.id,
             )) {
               const a = activitySchema.parse(next);
+              if (
+                workout.completion!.performedDate === a.localDate &&
+                workout.completion!.durationSeconds === a.durationSeconds &&
+                workout.completion!.distanceMeters === a.distanceMeters
+              )
+                continue;
               const after = {
                 ...workout,
                 revision: workout.revision + 1,

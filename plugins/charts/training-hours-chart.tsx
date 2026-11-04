@@ -13,6 +13,8 @@ export default function TrainingHoursChart({ weeks }: { weeks: TrainingHoursWeek
   return (
     <WeeklyChart
       weeks={weeks}
+      yLabel="Hours"
+      planned
       config={config}
       tooltipRows={(week) => [
         ['Recorded', week.recordedLabel],

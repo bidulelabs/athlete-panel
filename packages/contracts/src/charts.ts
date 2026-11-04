@@ -4,8 +4,19 @@ import { historyMeasureSchema } from './history';
 
 export const chartsMaxWeeks = 53;
 export const chartsUsualRangeLookbackNights = 60;
+export const chartsTemplates = [
+  'training-hours',
+  'training-by-sport',
+  'workout-heart-rate',
+  'weekly-climbing',
+  'resting-heart-rate-hrv',
+] as const;
 export const chartsSummaryInputSchema = z
-  .object({ weekStart: dateSchema, weeks: z.number().int().min(1).max(chartsMaxWeeks) })
+  .object({
+    template: z.enum(chartsTemplates),
+    weekStart: dateSchema,
+    weeks: z.number().int().min(1).max(chartsMaxWeeks),
+  })
   .strict();
 export const chartsSports = [
   'running',

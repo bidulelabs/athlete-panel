@@ -28,7 +28,11 @@ it('reads 52 weeks, beyond the 121-day workspace limit, without changing stored 
   for (const [schema, kind, record] of records)
     await sql`insert into ${sql(schema + '.records')}(kind,id,revision,data) values(${kind},${record.id},1,${sql.json(record)})`;
   const before = await sql`select id,revision,data from activity_records.records order by id`;
-  const summary = await charts.operations.summary({ weekStart: '2029-01-08', weeks: 52 });
+  const summary = await charts.operations.summary({
+    template: 'training-hours',
+    weekStart: '2029-01-08',
+    weeks: 52,
+  });
   expect(summary.weeks).toHaveLength(52);
   expect(summary.weeks[0]).toMatchObject({
     weekStart: '2029-01-08',
@@ -50,7 +54,11 @@ it('returns the recorded duration of every chart sport', async () => {
   const sql = connection();
   const ride = { ...activity(5, '2029-01-09', 4500), sport: 'cycling' };
   await sql`insert into activity_records.records(kind,id,revision,data) values('activity',${ride.id},1,${sql.json(ride)})`;
-  const summary = await charts.operations.summary({ weekStart: '2029-01-08', weeks: 1 });
+  const summary = await charts.operations.summary({
+    template: 'training-hours',
+    weekStart: '2029-01-08',
+    weeks: 1,
+  });
   expect(chartsSummarySchema.parse(summary)).toEqual(summary);
   expect(summary.weeks[0]!.recordedSecondsBySport).toMatchObject({
     cycling: { value: 4500, knownCount: 1, missingCount: 0 },
@@ -67,7 +75,11 @@ it('returns elevation, running climb inputs and heart rate sessions from stored 
     averageHeartRateBpm: 148,
   };
   await sql`insert into activity_records.records(kind,id,revision,data) values('activity',${run.id},1,${sql.json(run)})`;
-  const summary = await charts.operations.summary({ weekStart: '2029-01-08', weeks: 1 });
+  const summary = await charts.operations.summary({
+    template: 'training-hours',
+    weekStart: '2029-01-08',
+    weeks: 1,
+  });
   expect(chartsSummarySchema.parse(summary)).toEqual(summary);
   expect(summary.weeks[0]).toMatchObject({
     recordedElevationMetersBySport: { running: { value: 250, knownCount: 1, missingCount: 0 } },
@@ -90,7 +102,7 @@ it('returns elevation, running climb inputs and heart rate sessions from stored 
   ]);
 });
 
-it('reads nights from 60 days before the period for the usual range', async () => {
+it('reads nights from 60 days before the period for resting heart rate and HRV only', async () => {
   const sql = connection();
   for (const night of [
     nightRecord(7, '2028-11-09', 'hrvMilliseconds', 51),
@@ -98,29 +110,44 @@ it('reads nights from 60 days before the period for the usual range', async () =
     nightRecord(9, '2029-01-09', 'restingHeartRateBpm', 47),
   ])
     await sql`insert into activity_records.records(kind,id,revision,data) values('health',${night.id},1,${sql.json(night)})`;
-  const summary = await charts.operations.summary({ weekStart: '2029-01-08', weeks: 1 });
-  expect(summary.nights.map((night) => night.date)).toEqual(['2028-11-09', '2029-01-09']);
+  const selection = { weekStart: '2029-01-08', weeks: 1 };
+  const nightly = await charts.operations.summary({
+    ...selection,
+    template: 'resting-heart-rate-hrv',
+  });
+  expect(nightly.nights.map((night) => night.date)).toEqual(['2028-11-09', '2029-01-09']);
+  const hours = await charts.operations.summary({ ...selection, template: 'training-hours' });
+  expect(hours.nights).toEqual([]);
 });
 
 it('refuses a selection longer than 53 weeks', async () => {
-  await expect(charts.operations.summary({ weekStart: '2029-01-08', weeks: 54 })).rejects.toThrow();
+  await expect(
+    charts.operations.summary({ template: 'training-hours', weekStart: '2029-01-08', weeks: 54 }),
+  ).rejects.toThrow();
 });
 
 it('loads the chart while a save holds the write lock', async () => {
   const sql = connection();
   const workout = plannedWorkout(1, '2029-01-09', 5400);
+  const night = nightRecord(2, '2029-01-09', 'hrvMilliseconds', 52);
   await sql`insert into training.records(kind,id,revision,data) values('workout',${workout.id},1,${sql.json(workout)})`;
+  await sql`insert into activity_records.records(kind,id,revision,data) values('health',${night.id},1,${sql.json(night)})`;
   await sql.begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(736147001)`;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const summary = await Promise.race([
-        charts.operations.summary({ weekStart: '2029-01-08', weeks: 1 }),
+        charts.operations.summary({
+          template: 'resting-heart-rate-hrv',
+          weekStart: '2029-01-08',
+          weeks: 1,
+        }),
         new Promise<never>((_, reject) => {
           timer = setTimeout(() => reject(new Error('The chart waited for the write lock')), 2000);
         }),
       ]);
       expect(summary.weeks[0]!.plannedSeconds.value).toBe(5400);
+      expect(summary.nights).toMatchObject([{ date: '2029-01-09', hrvMilliseconds: 52 }]);
     } finally {
       clearTimeout(timer);
     }

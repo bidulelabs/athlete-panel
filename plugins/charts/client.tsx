@@ -5,14 +5,11 @@ import {
   type ChartsSummary,
   type ChartsSummaryInput,
 } from '@athlete-panel/contracts';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { ChartColumn, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   addDays,
   Button,
-  dateLabel,
-  duration,
-  EmptyState,
   ErrorMessage,
   Field,
   Input,
@@ -20,28 +17,21 @@ import {
   NativeSelect,
   PageHeader,
   startOfWeek,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import { hasSessions, trainingHoursWeeks, type TrainingHoursWeek } from './training-hours';
+import { TrainingHoursFigure } from './training-hours-figure';
 import './charts.css';
-
-const TrainingHoursChart = lazy(() => import('./training-hours-chart'));
 
 const templates = [
   {
     id: 'training-hours',
     title: 'Training hours',
     description: 'Compare planned and recorded hours, with your races.',
+    Figure: TrainingHoursFigure,
   },
 ] as const;
-type TemplateId = (typeof templates)[number]['id'];
+type Template = (typeof templates)[number];
 const periods = {
   '4': 'Last 4 weeks',
   '12': 'Last 12 weeks',
@@ -54,9 +44,10 @@ const weekCount = (from: string, to: string) =>
   Math.round((Date.parse(to) - Date.parse(from)) / (7 * 86400000)) + 1;
 
 export default function ChartsPage({ data, request }: PluginPageProps) {
-  const [template, setTemplate] = useState<TemplateId | null>(null);
+  const [template, setTemplate] = useState<Template | null>(null);
   return template ? (
-    <TrainingHoursTemplate
+    <TemplatePage
+      template={template}
       today={localDate(new Date(), data.profile?.timezone)}
       request={request}
       onBack={() => setTemplate(null)}
@@ -73,7 +64,7 @@ export default function ChartsPage({ data, request }: PluginPageProps) {
             <Button
               variant="unstyled"
               className="charts-template"
-              onClick={() => setTemplate(item.id)}
+              onClick={() => setTemplate(item)}
             >
               <span>
                 <strong>{item.title}</strong>
@@ -88,11 +79,13 @@ export default function ChartsPage({ data, request }: PluginPageProps) {
   );
 }
 
-function TrainingHoursTemplate({
+function TemplatePage({
+  template,
   today,
   request,
   onBack,
 }: {
+  template: Template;
   today: string;
   request: PluginPageProps['request'];
   onBack: () => void;
@@ -133,13 +126,12 @@ function TrainingHoursTemplate({
       current = false;
     };
   }, [request, selection]);
-  const weeks = summary ? trainingHoursWeeks(summary, today, duration) : [];
   return (
     <>
       <Button variant="link" className="charts-back" onClick={onBack}>
         <ChevronLeft size={16} aria-hidden="true" /> All templates
       </Button>
-      <PageHeader title="Training hours" />
+      <PageHeader title={template.title} />
       <div className="charts-filters">
         <Field label="Period">
           <NativeSelect
@@ -173,94 +165,7 @@ function TrainingHoursTemplate({
         )}
       </div>
       <ErrorMessage error={typeof selection === 'string' ? selection : error} />
-      {summary && !hasSessions(summary) ? (
-        <EmptyState icon={<ChartColumn size={25} />} title="No training in this period">
-          Planned and recorded sessions will appear here.
-        </EmptyState>
-      ) : (
-        summary && <TrainingHoursFigure summary={summary} weeks={weeks} loading={loading} />
-      )}
+      {summary && <template.Figure summary={summary} today={today} loading={loading} />}
     </>
-  );
-}
-
-function TrainingHoursFigure({
-  summary,
-  weeks,
-  loading,
-}: {
-  summary: ChartsSummary;
-  weeks: TrainingHoursWeek[];
-  loading: boolean;
-}) {
-  return (
-    <figure className="charts-figure" aria-busy={loading} data-loading={loading}>
-      <figcaption>
-        <h2>Weekly training hours</h2>
-        <p>
-          Recorded hours as bars and planned hours as a dashed line, per week from{' '}
-          {dateLabel(weeks[0]!.weekStart)} to{' '}
-          {dateLabel(addDays(weeks.at(-1)!.weekStart, 6), {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-          })}
-          . Races are vertical lines.
-        </p>
-      </figcaption>
-      <ul className="charts-legend" aria-label="Legend">
-        <li>
-          <span className="charts-key charts-key-recorded" aria-hidden="true" />
-          Recorded
-        </li>
-        <li>
-          <span className="charts-key charts-key-planned" aria-hidden="true" />
-          Planned
-        </li>
-        {summary.races.length > 0 && (
-          <li>
-            <span className="charts-key charts-key-race" aria-hidden="true" />
-            Race
-          </li>
-        )}
-      </ul>
-      <Suspense fallback={<div className="charts-plot" />}>
-        <TrainingHoursChart weeks={weeks} />
-      </Suspense>
-      <TrainingHoursTable weeks={weeks} />
-    </figure>
-  );
-}
-
-function TrainingHoursTable({ weeks }: { weeks: TrainingHoursWeek[] }) {
-  return (
-    <details className="charts-values">
-      <summary>View values</summary>
-      <div className="charts-values-scroll">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Week</TableHead>
-              <TableHead>Recorded</TableHead>
-              <TableHead>Planned</TableHead>
-              <TableHead>Races</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {weeks.map((week) => (
-              <TableRow key={week.weekStart}>
-                <TableCell>
-                  Week of {dateLabel(week.weekStart)}
-                  {week.inProgress && ' (in progress)'}
-                </TableCell>
-                <TableCell>{week.recordedLabel}</TableCell>
-                <TableCell>{week.plannedLabel}</TableCell>
-                <TableCell>{week.races.join(', ')}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </details>
   );
 }

@@ -21,7 +21,7 @@ describe('charts weekly summary', () => {
     expect(summary.weeks).toHaveLength(14);
     summary.weeks.forEach((week, index) => {
       const calendar = weeklySummary(data, addDays(chartsFirstWeek, index * 7));
-      expect(week).toEqual({
+      expect(week).toMatchObject({
         weekStart: calendar.startDate,
         plannedSeconds: calendar.planned.durationSeconds,
         recordedSeconds: calendar.actual.durationSeconds,

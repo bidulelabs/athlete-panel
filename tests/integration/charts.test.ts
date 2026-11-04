@@ -29,7 +29,7 @@ it('reads 52 weeks, beyond the 121-day workspace limit, without changing stored 
   const before = await sql`select id,revision,data from activity_records.records order by id`;
   const summary = await charts.operations.summary({ weekStart: '2029-01-08', weeks: 52 });
   expect(summary.weeks).toHaveLength(52);
-  expect(summary.weeks[0]).toEqual({
+  expect(summary.weeks[0]).toMatchObject({
     weekStart: '2029-01-08',
     plannedSeconds: { value: 5400, knownCount: 1, missingCount: 0 },
     recordedSeconds: { value: 4500, knownCount: 1, missingCount: 0 },

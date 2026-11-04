@@ -5,6 +5,7 @@ export default defineConfig({
     alias: {
       '@athlete-panel/contracts': resolve('packages/contracts/src/index.ts'),
       '@athlete-panel/plugin-sdk': resolve('packages/plugin-sdk/src/index.ts'),
+      '@athlete-panel/ui': resolve('packages/ui/src'),
     },
   },
   test: {

@@ -36,11 +36,15 @@ function WeekTooltip<Week extends TrainingHoursWeek>({
 
 export function WeeklyChart<Week extends TrainingHoursWeek>({
   weeks,
+  yLabel,
+  planned,
   config,
   tooltipRows,
   children,
 }: {
   weeks: Week[];
+  yLabel: string;
+  planned: boolean;
   config: ChartConfig;
   tooltipRows: TooltipRows<Week>;
   children: ReactNode;
@@ -63,7 +67,7 @@ export function WeeklyChart<Week extends TrainingHoursWeek>({
           tickLine={false}
           axisLine={false}
           tickCount={5}
-          label={{ value: 'Hours', position: 'top', offset: 16 }}
+          label={{ value: yLabel, position: 'top', offset: 16 }}
         />
         <ChartTooltip
           cursor={{ fill: 'var(--hover)' }}
@@ -85,18 +89,20 @@ export function WeeklyChart<Week extends TrainingHoursWeek>({
             />
           ))}
         {children}
-        <Line
-          dataKey="plannedHours"
-          type="linear"
-          stroke="var(--muted)"
-          strokeWidth={2}
-          strokeDasharray="4 4"
-          connectNulls={false}
-          dot={{ r: 4, fill: 'var(--surface)', strokeDasharray: '' }}
-          activeDot={{ r: 5, fill: 'var(--surface)' }}
-          animationDuration={180}
-          animationEasing="ease"
-        />
+        {planned && (
+          <Line
+            dataKey="plannedHours"
+            type="linear"
+            stroke="var(--muted)"
+            strokeWidth={2}
+            strokeDasharray="4 4"
+            connectNulls={false}
+            dot={{ r: 4, fill: 'var(--surface)', strokeDasharray: '' }}
+            activeDot={{ r: 5, fill: 'var(--surface)' }}
+            animationDuration={180}
+            animationEasing="ease"
+          />
+        )}
       </ComposedChart>
     </ChartContainer>
   );

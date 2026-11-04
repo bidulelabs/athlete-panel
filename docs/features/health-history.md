@@ -1,5 +1,7 @@
 # Feature: Health history navigation
 
+For availability in your installed version, see the [changelog](../changelog.md).
+
 ## Purpose and scope
 
 Review recorded sleep and daily health measurements over a recent historical period. Health owns its review dates independently of Calendar's forward planning position.

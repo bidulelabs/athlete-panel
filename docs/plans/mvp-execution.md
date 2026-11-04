@@ -85,6 +85,8 @@ Local activation: a matched pre-upgrade encrypted snapshot was created under mai
 
 ## Release gates and remaining environment evidence
 
+This list records the gates that were open at the time of the MVP rehearsal. For v0.3.0, see the [published rehearsal results](https://github.com/bidulelabs/athlete-panel/releases/download/v0.3.0/verification.json) and the [checks to perform on the intended server](../release-readiness.md#operator-acceptance-on-the-intended-server).
+
 - Owner-account Garmin smoke: personal key entered in the app, automatic history traversal, actual identity/units/sentinel/permission checks, pagination behavior, device metrics, historical gaps and throttling. Routine CI contains no Garmin credential.
 - Application container: complete the image build when registry metadata resolution is available, then exercise Compose startup and the critical workflow against that image.
 - Actual private Linux deployment: server/domain, off-host backup destination and separately recovered encryption keys; verify HTTPS, worker health, backup delivery and restoration on that environment.

@@ -63,6 +63,37 @@ class ReleaseTags(unittest.TestCase):
             with self.subTest(version=version):
                 self.assertTrue(ci.verify_release_tag('v' + version, self.feature, version))
 
+    def test_notes_come_from_the_release_commit_and_keep_fenced_upgrade_commands(self):
+        path = self.root / 'docs/changelog.md'
+        path.parent.mkdir()
+        entry = """- Fix a synthetic backup issue.
+
+### Upgrade steps
+
+~~~sh
+## v1.1.0 (2026-11-04)
+echo 'inspect the backup'
+~~~"""
+        path.write_text(f'## Unreleased\n\n- Future change.\n\n## v1.1.0-rc.1 (2026-11-04)\n\n{entry}\n')
+        self.git('add', 'docs/changelog.md')
+        self.git('commit', '-qm', 'Synthetic candidate notes')
+        commit = self.git('rev-parse', 'HEAD')
+        path.write_text('## Unreleased\n\n- Uncommitted notes.')
+        self.assertEqual(ci.changelog_entry(commit, 'v1.1.0-rc.1'), entry)
+        with self.assertRaisesRegex(ValueError, 'Cannot read docs/changelog.md'):
+            ci.changelog_entry(self.main, 'v1.0.0')
+
+    def test_missing_empty_or_duplicate_entries_cannot_supply_release_notes(self):
+        heading = '## v1.1.0 (2026-11-04)'
+        for contents in [
+            '## Unreleased\n- Not tagged yet.\n## v1.1.0-beta.1 (2026-11-03)\n- Beta only.',
+            heading + '\n\n## v1.0.0 (2026-11-03)\n- Earlier release.',
+            heading + '\n- One.\n' + heading + '\n- Two.',
+        ]:
+            with self.subTest(contents=contents), patch.object(ci, 'run', return_value=contents):
+                with self.assertRaisesRegex(ValueError, 'exactly one nonempty.*v1.1.0'):
+                    ci.changelog_entry(self.main, 'v1.1.0')
+
     def test_failed_fetch_cannot_authorize_stable_from_a_cached_main(self):
         self.git('remote', 'set-url', 'origin', self.root / 'missing-origin')
         with self.assertRaisesRegex(ValueError, 'git fetch failed') as result:

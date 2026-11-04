@@ -20,7 +20,7 @@ set +a
 | `ADMIN_DATABASE_URL` | Host console connection for migrations, owner bootstrap/recovery and restore. Never export it to web/worker. In Compose, only `admin` and `recovery` receive an administrative connection. |
 | `POSTGRES_USER`, `APP_DATABASE_ROLE` | Saved administrative/runtime SQL identities, generated for new installations. Keep existing identities during upgrades. |
 | `APP_DATABASE_PASSWORD` | Separate runtime password, 32–128 hexadecimal characters. `db:migrate` provisions the role and refreshes its grants when this is configured. Generate with `openssl rand -hex 32`. |
-| `TRUST_PROXY_CLIENT_IP` | Local default `false`; production Compose forces `true` behind Caddy, which overwrites the client-address header. Never expose the raw web port with this enabled. |
+| `TRUST_PROXY_CLIENT_IP` | Local default `false`. Production Compose sets it to `true` behind Caddy. An adopted external proxy must also overwrite `X-Athlete-Panel-Client-IP` with the verified client address on every request. Only the trusted proxy may reach the web port. |
 | `ENCRYPTION_KEY` | Independent random 32-byte application key, base64 encoded. Encrypts provider credentials; retain it separately from backups and source. Changing it without re-encrypting credentials loses access to those credentials. |
 | `APP_ORIGIN` | Canonical browser origin, including scheme and port. Local HTTP accepts `127.0.0.1` and `localhost` on the same port only when secure cookies and trusted proxy mode are disabled. Hosted/HTTPS origins remain exact. Production Compose derives HTTPS from the domain. |
 | `COOKIE_SECURE` | `false` only for local HTTP; production Compose forces `true`. |
@@ -72,7 +72,7 @@ Local uses PostgreSQL 17 on `127.0.0.1:55440`, database `athlete_panel`, runtime
 
 `pnpm run local` starts the database if necessary, checks the installed composition/schema and owner, then runs the web development server and background worker together. Open `http://127.0.0.1:3000` or `http://localhost:3000`. Sessions belong to the hostname used for login. Ctrl+C stops both process groups (including descendants), allowing up to 40 seconds for graceful shutdown before termination. If either exits unexpectedly, the sibling stops and the launcher returns a failure. PostgreSQL remains running and no volumes are removed. Stop the local launcher before using database start/stop commands. `pnpm db:stop` stops the local database when desired; `pnpm db:start` starts it again. Normal subsequent sessions need only `pnpm run local`.
 
-Setup preserves valid existing configuration and initialized owner accounts. An interrupted fresh setup resumes using the same secrets; an existing owner/database is checked without migrations or password changes. Code/schema mismatches require the [coordinated upgrade procedure](#coordinated-upgrades-and-plugin-activation). Neither command is an automatic update or password-recovery operation. Existing installations whose permissions predate the restricted runtime role need the documented permission transition first.
+Setup preserves valid existing configuration and initialized owner accounts. An interrupted fresh setup resumes using the same secrets; an existing owner/database is checked without migrations or password changes. If the checkout and database schema differ, follow [Updating a local checkout](#updating-a-local-checkout). Neither command is an automatic update or password-recovery operation. Existing installations whose permissions predate the restricted runtime role need the documented permission transition first.
 
 The local wizard supports macOS/Linux terminals. On Windows use WSL2 with Docker integration; native Windows process/permission behavior is not supported by these commands. Required host tools remain Node.js, pnpm and Docker Compose. Private-server deployment follows its own section below.
 
@@ -112,7 +112,7 @@ The disposable test database uses port 55439 and must never target persistent pe
 - **`.env` permissions are too broad:** run `chmod 600 .env`. Symlinks and hard-linked configuration are refused.
 - **Storage exists but `.env` is missing:** restore the original private configuration from your password manager/recovery copy. Setup does not invent new passwords for old storage. Removing a container alone does not remove its data volume.
 - **Setup was interrupted:** run it again. Generated credentials and completed initialization are retained. If a hard crash left `.runtime/local-command.lock`, the command reports whether its process is gone; remove that file only after confirming no setup/local command is running.
-- **Database schema differs from the checkout:** use the coordinated upgrade/backup procedure; neither setup nor local applies upgrades to an existing owner database.
+- **Database schema differs from the checkout.** Follow [Updating a local checkout](#updating-a-local-checkout) to back up the installed version and migrate with `pnpm local:ops`.
 - **Wrong saved database password:** changing `.env` alone does not rotate PostgreSQL passwords. Restore the matching configuration or perform deliberate console recovery.
 
 Advanced isolated instances may set `ATHLETE_PANEL_LOCAL_PROJECT` (default `athlete-panel-local`, or a name beginning `athlete-panel-local-`), `ATHLETE_PANEL_LOCAL_DB_PORT` (55440) and `ATHLETE_PANEL_LOCAL_WEB_PORT` (3000) in `.env`; update both URLs and `APP_ORIGIN` consistently. The wizard does not offer multiple-instance creation automatically. If configuration is absent, any labelled local Athlete Panel data volume blocks fresh credential generation until that storage is accounted for.
@@ -149,7 +149,7 @@ Run these from the repository root. Setup/local load their own `.env`; advanced 
 | `pnpm test:integration` | Destructive isolated database tests; requires explicit loopback `_test` storage. Includes actual PostgreSQL dump/restore and failure cases. |
 | `pnpm test:e2e` | Desktop/mobile Chromium checks against an already running synthetic loopback instance. |
 | `pnpm test` | All Vitest tests, including integration prerequisites; not a database-free shortcut. |
-| `pnpm docs:check` | Checks active document sections, placeholders and local file links. |
+| `pnpm docs:check` | Checks active document sections, placeholders, local file links and links to headings on the same page or in another document. |
 | `pnpm check` | Registry/contract/skill adapter drift, import boundaries, TypeScript, unit tests and documentation checks as defined in `package.json`. Run additional relevant integration/build/browser checks separately. |
 | `pnpm test:db:start` | Creates the dedicated loopback test PostgreSQL service on port 55439 using `compose.test.yml`. |
 | `pnpm test:db:stop` | Removes that test service and its disposable storage. Never substitute the production Compose file. |
@@ -161,6 +161,7 @@ Run these from the repository root. Setup/local load their own `.env`; advanced 
 | `pnpm backup --daily` | Creates an encrypted archive and applies seven-daily/four-weekly retention. |
 | `pnpm backup:verify /backups/recovery.fgr` | Authenticates and checks an archive using the configured backup/application keys without modifying a database. |
 | `pnpm ops backup-loop` | Immediate backup, then daily backups at the configured UTC hour. |
+| `python3 scripts/hosted.py install --domain training.example.com --backup-directory "$HOME/athlete-panel-backups"` | First install from the extracted release bundle. Replace the example domain with your server's hostname. |
 | `python3 scripts/hosted.py upgrade` | From a trusted bundle: prepare/rehearse, create final recovery point, migrate, verify and reopen. |
 | `python3 scripts/hosted.py status` | Read current release, operation attempts/timings and sanitized backup/worker/notification status without taking the deployment lock. |
 | `python3 scripts/hosted.py resume` | Reconcile and continue the pinned pending operation; after activation retry only backups. |
@@ -315,20 +316,40 @@ Garmin routine tests use injectable transport and synthetic fixtures. An owner-a
 
 ## Private-server installation
 
-The recommended VPS path uses **Linux, Python 3.10+ and Docker Engine with Compose v2 and Buildx**. Node, pnpm and PostgreSQL client tools run inside the image. The primary path uses a reviewed, digest-pinned deployment bundle and prebuilt Linux image, a persistent server disk, a DNS hostname pointing to that server, and ports 80/443 available to Caddy. New installations default to **local backups** in a dedicated private server directory; no network-storage setup is required. Optional **remote backups** require an existing NFS, SMB/CIFS or SSHFS mount. Provisioning the server, DNS and remote storage remains outside the application.
+Use this path for a **new Linux AMD64 (x86-64) server** with persistent storage, Python 3.10+, and Docker Engine with Compose v2 and Buildx. Run it as a user who can run Docker. Point your domain at the server and allow inbound TCP ports 80 and 443 for Caddy. The bundle selects the tested image from GHCR. The server does not need Node, pnpm or a source checkout. If you already have a managed installation, follow the [upgrade guide](#coordinated-upgrades-and-plugin-activation).
 
-The release workflow targets `ghcr.io/bidulelabs/athlete-panel` and matching GitHub Release assets. Implementing the workflow does not mean a version has already been published: obtain an available image and matching bundle through that trusted release channel; see [release bundle preparation](#preparing-a-release-image-and-bundle). Do not substitute an arbitrary public image. From the extracted bundle directory:
+### Download the release bundle
+
+Open the [latest stable GitHub release](https://github.com/bidulelabs/athlete-panel/releases/latest). Under **Assets**, choose `athlete-panel-deploy.tgz` and `athlete-panel-deploy.tgz.sha256`. GitHub's source archives are for developers. To download both deployment files for the latest stable release directly on the server, run these commands in a new empty directory. For a particular version, download the two assets from that version's release page.
+
+```sh
+release_url="https://github.com/bidulelabs/athlete-panel/releases/latest/download"
+curl -fLO "$release_url/athlete-panel-deploy.tgz" &&
+  curl -fLO "$release_url/athlete-panel-deploy.tgz.sha256"
+```
+
+### Verify the bundle
+
+From the directory containing both files, verify the checksum before extracting. A successful check prints `athlete-panel-deploy.tgz: OK`. If it fails, download both files again from the same release.
+
+```sh
+sha256sum -c athlete-panel-deploy.tgz.sha256 && tar -xzf athlete-panel-deploy.tgz
+```
+
+### Install and sign in
+
+Run the following command from the directory containing `release.json`, replacing `training.example.com` with your domain. This example keeps encrypted backups on the server. To keep backups on a separate machine, mount the remote storage first and use the remote-mode command below instead.
 
 ```sh
 python3 scripts/hosted.py install --domain training.example.com --backup-directory "$HOME/athlete-panel-backups"
 ```
 
-Choose and confirm the owner login password when prompted. The prompt does not echo or save it. The controller creates the local destination with mode 0700 (or validates an existing private directory), pulls the bundle’s immutable image digest, generates independent database passwords/application/backup keys, starts PostgreSQL, applies migrations, creates the owner, starts web/worker/Caddy and verifies HTTPS, saved data and fresh worker readiness. It reopens writes, starts the daily backup service and waits for its first authenticated backup. A bundle contains the controller and isolated-rehearsal helper, a pinned image descriptor and brief instructions. Download/extract it for review; there is no download-and-execute installer. Python only coordinates Docker and private checkpoints; application tools run inside containers.
+Choose and confirm the owner login password when prompted. The installer pulls the pinned image, generates credentials, starts PostgreSQL, web, worker and Caddy, and waits for HTTPS, worker readiness and the first verified backup. When it finishes, open your domain over HTTPS and sign in with that password. Create a workout, reload the calendar and confirm the workout is still there. You can do this without a Garmin key or an AI connection.
 
 Use `--backup-mode local` to state the default explicitly. The directory must belong to the controller account, be private (0700), and be separate from the controller state directory. Choose a destination outside source checkouts. Existing directories, keys and archives are never reset or made private automatically. For off-server storage, mount a dedicated destination first, then install with:
 
 ```sh
-python3 scripts/hosted.py install --domain training.example.com --backup-mode remote --backup-directory /mnt/offsite/athlete_panel
+python3 scripts/hosted.py install --domain training.example.com --backup-mode remote --backup-directory /mnt/offsite/athlete-panel
 ```
 
 Remote mode registers the mount fingerprint and storage marker. An absent/changed mount, policy or marker blocks operations; it never becomes local storage. The selected mode and path persist in `installation.json` across upgrades, resume, recovery and restore tests. Older controller records without a mode remain remote. There is no automatic mode conversion, and `reconcile` cannot change it.
@@ -354,7 +375,7 @@ python3 scripts/hosted.py logs --service worker
 python3 scripts/hosted.py logs --service backup
 ```
 
-Pull, metadata and build failures occur before the upgrade maintenance window; details are retained in the private state directory’s `build.log`. A failed setup/upgrade never reports success merely because containers started. Public certificate issuance and renewal, remote retention and physical-server recovery must still be rehearsed on the intended infrastructure. Log in and save/reload a manual workout after installation.
+Pull, metadata and build failures occur before the upgrade maintenance window; details are retained in the private state directory’s `build.log`. A failed setup/upgrade never reports success merely because containers started. Public certificate issuance and renewal, remote retention and physical-server recovery must still be rehearsed on the intended infrastructure.
 
 ### Advanced manual Compose installations
 
@@ -417,7 +438,7 @@ python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a reconcile --
 
 Reconciliation requires the same daemon, cluster, storage/network identities, service mappings and keys. It never accepts a different running release or rotates credentials. It cannot be used during a pending deployment; restore the expected inputs, resume/cancel safely, then reconcile. Database/volume/key replacement requires explicit recovery, not a drift acknowledgement. Avoid manual application restarts/configuration changes while the controller owns a deployment. The original Compose files remain your configuration references; the controller's private rendered deployment model owns subsequent release/database selection.
 
-To roll back, select the recorded **final** pre-upgrade archive and recover it into a new database:
+To roll back, select the recorded **final** pre-upgrade archive and recover it into a new database. Replace the example path with the exact archive path in the adopted installation’s backup directory.
 
 ```sh
 python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a recover \
@@ -472,10 +493,15 @@ Retention cleanup has a separate outcome: a verified archive keeps `backupAttemp
 
 Optional monitoring uses a private file in the operator state, `.secrets/backup-heartbeat.json`, owned by the operator with mode 0600. Set `success` to the monitor's secret HTTPS success URL and optionally `failure` to its failure URL. Obtain these from your chosen monitor; never put real URLs in source, shell arguments or logs. The next backup-service start mounts this file read-only. Configure the external monitor for daily signals plus a suitable grace period (for example 26 hours). Its missing-signal alert also detects a stopped VPS when that deadline passes, not immediately. Backup success is sent only after authenticated read-back and retention succeed; delivery has three attempts, each with a five-second timeout and no redirects. Notification failure is logged as `backup_notification`/`failed` and saved in `host.settings.backupNotification`, without endpoints or response bodies. A notification outage does not invalidate a completed backup. No additional scheduler or host monitor is needed. Real monitor activation is an operator action.
 
-For a managed installation, create or independently verify an archive with:
+For a managed installation, create a backup and read the archive name from the `file` field in the output:
 
 ```sh
 python3 scripts/hosted.py backup
+```
+
+To verify that archive, use its exact path on the server. Combine the `backupDirectory` recorded in your installation’s `installation.json` with the archive name. Replace the entire example path below with that path.
+
+```sh
 python3 scripts/hosted.py verify-backup --archive /mnt/offsite/athlete-panel/recorded-archive.fgr
 ```
 
@@ -496,15 +522,21 @@ The returned archive name identifies the exact recovery point. Record it along w
 This is for installations created with `pnpm run setup`, not production Compose. Normal setup/startup deliberately refuses a new schema. Keep the installed checkout and its `.env`; prepare candidate source in a **separate directory**. Never edit source while its development server is running.
 
 1. In the installed terminal, press Ctrl+C and wait for web and worker to exit. PostgreSQL stays running. `local:ops` refuses an active launcher lock or occupied configured web port.
-2. Create an independent backup key once using the exclusive-write command above. Install matching PostgreSQL 17 client tools for local maintenance, or set `PG_BIN_DIR` to their directory. Keep keys separately recoverable.
-3. In the **installed checkout**, close writes and create an authenticated pre-upgrade archive:
+2. Reuse your existing backup key. For a first backup, run the [key-generation example](#prerequisites-and-configuration) in the installed checkout. It creates `.secrets/backup-key`. Keep a separate protected copy. Install PostgreSQL 17 client tools or set `PG_BIN_DIR` to their directory.
+3. In the **installed checkout**, set the absolute path to your key and the directory on your mounted off-host storage. Replace the example destination with your actual mount, and adjust `backup_key` if you already keep the key elsewhere. Use the same terminal through the migration so these paths stay available when you change directories.
 
 ```sh
+backup_key="$PWD/.secrets/backup-key"
+backup_dir="/mounted/off-host/athlete-panel"
 pnpm local:ops maintenance on
-pnpm local:ops backup --key-file /secure/athlete-panel-backup-key --destination /mounted/off-host/athlete_panel
+pnpm local:ops backup --key-file "$backup_key" --destination "$backup_dir"
 ```
 
-The command verifies the encrypted archive before reporting success. Record its filename and verify its off-host copy. Do not run the backup from changed candidate source: it must match the installed migrations and composition.
+The command prints `Verified encrypted backup:` followed by the full archive path after verification succeeds. Confirm that file exists on your off-host storage. Run the following line, paste just that printed path, and press Enter. The migration will use that exact archive.
+
+```sh
+IFS= read -r backup_archive
+```
 
 4. Copy the existing protected `.env` to the reviewed candidate checkout (mode 0600), preserving the same project name, ports, database passwords and application key. Carry forward personal plugins and composition; do **not** copy `.runtime/local-command.lock`. In the candidate:
 
@@ -513,7 +545,7 @@ pnpm install --frozen-lockfile
 pnpm registry:generate
 pnpm check
 pnpm build
-pnpm local:ops migrate --backup /mounted/off-host/athlete-panel/recorded-archive.fgr --key-file /secure/athlete-panel-backup-key
+pnpm local:ops migrate --backup "$backup_archive" --key-file "$backup_key"
 pnpm run local
 ```
 
@@ -582,6 +614,10 @@ No application SQL migration is introduced by this image workflow. Existing mana
 
 ### Preparing a release image and bundle
 
+Add user-visible changes to **Unreleased** in the [changelog](changelog.md) as they land. Before tagging a stable release, move its changes under a heading of the form `## vX.Y.Z (YYYY-MM-DD)` and leave Unreleased ready for the next change. Give each beta or release candidate its own dated entry using the full tag (for example, `v0.2.0-beta.1`). When preparing the stable entry, include changes and upgrade steps that matter to someone coming from the previous stable release.
+
+If operators need to do anything specific to this version, add a `### Upgrade steps` subsection in that entry. Say who needs to act, what they should do and when. Link to the release and its tagged documentation; use absolute URLs so the links also work on the release page. The publisher copies the entry from the verified commit above the standard managed upgrade and fresh install instructions. A missing, empty or duplicate entry blocks publication before any image is pushed. Retrying an interrupted draft regenerates its notes; retrying an already published release leaves its notes untouched.
+
 The existing Verify application workflow builds a Linux AMD64 candidate once, with the full commit in OCI labels and `.athlete-panel-release.json`. Build-stage/runtime exclusion checks run there. A run-scoped artifact carries the image tar, checksum, local image ID and metadata; all three parallel container rehearsals verify and load that exact artifact. Quality, setup, integration, desktop/mobile and security checks retain their existing parallel jobs. The `verify` and `container-installation` aggregates reject failed, cancelled and unexpectedly skipped prerequisites. Ordinary feature-branch pushes do not run CI; superseded PR runs remain cancellable.
 
 After an authorized version tag such as `v0.1.0` is pushed, or manual dispatch selects that existing tag, all gates run before publication. The tag must match the package version and verified commit. Only the publication job receives package/release write access. It serializes the same release, loads the tested artifact without rebuilding, publishes version and `sha-FULL_COMMIT` tags to `ghcr.io/bidulelabs/athlete-panel`, pulls the resolved digest and verifies image/metadata identity. GitHub Release assets include `athlete-panel-deploy.tgz`, its SHA-256 checksum, `release-record.json` and sanitized `verification.json` with rehearsal timings. A retry preserves existing matching assets and refuses different contents; use a new version for changed contents. An interrupted draft can be completed. Published incomplete/conflicting releases require explicit investigation, not overwrite.
@@ -593,7 +629,7 @@ Use temporary feature branches and versioned prereleases; a permanent `dev` bran
 | `v0.2.0-beta.1` (also `-rc.1` or another supported suffix) | May identify a feature-branch or main commit. Published as a GitHub prerelease, explicitly excluded from Latest. |
 | `v0.2.0` | Must identify a commit reachable from freshly fetched `origin/main`. Published as a normal stable release; GitHub selects Latest without forcing an older retry over a newer version. |
 
-Create the feature branch from main containing this release tooling and open a PR. Commit the root `package.json` version as `0.2.0-beta.1` before tagging that exact commit. An authorized releaser can then publish the example beta with:
+Create the feature branch from main containing this release tooling and open a PR. Commit the root `package.json` version as `0.2.0-beta.1` and the matching changelog entry before tagging that exact commit. An authorized releaser can then publish the example beta with:
 
 ```sh
 git tag -a v0.2.0-beta.1 -m "Beta 0.2.0-beta.1"
@@ -668,22 +704,31 @@ If build or verification fails, keep maintenance enabled. A previous image can b
 
 ### Test restoration without changing the live installation
 
-Run on demand, for example after changing storage/keys or as a periodic operator exercise:
+To test the most recent successful backup after changing storage or keys, run:
 
 ```sh
 python3 scripts/hosted.py restore-test
-# Or choose a specific completed archive:
+```
+
+To test a specific completed archive, replace the example path with its exact path in your registered backup directory:
+
+```sh
 python3 scripts/hosted.py restore-test --archive /mnt/offsite/athlete-panel/recorded-archive.fgr
 ```
 
-The default is the installed database's most recent successful backup. The command authenticates it and selects its matching release, then uses the same isolated runner as upgrade preparation. It publishes no ports, uses an internal network and its own PostgreSQL volume, mounts only the selected archive/key, and leaves provider jobs paused. It validates schema, persisted data, app and worker. Cleanup verifies run-specific labels before removing resources. An interruption is resumable; `cancel` can discard an isolated test's temporary resources without altering live data. Ensure enough spare disk/memory for a second database/application and source extraction; resource contention can still affect the live VPS. No monthly scheduler is installed. Keep the resulting evidence, and separately exercise recovery on another machine with independently recovered keys to prove loss-of-VPS recovery.
+The command authenticates the selected archive and selects its matching release, then uses the same isolated runner as upgrade preparation. It publishes no ports, uses an internal network and its own PostgreSQL volume, mounts only the selected archive/key, and leaves provider jobs paused. It validates schema, persisted data, app and worker. Cleanup verifies run-specific labels before removing resources. An interruption is resumable; `cancel` can discard an isolated test's temporary resources without altering live data. Ensure enough spare disk/memory for a second database/application and source extraction; resource contention can still affect the live VPS. No monthly scheduler is installed. Keep the resulting evidence, and separately exercise recovery on another machine with independently recovered keys to prove loss-of-VPS recovery.
 
 ### Managed recovery after a failed update
 
-Use the recovery archive reported by `status` or the saved completed/failed operation record. Recovery deliberately returns data to that snapshot; changes made after it are absent from the recovered database. The current database is retained.
+Find the final recovery snapshot in `pending.backup.file` in the status output, or in `backup.file` in the saved upgrade operation record.
 
 ```sh
 python3 scripts/hosted.py status
+```
+
+Replace the example path below with that filename under your installation’s registered backup directory. Recovery returns data to that snapshot. Later writes are absent from the recovered database, and the current database is retained.
+
+```sh
 python3 scripts/hosted.py recover --archive /mnt/offsite/athlete-panel/recorded-archive.fgr --confirm-recovery
 ```
 

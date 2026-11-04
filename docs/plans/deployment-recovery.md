@@ -127,3 +127,29 @@ The owner requested review of [PR 67's feedback](https://github.com/bidulelabs/a
 The public probe now catches `HTTPException` alongside existing transport/JSON failures, preserving the retry limit and sanitized readiness error without printing parser details. Tests cover 60 failed attempts without advancing to the worker, and malformed HTTP followed by valid readiness. The hosted acceptance scenarios include this case; no deployment phase, public contract, migration or architecture ownership changes.
 
 Verification: the complete Python suite passed (115 passed, two Linux-only tests skipped), including both new real-loopback regressions and the existing deployment/recovery checks. Documentation checks passed for 43 files, and the diff passed whitespace review. Framework validation checked the updated acceptance scenario, test references and this execution record; ownership and operating commands are unchanged. Application type/build/database/browser checks were not repeated for this Python-only exception-handling correction. No deployment or release publication was performed.
+
+### GitHub first-install path (2026-11-04)
+
+The README now links new Linux AMD64 operators directly to the [first-install guide](../development.md#private-server-installation), with separate paths for a local checkout and an existing managed server. The guide covers the published assets, checksum, install command and first sign-in. The first revision of the release notes added fresh installation and a link to the guide at the release tag.
+
+Verification used the anonymous latest-stable download URLs in an empty temporary directory. Both v0.3.0 assets downloaded, the checksum passed, and the extracted installer accepted `install --help` with the documented arguments. The hosted controller, deployment/recovery and release-tag suites passed (61 tests), including stable and prerelease note generation. The documentation checker passed (55 files). Verification stopped at installer help; it did not provision a server or exercise public HTTPS sign-in. The published v0.3.0 release notes still contain their original upgrade instructions.
+
+### Documentation audit corrections (2026-11-04)
+
+Verified that GitHub private reporting was enabled, the Advisories page exposed the reporting form, and signed-out visitors were directed to sign in. The tagged v0.3.0 documentation was publicly reachable. Its verification report recorded successful release, hosted and hosted-registry rehearsals. The README links those results separately from operator checks, identifies features added after v0.3.0, and describes history reads, planning proposals and owner approval separately.
+
+Exercised the local upgrade examples in one shell across two temporary checkout directories using a stand-in for the operational commands. The backup and migration received the same absolute key path, and the migration received the exact printed archive path, including spaces. This checked the documentation without modifying a database. The documentation checker passed for all 55 files in its scope.
+
+The [changelog](../changelog.md) now lists unreleased changes and links each of the three published versions to its own documentation. Public release dates and tag contents were checked against GitHub and Git. The release and documentation links for all three tags were reachable anonymously. The documentation checker included the changelog and passed for 56 files. The 25 deployment/recovery tests passed with the updated release-note link.
+
+### Changelog in GitHub release notes (2026-11-04)
+
+The [publisher](../../scripts/release-ci.py) reads the matching entry from the verified commit for stable and prerelease tags. Version-specific steps and the standard managed upgrade come before fresh installation. The [release procedure](../development.md#preparing-a-release-image-and-bundle) documents what maintainers must add before tagging.
+
+Local tests used disposable Git history to distinguish committed notes from working-tree edits and simulated GitHub draft creation, resumption and published retries. The release-tag and deployment/recovery suites cover missing, empty and duplicate entries, fenced upgrade commands, note ordering and preservation of published releases. No image or GitHub release was published.
+
+### Operator and contributor documentation follow-up (2026-11-04)
+
+The [operations guide](../development.md) distinguishes local upgrades from managed server upgrades and uses the registered backup directory and recorded archive name throughout the managed recovery examples. The [security policy](../../SECURITY.md) identifies the client-IP header a trusted HTTPS proxy must overwrite. The [contributor guide](../../CONTRIBUTING.md) and pull request template explain when to update the changelog. The unreleased entry for [planning reads](../decisions/019-planning-read-baseline.md) includes the reread needed for a draft started before upgrading.
+
+The documentation checker passed for 58 active files. An isolated fixture confirmed that valid links to headings on the same page and in another file pass, missing headings fail, and fenced shell comments cannot serve as targets. All 24 hosted examples parsed against the controller CLI. The managed verification, restore-test and recovery examples use the same directory as remote installation. The adopted installation uses its own registered directory. These checks exercised the instructions and link checker without running a backup or recovery.

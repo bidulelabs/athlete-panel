@@ -3,6 +3,7 @@ import { resolve, dirname } from 'node:path';
 const roots = [
   'SECURITY.md',
   'CONTRIBUTING.md',
+  'docs/changelog.md',
   'docs/release-readiness.md',
   'README.md',
   'AGENTS.md',
@@ -23,17 +24,36 @@ async function walk(path: string) {
   else if (path.endsWith('.md')) files.push(path);
 }
 for (const root of roots) await walk(root);
+
+// Links and heading-like shell comments inside fenced examples aren't page navigation.
+function outsideCodeFences(markdown: string) {
+  let fence = '';
+  const lines: string[] = [];
+  for (const line of markdown.split(/\r?\n/)) {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence) {
+      if (marker?.[1].startsWith(fence) && !marker[2].trim()) fence = '';
+    } else if (marker) {
+      fence = marker[1];
+    } else {
+      lines.push(line);
+    }
+  }
+  return lines.join('\n');
+}
+
 const errors: string[] = [];
 for (const file of files) {
   const text = await readFile(file, 'utf8');
   if (/\{\{[A-Z_]+\}\}/.test(text)) errors.push(`${file}: unresolved template placeholder`);
-  for (const match of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+  const markdown = outsideCodeFences(text);
+  for (const match of markdown.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
     const [link, anchor] = match[1].split('#');
-    if (!link || /^[a-z]+:/i.test(link)) continue;
-    const target = resolve(dirname(file), link);
+    if (/^[a-z]+:/i.test(link)) continue;
+    const target = link ? resolve(dirname(file), link) : resolve(file);
     if (!(await stat(target).catch(() => null))) errors.push(`${file}: missing link ${link}`);
     else if (anchor && target.endsWith('.md')) {
-      const body = await readFile(target, 'utf8');
+      const body = link ? outsideCodeFences(await readFile(target, 'utf8')) : markdown;
       const headings = [...body.matchAll(/^#{1,6}\s+(.+)$/gm)].map((h) =>
         h[1]
           .toLowerCase()

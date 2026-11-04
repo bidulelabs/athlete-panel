@@ -4,21 +4,19 @@ Athlete Panel holds private training and health data. Please report vulnerabilit
 
 ## Reporting a vulnerability
 
-Use this repository’s **Security → Report a vulnerability** form when private vulnerability reporting is enabled. Include the affected version, a synthetic reproduction, expected and actual behavior, and likely impact. Do not open a public issue containing exploit details or sensitive data.
-
-If the private reporting form is unavailable, do not post the vulnerability publicly. Ask the maintainers to enable a private reporting channel without disclosing the issue. Maintainers must enable and verify GitHub private vulnerability reporting before the first public release. No email address or response-time guarantee is currently established.
+Sign in to GitHub and use the [private vulnerability reporting form](https://github.com/bidulelabs/athlete-panel/security/advisories/new). Include the affected release or commit, steps to reproduce with synthetic data, the expected and actual behavior, and the likely impact. Keep exploit details out of public issues.
 
 ## Supported versions
 
-This project is pre-release. Security fixes target the current development branch; older snapshots do not have a promised support window. Use a reviewed release, run its verification checks, and follow the [upgrade and recovery procedure](docs/development.md#coordinated-upgrades-and-plugin-activation).
+Security fixes target `main`. Older releases have no guaranteed support window or backports. For a managed installation, check the [published releases](https://github.com/bidulelabs/athlete-panel/releases) for a version containing the fix and follow the [upgrade guide](docs/development.md#coordinated-upgrades-and-plugin-activation).
 
 ## Deployment boundaries
 
-- Production exposes Caddy over HTTPS. Keep web, worker and PostgreSQL on the private Compose network. Do not expose the web port when `TRUST_PROXY_CLIENT_IP=true`: only Caddy may supply the client-address header used for login limits.
+- The default installation serves HTTPS through Caddy. An [adopted Compose installation](docs/development.md#adopting-an-existing-compose-installation) can use its existing HTTPS proxy. With `TRUST_PROXY_CLIENT_IP=true`, only the trusted proxy may reach the web port. On every request it must overwrite `X-Athlete-Panel-Client-IP` with the client address it verified, even when the client supplied that header. Login limits use this value. Keep the worker and PostgreSQL private.
 - Web and worker use the restricted `athlete_panel_app` database role. Migration, owner recovery and restore use a separate administrative connection. Do not supply administrative credentials to application containers.
 - Login limits apply per source address (IPv6 /64). Users behind one shared address share a limit; console recovery clears attempts and revokes sessions and grants. This reduces account-wide lockout but is not protection against every distributed denial-of-service attack.
 - Garmin keys and cached tokens are encrypted using the separately held application key. Database backups contain personal data and require their independent backup key. Losing either key can prevent recovery.
-- Agent grants permit bounded context reads and proposal submission. Only the signed-in owner can apply or undo a proposal. External model providers may receive context when an agent uses them. A coding agent with filesystem/server credentials has whatever access those credentials grant; API grants are not a machine sandbox.
+- An owner can grant history reads by date and category. Separately, planning access lets the agent read planning context and submit proposals for the approved period. Only the signed-in owner can apply or undo a proposal. External model providers may receive context when an agent uses them. A coding agent with filesystem/server credentials has whatever access those credentials grant; API grants are not a machine sandbox.
 - Source plugins are trusted in-process code. Review them before building and activating them.
 
 ## Safe diagnostics

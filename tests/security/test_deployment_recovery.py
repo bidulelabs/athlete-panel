@@ -310,9 +310,20 @@ class ExactImage(unittest.TestCase):
             directory, record = self.candidate(root)
             for kind in ['release', 'hosted', 'hosted-registry']:
                 (directory / (kind + '.json')).write_text(json.dumps({'commit': COMMIT, 'imageId': IMAGE, 'result': 'succeeded'}))
-            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=False), patch.object(ci, 'run') as run, patch.object(ci, 'existing_release', return_value=None), patch.object(ci, 'remote_image', return_value={'Id': 'different', 'RepoDigests': ['ghcr.io/bidulelabs/athlete-panel@sha256:' + 'd' * 64]}), patch.object(ci, 'inspect', return_value={'Id': IMAGE}), patch.object(ci.image_identity, 'identify', return_value={**IDENTITY, 'configDigest': 'sha256:' + 'e' * 64}):
+            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=False), patch.object(ci, 'changelog_entry', return_value='- Synthetic change.'), patch.object(ci, 'run') as run, patch.object(ci, 'existing_release', return_value=None), patch.object(ci, 'remote_image', return_value={'Id': 'different', 'RepoDigests': ['ghcr.io/bidulelabs/athlete-panel@sha256:' + 'd' * 64]}), patch.object(ci, 'inspect', return_value={'Id': IMAGE}), patch.object(ci.image_identity, 'identify', return_value={**IDENTITY, 'configDigest': 'sha256:' + 'e' * 64}):
                 with self.assertRaisesRegex(ValueError, 'cannot be linked'): ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
                 run.assert_not_called()
+
+    def test_missing_changelog_stops_publication_before_registry_or_release_writes(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory, record = self.candidate(root)
+            for kind in ['release', 'hosted', 'hosted-registry']:
+                (directory / (kind + '.json')).write_text(json.dumps({'commit': COMMIT, 'imageId': IMAGE, 'result': 'succeeded'}))
+            with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=False), patch.object(ci, 'existing_release', return_value=None), patch.object(ci, 'remote_image') as registry, patch.object(ci, 'run', return_value='## Unreleased\n\n- Other work.') as run:
+                with self.assertRaisesRegex(ValueError, 'nonempty.*v1.0.0'):
+                    ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', 'v1.0.0', directory)
+                run.assert_called_once_with(['git', 'show', f'{COMMIT}:docs/changelog.md'], cwd=ci.ROOT)
+                registry.assert_not_called()
 
     def test_rejected_release_tag_stops_before_remote_publication(self):
         with tempfile.TemporaryDirectory() as root:
@@ -346,15 +357,25 @@ class ExactImage(unittest.TestCase):
                 (directory / (kind + '.json')).write_text(json.dumps({'commit': COMMIT, 'imageId': IMAGE, 'result': 'succeeded', 'seconds': 1}))
             digest = 'ghcr.io/bidulelabs/athlete-panel@sha256:' + 'd' * 64
             remote = {'Id': IMAGE, 'RepoDigests': [digest]}
-            assets, commands = {}, []
+            entry = '- Synthetic change.\n\n### Upgrade steps\n\n1. Finish any pending operation before switching controllers.'
+            assets, commands, bodies = {}, [], []
             def run(args, **kwargs):
                 commands.append([str(arg) for arg in args])
+                if args == ['git', 'show', f'{COMMIT}:docs/changelog.md']:
+                    return f'## Unreleased\n\nDo not publish.\n\n## {tag} (2026-11-04)\n\n{entry}\n\n## v0.9.0 (2026-10-01)\n\nPrevious version.'
                 if args[:3] in [['gh', 'release', 'create'], ['gh', 'release', 'upload']]:
                     for arg in args:
                         if isinstance(arg, Path) and arg.name != 'notes.txt': assets[arg.name] = arg.read_bytes()
-                if args[:3] == ['gh', 'release', 'create']:
+                if '--notes-file' in args:
                     notes = Path(args[args.index('--notes-file') + 1]).read_text()
+                    bodies.append(notes)
                     self.assertEqual('separate instance' in notes, prerelease)
+                    self.assertLess(notes.index(entry), notes.index('## Upgrade an existing managed server'))
+                    self.assertLess(notes.index('scripts/hosted.py upgrade'), notes.index('## Fresh install'))
+                    self.assertIn('scripts/hosted.py install --domain', notes)
+                    self.assertIn(f'/blob/{tag}/docs/development.md#private-server-installation', notes)
+                    self.assertNotIn('Do not publish.', notes)
+                    self.assertNotIn('Previous version.', notes)
                 if args[:3] == ['gh', 'release', 'download']:
                     name = args[args.index('--pattern') + 1]
                     (Path(args[args.index('--dir') + 1]) / name).write_bytes(assets[name])
@@ -367,6 +388,7 @@ class ExactImage(unittest.TestCase):
             with patch.object(ci, 'verify_image', return_value=record), patch.object(ci, 'verify_release_tag', return_value=prerelease), patch.object(ci, 'run', side_effect=run), patch.object(ci, 'read_metadata', return_value=record['metadata']), patch.object(ci, 'inspect', return_value=remote), patch.object(ci, 'existing_release', return_value=None) as release, patch.object(ci, 'remote_image', side_effect=[None, None, remote]) as registry, patch.object(ci.image_identity, 'identify', return_value=IDENTITY):
                 ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', tag, directory)
                 self.assertEqual(len(assets), 4)
+                self.assertEqual(len(bodies), 1)
                 self.assertFalse(any(command[:2] == ['docker', 'build'] for command in commands))
                 for operation in ['create', 'edit']:
                     assert_classification(next(command for command in commands if command[:3] == ['gh', 'release', operation]))
@@ -377,6 +399,7 @@ class ExactImage(unittest.TestCase):
                 release.return_value = {'isDraft': True, 'isPrerelease': not prerelease, 'assets': [{'name': name} for name in assets]}
                 ci.publish(directory, COMMIT, 'bidulelabs/athlete-panel', tag, directory)
                 self.assertEqual(assets, original)
+                self.assertEqual(bodies, [bodies[0]] * 2)
                 assert_classification(next(command for command in commands if command[:3] == ['gh', 'release', 'edit']))
                 self.assertFalse(any(command[:2] == ['docker', 'push'] or command[:3] == ['gh', 'release', 'create'] for command in commands))
                 commands.clear()

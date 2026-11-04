@@ -69,7 +69,7 @@ export function nightRows(summary: ChartsSummary, metric: NightMetric, today: st
       valueLabel:
         value === null
           ? 'No measure'
-          : `${Math.round(value)} ${unit}${mayBeMinimum ? ' (daily minimum)' : ''}`,
+          : `${Math.round(value)} ${unit}${mayBeMinimum ? ' (possible daily minimum)' : ''}`,
       averageLabel:
         average === null
           ? 'Not enough nights'

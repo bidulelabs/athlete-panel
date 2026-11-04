@@ -328,7 +328,11 @@ for (const theme of ['dark', 'light'] as const)
     await expect(resting.getByRole('list', { name: 'Legend' })).toHaveText(
       /^Night\s*7-day average\s*Usual range$/,
     );
-    await expect(resting).toContainText('Garmin reported the lowest heart rate of the day');
+    await expect(resting).toContainText(
+      /On \d+ nights the resting heart rate is a possible daily minimum/,
+    );
+    await resting.getByText('View values', { exact: true }).click();
+    await expect(resting.getByRole('table')).toContainText('(possible daily minimum)');
     await hrv.getByText('View values', { exact: true }).click();
     const night = (date: string) =>
       hrv.getByRole('row').filter({ has: page.getByRole('cell', { name: date, exact: true }) });

@@ -567,7 +567,7 @@ describe('charts resting heart rate and HRV', () => {
     });
   });
 
-  it('marks a resting heart rate that Garmin took as the daily minimum', () => {
+  it('marks a resting heart rate that Garmin may have taken as the daily minimum as a possible daily minimum', () => {
     const data = emptyWorkspace();
     data.health = [
       nightRecord(1600, chartsFirstWeek, 'restingHeartRateBpm', 47, true),
@@ -575,7 +575,7 @@ describe('charts resting heart rate and HRV', () => {
     ];
     const rows = nightRows(chartsSummary(data, selection), 'restingHeartRateBpm', chartsToday);
     expect(rows.slice(0, 3).map((row) => row.valueLabel)).toEqual([
-      '47 bpm (daily minimum)',
+      '47 bpm (possible daily minimum)',
       '49 bpm',
       'No measure',
     ]);

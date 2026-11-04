@@ -45,7 +45,7 @@ export function RestingHeartRateHrvFigure({
       <ChartFigure
         key={metric}
         title={title}
-        description={`Nightly ${name} as dots and its 7-night average as a line (from ${averageMinimumMeasuredNights} nights), ${periodText(summary.weeks)}. The band is your usual range: the average of the previous ${chartsUsualRangeLookbackNights} nights plus or minus ${usualRangeStandardDeviations} standard deviation, shown once ${usualRangeMinimumNights} nights are recorded.${mayBeMinimumCount ? ` On ${mayBeMinimumCount} nights Garmin reported the lowest heart rate of the day, not a resting value.` : ''}`}
+        description={`Nightly ${name} as dots and its 7-night average as a line (from ${averageMinimumMeasuredNights} nights), ${periodText(summary.weeks)}. The band is your usual range: the average of the previous ${chartsUsualRangeLookbackNights} nights plus or minus ${usualRangeStandardDeviations} standard deviation, shown once ${usualRangeMinimumNights} nights are recorded.${mayBeMinimumCount ? ` On ${mayBeMinimumCount} nights the resting heart rate is a possible daily minimum: Garmin may have reported the lowest heart rate of the day instead of a resting value.` : ''}`}
         legend={[
           { label: 'Night', keyClass: 'charts-key-night' },
           { label: '7-day average', keyClass: 'charts-key-average' },

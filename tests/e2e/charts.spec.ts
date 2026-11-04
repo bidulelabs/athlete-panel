@@ -93,6 +93,41 @@ test('training hours asks the server for the season and custom weeks and refuses
   await expect.poll(() => selections.at(-1)).toEqual({ weekStart: '2029-12-03', weeks: 5 });
   await page.getByRole('textbox', { name: 'To' }).fill('2029-11-01');
   await expect(page.getByText('Choose an end date on or after the start date.')).toBeVisible();
+  await expect(page.getByRole('figure')).toHaveCount(0);
+});
+
+test('changing the period loads only the chart, without reloading the workspace or announcing a save', async ({
+  page,
+}) => {
+  await openTrainingHours(page, 'dark');
+  await expect(page.getByRole('heading', { name: 'Weekly training hours' })).toBeVisible();
+  const workspaceRequestUrls: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/workspace')) workspaceRequestUrls.push(request.url());
+  });
+  await page.getByRole('combobox', { name: 'Period' }).selectOption('4');
+  await page.getByText('View values', { exact: true }).click();
+  await expect(page.getByRole('figure').getByRole('table').getByRole('row')).toHaveCount(5);
+  await expect(page.getByText(/Your change was saved/)).toHaveCount(0);
+  expect(workspaceRequestUrls).toEqual([]);
+});
+
+test('a failed period change shows Try again and hides the old weeks', async ({ page }) => {
+  const selections = await openTrainingHours(page, 'dark');
+  const table = page.getByRole('figure').getByRole('table');
+  await page.getByText('View values', { exact: true }).click();
+  await expect(table.getByRole('row')).toHaveCount(13);
+  await page.route('**/api/plugins/charts/summary', (route) => route.fulfill({ status: 500 }), {
+    times: 1,
+  });
+  await page.getByRole('combobox', { name: 'Period' }).selectOption('4');
+  await expect(page.getByText('This chart could not load for these dates.')).toBeVisible();
+  await expect(page.getByRole('figure')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await page.getByText('View values', { exact: true }).click();
+  await expect(table.getByRole('row')).toHaveCount(5);
+  expect(selections.at(-1)).toEqual({ weekStart: '2029-12-24', weeks: 4 });
+  await expect(page.getByText('This chart could not load for these dates.')).toHaveCount(0);
 });
 
 test('training hours shows an empty state instead of empty axes', async ({ page }, info) => {

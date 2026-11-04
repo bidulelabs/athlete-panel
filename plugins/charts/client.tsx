@@ -1,11 +1,7 @@
 'use client';
 
-import {
-  chartsMaxWeeks,
-  type ChartsSummary,
-  type ChartsSummaryInput,
-} from '@athlete-panel/contracts';
-import { useEffect, useMemo, useState } from 'react';
+import { chartsMaxWeeks, type ChartsSummaryInput } from '@athlete-panel/contracts';
+import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   addDays,
@@ -22,6 +18,7 @@ import {
 } from '@athlete-panel/ui';
 import { seasonStart } from './season';
 import { TrainingHoursFigure } from './training-hours-figure';
+import { useChartsSummary } from './use-charts-summary';
 import './charts.css';
 
 const templates = [
@@ -45,7 +42,7 @@ type Period = keyof typeof periods;
 const weekCount = (from: string, to: string) =>
   Math.round((Date.parse(to) - Date.parse(from)) / (7 * 86400000)) + 1;
 
-export default function ChartsPage({ data, request }: PluginPageProps) {
+export default function ChartsPage({ data }: PluginPageProps) {
   const [template, setTemplate] = useState<Template | null>(null);
   const today = localDate(new Date(), data.profile?.timezone);
   return template ? (
@@ -53,7 +50,6 @@ export default function ChartsPage({ data, request }: PluginPageProps) {
       template={template}
       today={today}
       season={seasonStart(data, today)}
-      request={request}
       onBack={() => setTemplate(null)}
     />
   ) : (
@@ -87,13 +83,11 @@ function TemplatePage({
   template,
   today,
   season,
-  request,
   onBack,
 }: {
   template: Template;
   today: string;
   season: string;
-  request: PluginPageProps['request'];
   onBack: () => void;
 }) {
   const { weekStartsOn } = useWorkspace();
@@ -101,9 +95,6 @@ function TemplatePage({
   const [period, setPeriod] = useState<Period>('12');
   const [customFrom, setCustomFrom] = useState(addDays(currentWeek, -7 * 11));
   const [customTo, setCustomTo] = useState(today);
-  const [summary, setSummary] = useState<ChartsSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const selection: ChartsSummaryInput | string = useMemo(() => {
     if (period === 'custom' && (!customFrom || !customTo || customTo < customFrom))
       return 'Choose an end date on or after the start date.';
@@ -122,23 +113,7 @@ function TemplatePage({
       ? `Choose a period of at most ${chartsMaxWeeks} weeks.`
       : { weekStart, weeks };
   }, [period, currentWeek, season, customFrom, customTo, weekStartsOn]);
-  useEffect(() => {
-    if (typeof selection === 'string') return;
-    let current = true;
-    setLoading(true);
-    setError(null);
-    request('charts', 'summary', selection)
-      .then((result) => current && setSummary(result))
-      .catch(
-        (failure: unknown) =>
-          current &&
-          setError(failure instanceof Error ? failure.message : 'Charts could not load.'),
-      )
-      .finally(() => current && setLoading(false));
-    return () => {
-      current = false;
-    };
-  }, [request, selection]);
+  const chart = useChartsSummary(typeof selection === 'string' ? null : selection);
   return (
     <>
       <Button variant="link" className="charts-back" onClick={onBack}>
@@ -177,8 +152,15 @@ function TemplatePage({
           </>
         )}
       </div>
-      <ErrorMessage error={typeof selection === 'string' ? selection : error} />
-      {summary && <template.Figure summary={summary} today={today} loading={loading} />}
+      <ErrorMessage error={typeof selection === 'string' ? selection : chart.error} />
+      {chart.error && (
+        <Button variant="outline" onClick={chart.retry}>
+          Try again
+        </Button>
+      )}
+      {chart.summary && (
+        <template.Figure summary={chart.summary} today={today} loading={chart.loading} />
+      )}
     </>
   );
 }

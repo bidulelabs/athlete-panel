@@ -630,6 +630,16 @@ describe('estimated training load', () => {
     expect(sunday!.shortAverageLabel).toBe('20 (5 of 7 days)');
   });
 
+  it('keeps the averages of earlier sessions through a rest week', () => {
+    const data = emptyWorkspace();
+    data.activities = [run(850, addDays(chartsFirstWeek, -1), 150)];
+    const [monday] = days(data);
+    expect(monday).toMatchObject({ load: null, loadLabel: 'No sessions recorded' });
+    expect(monday!.shortAverage).toBeCloseTo(100.09187 / 7, 2);
+    expect(monday!.longAverage).toBeCloseTo(100.09187 / 42, 2);
+    expect(monday).toMatchObject({ shortAverageLabel: '14', longAverageLabel: '2' });
+  });
+
   it('counts a manually logged workout as a session without heart rate', () => {
     const data = emptyWorkspace();
     data.workouts = [

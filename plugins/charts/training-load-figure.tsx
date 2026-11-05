@@ -42,7 +42,7 @@ export function TrainingLoadFigure({
     );
   const days = dailyLoads(summary, { restingHeartRateBpm, maxHeartRateBpm }, today);
   const pastDays = days.filter((day) => day.date <= today);
-  if (pastDays.every((day) => day.load === null && !day.hasSessionWithoutHeartRate))
+  if (!summary.trainingLoadSessions.length)
     return (
       <EmptyState icon={<Activity size={25} />} title="No training in this period">
         Recorded sessions with heart rate will appear here.

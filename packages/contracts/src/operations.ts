@@ -14,6 +14,7 @@ import {
   agentConnectionStatusSchema,
 } from './domain';
 import { onboardingActionSchema, onboardingSchema } from './onboarding';
+import { chartsSummaryInputSchema, chartsSummarySchema } from './charts';
 import {
   mutationResponseSchema,
   coveragePageSchema,
@@ -97,6 +98,7 @@ export const operationContracts = {
     'approve-connection': operation(agentConnectionApprovalSchema, agentConnectionStatusSchema),
     'deny-connection': operation(agentConnectionIdSchema, agentConnectionStatusSchema),
   },
+  charts: { summary: operation(chartsSummaryInputSchema, chartsSummarySchema) },
 } as const;
 type Contracts = typeof operationContracts;
 type Contract<P extends string, O extends string> = P extends keyof Contracts

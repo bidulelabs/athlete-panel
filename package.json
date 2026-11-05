@@ -57,6 +57,7 @@
     "postgres": "4.0.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "recharts": "3.10.1",
     "semver": "7.7.3",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",

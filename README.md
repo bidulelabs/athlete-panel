@@ -303,6 +303,7 @@ Workout libraries, automatic activity matching, advanced training-load/recovery 
 | [Garmin import and health](docs/features/garmin-import.md)      | Authentication, normalized records, history traversal, coverage and limits                           |
 | [Activity summary coverage](docs/features/activity-summary.md) | Recorded duration/distance, missing measurements and filtered totals |
 | [Health history](docs/features/health-history.md) | Recent health review, date presets and independent Calendar navigation |
+| [Charts](docs/features/charts.md) | Chart templates, weekly planned and recorded hours, races and exact values |
 | [Reviewed agent training](docs/features/agent-training.md)      | History reads, planning permissions, owner review, apply and undo                                              |
 | [Plugins and skills](docs/features/plugins.md)                  | Source extensions, templates, compatibility and agent workflows                                      |
 | [Runtime contract reference](docs/reference/contracts.json)     | Generated command and data schemas                                                                   |

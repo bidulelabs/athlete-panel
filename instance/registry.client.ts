@@ -6,8 +6,9 @@ import Page2 from '../plugins/activity-records/client';
 import Page3 from '../plugins/calendar/client';
 import Page4, { contributions as Contributions4 } from '../plugins/garmin/client';
 import Page5 from '../plugins/health/client';
-import Page6 from '../plugins/agent-bridge/client';
-import Page7 from '../personal-plugins/cycling-sleep/client';
+import Page6 from '../plugins/charts/client';
+import Page7 from '../plugins/agent-bridge/client';
+import Page8 from '../personal-plugins/cycling-sleep/client';
 export const pages = [
 {...{"path":"/plans","title":"Training plans","icon":"Layers"},pluginId:"training",component:Page0},
 {...{"path":"/settings","title":"Settings","icon":"Settings"},pluginId:"athlete",component:Page1},
@@ -15,8 +16,9 @@ export const pages = [
 {...{"path":"/calendar","title":"Calendar","icon":"CalendarDays"},pluginId:"calendar",component:Page3},
 {...{"path":"/garmin","title":"Garmin import","icon":"Plug"},pluginId:"garmin",component:Page4},
 {...{"path":"/health","title":"Health","icon":"HeartPulse"},pluginId:"health",component:Page5},
-{...{"path":"/agent","title":"Agent workspace","icon":"Sparkles"},pluginId:"agent-bridge",component:Page6},
-{...{"path":"/cycling-sleep","title":"Cycling & sleep","icon":"ChartNoAxesCombined"},pluginId:"cycling-sleep",component:Page7}
+{...{"path":"/charts","title":"Charts","icon":"ChartColumn"},pluginId:"charts",component:Page6},
+{...{"path":"/agent","title":"Agent workspace","icon":"Sparkles"},pluginId:"agent-bridge",component:Page7},
+{...{"path":"/cycling-sleep","title":"Cycling & sleep","icon":"ChartNoAxesCombined"},pluginId:"cycling-sleep",component:Page8}
 ];
 export const slots = [
 {...{"id":"welcome","kind":"workspace","title":"Welcome setup"},kind:"workspace" as const,pluginId:"athlete",component:Contributions1["welcome"]},

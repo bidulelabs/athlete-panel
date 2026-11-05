@@ -16,9 +16,14 @@ import {
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
+import { RestingHeartRateHrvFigure } from './resting-heart-rate-hrv-figure';
 import { seasonStart } from './season';
+import { TrainingBySportFigure } from './training-by-sport-figure';
 import { TrainingHoursFigure } from './training-hours-figure';
+import { TrainingLoadFigure } from './training-load-figure';
 import { useChartsSummary } from './use-charts-summary';
+import { WeeklyClimbingFigure } from './weekly-climbing-figure';
+import { WorkoutHeartRateFigure } from './workout-heart-rate-figure';
 import './charts.css';
 
 const templates = [
@@ -27,6 +32,36 @@ const templates = [
     title: 'Training hours',
     description: 'Compare planned and recorded hours, with your races.',
     Figure: TrainingHoursFigure,
+  },
+  {
+    id: 'training-by-sport',
+    title: 'Training by sport',
+    description: 'See which sports fill your recorded hours, against the plan.',
+    Figure: TrainingBySportFigure,
+  },
+  {
+    id: 'workout-heart-rate',
+    title: 'Workout heart rate',
+    description: 'Follow the average heart rate of each session, one sport at a time.',
+    Figure: WorkoutHeartRateFigure,
+  },
+  {
+    id: 'weekly-climbing',
+    title: 'Weekly climbing',
+    description: 'See elevation gain per sport, and how steep your running is.',
+    Figure: WeeklyClimbingFigure,
+  },
+  {
+    id: 'resting-heart-rate-hrv',
+    title: 'Resting heart rate and HRV',
+    description: 'Compare each night with its 7-day average and your usual range.',
+    Figure: RestingHeartRateHrvFigure,
+  },
+  {
+    id: 'estimated-training-load',
+    title: 'Estimated training load',
+    description: 'Estimate the daily load of your sessions from their heart rate.',
+    Figure: TrainingLoadFigure,
   },
 ] as const;
 type Template = (typeof templates)[number];
@@ -111,8 +146,8 @@ function TemplatePage({
     );
     return weeks > chartsMaxWeeks
       ? `Choose a period of at most ${chartsMaxWeeks} weeks.`
-      : { weekStart, weeks };
-  }, [period, currentWeek, season, customFrom, customTo, weekStartsOn]);
+      : { template: template.id, weekStart, weeks };
+  }, [template.id, period, currentWeek, season, customFrom, customTo, weekStartsOn]);
   const chart = useChartsSummary(typeof selection === 'string' ? null : selection);
   return (
     <>

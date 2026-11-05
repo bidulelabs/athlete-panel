@@ -138,6 +138,69 @@ def verify_release_tag(tag, commit, version):
     return prerelease
 
 
+def changelog_entry(commit, tag):
+    try:
+        changelog = run(['git', 'show', f'{commit}:docs/changelog.md'], cwd=ROOT)
+    except ValueError:
+        raise ValueError('Cannot read docs/changelog.md from the verified release commit.') from None
+
+    # Only level-two headings delimit releases. Keep subsections and fenced upgrade examples intact.
+    title = re.compile(re.escape(tag) + r' \(\d{4}-\d{2}-\d{2}\)')
+    entries, current, fence = [], None, None
+    for line in changelog.splitlines():
+        marker = re.match(r' {0,3}(`{3,}|~{3,})(.*)$', line)
+        if fence:
+            if marker and marker[1].startswith(fence) and not marker[2].strip():
+                fence = None
+        elif marker:
+            fence = marker[1]
+        elif heading := re.match(r'^ {0,3}##[ \t]+(.+?)\s*$', line):
+            current = None
+            if title.fullmatch(heading[1]):
+                current = []
+                entries.append(current)
+            continue
+        if current is not None:
+            current.append(line)
+    if len(entries) != 1 or not any(line.strip() for line in entries[0]):
+        raise ValueError(f'docs/changelog.md must contain exactly one nonempty "## {tag} (YYYY-MM-DD)" entry.')
+    return '\n'.join(entries[0]).strip('\n')
+
+
+def release_notes(repository, tag, commit, digest, prerelease, entry):
+    warning = 'Prerelease: test on a separate instance with its own database, storage and synthetic data.\n\n' if prerelease else ''
+    docs = f'https://github.com/{repository}/blob/{tag}/docs'
+    guide = f'{docs}/development.md'
+    return warning + f"""## What changed in {tag}
+
+{entry}
+
+## Upgrade an existing managed server
+
+Download `athlete-panel-deploy.tgz` and its `.sha256` file from **Assets** below. [Verify and extract this release’s bundle]({guide}#verify-the-bundle) in a new directory. Keep your recovery keys and run the following from that directory with the same account and operator state:
+
+```sh
+python3 scripts/hosted.py upgrade
+```
+
+[Managed upgrade guide]({guide}#coordinated-upgrades-and-plugin-activation)
+
+## Fresh install
+
+Tested platform: Linux AMD64 (x86-64). Follow the [fresh install guide]({guide}#private-server-installation) to prepare your server. Download `athlete-panel-deploy.tgz` and `athlete-panel-deploy.tgz.sha256` from **Assets** below. [Verify and extract the bundle]({guide}#verify-the-bundle), then run this command with your domain:
+
+```sh
+python3 scripts/hosted.py install --domain training.example.com --backup-directory "$HOME/athlete-panel-backups"
+```
+
+[Full changelog]({docs}/changelog.md)
+
+Commit: `{commit}`
+
+Image: `{digest}`
+"""
+
+
 def publish(directory, commit, repository, tag, evidence_directory):
     if not re.fullmatch('[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository): raise ValueError('Invalid repository.')
     record = verify_image(directory, commit)
@@ -160,6 +223,7 @@ def publish(directory, commit, repository, tag, evidence_directory):
     release = existing_release(repository, tag)
     if release and not release['isDraft'] and release['isPrerelease'] != prerelease:
         raise ValueError('Published release classification differs from its tag; review it explicitly. Existing release was preserved.')
+    changes = changelog_entry(commit, tag) if not release or release['isDraft'] else None
     repo = 'ghcr.io/' + repository.lower()
     references = [repo + ':' + tag, repo + ':sha-' + commit]
     existing = [remote_image(ref) for ref in references]
@@ -206,14 +270,15 @@ def publish(directory, commit, repository, tag, evidence_directory):
                     raise ValueError('Published release is missing an expected asset; repair it explicitly.')
             missing = [output / name for name in names if name not in present]
             if missing: run(['gh', 'release', 'upload', tag, '--repo', repository, *missing])
-        else:
+        if changes is not None:
             notes = output / 'notes.txt'
-            warning = 'Prerelease: test on a separate instance with its own database, storage and synthetic data.\n\n' if prerelease else ''
-            notes.write_text(warning + f'Tested Linux AMD64 release.\n\nCommit: {commit}\nImage: {digest}\n\nExtract the deployment bundle and run python3 scripts/hosted.py upgrade. Preserve your private operator state and recovery keys.\n')
-            run(['gh', 'release', 'create', tag, '--repo', repository, '--verify-tag', '--draft', '--title', tag,
-                 *release_flags, '--notes-file', notes, *(output / name for name in names)])
-        if not release or release['isDraft']:
-            run(['gh', 'release', 'edit', tag, '--repo', repository, '--draft=false', *release_flags])
+            notes.write_text(release_notes(repository, tag, commit, digest, prerelease, changes), encoding='utf-8')
+            if not release:
+                run(['gh', 'release', 'create', tag, '--repo', repository, '--verify-tag', '--draft', '--title', tag,
+                     *release_flags, '--notes-file', notes, *(output / name for name in names)])
+            # Refresh a resumed draft's notes as part of publishing it. Never edit a published release.
+            draft_notes = ['--notes-file', notes] if release else []
+            run(['gh', 'release', 'edit', tag, '--repo', repository, '--draft=false', *release_flags, *draft_notes])
     print('Published the tested image and matching deployment bundle: ' + digest)
 
 

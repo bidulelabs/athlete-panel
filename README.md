@@ -4,13 +4,15 @@
 
 Athlete Panel brings training plans, activity history and everyday context into one private workspace. The project is growing toward support for **endurance, multisport and strength training**—from trail running and cycling to triathlon and gym sessions.
 
-Plan your sessions, import what you actually did, review your week, and adjust what comes next. Your instance stores your training and health records in PostgreSQL under your control. The current preview has dedicated running and cycling planning; broader sport support is part of the direction described below.
+Plan your sessions, import what you actually did, review your week, and adjust what comes next. Your instance stores your training and health records in PostgreSQL under your control.
 
 Start with manual planning. Add Garmin imports when you want them. Connect an external AI agent to propose changes that **you review and apply**.
 
-[Sports and training styles](#sports-and-training-styles) · [Quick start](#quick-start) · [Garmin](#garmin-integration) · [AI agents](#ai-agent-integration) · [Contributing](#development-and-contributions) · [Documentation](#documentation)
+**[Fresh install on Linux AMD64](docs/development.md#private-server-installation)** · [Try it locally](#try-it-locally) · [Upgrade an existing server](docs/development.md#coordinated-upgrades-and-plugin-activation) · [Garmin](#garmin-integration) · [AI agents](#ai-agent-integration) · [Contributing](#development-and-contributions) · [Documentation](#documentation)
 
-> **Developer preview · One athlete per instance.** Local workflows are implemented and tested. Isolated container installation and recovery are exercised by the release rehearsal. Actual public HTTPS, off-host recovery and owner-account Garmin verification remain deployment gates. See the [release gates](docs/plans/mvp-execution.md#release-gates-and-remaining-environment-evidence) and [license](#license-and-acknowledgments) before adopting or redistributing the project.
+The docs on `main` describe the development version. Find the docs for your installed release and see what’s coming next in the [changelog](docs/changelog.md).
+
+> **Developer preview · One athlete per instance.** The release report records automated installation and recovery checks with synthetic data. Public HTTPS on your domain, recovery on another machine from an off-host backup, and imports from your Garmin account still need checks on the intended installation. [Latest stable verification report](https://github.com/bidulelabs/athlete-panel/releases/latest/download/verification.json) · [Operator checklist](docs/release-readiness.md#operator-acceptance-on-the-intended-server)
 
 ## Why Athlete Panel?
 
@@ -46,7 +48,7 @@ Planning now follows Garmin sport groups and subgroups, with separate hiking and
   <img src="docs/images/calendar-dark.png" alt="Athlete Panel calendar with an expanded weekly summary showing planned and recorded training, session status, elevation, sleep, HRV and workout cards." width="100%">
 </picture>
 
-_Actual application screenshots using synthetic training and health records, captured during local browser verification. [Light view](docs/images/calendar-light.png) · [Dark view](docs/images/calendar-dark.png)._ There is no hosted public demo currently documented.
+_Actual application screenshots using synthetic training and health records, captured during local browser verification. [Light view](docs/images/calendar-light.png) · [Dark view](docs/images/calendar-dark.png)._ To run your own instance, follow the [fresh install guide](docs/development.md#private-server-installation) for the [latest stable release](https://github.com/bidulelabs/athlete-panel/releases/latest).
 
 ## How it works
 
@@ -67,21 +69,21 @@ The architecture targets a single owner on a private instance. Team accounts, pu
 
 ## Quick start
 
-Choose the workflow that fits your goal:
+| Goal | Start here |
+| --- | --- |
+| Install on a new Linux AMD64 server | [Download the release bundle and install](docs/development.md#private-server-installation) |
+| Run on your computer or contribute | [Start from a local checkout](#try-it-locally) |
+| Upgrade a managed private server | [Deploy a new release](docs/development.md#coordinated-upgrades-and-plugin-activation) |
+| Test a backup on a running installation | [Test restoration without changing live data](docs/development.md#test-restoration-without-changing-the-live-installation) |
+| Update an existing local checkout | [Local update and recovery](docs/development.md#updating-a-local-checkout) |
 
-| Goal                                      | Start here                                                                                                                              |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Run a maintained private server           | [Production Docker Compose installation](docs/development.md#private-server-installation): generated secrets, HTTPS, worker and backups |
-| Upgrade a managed private server          | [One-command deployment](docs/development.md#coordinated-upgrades-and-plugin-activation): tested image, restored-backup rehearsal, recovery point and readiness |
-| Test a backup without changing live data  | [Manual restore testing](docs/development.md#test-restoration-without-changing-the-live-installation), with separately retained recovery keys |
-| Try the application locally or contribute | The checkout workflow below; it runs a development server bound to your computer                                                        |
-| Update an existing local checkout         | [Local update and recovery](docs/development.md#updating-a-local-checkout); setup does not upgrade existing data                        |
+### Try it locally
 
 This route runs the web app and worker on your computer, with PostgreSQL in Docker. It needs no Garmin or AI credentials. The shell examples assume a Unix-like terminal.
 
 **Prerequisites:** a maintained Node.js **22** release (minimum **22.13**, use current security patches), pnpm **11.28.8**, and a running Docker Engine/Desktop with Compose v2. If pnpm is missing, install the version pinned in `package.json`: `npm install --global pnpm@11.28.8`.
 
-### 1. Install and set up
+#### 1. Install and set up
 
 Clone or download this repository, open a terminal in its root, and run:
 
@@ -96,7 +98,7 @@ There is no need to copy `.env.example`, generate keys, construct database URLs 
 
 Setup can resume an interrupted fresh installation. Running it again preserves existing credentials, data and your account. It does not automatically upgrade an existing database. If storage exists but `.env` is missing, it stops and explains how to recover the configuration.
 
-### 2. Run Athlete Panel
+#### 2. Run Athlete Panel
 
 ```sh
 pnpm run local
@@ -116,25 +118,9 @@ These commands target macOS/Linux terminals; Windows users need WSL2 with Docker
 
 ### Hosting on your server
 
-The recommended VPS workflow uses a **prebuilt release image** with a small deployment bundle. Your server needs **Linux, Python 3.10+ and Docker Compose/Buildx**, a domain and mounted off-host backup storage. No application checkout, Node, pnpm or build is required on the server.
+For a new **Linux AMD64** server, use the published deployment bundle. It pins the tested container image and includes the installer. You need Python 3.10+, Docker Engine with Compose v2 and Buildx, a domain pointing to the server, and ports 80 and 443 reachable. The default backup stays on the server. You can choose a mounted remote destination during installation. [Fresh install and first sign-in](docs/development.md#private-server-installation) · [Latest stable release](https://github.com/bidulelabs/athlete-panel/releases/latest)
 
-Existing manual Compose installations can use the explicit [adoption preview and confirmation](docs/development.md#adopting-an-existing-compose-installation) when they fit the documented support matrix. Adoption records their configuration without restarting services; subsequent upgrades use the shared deployment/recovery sequence.
-
-**Release availability:** this repository implements the workflow; no official image or downloadable release bundle has been published yet. Use a trusted image/bundle supplied by the maintainer, or the [custom/source build path](docs/development.md#custom-images-and-source-upgrades). From an extracted release bundle:
-
-```sh
-python3 scripts/hosted.py install --domain training.example.com --backup-directory /mnt/offsite/athlete-panel
-```
-
-You choose your login password. Setup generates technical credentials, applies database migrations, configures HTTPS and starts verified daily backups. It preserves private operator state separately from the checkout. The [server guide](docs/development.md#private-server-installation) covers prerequisites, recovery keys and troubleshooting. The local development launcher is not the public deployment method.
-
-For later releases, download and extract the new deployment bundle into a separate directory, then run from that directory using the same account and persistent state:
-
-```sh
-python3 scripts/hosted.py upgrade
-```
-
-The updater prepares the image before downtime, takes a verified backup, runs migrations and checks readiness before reopening the application. Interrupted operations have a saved phase and a `resume` command. Recovery uses the archive’s matching image and restores data into a **new database**, preserving the old one. Archived source remains available for custom builds and older backups. Custom plugins require a custom image; updates check for accidental plugin removal before downtime. See [upgrades](docs/development.md#coordinated-upgrades-and-plugin-activation) and [recovery](docs/development.md#restore-and-owner-recovery). Public HTTPS renewal and recovery on actual independent infrastructure remain [release checks](docs/release-readiness.md).
+If Athlete Panel is already running, choose the guide for your installation. [Upgrade a managed server](docs/development.md#coordinated-upgrades-and-plugin-activation) · [Adopt an existing manual Compose installation](docs/development.md#adopting-an-existing-compose-installation) · [Update a custom image or source build](docs/development.md#custom-images-and-source-upgrades)
 
 The following configuration reference is for advanced/manual deployments; the guided workflow generates these values:
 
@@ -190,7 +176,11 @@ From a local checkout with dependencies installed:
 pnpm agent connect --url http://127.0.0.1:3000
 ```
 
-The CLI opens the approval page. Sign in, compare the displayed code with your terminal, choose the dates and access duration, decide whether to include private notes, and approve. No token copying is needed. For a remote instance, supply its HTTPS origin; `--no-open` prints the link when automatic browser opening is unavailable.
+The CLI opens the approval page. Sign in and match the code with your terminal. For a remote instance, supply its HTTPS address. Use `--no-open` to print the approval link.
+
+You choose which history dates and categories the agent may read. You can grant history alone for analysis. If you also allow suggestions, choose a separate planning period: the agent can read training context for those dates and submit proposed changes. Private notes are off by default and have separate controls for history and planning. Choose when access expires, then approve.
+
+For example, you can share the past four weeks and allow suggestions for the next two. The agent can review those weeks and suggest moving Tuesday’s run to Thursday. The calendar changes only when you review and apply the proposal in **Agent workspace**.
 
 Then ask your agent:
 
@@ -198,16 +188,22 @@ Then ask your agent:
 
 The training skill loads the [coaching workflow](.agents/skills/athlete-panel-training-coaching/SKILL.md) for program creation and workout adjustments. The agent reads your context first, asks brief questions only when missing answers would materially change the plan, and proceeds directly when it has enough information. For a request such as “Generate a three-month trail-running program,” it clarifies unresolved goals, dates, availability, terrain and constraints, then prepares the requested program. Essential questions wait for your answer; minor assumptions are stated. This conversation happens in your agent, without requiring a special planning mode. Your answers do not apply calendar changes.
 
-The agent can use:
+With history access, the agent can read the approved period:
 
 ```sh
-pnpm agent context --out context.json
-pnpm agent propose --file proposal.json
+pnpm agent history summary --period week --out private-exports/history.json
+```
+
+With planning access, it can read the planning context and submit a proposal it has prepared:
+
+```sh
+pnpm agent context --out private-exports/context.json
+pnpm agent propose --file private-exports/proposal.json
 ```
 
 The agent prepares the proposal file using the [training skill](.agents/skills/athlete-panel-training-planning/SKILL.md) and shared schemas. You review the exact diff in **Agent workspace** and apply it yourself. Validation, scope and freshness checks run again at application time; a stale or invalid batch writes nothing.
 
-The CLI saves its credential in `~/.config/athlete-panel/agent.json` with owner-only file permissions. It is **not encrypted on disk**. Grants expire, can be disconnected in the app, and permit bounded reads and proposals—not applying changes, editing recorded completion, managing credentials or deploying code. Context and proposal files can contain personal data; keep them private and out of version control.
+The CLI saves its credential in `~/.config/athlete-panel/agent.json` with owner-only file permissions. It is **not encrypted on disk**. Grants expire, and you can revoke them in the app. The agent may read or propose only within the access you approved. Context and proposal files can contain personal data; keep them private and out of version control.
 
 ### Build a personal extension
 
@@ -221,8 +217,8 @@ The [cycling/sleep example](personal-plugins/cycling-sleep) demonstrates this ar
 
 | Interface         | Current support                                                                        |
 | ----------------- | -------------------------------------------------------------------------------------- |
-| CLI               | Browser connection, bounded context export and proposal submission                     |
-| HTTP API          | `GET /api/agent/context` and `POST /api/agent/propose` with a scoped bearer credential |
+| CLI               | Browser approval, scoped history reads, planning context and proposal submission                     |
+| HTTP API          | History grants allow `POST /api/agent/history-{discover,summary,records,context}`. Planning grants allow `GET /api/agent/context` and `POST /api/agent/propose`. |
 | Repository skills | Canonical `.agents/skills/` instructions and generated `.claude/skills/` adapters      |
 | MCP               | Not implemented                                                                        |
 
@@ -244,13 +240,13 @@ Your database runs on your infrastructure. The application does not require an a
 - **Host authority:** API grants constrain the HTTP workflow. They do not sandbox an agent that also has access to server files, database credentials or your operating-system account. Source plugins likewise run as trusted code.
 - **Recovery:** protect `.env`, local agent configuration and exported context. Keep application and backup keys separately recoverable, enable off-host backups, and test restoration.
 
-No private vulnerability-reporting channel is configured in the repository yet. Do not put credentials, real health records or sensitive exploit details in a public issue.
+Report suspected vulnerabilities privately using the [GitHub reporting form](https://github.com/bidulelabs/athlete-panel/security/advisories/new). Include a synthetic example and the affected version. Keep credentials and real athlete records out of reports.
 
 ## Development and contributions
 
 Athletes and developers are both welcome to contribute. Share how you train, where the current workflow falls short, or what would make the application easier to use. Feedback from trail runners, cyclists, triathletes, strength athletes and people combining disciplines will help shape broader sport support.
 
-Bug reports, documentation improvements, accessibility work and focused feature contributions are welcome. For a substantial change, start with an issue describing the problem and proposed scope. Include reproducible steps and synthetic examples in bug reports; keep personal records out of attachments. Licensing and a private security contact still need to be established for public contributions.
+Bug reports, documentation improvements, accessibility work and focused feature contributions are welcome under the [MIT license](LICENSE). For a substantial change, start with an issue describing the problem and proposed scope. Include reproducible steps and synthetic examples in bug reports. Keep personal records out of attachments and report suspected vulnerabilities privately through the [security policy](SECURITY.md#reporting-a-vulnerability).
 
 Use the quick start for local development and read [AGENTS.md](AGENTS.md), the [architecture](docs/architecture.md) and the relevant feature specification before changing behavior.
 
@@ -281,12 +277,11 @@ pnpm build
 
 ## Roadmap and current limits
 
-The product direction is one personal training workspace across endurance, multisport and strength disciplines. Areas to develop include expanding the sport model, swimming and combined-session planning, richer trail-running workflows, and strength-specific exercises, sets, repetitions and loads. These capabilities are not implemented in the current preview.
+You can already plan swims, rides, runs and strength workouts, including exercises with sets, reps and loads. Strength completion is recorded per session. Combined-session planning and richer trail-running workflows remain areas for development. See [sport planning](docs/features/garmin-sport-planning.md).
 
-Alongside that direction, the immediate release priority is a reproducible public installation. The [execution record](docs/plans/mvp-execution.md#release-gates-and-remaining-environment-evidence) tracks the evidence still needed:
+The [operator checklist](docs/release-readiness.md#operator-acceptance-on-the-intended-server) covers deployment checks. Remaining verification work includes:
 
-- Complete application-image build and Compose startup verification.
-- Rehearse Linux deployment, HTTPS, off-host backup delivery and fresh-instance recovery.
+- Verify public HTTPS, off-host backup delivery and recovery on a replacement server.
 - Expand account/device-specific Garmin conformance and historical-coverage checks.
 - Record real harness discovery and browser-launch behavior on supported environments.
 - Measure representative history performance and restore times.
@@ -308,7 +303,7 @@ Workout libraries, automatic activity matching, advanced training-load/recovery 
 | [Garmin import and health](docs/features/garmin-import.md)      | Authentication, normalized records, history traversal, coverage and limits                           |
 | [Activity summary coverage](docs/features/activity-summary.md) | Recorded duration/distance, missing measurements and filtered totals |
 | [Health history](docs/features/health-history.md) | Recent health review, date presets and independent Calendar navigation |
-| [Reviewed agent training](docs/features/agent-training.md)      | Grants, context, proposal review, atomic apply and undo                                              |
+| [Reviewed agent training](docs/features/agent-training.md)      | History reads, planning permissions, owner review, apply and undo                                              |
 | [Plugins and skills](docs/features/plugins.md)                  | Source extensions, templates, compatibility and agent workflows                                      |
 | [Runtime contract reference](docs/reference/contracts.json)     | Generated command and data schemas                                                                   |
 | [Execution record](docs/plans/mvp-execution.md)                 | Implementation progress, actual verification and deployment gates                                    |

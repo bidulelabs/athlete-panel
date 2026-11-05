@@ -13,8 +13,9 @@ Discuss a substantial feature in an issue before implementing it. Explain the us
 1. Create a focused branch. Keep existing local data and private instance configuration out of the change.
 2. Put domain behavior in its owning plugin. Use the public contracts and SDK for extensions. Applied migrations are immutable; add a new migration when necessary.
 3. Update the relevant feature specification when behavior, stored data or permissions change. Record consequential architecture decisions separately.
-4. Run the relevant checks from the development guide. Use the disposable test database, not your daily instance. UI changes should include synthetic screenshots in both themes and a narrow viewport.
-5. Review the exact staged publication scan and diff. Open a pull request explaining the problem, the behavior after the change, verification performed and any limits.
+4. If the PR changes what an athlete sees or what a server operator must do, add a short note to [Unreleased](docs/changelog.md#unreleased) in the same PR. Describe the change and any required upgrade steps. Internal refactors, test-only changes and typo fixes can skip this step.
+5. Run the relevant checks from the development guide. Use the disposable test database, not your daily instance. UI changes should include synthetic screenshots in both themes and a narrow viewport.
+6. Review the exact staged publication scan and diff. Open a pull request explaining the problem, the behavior after the change, verification performed and any limits.
 
 Do not claim a Garmin live check, deployment or recovery test unless it actually ran. CI uses synthetic data and cannot establish a particular Garmin account’s historical coverage.
 

@@ -16,6 +16,7 @@ For UI work, read [product context](PRODUCT.md) and the [design system](DESIGN.m
 
 ## Documentation and verification
 
+- If a PR changes what a user sees or what a server operator must do, add or update a short entry under [Unreleased](docs/changelog.md#unreleased) in the same PR. Describe the effect and any steps needed to upgrade. Skip entries for internal refactors, test-only changes and typo fixes. The release maintainer assigns the version and date before tagging.
 - Create/update a feature spec for a new capability or changed persisted behavior, permission or public contract, following [the feature template](docs/templates/Feature-Template.md).
 - Update architecture when ownership or interactions change. Record consequential decisions with [the ADR template](docs/templates/ADR-Template.md); acceptance requires evidence.
 - Keep commands canonical in the development guide. The everyday loop is in [Verification](docs/development.md#verification): `pnpm test:db:start`, export `TEST_DATABASE_URL`, then `pnpm check`, `pnpm test:integration` and `pnpm build`; every other command is in the [command reference](docs/development.md#command-reference). Keep progress and individual results in the execution/task record.

@@ -1,5 +1,7 @@
 # Feature: Activity summary coverage
 
+For availability in your installed version, see the [changelog](../changelog.md).
+
 ## Purpose and scope
 
 Show recorded activity duration and distance without presenting incomplete measurements as complete totals. Coverage describes the measurements in the current selection, not Garmin import progress.

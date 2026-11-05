@@ -73,6 +73,10 @@ function ProfileForm({ data, request }: PluginPageProps) {
       weekStartsOnPreference: weekPreference,
       goals: String(form.get('goals')),
       ftpWatts: form.get('ftpWatts') ? Number(form.get('ftpWatts')) : null,
+      restingHeartRateBpm: form.get('restingHeartRateBpm')
+        ? Number(form.get('restingHeartRateBpm'))
+        : null,
+      maxHeartRateBpm: form.get('maxHeartRateBpm') ? Number(form.get('maxHeartRateBpm')) : null,
       heartRateZones: { cycling: zones('cyclingZones'), running: zones('runningZones') },
       weeklyAvailability: Object.fromEntries(
         days.map((day) => [day, Math.round(Number(form.get(day) ?? 0) * 3600)]),
@@ -180,6 +184,30 @@ function ProfileForm({ data, request }: PluginPageProps) {
                 name="runningZones"
                 placeholder="e.g. 125, 145, 160, 175, 190"
                 defaultValue={profile?.heartRateZones.running.join(', ') ?? ''}
+              />
+            </Field>
+          </div>
+          <div className="form-grid">
+            <Field label="Resting heart rate · bpm">
+              <Input
+                type="number"
+                min="25"
+                max="120"
+                step="1"
+                name="restingHeartRateBpm"
+                placeholder="Unknown"
+                defaultValue={profile?.restingHeartRateBpm ?? ''}
+              />
+            </Field>
+            <Field label="Maximum heart rate · bpm">
+              <Input
+                type="number"
+                min="100"
+                max="240"
+                step="1"
+                name="maxHeartRateBpm"
+                placeholder="Unknown"
+                defaultValue={profile?.maxHeartRateBpm ?? ''}
               />
             </Field>
           </div>

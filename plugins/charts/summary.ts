@@ -1,4 +1,5 @@
 import {
+  chartsLongLoadAverageDays,
   chartsUsualRangeLookbackNights,
   chartsSports,
   isUnresolvedActivitySport,
@@ -68,7 +69,7 @@ function nightsBetween(health: WorkspaceState['health'], from: string, to: strin
 
 export function chartsSummary(
   state: WorkspaceState,
-  { weekStart, weeks }: ChartsSummaryInput,
+  { template, weekStart, weeks }: ChartsSummaryInput,
 ): ChartsSummary {
   const lastDay = addDays(weekStart, weeks * 7 - 1);
   const activitiesById = new Map(state.activities.map((activity) => [activity.id, activity]));
@@ -136,5 +137,21 @@ export function chartsSummary(
       addDays(weekStart, -chartsUsualRangeLookbackNights),
       lastDay,
     ),
+    trainingLoadSessions:
+      template === 'estimated-training-load'
+        ? [
+            ...Array.from({ length: chartsLongLoadAverageDays / 7 }, (_, index) =>
+              weeklySummary(state, addDays(weekStart, (index - chartsLongLoadAverageDays / 7) * 7)),
+            ),
+            ...calendarWeeks,
+          ]
+            .flatMap(recordedSessions)
+            .filter((session) => session.date >= addDays(weekStart, 1 - chartsLongLoadAverageDays))
+            .map(({ date, averageHeartRateBpm, durationSeconds }) => ({
+              date,
+              averageHeartRateBpm,
+              durationSeconds,
+            }))
+        : [],
   };
 }

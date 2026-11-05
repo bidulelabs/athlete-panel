@@ -10,7 +10,9 @@ export const chartsTemplates = [
   'workout-heart-rate',
   'weekly-climbing',
   'resting-heart-rate-hrv',
+  'estimated-training-load',
 ] as const;
+export const chartsLongLoadAverageDays = 42;
 export const chartsSummaryInputSchema = z
   .object({
     template: z.enum(chartsTemplates),
@@ -55,13 +57,20 @@ export const chartsNightSchema = z.object({
   restingHeartRateMayBeMinimum: z.boolean(),
   hrvMilliseconds: z.number().nullable(),
 });
+export const chartsLoadSessionSchema = z.object({
+  date: dateSchema,
+  averageHeartRateBpm: z.number().nullable(),
+  durationSeconds: z.number().nullable(),
+});
 export const chartsSummarySchema = z.object({
   weeks: z.array(chartsWeekSchema),
   races: z.array(chartsRaceSchema),
   sessions: z.array(chartsSessionSchema),
   nights: z.array(chartsNightSchema),
+  trainingLoadSessions: z.array(chartsLoadSessionSchema),
 });
 export type ChartsSummaryInput = z.infer<typeof chartsSummaryInputSchema>;
 export type ChartsSummary = z.infer<typeof chartsSummarySchema>;
 export type ChartsSession = z.infer<typeof chartsSessionSchema>;
 export type ChartsNight = z.infer<typeof chartsNightSchema>;
+export type ChartsLoadSession = z.infer<typeof chartsLoadSessionSchema>;

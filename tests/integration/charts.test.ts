@@ -1,9 +1,10 @@
-import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { chartsSummarySchema } from '@athlete-panel/contracts';
 import { isolatedDatabaseUrl } from '../support/test-database';
 import { closeDatabase, connection } from '../../packages/host/src/db';
 import { migrate } from '../../packages/host/src/migrations';
 import charts from '../../plugins/charts/server';
+import { repositories } from '../../instance/services';
 import { activity, chartsId, nightRecord, plannedWorkout, trainingEvent } from '../fixtures/charts';
 
 beforeAll(async () => {
@@ -118,6 +119,36 @@ it('reads nights from 60 days before the period for resting heart rate and HRV o
   expect(nightly.nights.map((night) => night.date)).toEqual(['2028-11-09', '2029-01-09']);
   const hours = await charts.operations.summary({ ...selection, template: 'training-hours' });
   expect(hours.nights).toEqual([]);
+});
+
+it('reads sessions from 41 days before the period for Estimated training load only', async () => {
+  const sql = connection();
+  for (const record of [
+    activity(10, '2028-11-27', 3600),
+    activity(11, '2028-11-28', 3600),
+    activity(12, '2029-01-09', 3600),
+  ])
+    await sql`insert into activity_records.records(kind,id,revision,data) values('activity',${record.id},1,${sql.json(record)})`;
+  const selection = { weekStart: '2029-01-08', weeks: 1 };
+  const summary = await charts.operations.summary({
+    ...selection,
+    template: 'estimated-training-load',
+  });
+  const select = vi.spyOn(repositories.activity, 'select');
+  const hours = await charts.operations.summary({ ...selection, template: 'training-hours' });
+  expect(select).toHaveBeenCalledWith(
+    'activity',
+    { range: { from: '2029-01-08', to: '2029-01-14' } },
+    expect.anything(),
+  );
+  select.mockRestore();
+  expect(hours.trainingLoadSessions).toEqual([]);
+  expect(hours.weeks).toEqual(summary.weeks);
+  expect(summary.trainingLoadSessions.map((session) => session.date)).toEqual([
+    '2028-11-28',
+    '2029-01-09',
+  ]);
+  expect(summary.weeks[0]!.recordedSeconds.value).toBe(3600);
 });
 
 it('refuses a selection longer than 53 weeks', async () => {

@@ -578,6 +578,56 @@ describe('profile.set', () => {
     });
   });
 
+  it('saves resting and maximum heart rate without changing the other fields', () => {
+    const state = workspaceWithSavedProfile();
+    const heartRatesSet = run(state, [
+      {
+        action: 'profile.set',
+        expectedRevision: 1,
+        values: { restingHeartRateBpm: 47, maxHeartRateBpm: 196 },
+      },
+    ]);
+    expect(heartRatesSet.state.profile).toEqual({
+      ...state.profile,
+      restingHeartRateBpm: 47,
+      maxHeartRateBpm: 196,
+      revision: 2,
+    });
+    const restingCleared = run(heartRatesSet.state, [
+      { action: 'profile.set', expectedRevision: 2, values: { restingHeartRateBpm: null } },
+    ]);
+    expect(restingCleared.state.profile).toEqual({
+      ...heartRatesSet.state.profile,
+      restingHeartRateBpm: null,
+      revision: 3,
+    });
+  });
+
+  it('rejects a resting heart rate at or above the maximum, also when only one is sent', () => {
+    expect(() =>
+      run(workspaceWithSavedProfile(), [
+        {
+          action: 'profile.set',
+          expectedRevision: 1,
+          values: { restingHeartRateBpm: 120, maxHeartRateBpm: 120 },
+        },
+      ]),
+    ).toThrow(/lower than maximum/);
+    const maxSaved = run(workspaceWithSavedProfile(), [
+      { action: 'profile.set', expectedRevision: 1, values: { maxHeartRateBpm: 110 } },
+    ]).state;
+    expect(() =>
+      run(maxSaved, [
+        { action: 'profile.set', expectedRevision: 2, values: { restingHeartRateBpm: 115 } },
+      ]),
+    ).toThrow(/lower than maximum/);
+    expect(
+      run(maxSaved, [
+        { action: 'profile.set', expectedRevision: 2, values: { restingHeartRateBpm: 109 } },
+      ]).state.profile?.restingHeartRateBpm,
+    ).toBe(109);
+  });
+
   it('changes nothing for empty values on a saved profile', () => {
     const state = workspaceWithSavedProfile();
     const empty = run(state, [{ action: 'profile.set', expectedRevision: 1, values: {} }]);
@@ -616,6 +666,12 @@ describe('profile.set', () => {
     [{ heartRateZones: { running: [130] } }, /cycling[\s\S]*expected array, received undefined/],
     [{ revision: 5 }, /Unrecognized key[\s\S]*revision/],
     [{ displayName: null }, /displayName[\s\S]*expected string, received null/],
+    [{ restingHeartRateBpm: 24 }, /restingHeartRateBpm[\s\S]*>=25/],
+    [{ restingHeartRateBpm: 121 }, /restingHeartRateBpm[\s\S]*<=120/],
+    [{ restingHeartRateBpm: 47.5 }, /restingHeartRateBpm[\s\S]*expected int/],
+    [{ maxHeartRateBpm: 99 }, /maxHeartRateBpm[\s\S]*>=100/],
+    [{ maxHeartRateBpm: 241 }, /maxHeartRateBpm[\s\S]*<=240/],
+    [{ maxHeartRateBpm: '196' }, /maxHeartRateBpm[\s\S]*expected number, received string/],
   ])('rejects %j', (values, error) => {
     expect(() =>
       run(workspaceWithSavedProfile(), [

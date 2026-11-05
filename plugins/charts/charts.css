@@ -7,6 +7,7 @@
   --chart-hiking: #008300;
   --chart-swimming: #d55181;
   --chart-other: var(--muted);
+  --chart-load: color-mix(in srgb, var(--chart-recorded) 45%, transparent);
 }
 :root[data-theme='light'] {
   --chart-recorded: #46525d;
@@ -158,6 +159,15 @@
   width: 16px;
   height: 0;
   border-top: 2px solid var(--chart-recorded);
+  border-radius: 0;
+}
+.charts-key-load {
+  background: var(--chart-load);
+}
+.charts-key-long-average {
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed var(--muted);
   border-radius: 0;
 }
 .charts-key-usual-range {

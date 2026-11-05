@@ -10,7 +10,7 @@ The [Garmin sport planning specification](garmin-sport-planning.md) extends this
 
 Specification status: approved. Requirement source: the owner's private MVP implementation request, 2026-10-24, P1–P3/P5 and T1–T4; recorded in the [execution handoff](../plans/mvp-execution.md). No durable chat link is available.
 
-The owner signs in after console bootstrap. Recovery revokes sessions and agent grants. Profile settings include display name, timezone, units, week-start preference, goals, daily available seconds, manual HR-zone boundaries and cycling FTP. A profile save changes only the fields it sends; omitted fields keep their saved values and defaults fill only a first save. Weekly availability and HR zones are sent whole ([issue 60](https://github.com/bidulelabs/athlete-panel/issues/60)). There is no public registration or email dependency.
+The owner signs in after console bootstrap. Recovery revokes sessions and agent grants. Profile settings include display name, timezone, units, week-start preference, goals, daily available seconds, manual HR-zone boundaries, cycling FTP, and resting and maximum heart rate (whole bpm, resting 25 to 120, maximum 100 to 240, resting lower than maximum, checked after merging with the saved profile; [Charts](charts.md) uses them for the training load estimate). A profile save changes only the fields it sends; omitted fields keep their saved values and defaults fill only a first save. Weekly availability and HR zones are sent whole ([issue 60](https://github.com/bidulelabs/athlete-panel/issues/60)). There is no public registration or email dependency.
 
 An independent workout has a strict date. A plan workout has a plan identity and positive one-based day; its date derives from the plan start. Unscheduled plans remain editable but do not appear in the dated calendar. Ordered intervals support one repeat-group level, positive time or distance lengths, and coherent HR/power/pace/RPE ranges. Unknown planned totals are never inferred from incomplete steps.
 
@@ -122,6 +122,7 @@ The expanded summary stays inside the calendar and supports native keyboard acti
 | Create/complete then restart | Same saved prescription and actuals return | [Database tests](../../tests/integration/domain.test.ts), browser suite |
 | Invalid date, interval or partial reason | Whole request rejected, draft retained | [Domain tests](../../tests/unit/domain.test.ts), [contracts](../../tests/unit/contracts.test.ts) |
 | Save only some profile fields | Other fields keep their values; an empty save changes nothing; stale revision or partial availability/zones rejected | [Domain tests](../../tests/unit/domain.test.ts) |
+| Resting and maximum heart rate | Saved alone without changing other fields; out-of-range or decimal value, or resting at or above maximum (also against a saved maximum) rejected | [Domain tests](../../tests/unit/domain.test.ts), [browser test](../../tests/e2e/heart-rate-profile.spec.ts) |
 | Two stale simultaneous moves | One commits; other conflicts without lost siblings | Database/domain tests |
 | Shift a plan with completion | Explicit history conflict; duplication remains available | Domain tests |
 | Link/unlink/manual/imported mixed data | Single linked count, no resurrected manual values | [Summary tests](../../tests/unit/summary.test.ts) |
@@ -153,6 +154,8 @@ The [weekly summary component](../../plugins/calendar/weekly-summary.tsx) render
 ## Contracts and constraints
 
 The [runtime contracts](../../packages/contracts/src/index.ts) are authoritative. UI operations and the external agent call the same engine. See [architecture](../architecture.md) and [agent training](agent-training.md) for transaction and permission boundaries. Restore and upgrade procedures are centralized in [development](../development.md).
+
+Resting and maximum heart rate are optional profile fields: existing profiles stay unchanged until the owner saves the profile, and the same strict-validation rollback caveat as the week-start field applies once they are saved.
 
 Week-start activation requires rebuilding and restarting both local application processes using the [upgrade procedure](../development.md#coordinated-upgrades-and-plugin-activation). The composition and SQL schema stay unchanged, but an older binary with strict profile validation cannot read the added field after it has been saved. Rollback to that version requires its matched pre-change snapshot; do not assume code-only rollback from unchanged SQL migrations.
 

@@ -154,6 +154,30 @@
                         }
                       ]
                     },
+                    "restingHeartRateBpm": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 25,
+                          "maximum": 120
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "maxHeartRateBpm": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 100,
+                          "maximum": 240
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "id": {
                       "type": "string",
                       "const": "owner"
@@ -3273,6 +3297,30 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "restingHeartRateBpm": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 25,
+                                "maximum": 120
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "maxHeartRateBpm": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 100,
+                                "maximum": 240
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "additionalProperties": false
@@ -5469,6 +5517,30 @@
                                   }
                                 ]
                               },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -5638,6 +5710,30 @@
                                     "type": "integer",
                                     "minimum": 1,
                                     "maximum": 3000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
                                   },
                                   {
                                     "type": "null"
@@ -8637,6 +8733,30 @@
                                   }
                                 ]
                               },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -8806,6 +8926,30 @@
                                     "type": "integer",
                                     "minimum": 1,
                                     "maximum": 3000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
                                   },
                                   {
                                     "type": "null"
@@ -11822,6 +11966,30 @@
                                   }
                                 ]
                               },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -11991,6 +12159,30 @@
                                     "type": "integer",
                                     "minimum": 1,
                                     "maximum": 3000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
                                   },
                                   {
                                     "type": "null"
@@ -15421,6 +15613,30 @@
                                   }
                                 ]
                               },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -15590,6 +15806,30 @@
                                     "type": "integer",
                                     "minimum": 1,
                                     "maximum": 3000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
                                   },
                                   {
                                     "type": "null"
@@ -18997,6 +19237,30 @@
                                   }
                                 ]
                               },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -19166,6 +19430,30 @@
                                     "type": "integer",
                                     "minimum": 1,
                                     "maximum": 3000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
                                   },
                                   {
                                     "type": "null"
@@ -22194,6 +22482,30 @@
                                   }
                                 ]
                               },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -22363,6 +22675,30 @@
                                     "type": "integer",
                                     "minimum": 1,
                                     "maximum": 3000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
                                   },
                                   {
                                     "type": "null"
@@ -25402,6 +25738,30 @@
                                   }
                                 ]
                               },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -25571,6 +25931,30 @@
                                     "type": "integer",
                                     "minimum": 1,
                                     "maximum": 3000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "restingHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 25,
+                                    "maximum": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "maxHeartRateBpm": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 100,
+                                    "maximum": 240
                                   },
                                   {
                                     "type": "null"
@@ -29225,6 +29609,17 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "properties": {
+            "template": {
+              "type": "string",
+              "enum": [
+                "training-hours",
+                "training-by-sport",
+                "workout-heart-rate",
+                "weekly-climbing",
+                "resting-heart-rate-hrv",
+                "estimated-training-load"
+              ]
+            },
             "weekStart": {
               "type": "string",
               "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -29236,6 +29631,7 @@
             }
           },
           "required": [
+            "template",
             "weekStart",
             "weeks"
           ],
@@ -29543,12 +29939,78 @@
                 ],
                 "additionalProperties": false
               }
+            },
+            "nights": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "restingHeartRateBpm": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "restingHeartRateMayBeMinimum": {
+                    "type": "boolean"
+                  },
+                  "hrvMilliseconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "date",
+                  "restingHeartRateBpm",
+                  "restingHeartRateMayBeMinimum",
+                  "hrvMilliseconds"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "trainingLoadSessions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "averageHeartRateBpm": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "durationSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "date",
+                  "averageHeartRateBpm",
+                  "durationSeconds"
+                ],
+                "additionalProperties": false
+              }
             }
           },
           "required": [
             "weeks",
             "races",
-            "sessions"
+            "sessions",
+            "nights",
+            "trainingLoadSessions"
           ],
           "additionalProperties": false
         }
@@ -29875,6 +30337,30 @@
                       "type": "integer",
                       "minimum": 1,
                       "maximum": 3000
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "restingHeartRateBpm": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 25,
+                      "maximum": 120
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxHeartRateBpm": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 100,
+                      "maximum": 240
                     },
                     {
                       "type": "null"
@@ -33568,6 +34054,30 @@
                   }
                 ]
               },
+              "restingHeartRateBpm": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 25,
+                    "maximum": 120
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maxHeartRateBpm": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 240
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "id": {
                 "type": "string",
                 "const": "owner"
@@ -36757,6 +37267,30 @@
                       "type": "integer",
                       "minimum": 1,
                       "maximum": 3000
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "restingHeartRateBpm": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 25,
+                      "maximum": 120
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxHeartRateBpm": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 100,
+                      "maximum": 240
                     },
                     {
                       "type": "null"

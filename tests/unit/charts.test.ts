@@ -6,6 +6,8 @@ import {
   planSchema,
   workoutSchema,
 } from '@athlete-panel/contracts';
+import { nightRows } from '../../plugins/charts/resting-heart-rate-hrv';
+import { dailyLoads, sessionLoad } from '../../plugins/charts/training-load';
 import { seasonStart } from '../../plugins/charts/season';
 import { chartsSummary } from '../../plugins/charts/summary';
 import { hasSessions, trainingHoursWeeks } from '../../plugins/charts/training-hours';
@@ -24,11 +26,12 @@ import {
   chartsFirstWeek,
   chartsId,
   chartsToday,
+  nightRecord,
   trainingEvent,
 } from '../fixtures/charts';
 
 const minutes = (seconds: number) => `${seconds / 60}m`;
-const selection = { weekStart: chartsFirstWeek, weeks: 14 };
+const selection = { template: 'training-hours', weekStart: chartsFirstWeek, weeks: 14 } as const;
 
 describe('charts weekly summary', () => {
   it('returns the same planned and recorded duration as each Calendar week', () => {
@@ -105,13 +108,9 @@ describe('charts weekly summary', () => {
 
   it('accepts one to 53 weeks', () => {
     for (const weeks of [1, 53])
-      expect(chartsSummaryInputSchema.safeParse({ weekStart: chartsToday, weeks }).success).toBe(
-        true,
-      );
+      expect(chartsSummaryInputSchema.safeParse({ ...selection, weeks }).success).toBe(true);
     for (const weeks of [0, 54, 1.5])
-      expect(chartsSummaryInputSchema.safeParse({ weekStart: chartsToday, weeks }).success).toBe(
-        false,
-      );
+      expect(chartsSummaryInputSchema.safeParse({ ...selection, weeks }).success).toBe(false);
   });
 });
 
@@ -210,11 +209,7 @@ describe('charts training by sport', () => {
       activityWithSport(702, 'hiking', null),
       activityWithSport(703, 'hiking', 1800),
     ];
-    const weeks = trainingBySportWeeks(
-      chartsSummary(data, { weekStart: chartsFirstWeek, weeks: 14 }),
-      chartsToday,
-      minutes,
-    );
+    const weeks = trainingBySportWeeks(chartsSummary(data, selection), chartsToday, minutes);
     expect(weeks[0]).toMatchObject({
       sessionSports: ['running', 'cycling', 'hiking'],
       hoursBySport: { running: null, cycling: 0, hiking: 0.5, swimming: null },
@@ -236,7 +231,7 @@ describe('charts training by sport', () => {
     const data = emptyWorkspace();
     data.activities = [activityWithSport(710, 'running', 0)];
     const [zeroWeek, emptyWeek] = trainingBySportWeeks(
-      chartsSummary(data, { weekStart: chartsFirstWeek, weeks: 2 }),
+      chartsSummary(data, { ...selection, weeks: 2 }),
       chartsToday,
       minutes,
     );
@@ -470,5 +465,283 @@ describe('charts climbing and heart rate', () => {
       }),
     );
     expect(sportWithMostHeartRate(chartsSummary(cyclingWeek, selection), sports)).toBe('cycling');
+  });
+});
+
+describe('charts resting heart rate and HRV', () => {
+  const hrvRecords = (values: (number | null)[], lastNight: string) =>
+    values.map((value, index) =>
+      nightRecord(
+        1500 + index,
+        addDays(lastNight, index - values.length + 1),
+        'hrvMilliseconds',
+        value,
+      ),
+    );
+
+  it('returns each night from 60 days before the period, both metrics on one night', () => {
+    const data = emptyWorkspace();
+    data.health = [
+      nightRecord(1400, addDays(chartsFirstWeek, -60), 'hrvMilliseconds', 52),
+      nightRecord(1401, addDays(chartsFirstWeek, -61), 'hrvMilliseconds', 50),
+      nightRecord(1402, chartsFirstWeek, 'hrvMilliseconds', 55),
+      nightRecord(1403, chartsFirstWeek, 'restingHeartRateBpm', 48, true),
+      nightRecord(1404, addDays(chartsFirstWeek, 1), 'hrvMilliseconds', null),
+      nightRecord(1405, addDays(chartsFirstWeek, 14 * 7), 'hrvMilliseconds', 60),
+    ];
+    expect(chartsSummary(data, selection).nights).toEqual([
+      {
+        date: addDays(chartsFirstWeek, -60),
+        restingHeartRateBpm: null,
+        restingHeartRateMayBeMinimum: false,
+        hrvMilliseconds: 52,
+      },
+      {
+        date: chartsFirstWeek,
+        restingHeartRateBpm: 48,
+        restingHeartRateMayBeMinimum: true,
+        hrvMilliseconds: 55,
+      },
+    ]);
+  });
+
+  it('averages the last 7 nights only from 4 measured nights', () => {
+    const data = emptyWorkspace();
+    data.health = hrvRecords([60, null, null, 65, null, 70, 85], addDays(chartsFirstWeek, 1));
+    const [first, second] = nightRows(
+      chartsSummary(data, selection),
+      'hrvMilliseconds',
+      chartsToday,
+    );
+    expect(first).toMatchObject({ value: 70, average: null, averageLabel: 'Not enough nights' });
+    expect(second).toMatchObject({ value: 85, average: 70, averageLabel: '70 ms (4 of 7 nights)' });
+  });
+
+  it('keeps a night without a value with its 7-night average and usual range, and later nights as Upcoming', () => {
+    const data = emptyWorkspace();
+    data.health = hrvRecords(
+      [
+        ...Array.from({ length: 60 }, (_, index) => (index % 2 ? 60 : 50)),
+        60,
+        60,
+        60,
+        60,
+        60,
+        60,
+        null,
+      ],
+      addDays(chartsFirstWeek, 6),
+    );
+    const rows = nightRows(chartsSummary(data, selection), 'hrvMilliseconds', chartsToday);
+    expect(rows).toHaveLength(98);
+    expect(rows[6]).toMatchObject({
+      date: addDays(chartsFirstWeek, 6),
+      value: null,
+      valueLabel: 'No measure',
+      average: 60,
+      averageLabel: '60 ms (6 of 7 nights)',
+      usualRangeLabel: expect.stringMatching(/^\d+ to \d+ ms$/),
+    });
+    expect(rows.find((row) => row.date === addDays(chartsToday, 1))).toMatchObject({
+      average: null,
+      usualRange: null,
+      valueLabel: 'Upcoming',
+      averageLabel: 'Upcoming',
+      usualRangeLabel: 'Upcoming',
+    });
+  });
+
+  it('shows a usual range only from 30 nights in the previous 60', () => {
+    const data = emptyWorkspace();
+    data.health = hrvRecords(
+      Array.from({ length: 30 }, (_, index) => (index % 2 ? 60 : 50)),
+      addDays(chartsFirstWeek, -1),
+    );
+    const rows = nightRows(chartsSummary(data, selection), 'hrvMilliseconds', chartsToday);
+    expect(rows[0]).toMatchObject({ usualRange: [51.25, 58.75], usualRangeLabel: '51 to 59 ms' });
+    data.health.shift();
+    expect(
+      nightRows(chartsSummary(data, selection), 'hrvMilliseconds', chartsToday)[0],
+    ).toMatchObject({
+      usualRange: null,
+      usualRangeLabel: 'Not enough nights',
+    });
+  });
+
+  it('marks a resting heart rate that Garmin may have taken as the daily minimum as a possible daily minimum', () => {
+    const data = emptyWorkspace();
+    data.health = [
+      nightRecord(1600, chartsFirstWeek, 'restingHeartRateBpm', 47, true),
+      nightRecord(1601, addDays(chartsFirstWeek, 1), 'restingHeartRateBpm', 49),
+    ];
+    const rows = nightRows(chartsSummary(data, selection), 'restingHeartRateBpm', chartsToday);
+    expect(rows.slice(0, 3).map((row) => row.valueLabel)).toEqual([
+      '47 bpm (possible daily minimum)',
+      '49 bpm',
+      'No measure',
+    ]);
+  });
+});
+
+describe('estimated training load', () => {
+  const limits = { restingHeartRateBpm: 47, maxHeartRateBpm: 196 };
+  const load = (averageHeartRateBpm: number | null, durationSeconds: number | null) =>
+    sessionLoad({ date: chartsFirstWeek, averageHeartRateBpm, durationSeconds }, limits);
+  const run = (id: number, date: string, averageHeartRateBpm: number | null) =>
+    activitySchema.parse({ ...activity(id, date, 3600), averageHeartRateBpm });
+  const loadSelection = {
+    template: 'estimated-training-load',
+    weekStart: chartsFirstWeek,
+    weeks: 1,
+  } as const;
+  const days = (data: ReturnType<typeof emptyWorkspace>, today = chartsToday) =>
+    dailyLoads(chartsSummary(data, loadSelection), limits, today);
+
+  it('weighs minutes by heart rate reserve with the Banister formula, between rest and max', () => {
+    expect(load(150, 3600)).toBeCloseTo(100.1, 1);
+    expect(load(40, 3600)).toBe(0);
+    expect(load(210, 3600)).toBeCloseTo(261.9, 1);
+    expect(load(null, 3600)).toBeNull();
+    expect(load(150, null)).toBeNull();
+  });
+
+  it('tells a day without sessions from a day without heart rate and a partial day', () => {
+    const data = emptyWorkspace();
+    data.activities = [
+      run(800, '2029-10-22', 150),
+      run(801, '2029-10-24', null),
+      run(802, '2029-10-25', 150),
+      run(803, '2029-10-25', null),
+    ];
+    const [monday, tuesday, wednesday, thursday, , , sunday] = days(data);
+    expect(monday).toMatchObject({ loadLabel: '100', hasSessionWithoutHeartRate: false });
+    expect(monday!.load).toBeCloseTo(100.1, 1);
+    expect(tuesday).toMatchObject({ load: null, loadLabel: 'No sessions recorded' });
+    expect(wednesday).toMatchObject({
+      load: null,
+      loadLabel: 'No heart rate',
+      hasSessionWithoutHeartRate: true,
+    });
+    expect(thursday).toMatchObject({
+      loadLabel: '100 (1 of 2 sessions without heart rate)',
+      hasSessionWithoutHeartRate: true,
+    });
+    expect(sunday!.shortAverage).toBeCloseTo(100.1 / 5, 1);
+    expect(sunday!.shortAverageLabel).toBe('20 (5 of 7 days)');
+  });
+
+  it('tells a session without duration from a session without heart rate', () => {
+    const data = emptyWorkspace();
+    const untimed = (id: number, date: string) =>
+      activitySchema.parse({
+        ...activity(id, date, 3600),
+        durationSeconds: null,
+        averageHeartRateBpm: 150,
+      });
+    data.activities = [
+      untimed(840, '2029-10-22'),
+      run(841, '2029-10-23', 150),
+      untimed(842, '2029-10-23'),
+      run(843, '2029-10-24', null),
+      untimed(844, '2029-10-24'),
+      run(845, '2029-10-25', 150),
+      run(846, '2029-10-25', null),
+      untimed(847, '2029-10-25'),
+    ];
+    const [monday, tuesday, wednesday, thursday] = days(data);
+    expect(monday).toMatchObject({
+      load: null,
+      loadLabel: 'Duration missing',
+      hasSessionWithoutHeartRate: false,
+      hasSessionWithoutDuration: true,
+    });
+    expect(tuesday!.loadLabel).toBe('100 (1 of 2 sessions without duration)');
+    expect(wednesday).toMatchObject({ load: null, loadLabel: 'No heart rate or duration' });
+    expect(thursday!.loadLabel).toBe(
+      '100 (1 of 3 sessions without heart rate, 1 without duration)',
+    );
+  });
+
+  it('keeps the averages of earlier sessions through a rest week', () => {
+    const data = emptyWorkspace();
+    data.activities = [run(850, addDays(chartsFirstWeek, -1), 150)];
+    const [monday] = days(data);
+    expect(monday).toMatchObject({ load: null, loadLabel: 'No sessions recorded' });
+    expect(monday!.shortAverage).toBeCloseTo(100.09187 / 7, 2);
+    expect(monday!.longAverage).toBeCloseTo(100.09187 / 42, 2);
+    expect(monday).toMatchObject({ shortAverageLabel: '14', longAverageLabel: '2' });
+  });
+
+  it('counts a manually logged workout as a session without heart rate', () => {
+    const data = emptyWorkspace();
+    data.workouts = [
+      workoutSchema.parse({
+        id: chartsId(830),
+        revision: 1,
+        title: 'Synthetic manual run',
+        sport: 'running',
+        schedule: { kind: 'independent', date: addDays(chartsFirstWeek, 1) },
+        durationSeconds: 3600,
+        completion: {
+          status: 'completed',
+          source: 'manual',
+          activityId: null,
+          performedDate: addDays(chartsFirstWeek, 2),
+          durationSeconds: 3000,
+          distanceMeters: null,
+          rpe: null,
+          reason: '',
+        },
+      }),
+    ];
+    const [, tuesday, wednesday] = days(data);
+    expect(tuesday!.loadLabel).toBe('No sessions recorded');
+    expect(wednesday).toMatchObject({
+      load: null,
+      loadLabel: 'No heart rate',
+      hasSessionWithoutHeartRate: true,
+    });
+  });
+
+  it('reads the 42-day average from sessions up to 41 days before the period', () => {
+    const data = emptyWorkspace();
+    data.activities = [
+      run(810, addDays(chartsFirstWeek, -42), 150),
+      run(811, addDays(chartsFirstWeek, -41), 150),
+      run(812, chartsFirstWeek, 150),
+    ];
+    const summary = chartsSummary(data, loadSelection);
+    expect(
+      chartsSummary(data, { ...loadSelection, template: 'training-hours' }).trainingLoadSessions,
+    ).toEqual([]);
+    expect(summary.trainingLoadSessions.map((session) => session.date)).toEqual([
+      addDays(chartsFirstWeek, -41),
+      chartsFirstWeek,
+    ]);
+    const [monday] = dailyLoads(summary, limits, chartsToday);
+    expect(monday!.longAverage).toBeCloseTo((2 * 100.1) / 42, 1);
+    expect(monday!.shortAverage).toBeCloseTo(100.1 / 7, 1);
+  });
+
+  it('shows no average below 4 of 7 or 24 of 42 days without missing heart rate', () => {
+    const data = emptyWorkspace();
+    data.activities = [0, 1, 2, 3].map((day) =>
+      run(820 + day, addDays(chartsFirstWeek, day), null),
+    );
+    const week = days(data);
+    expect(week[5]).toMatchObject({ shortAverage: null, shortAverageLabel: 'Not enough days' });
+    expect(week[2]!.shortAverage).toBe(0);
+    data.activities = Array.from({ length: 19 }, (_, day) =>
+      run(830 + day, addDays(chartsFirstWeek, day - 18), null),
+    );
+    expect(days(data)[0]).toMatchObject({ longAverage: null, longAverageLabel: 'Not enough days' });
+    data.activities.pop();
+    expect(days(data)[0]!.longAverage).toBe(0);
+  });
+
+  it('labels days after today Upcoming', () => {
+    const week = days(emptyWorkspace(), '2029-10-27');
+    expect(week[5]!.loadLabel).toBe('No sessions recorded');
+    expect(week[6]).toMatchObject({ load: null, loadLabel: 'Upcoming', shortAverage: null });
   });
 });

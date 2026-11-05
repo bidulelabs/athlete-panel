@@ -1,6 +1,9 @@
 import {
+  chartsLongLoadAverageDays,
+  chartsUsualRangeLookbackNights,
   chartsSports,
   isUnresolvedActivitySport,
+  type ChartsNight,
   type ChartsSport,
   type ChartsSummary,
   type ChartsSummaryInput,
@@ -45,9 +48,28 @@ function sumBySport(
 
 type CalendarWeek = ReturnType<typeof weeklySummary>;
 
+function nightsBetween(health: WorkspaceState['health'], from: string, to: string): ChartsNight[] {
+  const byDate = new Map<string, ChartsNight>();
+  for (const record of health) {
+    if (record.localDate < from || record.localDate > to || record.value === null) continue;
+    if (record.metric !== 'restingHeartRateBpm' && record.metric !== 'hrvMilliseconds') continue;
+    const night = byDate.get(record.localDate) ?? {
+      date: record.localDate,
+      restingHeartRateBpm: null,
+      restingHeartRateMayBeMinimum: false,
+      hrvMilliseconds: null,
+    };
+    night[record.metric] = record.value;
+    if (record.metric === 'restingHeartRateBpm')
+      night.restingHeartRateMayBeMinimum = record.provenance?.restingHeartRateMayBeMinimum ?? false;
+    byDate.set(record.localDate, night);
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export function chartsSummary(
   state: WorkspaceState,
-  { weekStart, weeks }: ChartsSummaryInput,
+  { template, weekStart, weeks }: ChartsSummaryInput,
 ): ChartsSummary {
   const lastDay = addDays(weekStart, weeks * 7 - 1);
   const activitiesById = new Map(state.activities.map((activity) => [activity.id, activity]));
@@ -110,5 +132,26 @@ export function chartsSummary(
         averageHeartRateBpm,
         durationSeconds,
       })),
+    nights: nightsBetween(
+      state.health,
+      addDays(weekStart, -chartsUsualRangeLookbackNights),
+      lastDay,
+    ),
+    trainingLoadSessions:
+      template === 'estimated-training-load'
+        ? [
+            ...Array.from({ length: chartsLongLoadAverageDays / 7 }, (_, index) =>
+              weeklySummary(state, addDays(weekStart, (index - chartsLongLoadAverageDays / 7) * 7)),
+            ),
+            ...calendarWeeks,
+          ]
+            .flatMap(recordedSessions)
+            .filter((session) => session.date >= addDays(weekStart, 1 - chartsLongLoadAverageDays))
+            .map(({ date, averageHeartRateBpm, durationSeconds }) => ({
+              date,
+              averageHeartRateBpm,
+              durationSeconds,
+            }))
+        : [],
   };
 }

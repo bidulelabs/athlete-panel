@@ -1,7 +1,10 @@
 import {
+  chartsLongLoadAverageDays,
   chartsSummaryInputSchema,
+  chartsUsualRangeLookbackNights,
   emptyWorkspace,
   type Activity,
+  type HealthRecord,
   type Plan,
   type TrainingEvent,
   type Workout,
@@ -15,6 +18,8 @@ import { chartsSummary } from './summary';
 async function summary(body: unknown) {
   const input = chartsSummaryInputSchema.parse(body);
   const range = { from: input.weekStart, to: addDays(input.weekStart, input.weeks * 7 - 1) };
+  const loadRange = { ...range, from: addDays(input.weekStart, 1 - chartsLongLoadAverageDays) };
+  const nightRange = { ...range, from: addDays(input.weekStart, -chartsUsualRangeLookbackNights) };
   const state = await connection().begin(
     'isolation level repeatable read read only',
     async (tx) => ({
@@ -22,7 +27,19 @@ async function summary(body: unknown) {
       plans: (await repositories.plan.list('plan', tx)) as Plan[],
       workouts: (await repositories.workout.list('workout', tx)) as Workout[],
       events: (await repositories.event.list('event', tx)) as TrainingEvent[],
-      activities: (await repositories.activity.select('activity', { range }, tx)) as Activity[],
+      activities: (await repositories.activity.select(
+        'activity',
+        { range: input.template === 'estimated-training-load' ? loadRange : range },
+        tx,
+      )) as Activity[],
+      health:
+        input.template === 'resting-heart-rate-hrv'
+          ? ((await repositories.health.select(
+              'health',
+              { range: nightRange },
+              tx,
+            )) as HealthRecord[])
+          : [],
     }),
   );
   return chartsSummary(state, input);

@@ -153,3 +153,9 @@ Local tests used disposable Git history to distinguish committed notes from work
 The [operations guide](../development.md) distinguishes local upgrades from managed server upgrades and uses the registered backup directory and recorded archive name throughout the managed recovery examples. The [security policy](../../SECURITY.md) identifies the client-IP header a trusted HTTPS proxy must overwrite. The [contributor guide](../../CONTRIBUTING.md) and pull request template explain when to update the changelog. The unreleased entry for [planning reads](../decisions/019-planning-read-baseline.md) includes the reread needed for a draft started before upgrading.
 
 The documentation checker passed for 58 active files. An isolated fixture confirmed that valid links to headings on the same page and in another file pass, missing headings fail, and fenced shell comments cannot serve as targets. All 24 hosted examples parsed against the controller CLI. The managed verification, restore-test and recovery examples use the same directory as remote installation. The adopted installation uses its own registered directory. These checks exercised the instructions and link checker without running a backup or recovery.
+
+### PR 92 changelog review follow-up (2026-11-05)
+
+[Review feedback](https://github.com/bidulelabs/athlete-panel/pull/92#discussion_r4478123266) identified two missing v0.3.0 highlights. The changelog now covers public HTTPS checks before upgrade maintenance, proxy request identification and HTTP 403 guidance, and weekly health summaries in agent planning context. Both changes were verified against the v0.2.0–v0.3.0 Git range and the tagged controller and agent specification.
+
+Verification passed for all 58 files in the documentation checker and whitespace review. The worktree publication scan reported zero findings.

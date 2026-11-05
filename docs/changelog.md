@@ -17,7 +17,9 @@ If an agent read planning context before the upgrade and still has an unsubmitte
 
 ## v0.3.0 (2026-11-02)
 
+- Managed upgrades check public HTTPS access before entering maintenance. Deployment health requests identify themselves to proxies such as Cloudflare and explain HTTP 403 rejections.
 - Owners can grant agents up to five calendar years of history reads and a separate planning period of up to one calendar year. Training changes still require owner review.
+- Agent planning context includes daily health data for the latest seven days and weekly averages with measurement counts for earlier days in the approved period.
 - Garmin continues scheduling recent imports after a failure and clears the retry status after a successful recent import.
 - Editing a profile preserves fields you leave out. Editing a workout preserves its duration when you leave that field untouched.
 

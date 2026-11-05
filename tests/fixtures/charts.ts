@@ -93,3 +93,43 @@ export function mixedSportsWorkspace() {
   );
   return data;
 }
+
+const metersPerSecondBySport: Record<string, number> = { running: 2.8, cycling: 7, hiking: 1.2 };
+const climbMetersPerHourBySport: Record<string, number> = {
+  running: 150,
+  cycling: 400,
+  hiking: 300,
+  winter_sports: 500,
+};
+const averageHeartRateBySport: Record<string, number> = {
+  running: 145,
+  cycling: 128,
+  hiking: 112,
+  winter_sports: 135,
+  swimming: 120,
+};
+export function elevationAndHeartRateWorkspace() {
+  const data = mixedSportsWorkspace();
+  data.activities = data.activities.map((item, index) =>
+    activitySchema.parse({
+      ...item,
+      distanceMeters:
+        item.durationSeconds === null
+          ? null
+          : Math.round(item.durationSeconds * (metersPerSecondBySport[item.sport] ?? 1)),
+      elevationMeters:
+        index === 4 || item.durationSeconds === null || !(item.sport in climbMetersPerHourBySport)
+          ? null
+          : Math.round(
+              (item.durationSeconds / 3600) *
+                climbMetersPerHourBySport[item.sport]! *
+                (1 + (index % 3) / 2),
+            ),
+      averageHeartRateBpm:
+        index === 2 || !(item.sport in averageHeartRateBySport)
+          ? null
+          : averageHeartRateBySport[item.sport]! + (index % 5) * 2,
+    }),
+  );
+  return data;
+}

@@ -29371,13 +29371,97 @@
                       "swimming",
                       "other"
                     ]
+                  },
+                  "recordedElevationMetersBySport": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "cycling",
+                        "winter_sports",
+                        "hiking",
+                        "swimming",
+                        "other"
+                      ]
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "knownCount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "missingCount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "knownCount",
+                        "missingCount"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "required": [
+                      "running",
+                      "cycling",
+                      "winter_sports",
+                      "hiking",
+                      "swimming",
+                      "other"
+                    ]
+                  },
+                  "runningClimb": {
+                    "type": "object",
+                    "properties": {
+                      "sessionCount": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "measuredSessionCount": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "elevationMeters": {
+                        "type": "number"
+                      },
+                      "distanceMeters": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "sessionCount",
+                      "measuredSessionCount",
+                      "elevationMeters",
+                      "distanceMeters"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
                   "weekStart",
                   "plannedSeconds",
                   "recordedSeconds",
-                  "recordedSecondsBySport"
+                  "recordedSecondsBySport",
+                  "recordedElevationMetersBySport",
+                  "runningClimb"
                 ],
                 "additionalProperties": false
               }
@@ -29407,11 +29491,64 @@
                 ],
                 "additionalProperties": false
               }
+            },
+            "sessions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "sport": {
+                    "type": "string",
+                    "enum": [
+                      "running",
+                      "cycling",
+                      "winter_sports",
+                      "hiking",
+                      "swimming",
+                      "other"
+                    ]
+                  },
+                  "averageHeartRateBpm": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "durationSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "date",
+                  "title",
+                  "sport",
+                  "averageHeartRateBpm",
+                  "durationSeconds"
+                ],
+                "additionalProperties": false
+              }
             }
           },
           "required": [
             "weeks",
-            "races"
+            "races",
+            "sessions"
           ],
           "additionalProperties": false
         }

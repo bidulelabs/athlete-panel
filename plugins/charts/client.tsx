@@ -20,6 +20,8 @@ import { seasonStart } from './season';
 import { TrainingBySportFigure } from './training-by-sport-figure';
 import { TrainingHoursFigure } from './training-hours-figure';
 import { useChartsSummary } from './use-charts-summary';
+import { WeeklyClimbingFigure } from './weekly-climbing-figure';
+import { WorkoutHeartRateFigure } from './workout-heart-rate-figure';
 import './charts.css';
 
 const templates = [
@@ -34,6 +36,18 @@ const templates = [
     title: 'Training by sport',
     description: 'See which sports fill your recorded hours, against the plan.',
     Figure: TrainingBySportFigure,
+  },
+  {
+    id: 'workout-heart-rate',
+    title: 'Workout heart rate',
+    description: 'Follow the average heart rate of each session, one sport at a time.',
+    Figure: WorkoutHeartRateFigure,
+  },
+  {
+    id: 'weekly-climbing',
+    title: 'Weekly climbing',
+    description: 'See elevation gain per sport, and how steep your running is.',
+    Figure: WeeklyClimbingFigure,
   },
 ] as const;
 type Template = (typeof templates)[number];

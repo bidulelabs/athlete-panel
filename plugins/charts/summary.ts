@@ -24,7 +24,7 @@ function addMetricTotals(a: MetricTotal, b: MetricTotal): MetricTotal {
   };
 }
 
-const toChartsSport = (item: SportSelection & { sport: string }): ChartsSport =>
+const toChartsSport = (item: SportSelection): ChartsSport =>
   !isUnresolvedActivitySport(item) && chartsSports.includes(item.sport as ChartsSport)
     ? (item.sport as ChartsSport)
     : 'other';
@@ -43,14 +43,39 @@ function sumBySport(
   return bySport;
 }
 
+type CalendarWeek = ReturnType<typeof weeklySummary>;
+
 export function chartsSummary(
   state: WorkspaceState,
   { weekStart, weeks }: ChartsSummaryInput,
 ): ChartsSummary {
   const lastDay = addDays(weekStart, weeks * 7 - 1);
+  const activitiesById = new Map(state.activities.map((activity) => [activity.id, activity]));
+  const workoutsById = new Map(state.workouts.map((workout) => [workout.id, workout]));
+  const recordedSessions = (week: CalendarWeek) =>
+    week.recordedSessions.map((session) => {
+      const activity = session.kind === 'activity' ? activitiesById.get(session.id)! : null;
+      const completion = activity ? null : workoutsById.get(session.id)!.completion!;
+      return {
+        id: session.id,
+        date: session.localDate,
+        title: session.title,
+        sport: toChartsSport(activity ?? workoutsById.get(session.id)!),
+        averageHeartRateBpm: activity?.averageHeartRateBpm ?? null,
+        durationSeconds: session.durationSeconds,
+        distanceMeters: activity ? activity.distanceMeters : completion!.distanceMeters,
+        elevationMeters: activity?.elevationMeters ?? null,
+      };
+    });
+  const calendarWeeks = Array.from({ length: weeks }, (_, index) =>
+    weeklySummary(state, addDays(weekStart, index * 7)),
+  );
   return {
-    weeks: Array.from({ length: weeks }, (_, index) => {
-      const week = weeklySummary(state, addDays(weekStart, index * 7));
+    weeks: calendarWeeks.map((week) => {
+      const runs = recordedSessions(week).filter((session) => session.sport === 'running');
+      const measuredRuns = runs.filter(
+        (run) => run.elevationMeters !== null && !!run.distanceMeters,
+      );
       return {
         weekStart: week.startDate,
         plannedSeconds: week.planned.durationSeconds,
@@ -59,11 +84,31 @@ export function chartsSummary(
           week.sportBreakdown,
           (recorded) => recorded.durationSeconds,
         ),
+        recordedElevationMetersBySport: sumBySport(
+          week.sportBreakdown,
+          (recorded) => recorded.elevationMeters,
+        ),
+        runningClimb: {
+          sessionCount: runs.length,
+          measuredSessionCount: measuredRuns.length,
+          elevationMeters: measuredRuns.reduce((sum, run) => sum + run.elevationMeters!, 0),
+          distanceMeters: measuredRuns.reduce((sum, run) => sum + run.distanceMeters!, 0),
+        },
       };
     }),
     races: state.events
       .filter((event) => event.kind === 'race' && event.date >= weekStart && event.date <= lastDay)
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
       .map(({ id, date, title }) => ({ id, date, title })),
+    sessions: calendarWeeks
+      .flatMap(recordedSessions)
+      .map(({ id, date, title, sport, averageHeartRateBpm, durationSeconds }) => ({
+        id,
+        date,
+        title,
+        sport,
+        averageHeartRateBpm,
+        durationSeconds,
+      })),
   };
 }

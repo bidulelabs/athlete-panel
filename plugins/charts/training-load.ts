@@ -13,6 +13,7 @@ export type LoadDay = {
   shortAverage: number | null;
   longAverage: number | null;
   hasSessionWithoutHeartRate: boolean;
+  hasSessionWithoutDuration: boolean;
   loadLabel: string;
   shortAverageLabel: string;
   longAverageLabel: string;
@@ -44,6 +45,34 @@ export function sessionLoad(
   );
 }
 
+function loadLabel(
+  total: {
+    loadSum: number;
+    sessionCount: number;
+    sessionsWithoutHeartRate: number;
+    sessionsWithoutDuration: number;
+  },
+  knownSessions: number,
+) {
+  const missing = [
+    { count: total.sessionsWithoutHeartRate, input: 'heart rate' },
+    { count: total.sessionsWithoutDuration, input: 'duration' },
+  ].filter(({ count }) => count);
+  if (!knownSessions)
+    return missing.length === 2
+      ? 'No heart rate or duration'
+      : missing[0]!.input === 'heart rate'
+        ? 'No heart rate'
+        : 'Duration missing';
+  if (!missing.length) return `${Math.round(total.loadSum)}`;
+  const counts = missing.map(({ count, input }, index) =>
+    index
+      ? `${count} without ${input}`
+      : `${count} of ${total.sessionCount} sessions without ${input}`,
+  );
+  return `${Math.round(total.loadSum)} (${counts.join(', ')})`;
+}
+
 export function dailyLoads(
   summary: ChartsSummary,
   limits: HeartRateRange,
@@ -52,25 +81,35 @@ export function dailyLoads(
   const firstDay = summary.weeks[0]!.weekStart;
   const sessionTotalsByDate = new Map<
     string,
-    { loadSum: number; sessionCount: number; sessionsWithoutHeartRate: number }
+    {
+      loadSum: number;
+      sessionCount: number;
+      sessionsWithoutHeartRate: number;
+      sessionsWithoutDuration: number;
+    }
   >();
   for (const session of summary.trainingLoadSessions) {
     const total = sessionTotalsByDate.get(session.date) ?? {
       loadSum: 0,
       sessionCount: 0,
       sessionsWithoutHeartRate: 0,
+      sessionsWithoutDuration: 0,
     };
-    const load = sessionLoad(session, limits);
+    const withoutDuration = session.durationSeconds === null;
+    const withoutHeartRate = !withoutDuration && session.averageHeartRateBpm === null;
     sessionTotalsByDate.set(session.date, {
-      loadSum: total.loadSum + (load ?? 0),
+      loadSum: total.loadSum + (sessionLoad(session, limits) ?? 0),
       sessionCount: total.sessionCount + 1,
-      sessionsWithoutHeartRate: total.sessionsWithoutHeartRate + (load === null ? 1 : 0),
+      sessionsWithoutHeartRate: total.sessionsWithoutHeartRate + (withoutHeartRate ? 1 : 0),
+      sessionsWithoutDuration: total.sessionsWithoutDuration + (withoutDuration ? 1 : 0),
     });
   }
-  const dayLoadIfComplete = (date: string) => {
+  const unknownSessions = (date: string) => {
     const total = sessionTotalsByDate.get(date);
-    return total?.sessionsWithoutHeartRate ? null : (total?.loadSum ?? 0);
+    return total ? total.sessionsWithoutHeartRate + total.sessionsWithoutDuration : 0;
   };
+  const dayLoadIfComplete = (date: string) =>
+    unknownSessions(date) ? null : (sessionTotalsByDate.get(date)?.loadSum ?? 0);
   const averageLoadOver = (date: string, days: number, minimumDays: number) => {
     const loads = Array.from({ length: days }, (_, index) =>
       dayLoadIfComplete(addDays(date, index + 1 - days)),
@@ -91,6 +130,7 @@ export function dailyLoads(
         shortAverage: null,
         longAverage: null,
         hasSessionWithoutHeartRate: false,
+        hasSessionWithoutDuration: false,
         loadLabel: 'Upcoming',
         shortAverageLabel: 'Upcoming',
         longAverageLabel: 'Upcoming',
@@ -98,20 +138,15 @@ export function dailyLoads(
     const total = sessionTotalsByDate.get(date);
     const shortAverage = averageLoadOver(date, shortAverageDays, shortAverageMinimumDays);
     const longAverage = averageLoadOver(date, chartsLongLoadAverageDays, longAverageMinimumDays);
-    const knownSessions = total ? total.sessionCount - total.sessionsWithoutHeartRate : 0;
+    const knownSessions = total ? total.sessionCount - unknownSessions(date) : 0;
     return {
       date,
       load: knownSessions ? total!.loadSum : null,
       shortAverage: shortAverage.value,
       longAverage: longAverage.value,
       hasSessionWithoutHeartRate: !!total?.sessionsWithoutHeartRate,
-      loadLabel: !total
-        ? 'No sessions recorded'
-        : !knownSessions
-          ? 'No heart rate'
-          : total.sessionsWithoutHeartRate
-            ? `${Math.round(total.loadSum)} (${total.sessionsWithoutHeartRate} of ${total.sessionCount} sessions without heart rate)`
-            : `${Math.round(total.loadSum)}`,
+      hasSessionWithoutDuration: !!total?.sessionsWithoutDuration,
+      loadLabel: !total ? 'No sessions recorded' : loadLabel(total, knownSessions),
       shortAverageLabel: shortAverage.label,
       longAverageLabel: longAverage.label,
     };

@@ -49,10 +49,15 @@ export function TrainingLoadFigure({
       </EmptyState>
     );
   const daysWithoutHeartRate = pastDays.filter((day) => day.hasSessionWithoutHeartRate).length;
+  const daysWithoutDuration = pastDays.filter((day) => day.hasSessionWithoutDuration).length;
+  const missingInputs = [
+    daysWithoutHeartRate && `${daysWithoutHeartRate} days have a session without heart rate`,
+    daysWithoutDuration && `${daysWithoutDuration} days have a session without duration`,
+  ].filter(Boolean);
   return (
     <ChartFigure
       title="Estimated training load"
-      description={`An estimate, not a measurement: each day's load (Banister TRIMP) as bars, with its ${shortAverageDays}-day average (from ${shortAverageMinimumDays} days) and ${chartsLongLoadAverageDays}-day average (from ${longAverageMinimumDays} days) as lines, ${periodText(summary.weeks)}. Each session counts its minutes, weighted by where its average heart rate sits between your resting ${restingHeartRateBpm} and maximum ${maxHeartRateBpm} bpm.${daysWithoutHeartRate ? ` ${daysWithoutHeartRate} days have a session without heart rate and are left out of the averages.` : ''}`}
+      description={`An estimate, not a measurement: each day's load (Banister TRIMP) as bars, with its ${shortAverageDays}-day average (from ${shortAverageMinimumDays} days) and ${chartsLongLoadAverageDays}-day average (from ${longAverageMinimumDays} days) as lines, ${periodText(summary.weeks)}. Each session counts its minutes, weighted by where its average heart rate sits between your resting ${restingHeartRateBpm} and maximum ${maxHeartRateBpm} bpm.${missingInputs.length ? ` ${missingInputs.join(' and ')}; they are left out of the averages.` : ''}`}
       legend={[
         { label: 'Daily load', keyClass: 'charts-key-load' },
         { label: `${shortAverageDays}-day average`, keyClass: 'charts-key-average' },

@@ -630,6 +630,38 @@ describe('estimated training load', () => {
     expect(sunday!.shortAverageLabel).toBe('20 (5 of 7 days)');
   });
 
+  it('tells a session without duration from a session without heart rate', () => {
+    const data = emptyWorkspace();
+    const untimed = (id: number, date: string) =>
+      activitySchema.parse({
+        ...activity(id, date, 3600),
+        durationSeconds: null,
+        averageHeartRateBpm: 150,
+      });
+    data.activities = [
+      untimed(840, '2029-10-22'),
+      run(841, '2029-10-23', 150),
+      untimed(842, '2029-10-23'),
+      run(843, '2029-10-24', null),
+      untimed(844, '2029-10-24'),
+      run(845, '2029-10-25', 150),
+      run(846, '2029-10-25', null),
+      untimed(847, '2029-10-25'),
+    ];
+    const [monday, tuesday, wednesday, thursday] = days(data);
+    expect(monday).toMatchObject({
+      load: null,
+      loadLabel: 'Duration missing',
+      hasSessionWithoutHeartRate: false,
+      hasSessionWithoutDuration: true,
+    });
+    expect(tuesday!.loadLabel).toBe('100 (1 of 2 sessions without duration)');
+    expect(wednesday).toMatchObject({ load: null, loadLabel: 'No heart rate or duration' });
+    expect(thursday!.loadLabel).toBe(
+      '100 (1 of 3 sessions without heart rate, 1 without duration)',
+    );
+  });
+
   it('keeps the averages of earlier sessions through a rest week', () => {
     const data = emptyWorkspace();
     data.activities = [run(850, addDays(chartsFirstWeek, -1), 150)];

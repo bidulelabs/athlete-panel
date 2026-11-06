@@ -171,6 +171,73 @@ for (const theme of ['dark', 'light']) {
         await expect(page.getByRole('combobox', { name: 'Sport', exact: true })).toBeVisible();
     }
   });
+
+  test(`52-week daily sport bars retain visible color at narrow widths (${theme})`, async ({
+    page,
+  }, info) => {
+    await openCharts(page, theme);
+    for (const template of ['Training by sport', 'Weekly climbing']) {
+      await page.getByRole('button', { name: 'All templates', exact: true }).click();
+      await page.getByRole('button', { name: new RegExp(`^${template}`) }).click();
+      await page.getByRole('combobox', { name: 'Period', exact: true }).selectOption('52');
+      await page.getByRole('combobox', { name: 'Group by' }).selectOption('day');
+      const figure = page.getByRole('figure').first();
+      await expect(figure.getByRole('heading')).toHaveText(/^Daily /);
+      await expect(figure).toHaveAttribute('aria-busy', 'false');
+      await figure.getByText('View values', { exact: true }).click();
+      await expect(figure.getByRole('table').getByRole('row')).toHaveCount(365);
+      await figure.getByText('View values', { exact: true }).click();
+      for (const width of info.project.name === 'mobile' ? [412, 320] : [1440]) {
+        await page.setViewportSize({ width, height: 915 });
+        // Visibility alone misses this bug: SVG borders can paint over an entire filled bar.
+        await expect
+          .poll(() =>
+            figure.locator('.recharts-bar-rectangle .recharts-rectangle').evaluateAll((bars) => {
+              const filled = bars.flatMap((bar) => {
+                const { width, height } = (bar as SVGGraphicsElement).getBBox();
+                const style = getComputedStyle(bar);
+                if (
+                  width <= 0 ||
+                  height <= 0 ||
+                  ['none', 'transparent', 'rgba(0, 0, 0, 0)'].includes(style.fill)
+                )
+                  return [];
+                const border =
+                  style.stroke === 'none' || style.stroke === style.fill
+                    ? 0
+                    : Number.parseFloat(style.strokeWidth);
+                return [{ width: width - border, height: height - border }];
+              });
+              return {
+                hasRecordedBars: filled.length > 0,
+                hiddenByBorder: filled.filter((bar) => bar.width <= 0 || bar.height <= 0).length,
+              };
+            }),
+          )
+          .toEqual({ hasRecordedBars: true, hiddenByBorder: 0 });
+        await page.screenshot({
+          path: `.runtime/charts/daily-bars-${template.replaceAll(' ', '-')}-${width}-${theme}.png`,
+          fullPage: true,
+        });
+      }
+      await page.getByRole('combobox', { name: 'Group by' }).selectOption('month');
+      await expect(figure.getByRole('heading')).toHaveText(/^Monthly /);
+      await expect
+        .poll(() =>
+          figure
+            .locator('.recharts-bar-rectangle .recharts-rectangle')
+            .evaluateAll((bars) =>
+              bars.some(
+                (bar) =>
+                  bar.getAttribute('fill') === 'transparent' &&
+                  getComputedStyle(bar).stroke !== 'none' &&
+                  Number.parseFloat(getComputedStyle(bar).strokeWidth) > 0,
+              ),
+            ),
+        )
+        .toBe(true);
+    }
+  });
 }
 
 test('a failed sport selection hides the previous chart and retry keeps the chosen sports and grouping', async ({

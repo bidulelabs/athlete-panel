@@ -25,6 +25,8 @@ The owner approved implementation on 2026-11-05 in the implementation chat after
 
 ## Documentation validation
 
+The 2026-11-06 PR review correction is recorded below, with its own regression evidence.
+
 Scope: [Charts specification](../features/charts.md), [architecture](../architecture.md), [changelog](../changelog.md), generated contract reference and this task record. Framework validation compared requirements with implementation and exercised scenarios, reviewed source authority, local links, unresolved placeholders, ownership and release guidance. No diagram or ADR change is needed. Commands remain canonical in the development guide.
 
 | Topic | Canonical document | Coverage completed | Remaining gaps |
@@ -36,3 +38,13 @@ Scope: [Charts specification](../features/charts.md), [architecture](../architec
 ## Release status
 
 Implementation is on `codex/charts-sport-grouping`; the owner authorized pushing the branch and opening a pull request on 2026-11-06. The existing synthetic preview at `http://127.0.0.1:3000/charts` was stopped, put in maintenance, snapshotted, updated to the matching composition, reopened and restarted with the new web/worker build. Existing demo data and mockup assets were preserved. The separate browser test server is stopped after verification. No real-server deployment or real Garmin request is included. External activation still requires the documented matched build/restart and composition validation; no new athlete records or SQL migrations are introduced. Deployment evidence remains separate from local verification.
+
+## PR #94: narrow sport bars (2026-11-06)
+
+The owner requested fixing the review finding, adding a regression test and pushing to PR #94. Long daily ranges could produce sport bars narrower than one CSS pixel; their two-pixel background-colored borders completely covered their fills. The shared sport renderer now omits borders on past-period bars and retains the sport-colored outline for the current period. This affects Training by sport and the elevation chart; calculations and public contracts are unchanged. No additional version, migration or shared design-system change is needed within this unreleased PR.
+
+The browser regression requests 52 weeks grouped by day for both affected templates. It checks the 364 daily rows, verifies a positive colored interior on rendered SVG bars at desktop and 412px/320px phone widths in both themes, and verifies current-period outlines after switching to months. Against the previous production build it failed with 21 recorded bars hidden by their borders, establishing that it catches the reported defect rather than merely checking that SVG elements exist.
+
+Fresh `pnpm check` passed (380 unit tests, normal/strict types, boundaries, generated files, formatting and 0 lint errors); all 249 integration tests and the web/worker production build also passed. The complete scoped browser rerun passed 86 tests with 2 intentional platform-specific skips, including all 4 new regression cases and the desktop planning/phone review and logging paths. Visual inspection confirmed colored bars in both templates across desktop and 320px phone layouts in light/dark themes; screenshots are under `.runtime/charts/daily-bars-*`. The first browser launch correctly stopped at the readiness guard because the lifecycle integration test had reset the shared synthetic runtime-role password; refreshing the test role through the canonical migration command restored readiness on both synthetic servers before rerunning. No real data or production configuration was involved.
+
+The updated feature specification, Unreleased entry and this record were checked against the implementation and observed regression results using the scoped Framework validation. Local documentation links and diff whitespace checks passed. The user preview was restarted with the fixed build and its synthetic data preserved; the temporary browser server was stopped after verification. Publishing the fix updates PR #94, not a real server deployment.

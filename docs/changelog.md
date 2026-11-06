@@ -4,7 +4,7 @@ Use the documentation link for the version you installed. Each release page incl
 
 ## Unreleased
 
-- Training hours, Training by sport and Climbing can show selected sports by day, week or month. Planned and recorded hours use the same filter; partial months and missing measurements remain labelled. Activate the updated Charts composition and matching web/worker build through the [coordinated upgrade procedure](development.md#coordinated-upgrades-and-plugin-activation); no SQL migration or athlete-data conversion is required.
+- Training hours, Training by sport and Climbing can show selected sports by day, week or month. Planned and recorded hours use the same filter; partial months and missing measurements remain labelled. Sport bars remain visible in long daily views on phones. Activate the updated Charts composition and matching web/worker build through the [coordinated upgrade procedure](development.md#coordinated-upgrades-and-plugin-activation); no SQL migration or athlete-data conversion is required.
 
 - Health opens on the last 30 days. You can choose 7, 30 or 90 days and browse earlier dates without moving your planning calendar.
 - Activities labels duration and distance totals as partial when measurements are missing. Each total shows how many activities lack that measurement.

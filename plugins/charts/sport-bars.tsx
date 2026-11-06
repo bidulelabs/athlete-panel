@@ -24,8 +24,9 @@ export function sportBars(
         <Cell
           key={week.startDate}
           fill={week.inProgress ? 'transparent' : sportColor(sport)}
-          stroke={week.inProgress ? sportColor(sport) : 'var(--surface)'}
-          strokeWidth={week.inProgress ? 1.5 : 2}
+          // A background-colored stroke would cover subpixel bars in long daily ranges.
+          stroke={week.inProgress ? sportColor(sport) : 'none'}
+          strokeWidth={week.inProgress ? 1.5 : 0}
         />
       ))}
     </Bar>

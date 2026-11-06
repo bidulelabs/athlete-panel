@@ -2,20 +2,20 @@
 
 import type { Key } from 'react';
 import { Line } from 'recharts';
-import { climbUnitLabel, type UnitSystem, type ClimbingWeek } from './weekly-climbing';
-import { WeeklyChart } from './weekly-chart';
+import { climbUnitLabel, type UnitSystem, type ClimbingBucket } from './weekly-climbing';
+import { GroupedChart } from './grouped-chart';
 
-type ClimbDotProps = { key?: Key | null; cx?: number; cy?: number; payload: ClimbingWeek };
+type ClimbDotProps = { key?: Key | null; cx?: number; cy?: number; payload: ClimbingBucket };
 
 export default function RunningClimbChart({
   weeks,
   units,
 }: {
-  weeks: ClimbingWeek[];
+  weeks: ClimbingBucket[];
   units: UnitSystem;
 }) {
   return (
-    <WeeklyChart
+    <GroupedChart
       weeks={weeks}
       yLabel={climbUnitLabel(units)}
       planned={false}
@@ -47,6 +47,6 @@ export default function RunningClimbChart({
         animationDuration={180}
         animationEasing="ease"
       />
-    </WeeklyChart>
+    </GroupedChart>
   );
 }

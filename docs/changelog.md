@@ -4,6 +4,8 @@ Use the documentation link for the version you installed. Each release page incl
 
 ## Unreleased
 
+- Charts adds six templates: Training hours, Training by sport, Workout heart rate, Weekly climbing, Resting heart rate and HRV, and Estimated training load. Training hours, Training by sport and Weekly climbing support selected sports grouped by day, week or month. Planned and recorded hours use the same filter; empty results identify the sport selection, and partial periods and missing measurements remain labelled. Sport bars remain visible in long daily views on phones. Activate Charts with the matching web/worker build through the [coordinated upgrade procedure](development.md#coordinated-upgrades-and-plugin-activation), then reload open browser tabs; no SQL migration or athlete-data conversion is required.
+
 - Health opens on the last 30 days. You can choose 7, 30 or 90 days and browse earlier dates without moving your planning calendar.
 - Activities labels duration and distance totals as partial when measurements are missing. Each total shows how many activities lack that measurement.
 - Garmin activity imports preserve elevation loss, maximum heart rate and time in five heart-rate zones when Garmin supplies them.

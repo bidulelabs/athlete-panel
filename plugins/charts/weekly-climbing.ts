@@ -1,15 +1,16 @@
 import {
   chartsSports,
+  type ChartsBucket,
   type ChartsSport,
   type ChartsSummary,
   type Profile,
 } from '@athlete-panel/contracts';
 import { type MetricTotal } from '../training/public/shared';
 import { perSport } from './training-by-sport';
-import { sessionCount, trainingHoursWeeks, type TrainingHoursWeek } from './training-hours';
+import { sessionCount, trainingHoursBuckets, type TrainingHoursBucket } from './training-hours';
 
 export type UnitSystem = Profile['units'];
-export type ClimbingWeek = TrainingHoursWeek & {
+export type ClimbingBucket = TrainingHoursBucket & {
   sessionSports: ChartsSport[];
   elevationBySport: Record<ChartsSport, number | null>;
   elevationLabelBySport: Record<ChartsSport, string>;
@@ -28,10 +29,7 @@ function elevationLabel(measure: MetricTotal, units: UnitSystem) {
   return `${elevation} (${measure.missingCount} of ${sessionCount(measure)} sessions without elevation)`;
 }
 
-function measureRunningClimb(
-  climb: ChartsSummary['weeks'][number]['runningClimb'],
-  units: UnitSystem,
-) {
+function measureRunningClimb(climb: ChartsBucket['runningClimb'], units: UnitSystem) {
   if (!climb.sessionCount) return { value: null, label: 'No running' };
   if (!climb.measuredSessionCount) return { value: null, label: 'Not measured' };
   const value =
@@ -44,18 +42,20 @@ function measureRunningClimb(
 
 export const sportsWithElevation = (summary: ChartsSummary) =>
   chartsSports.filter((sport) =>
-    summary.weeks.some((week) => week.recordedElevationMetersBySport[sport].knownCount > 0),
+    (summary.volume?.buckets ?? []).some(
+      (week) => week.recordedElevationMetersBySport[sport].knownCount > 0,
+    ),
   );
 
-export function climbingWeeks(
+export function climbingBuckets(
   summary: ChartsSummary,
   today: string,
   units: UnitSystem,
-): ClimbingWeek[] {
+): ClimbingBucket[] {
   const sports = sportsWithElevation(summary);
-  return trainingHoursWeeks(summary, today, String).map((week, index) => {
-    const { recordedElevationMetersBySport, runningClimb } = summary.weeks[index]!;
-    const upcoming = week.weekStart > today;
+  return trainingHoursBuckets(summary, today, String).map((week, index) => {
+    const { recordedElevationMetersBySport, runningClimb } = summary.volume!.buckets[index]!;
+    const upcoming = week.startDate > today;
     const noSessions = (sport: ChartsSport) =>
       sessionCount(recordedElevationMetersBySport[sport]) === 0;
     const climb = measureRunningClimb(runningClimb, units);

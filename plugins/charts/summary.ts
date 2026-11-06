@@ -2,6 +2,7 @@ import {
   chartsLongLoadAverageDays,
   chartsUsualRangeLookbackNights,
   chartsSports,
+  isChartsVolumeTemplate,
   isUnresolvedActivitySport,
   type ChartsNight,
   type ChartsSport,
@@ -13,9 +14,11 @@ import {
 import {
   addDays,
   weeklySummary,
+  summarizeRange,
   type MetricTotal,
   type SportBreakdown,
 } from '../training/public/shared';
+import { bucketRanges } from './bucket-ranges';
 
 function addMetricTotals(a: MetricTotal, b: MetricTotal): MetricTotal {
   const knownCount = a.knownCount + b.knownCount;
@@ -35,13 +38,16 @@ const toChartsSport = (item: SportSelection): ChartsSport =>
 function sumBySport(
   breakdown: SportBreakdown[],
   measure: (recorded: SportBreakdown['actual']) => MetricTotal,
+  source: 'actual' | 'planned' = 'actual',
+  sports: readonly ChartsSport[] = chartsSports,
 ) {
   const bySport = Object.fromEntries(
     chartsSports.map((sport) => [sport, { value: 0, knownCount: 0, missingCount: 0 }]),
   ) as Record<ChartsSport, MetricTotal>;
   for (const entry of breakdown.filter((item) => item.sportSubgroup === null)) {
     const sport = toChartsSport(entry);
-    bySport[sport] = addMetricTotals(bySport[sport], measure(entry.actual));
+    if (sports.includes(sport))
+      bySport[sport] = addMetricTotals(bySport[sport], measure(entry[source]));
   }
   return bySport;
 }
@@ -69,7 +75,7 @@ function nightsBetween(health: WorkspaceState['health'], from: string, to: strin
 
 export function chartsSummary(
   state: WorkspaceState,
-  { template, weekStart, weeks }: ChartsSummaryInput,
+  { template, weekStart, weeks, grouping = 'week', sports = [...chartsSports] }: ChartsSummaryInput,
 ): ChartsSummary {
   const lastDay = addDays(weekStart, weeks * 7 - 1);
   const activitiesById = new Map(state.activities.map((activity) => [activity.id, activity]));
@@ -92,32 +98,58 @@ export function chartsSummary(
   const calendarWeeks = Array.from({ length: weeks }, (_, index) =>
     weeklySummary(state, addDays(weekStart, index * 7)),
   );
+  const project = (period: CalendarWeek, selected: readonly ChartsSport[]) => {
+    const recordedSecondsBySport = sumBySport(
+      period.sportBreakdown,
+      (value) => value.durationSeconds,
+      'actual',
+      selected,
+    );
+    const plannedBySport = sumBySport(
+      period.sportBreakdown,
+      (value) => value.durationSeconds,
+      'planned',
+      selected,
+    );
+    const sum = (values: Record<ChartsSport, MetricTotal>) =>
+      Object.values(values).reduce(addMetricTotals, { value: 0, knownCount: 0, missingCount: 0 });
+    const runs = selected.includes('running')
+      ? recordedSessions(period).filter((session) => session.sport === 'running')
+      : [];
+    const measuredRuns = runs.filter((run) => run.elevationMeters !== null && !!run.distanceMeters);
+    return {
+      plannedSeconds: sum(plannedBySport),
+      recordedSeconds: sum(recordedSecondsBySport),
+      recordedSecondsBySport,
+      recordedElevationMetersBySport: sumBySport(
+        period.sportBreakdown,
+        (value) => value.elevationMeters,
+        'actual',
+        selected,
+      ),
+      runningClimb: {
+        sessionCount: runs.length,
+        measuredSessionCount: measuredRuns.length,
+        elevationMeters: measuredRuns.reduce((sum, run) => sum + run.elevationMeters!, 0),
+        distanceMeters: measuredRuns.reduce((sum, run) => sum + run.distanceMeters!, 0),
+      },
+    };
+  };
   return {
-    weeks: calendarWeeks.map((week) => {
-      const runs = recordedSessions(week).filter((session) => session.sport === 'running');
-      const measuredRuns = runs.filter(
-        (run) => run.elevationMeters !== null && !!run.distanceMeters,
-      );
-      return {
-        weekStart: week.startDate,
-        plannedSeconds: week.planned.durationSeconds,
-        recordedSeconds: week.actual.durationSeconds,
-        recordedSecondsBySport: sumBySport(
-          week.sportBreakdown,
-          (recorded) => recorded.durationSeconds,
-        ),
-        recordedElevationMetersBySport: sumBySport(
-          week.sportBreakdown,
-          (recorded) => recorded.elevationMeters,
-        ),
-        runningClimb: {
-          sessionCount: runs.length,
-          measuredSessionCount: measuredRuns.length,
-          elevationMeters: measuredRuns.reduce((sum, run) => sum + run.elevationMeters!, 0),
-          distanceMeters: measuredRuns.reduce((sum, run) => sum + run.distanceMeters!, 0),
-        },
-      };
-    }),
+    weeks: calendarWeeks.map((week) => ({ weekStart: week.startDate })),
+    volume: isChartsVolumeTemplate(template)
+      ? {
+          grouping,
+          sports: chartsSports.filter((sport) => sports.includes(sport)),
+          buckets: bucketRanges(weekStart, weeks, grouping).map((range, index) => ({
+            ...range,
+            ...project(
+              grouping === 'week' ? calendarWeeks[index]! : summarizeRange(state, range),
+              sports,
+            ),
+          })),
+        }
+      : null,
     races: state.events
       .filter((event) => event.kind === 'race' && event.date >= weekStart && event.date <= lastDay)
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))

@@ -35,16 +35,16 @@ it('reads 52 weeks, beyond the 121-day workspace limit, without changing stored 
     weeks: 52,
   });
   expect(summary.weeks).toHaveLength(52);
-  expect(summary.weeks[0]).toMatchObject({
-    weekStart: '2029-01-08',
+  expect(summary.volume!.buckets[0]).toMatchObject({
+    startDate: '2029-01-08',
     plannedSeconds: { value: 5400, knownCount: 1, missingCount: 0 },
     recordedSeconds: { value: 4500, knownCount: 1, missingCount: 0 },
   });
-  expect(summary.weeks[51]).toMatchObject({
-    weekStart: '2029-12-31',
+  expect(summary.volume!.buckets[51]).toMatchObject({
+    startDate: '2029-12-31',
     recordedSeconds: { value: 0, knownCount: 0, missingCount: 0 },
   });
-  expect(summary.weeks[50]!.recordedSeconds.value).toBe(3600);
+  expect(summary.volume!.buckets[50]!.recordedSeconds.value).toBe(3600);
   expect(summary.races).toEqual([{ id: chartsId(2), date: '2029-01-12', title: 'Winter trail' }]);
   expect(await sql`select id,revision,data from activity_records.records order by id`).toEqual(
     before,
@@ -61,7 +61,7 @@ it('returns the recorded duration of every chart sport', async () => {
     weeks: 1,
   });
   expect(chartsSummarySchema.parse(summary)).toEqual(summary);
-  expect(summary.weeks[0]!.recordedSecondsBySport).toMatchObject({
+  expect(summary.volume!.buckets[0]!.recordedSecondsBySport).toMatchObject({
     cycling: { value: 4500, knownCount: 1, missingCount: 0 },
     running: { value: 0, knownCount: 0, missingCount: 0 },
   });
@@ -82,7 +82,7 @@ it('returns elevation, running climb inputs and heart rate sessions from stored 
     weeks: 1,
   });
   expect(chartsSummarySchema.parse(summary)).toEqual(summary);
-  expect(summary.weeks[0]).toMatchObject({
+  expect(summary.volume!.buckets[0]).toMatchObject({
     recordedElevationMetersBySport: { running: { value: 250, knownCount: 1, missingCount: 0 } },
     runningClimb: {
       sessionCount: 1,
@@ -148,13 +148,68 @@ it('reads sessions from 41 days before the period for Estimated training load on
     '2028-11-28',
     '2029-01-09',
   ]);
-  expect(summary.weeks[0]!.recordedSeconds.value).toBe(3600);
+  expect(hours.volume!.buckets[0]!.recordedSeconds.value).toBe(3600);
 });
 
 it('refuses a selection longer than 53 weeks', async () => {
   await expect(
     charts.operations.summary({ template: 'training-hours', weekStart: '2029-01-08', weeks: 54 }),
   ).rejects.toThrow();
+});
+
+it('returns filtered daily and clipped monthly volume from stored records without changing the selected dates', async () => {
+  const sql = connection();
+  const records = [
+    ['training', 'workout', plannedWorkout(30, '2028-02-29', 5400)],
+    ['training', 'workout', { ...plannedWorkout(31, '2028-03-01', 3600), sport: 'cycling' }],
+    [
+      'activity_records',
+      'activity',
+      { ...activity(32, '2028-02-29', 3600), elevationMeters: 250, distanceMeters: 10000 },
+    ],
+    ['activity_records', 'activity', { ...activity(33, '2028-03-01', 7200), sport: 'cycling' }],
+  ] as const;
+  for (const [schema, kind, record] of records)
+    await sql`insert into ${sql(schema + '.records')}(kind,id,revision,data) values(${kind},${record.id},1,${sql.json(record)})`;
+  const base = {
+    template: 'training-hours',
+    weekStart: '2028-02-27',
+    weeks: 2,
+    sports: ['running'],
+  };
+  const daily = await charts.operations.summary({ ...base, grouping: 'day' });
+  const monthly = await charts.operations.summary({ ...base, grouping: 'month' });
+  expect(chartsSummarySchema.parse(monthly)).toEqual(monthly);
+  expect(daily.volume!.buckets).toHaveLength(14);
+  expect(monthly.volume!.buckets.map((b) => [b.startDate, b.endDate, b.partial])).toEqual([
+    ['2028-02-27', '2028-02-29', true],
+    ['2028-03-01', '2028-03-11', true],
+  ]);
+  expect(monthly.volume!.buckets[0]).toMatchObject({
+    plannedSeconds: { value: 5400, knownCount: 1, missingCount: 0 },
+    recordedSeconds: { value: 3600, knownCount: 1, missingCount: 0 },
+    runningClimb: { elevationMeters: 250, distanceMeters: 10000 },
+  });
+  expect(monthly.volume!.buckets[1]!.recordedSeconds.knownCount).toBe(0);
+  expect(monthly.volume!.buckets[1]!.plannedSeconds.knownCount).toBe(0);
+  expect(monthly.weeks).toEqual(daily.weeks);
+});
+
+it('refuses unsupported filters before loading workspace records', async () => {
+  const select = vi.spyOn(repositories.activity, 'select');
+  try {
+    for (const input of [
+      { template: 'training-hours', sports: [] },
+      { template: 'training-hours', grouping: 'year' },
+      { template: 'estimated-training-load', sports: ['running'] },
+    ])
+      await expect(
+        charts.operations.summary({ weekStart: '2028-02-27', weeks: 2, ...input }),
+      ).rejects.toThrow();
+    expect(select).not.toHaveBeenCalled();
+  } finally {
+    select.mockRestore();
+  }
 });
 
 it('loads the chart while a save holds the write lock', async () => {
@@ -177,7 +232,7 @@ it('loads the chart while a save holds the write lock', async () => {
           timer = setTimeout(() => reject(new Error('The chart waited for the write lock')), 2000);
         }),
       ]);
-      expect(summary.weeks[0]!.plannedSeconds.value).toBe(5400);
+      expect(summary.weeks).toEqual([{ weekStart: '2029-01-08' }]);
       expect(summary.nights).toMatchObject([{ date: '2029-01-09', hrvMilliseconds: 52 }]);
     } finally {
       clearTimeout(timer);

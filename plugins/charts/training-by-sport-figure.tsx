@@ -4,9 +4,9 @@ import { sportTypeLabel, type ChartsSummary } from '@athlete-panel/contracts';
 import { lazy, Suspense } from 'react';
 import { ChartColumnStacked } from 'lucide-react';
 import { duration, EmptyState } from '@athlete-panel/ui';
-import { ChartFigure, periodText, weekLabel } from './chart-figure';
-import { hasSessions } from './training-hours';
-import { recordedSports, trainingBySportWeeks } from './training-by-sport';
+import { ChartFigure, periodText, bucketLabel, groupingLabels } from './chart-figure';
+import { emptyTrainingTitle, hasSessions } from './training-hours';
+import { recordedSports, trainingBySportBuckets } from './training-by-sport';
 
 const TrainingBySportChart = lazy(() => import('./training-by-sport-chart'));
 
@@ -21,16 +21,18 @@ export function TrainingBySportFigure({
 }) {
   if (!hasSessions(summary))
     return (
-      <EmptyState icon={<ChartColumnStacked size={25} />} title="No training in this period">
+      <EmptyState icon={<ChartColumnStacked size={25} />} title={emptyTrainingTitle(summary)}>
         Planned and recorded sessions will appear here.
       </EmptyState>
     );
-  const weeks = trainingBySportWeeks(summary, today, duration);
+  const grouping = summary.volume!.grouping;
+  const labels = groupingLabels[grouping];
+  const weeks = trainingBySportBuckets(summary, today, duration);
   const sports = recordedSports(summary);
   return (
     <ChartFigure
-      title="Weekly training by sport"
-      description={`Recorded hours per sport as stacked bars and planned hours as a dashed line, per week ${periodText(weeks)}. Races are vertical lines.`}
+      title={`${labels.title} training by sport`}
+      description={`Recorded hours per sport as stacked bars and planned hours as a dashed line, per ${grouping} ${periodText(weeks)}. Races are vertical lines.`}
       legend={[
         ...sports.map((sport) => ({
           label: sportTypeLabel(sport),
@@ -45,11 +47,11 @@ export function TrainingBySportFigure({
           <TrainingBySportChart weeks={weeks} sports={sports} />
         </Suspense>
       }
-      headers={['Week', ...sports.map(sportTypeLabel), 'Recorded', 'Planned', 'Races']}
+      headers={[labels.column, ...sports.map(sportTypeLabel), 'Recorded', 'Planned', 'Races']}
       rows={weeks.map((week) => ({
-        key: week.weekStart,
+        key: week.startDate,
         cells: [
-          weekLabel(week),
+          bucketLabel(week),
           ...sports.map((sport) => week.labelBySport[sport]),
           week.recordedLabel,
           week.plannedLabel,

@@ -10,9 +10,9 @@ import { nightRows } from '../../plugins/charts/resting-heart-rate-hrv';
 import { dailyLoads, sessionLoad } from '../../plugins/charts/training-load';
 import { seasonStart } from '../../plugins/charts/season';
 import { chartsSummary } from '../../plugins/charts/summary';
-import { hasSessions, trainingHoursWeeks } from '../../plugins/charts/training-hours';
-import { recordedSports, trainingBySportWeeks } from '../../plugins/charts/training-by-sport';
-import { climbingWeeks } from '../../plugins/charts/weekly-climbing';
+import { hasSessions, trainingHoursBuckets } from '../../plugins/charts/training-hours';
+import { recordedSports, trainingBySportBuckets } from '../../plugins/charts/training-by-sport';
+import { climbingBuckets } from '../../plugins/charts/weekly-climbing';
 import {
   sportWithMostHeartRate,
   heartRateSessions,
@@ -37,11 +37,11 @@ describe('charts weekly summary', () => {
   it('returns the same planned and recorded duration as each Calendar week', () => {
     const data = chartsWorkspace();
     const summary = chartsSummary(data, selection);
-    expect(summary.weeks).toHaveLength(14);
-    summary.weeks.forEach((week, index) => {
+    expect(summary.volume!.buckets).toHaveLength(14);
+    summary.volume!.buckets.forEach((week, index) => {
       const calendar = weeklySummary(data, addDays(chartsFirstWeek, index * 7));
       expect(week).toMatchObject({
-        weekStart: calendar.startDate,
+        startDate: calendar.startDate,
         plannedSeconds: calendar.planned.durationSeconds,
         recordedSeconds: calendar.actual.durationSeconds,
       });
@@ -60,7 +60,7 @@ describe('charts weekly summary', () => {
   it('tells a week without sessions from a missing duration, a partial week and an upcoming week', () => {
     const data = chartsWorkspace();
     data.activities.push(activity(400, addDays(chartsFirstWeek, 12 * 7 + 1), 3600));
-    const weeks = trainingHoursWeeks(chartsSummary(data, selection), chartsToday, minutes);
+    const weeks = trainingHoursBuckets(chartsSummary(data, selection), chartsToday, minutes);
     expect(weeks[2]).toMatchObject({ recordedHours: null, recordedLabel: 'No sessions recorded' });
     expect(weeks[10]).toMatchObject({
       recordedHours: 0.5,
@@ -90,14 +90,14 @@ describe('charts weekly summary', () => {
   it('reports a session measured at zero as 0m, not as a week without sessions', () => {
     const data = chartsWorkspace();
     data.activities.push(activity(401, addDays(chartsFirstWeek, 2 * 7 + 2), 0));
-    const weeks = trainingHoursWeeks(chartsSummary(data, selection), chartsToday, minutes);
+    const weeks = trainingHoursBuckets(chartsSummary(data, selection), chartsToday, minutes);
     expect(weeks[2]).toMatchObject({ recordedHours: 0, recordedLabel: '0m' });
   });
 
   it('reports a week where every recorded duration is missing as missing, not zero', () => {
     const data = chartsWorkspace();
     data.activities = [activity(500, addDays(chartsFirstWeek, 1), null)];
-    const [week] = trainingHoursWeeks(chartsSummary(data, selection), chartsToday, minutes);
+    const [week] = trainingHoursBuckets(chartsSummary(data, selection), chartsToday, minutes);
     expect(week).toMatchObject({ recordedHours: null, recordedLabel: 'Duration missing' });
   });
 
@@ -162,8 +162,12 @@ describe('charts training by sport', () => {
     });
 
   it('adds up the sport totals of each week to the Calendar total', () => {
-    const summary = chartsSummary(mixedSportsWorkspace(), selection);
-    for (const week of summary.weeks) {
+    const data = mixedSportsWorkspace();
+    const summary = chartsSummary(data, selection);
+    for (const week of summary.volume!.buckets) {
+      expect(week.recordedSeconds).toEqual(
+        weeklySummary(data, week.startDate).actual.durationSeconds,
+      );
       const sports = Object.values(week.recordedSecondsBySport);
       expect(sports.reduce((sum, item) => sum + item.knownCount + item.missingCount, 0)).toBe(
         week.recordedSeconds.knownCount + week.recordedSeconds.missingCount,
@@ -188,7 +192,7 @@ describe('charts training by sport', () => {
       activityWithSport(601, 'running', 600, 'unresolved'),
       activityWithSport(602, 'fitness_equipment', 1200),
     ];
-    const [week] = chartsSummary(data, selection).weeks;
+    const [week] = chartsSummary(data, selection).volume!.buckets;
     expect(week!.recordedSecondsBySport.running).toEqual({
       value: 1800,
       knownCount: 1,
@@ -209,7 +213,7 @@ describe('charts training by sport', () => {
       activityWithSport(702, 'hiking', null),
       activityWithSport(703, 'hiking', 1800),
     ];
-    const weeks = trainingBySportWeeks(chartsSummary(data, selection), chartsToday, minutes);
+    const weeks = trainingBySportBuckets(chartsSummary(data, selection), chartsToday, minutes);
     expect(weeks[0]).toMatchObject({
       sessionSports: ['running', 'cycling', 'hiking'],
       hoursBySport: { running: null, cycling: 0, hiking: 0.5, swimming: null },
@@ -230,7 +234,7 @@ describe('charts training by sport', () => {
   it('labels an empty week No sessions recorded and a week with a zero-minute run 0m, in total and per sport', () => {
     const data = emptyWorkspace();
     data.activities = [activityWithSport(710, 'running', 0)];
-    const [zeroWeek, emptyWeek] = trainingBySportWeeks(
+    const [zeroWeek, emptyWeek] = trainingBySportBuckets(
       chartsSummary(data, { ...selection, weeks: 2 }),
       chartsToday,
       minutes,
@@ -312,17 +316,17 @@ describe('charts climbing and heart rate', () => {
 
   it('returns elevation per sport, the running climb inputs and the sessions of the selected weeks', () => {
     const summary = chartsSummary(climbingData(), selection);
-    expect(summary.weeks[0]!.recordedElevationMetersBySport.running).toEqual({
+    expect(summary.volume!.buckets[0]!.recordedElevationMetersBySport.running).toEqual({
       value: 200,
       knownCount: 1,
       missingCount: 1,
     });
-    expect(summary.weeks[0]!.recordedElevationMetersBySport.cycling).toEqual({
+    expect(summary.volume!.buckets[0]!.recordedElevationMetersBySport.cycling).toEqual({
       value: 500,
       knownCount: 1,
       missingCount: 0,
     });
-    expect(summary.weeks[0]!.runningClimb).toEqual({
+    expect(summary.volume!.buckets[0]!.runningClimb).toEqual({
       sessionCount: 2,
       measuredSessionCount: 1,
       elevationMeters: 200,
@@ -339,7 +343,7 @@ describe('charts climbing and heart rate', () => {
 
   it('labels elevation and running climb in metres or feet', () => {
     const summary = chartsSummary(climbingData(), selection);
-    const metric = climbingWeeks(summary, chartsToday, 'metric');
+    const metric = climbingBuckets(summary, chartsToday, 'metric');
     expect(metric[0]).toMatchObject({
       sessionSports: ['running', 'cycling'],
       elevationLabelBySport: {
@@ -364,7 +368,7 @@ describe('charts climbing and heart rate', () => {
       elevationBySport: { running: null },
       runningClimbLabel: 'Upcoming',
     });
-    expect(climbingWeeks(summary, chartsToday, 'imperial')[0]).toMatchObject({
+    expect(climbingBuckets(summary, chartsToday, 'imperial')[0]).toMatchObject({
       elevationLabelBySport: { running: '656 ft (1 of 2 sessions without elevation)' },
       runningClimbLabel: '106 ft/mi (partial)',
     });
@@ -384,7 +388,7 @@ describe('charts climbing and heart rate', () => {
         averageHeartRateBpm: null,
       }),
     ];
-    const [unmeasured] = climbingWeeks(chartsSummary(data, selection), chartsToday, 'metric');
+    const [unmeasured] = climbingBuckets(chartsSummary(data, selection), chartsToday, 'metric');
     expect(unmeasured).toMatchObject({ runningClimb: null, runningClimbLabel: 'Not measured' });
     data.activities.push(
       activityWithMeasures(912, 3, 'running', {
@@ -393,7 +397,7 @@ describe('charts climbing and heart rate', () => {
         averageHeartRateBpm: null,
       }),
     );
-    const [partial] = climbingWeeks(chartsSummary(data, selection), chartsToday, 'metric');
+    const [partial] = climbingBuckets(chartsSummary(data, selection), chartsToday, 'metric');
     expect(partial!.runningClimbLabel).toBe('12 m/km (partial)');
   });
 
@@ -436,7 +440,7 @@ describe('charts climbing and heart rate', () => {
       [chartsId(920), '2029-10-27', 'No heart rate'],
       [chartsId(903), '2029-10-30', '148 bpm'],
     ]);
-    expect(summary.weeks[0]!.runningClimb).toMatchObject({
+    expect(summary.volume!.buckets[0]!.runningClimb).toMatchObject({
       sessionCount: 3,
       measuredSessionCount: 1,
     });

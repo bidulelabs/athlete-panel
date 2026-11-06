@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { chartsSummaryInputSchema, emptyWorkspace } from '@athlete-panel/contracts';
+import { chartsSummaryInputSchema, chartsSports, emptyWorkspace } from '@athlete-panel/contracts';
 import { chartsSummary } from '../../plugins/charts/summary';
 import {
   chartsWorkspace,
@@ -48,7 +48,13 @@ for (const theme of ['dark', 'light'] as const)
     const selections = await openTrainingHours(page, theme);
     await expect(page.getByRole('heading', { name: 'Weekly training hours' })).toBeVisible();
     expect(selections).toEqual([
-      { template: 'training-hours', weekStart: '2029-10-29', weeks: 12 },
+      {
+        template: 'training-hours',
+        weekStart: '2029-10-29',
+        weeks: 12,
+        grouping: 'week',
+        sports: [...chartsSports],
+      },
     ]);
     const figure = page.getByRole('figure');
     await expect(figure.locator('.recharts-bar-rectangle')).toHaveCount(10);
@@ -96,13 +102,13 @@ test('training hours asks the server for the season and custom weeks and refuses
   await page.getByRole('combobox', { name: 'Period' }).selectOption('season');
   await expect
     .poll(() => selections.at(-1))
-    .toEqual({ template: 'training-hours', weekStart: '2029-12-31', weeks: 3 });
+    .toMatchObject({ template: 'training-hours', weekStart: '2029-12-31', weeks: 3 });
   await page.getByRole('combobox', { name: 'Period' }).selectOption('custom');
   await page.getByRole('textbox', { name: 'From' }).fill('2029-12-05');
   await page.getByRole('textbox', { name: 'To' }).fill('2030-01-02');
   await expect
     .poll(() => selections.at(-1))
-    .toEqual({ template: 'training-hours', weekStart: '2029-12-03', weeks: 5 });
+    .toMatchObject({ template: 'training-hours', weekStart: '2029-12-03', weeks: 5 });
   await page.getByRole('textbox', { name: 'To' }).fill('2029-11-01');
   await expect(page.getByText('Choose an end date on or after the start date.')).toBeVisible();
   await expect(page.getByRole('figure')).toHaveCount(0);
@@ -138,7 +144,7 @@ test('a failed period change shows Try again and hides the old weeks', async ({ 
   await page.getByRole('button', { name: 'Try again', exact: true }).click();
   await page.getByText('View values', { exact: true }).click();
   await expect(table.getByRole('row')).toHaveCount(5);
-  expect(selections.at(-1)).toEqual({
+  expect(selections.at(-1)).toMatchObject({
     template: 'training-hours',
     weekStart: '2029-12-24',
     weeks: 4,

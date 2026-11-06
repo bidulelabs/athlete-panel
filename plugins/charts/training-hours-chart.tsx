@@ -2,16 +2,16 @@
 
 import { Bar, Cell } from 'recharts';
 import type { ChartConfig } from '@athlete-panel/ui/components/chart';
-import type { TrainingHoursWeek } from './training-hours';
-import { WeeklyChart } from './weekly-chart';
+import type { TrainingHoursBucket } from './training-hours';
+import { GroupedChart } from './grouped-chart';
 
 const config = {
   recordedHours: { label: 'Recorded', color: 'var(--chart-recorded)' },
 } satisfies ChartConfig;
 
-export default function TrainingHoursChart({ weeks }: { weeks: TrainingHoursWeek[] }) {
+export default function TrainingHoursChart({ weeks }: { weeks: TrainingHoursBucket[] }) {
   return (
-    <WeeklyChart
+    <GroupedChart
       weeks={weeks}
       yLabel="Hours"
       planned
@@ -31,13 +31,13 @@ export default function TrainingHoursChart({ weeks }: { weeks: TrainingHoursWeek
       >
         {weeks.map((week) => (
           <Cell
-            key={week.weekStart}
+            key={week.startDate}
             fill={week.inProgress ? 'transparent' : 'var(--color-recordedHours)'}
             stroke={week.inProgress ? 'var(--color-recordedHours)' : 'none'}
             strokeWidth={1.5}
           />
         ))}
       </Bar>
-    </WeeklyChart>
+    </GroupedChart>
   );
 }

@@ -5,7 +5,7 @@ import { lazy, Suspense } from 'react';
 import { ChartColumn } from 'lucide-react';
 import { duration, EmptyState } from '@athlete-panel/ui';
 import { ChartFigure, periodText, bucketLabel, groupingLabels } from './chart-figure';
-import { hasSessions, trainingHoursBuckets } from './training-hours';
+import { emptyTrainingTitle, hasSessions, trainingHoursBuckets } from './training-hours';
 
 const TrainingHoursChart = lazy(() => import('./training-hours-chart'));
 
@@ -20,7 +20,7 @@ export function TrainingHoursFigure({
 }) {
   if (!hasSessions(summary))
     return (
-      <EmptyState icon={<ChartColumn size={25} />} title="No training in this period">
+      <EmptyState icon={<ChartColumn size={25} />} title={emptyTrainingTitle(summary)}>
         Planned and recorded sessions will appear here.
       </EmptyState>
     );

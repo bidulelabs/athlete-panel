@@ -29673,215 +29673,10 @@
                   "weekStart": {
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                  },
-                  "plannedSeconds": {
-                    "type": "object",
-                    "properties": {
-                      "value": {
-                        "anyOf": [
-                          {
-                            "type": "number",
-                            "minimum": 0
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "knownCount": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      },
-                      "missingCount": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      }
-                    },
-                    "required": [
-                      "value",
-                      "knownCount",
-                      "missingCount"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "recordedSeconds": {
-                    "type": "object",
-                    "properties": {
-                      "value": {
-                        "anyOf": [
-                          {
-                            "type": "number",
-                            "minimum": 0
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "knownCount": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      },
-                      "missingCount": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      }
-                    },
-                    "required": [
-                      "value",
-                      "knownCount",
-                      "missingCount"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "recordedSecondsBySport": {
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string",
-                      "enum": [
-                        "running",
-                        "cycling",
-                        "winter_sports",
-                        "hiking",
-                        "swimming",
-                        "other"
-                      ]
-                    },
-                    "additionalProperties": {
-                      "type": "object",
-                      "properties": {
-                        "value": {
-                          "anyOf": [
-                            {
-                              "type": "number",
-                              "minimum": 0
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "knownCount": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "missingCount": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        }
-                      },
-                      "required": [
-                        "value",
-                        "knownCount",
-                        "missingCount"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "required": [
-                      "running",
-                      "cycling",
-                      "winter_sports",
-                      "hiking",
-                      "swimming",
-                      "other"
-                    ]
-                  },
-                  "recordedElevationMetersBySport": {
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string",
-                      "enum": [
-                        "running",
-                        "cycling",
-                        "winter_sports",
-                        "hiking",
-                        "swimming",
-                        "other"
-                      ]
-                    },
-                    "additionalProperties": {
-                      "type": "object",
-                      "properties": {
-                        "value": {
-                          "anyOf": [
-                            {
-                              "type": "number",
-                              "minimum": 0
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "knownCount": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "missingCount": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        }
-                      },
-                      "required": [
-                        "value",
-                        "knownCount",
-                        "missingCount"
-                      ],
-                      "additionalProperties": false
-                    },
-                    "required": [
-                      "running",
-                      "cycling",
-                      "winter_sports",
-                      "hiking",
-                      "swimming",
-                      "other"
-                    ]
-                  },
-                  "runningClimb": {
-                    "type": "object",
-                    "properties": {
-                      "sessionCount": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      },
-                      "measuredSessionCount": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      },
-                      "elevationMeters": {
-                        "type": "number"
-                      },
-                      "distanceMeters": {
-                        "type": "number"
-                      }
-                    },
-                    "required": [
-                      "sessionCount",
-                      "measuredSessionCount",
-                      "elevationMeters",
-                      "distanceMeters"
-                    ],
-                    "additionalProperties": false
                   }
                 },
                 "required": [
-                  "weekStart",
-                  "plannedSeconds",
-                  "recordedSeconds",
-                  "recordedSecondsBySport",
-                  "recordedElevationMetersBySport",
-                  "runningClimb"
+                  "weekStart"
                 ],
                 "additionalProperties": false
               }
@@ -29922,6 +29717,17 @@
                       "items": {
                         "type": "object",
                         "properties": {
+                          "startDate": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "endDate": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "partial": {
+                            "type": "boolean"
+                          },
                           "plannedSeconds": {
                             "type": "object",
                             "properties": {
@@ -30121,28 +29927,17 @@
                               "distanceMeters"
                             ],
                             "additionalProperties": false
-                          },
-                          "startDate": {
-                            "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                          },
-                          "endDate": {
-                            "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                          },
-                          "partial": {
-                            "type": "boolean"
                           }
                         },
                         "required": [
+                          "startDate",
+                          "endDate",
+                          "partial",
                           "plannedSeconds",
                           "recordedSeconds",
                           "recordedSecondsBySport",
                           "recordedElevationMetersBySport",
-                          "runningClimb",
-                          "startDate",
-                          "endDate",
-                          "partial"
+                          "runningClimb"
                         ],
                         "additionalProperties": false
                       }

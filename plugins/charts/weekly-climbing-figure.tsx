@@ -5,7 +5,7 @@ import { lazy, Suspense } from 'react';
 import { Mountain } from 'lucide-react';
 import { EmptyState, useWorkspace } from '@athlete-panel/ui';
 import { ChartFigure, periodText, bucketLabel, groupingLabels } from './chart-figure';
-import { hasSessions } from './training-hours';
+import { emptyTrainingTitle, hasSessions } from './training-hours';
 import { sportsWithElevation, climbUnitLabel, climbingBuckets } from './weekly-climbing';
 
 const ElevationChart = lazy(() => import('./elevation-chart'));
@@ -23,7 +23,7 @@ export function WeeklyClimbingFigure({
   const units = useWorkspace().data.profile?.units ?? 'metric';
   if (!hasSessions(summary))
     return (
-      <EmptyState icon={<Mountain size={25} />} title="No training in this period">
+      <EmptyState icon={<Mountain size={25} />} title={emptyTrainingTitle(summary)}>
         Planned and recorded sessions will appear here.
       </EmptyState>
     );

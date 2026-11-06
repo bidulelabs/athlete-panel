@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   activitySchema,
   chartsSports,
+  chartsTemplates,
   chartsSummaryInputSchema,
   chartsSummarySchema,
   emptyWorkspace,
@@ -11,7 +12,6 @@ import { bucketRanges } from '../../plugins/charts/bucket-ranges';
 import { chartsSummary } from '../../plugins/charts/summary';
 import { trainingHoursBuckets } from '../../plugins/charts/training-hours';
 import { climbingBuckets } from '../../plugins/charts/weekly-climbing';
-import { weeklySummary } from '../../plugins/training/public/shared';
 import { activity, plannedWorkout, trainingEvent } from '../fixtures/charts';
 
 const selection = { template: 'training-hours', weekStart: '2028-02-20', weeks: 3 } as const;
@@ -77,7 +77,19 @@ describe('chart sport filters and grouping', () => {
     ]);
   });
 
-  it('filters planned and recorded totals alike while retaining the unfiltered Calendar weeks', () => {
+  it('returns only week dates outside the volume buckets for every template', () => {
+    for (const template of chartsTemplates) {
+      const summary = chartsSummary(fixture(), { ...selection, template });
+      expect(chartsSummarySchema.parse(summary)).toEqual(summary);
+      expect(summary.weeks).toEqual([
+        { weekStart: '2028-02-20' },
+        { weekStart: '2028-02-27' },
+        { weekStart: '2028-03-05' },
+      ]);
+    }
+  });
+
+  it('filters planned and recorded totals alike while retaining the selected week dates', () => {
     const state = fixture();
     const summary = chartsSummary(state, { ...selection, grouping: 'month', sports: ['running'] });
     expect(chartsSummarySchema.parse(summary)).toEqual(summary);
@@ -89,9 +101,7 @@ describe('chart sport filters and grouping', () => {
       knownCount: 0,
       missingCount: 0,
     });
-    expect(summary.weeks[1]!.recordedSeconds).toEqual(
-      weeklySummary(state, '2028-02-27').actual.durationSeconds,
-    );
+    expect(summary.weeks).toEqual(chartsSummary(state, selection).weeks);
     expect(summary.races).toHaveLength(1);
   });
 

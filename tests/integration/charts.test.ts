@@ -35,16 +35,16 @@ it('reads 52 weeks, beyond the 121-day workspace limit, without changing stored 
     weeks: 52,
   });
   expect(summary.weeks).toHaveLength(52);
-  expect(summary.weeks[0]).toMatchObject({
-    weekStart: '2029-01-08',
+  expect(summary.volume!.buckets[0]).toMatchObject({
+    startDate: '2029-01-08',
     plannedSeconds: { value: 5400, knownCount: 1, missingCount: 0 },
     recordedSeconds: { value: 4500, knownCount: 1, missingCount: 0 },
   });
-  expect(summary.weeks[51]).toMatchObject({
-    weekStart: '2029-12-31',
+  expect(summary.volume!.buckets[51]).toMatchObject({
+    startDate: '2029-12-31',
     recordedSeconds: { value: 0, knownCount: 0, missingCount: 0 },
   });
-  expect(summary.weeks[50]!.recordedSeconds.value).toBe(3600);
+  expect(summary.volume!.buckets[50]!.recordedSeconds.value).toBe(3600);
   expect(summary.races).toEqual([{ id: chartsId(2), date: '2029-01-12', title: 'Winter trail' }]);
   expect(await sql`select id,revision,data from activity_records.records order by id`).toEqual(
     before,
@@ -61,7 +61,7 @@ it('returns the recorded duration of every chart sport', async () => {
     weeks: 1,
   });
   expect(chartsSummarySchema.parse(summary)).toEqual(summary);
-  expect(summary.weeks[0]!.recordedSecondsBySport).toMatchObject({
+  expect(summary.volume!.buckets[0]!.recordedSecondsBySport).toMatchObject({
     cycling: { value: 4500, knownCount: 1, missingCount: 0 },
     running: { value: 0, knownCount: 0, missingCount: 0 },
   });
@@ -82,7 +82,7 @@ it('returns elevation, running climb inputs and heart rate sessions from stored 
     weeks: 1,
   });
   expect(chartsSummarySchema.parse(summary)).toEqual(summary);
-  expect(summary.weeks[0]).toMatchObject({
+  expect(summary.volume!.buckets[0]).toMatchObject({
     recordedElevationMetersBySport: { running: { value: 250, knownCount: 1, missingCount: 0 } },
     runningClimb: {
       sessionCount: 1,
@@ -148,7 +148,7 @@ it('reads sessions from 41 days before the period for Estimated training load on
     '2028-11-28',
     '2029-01-09',
   ]);
-  expect(summary.weeks[0]!.recordedSeconds.value).toBe(3600);
+  expect(hours.volume!.buckets[0]!.recordedSeconds.value).toBe(3600);
 });
 
 it('refuses a selection longer than 53 weeks', async () => {
@@ -232,7 +232,7 @@ it('loads the chart while a save holds the write lock', async () => {
           timer = setTimeout(() => reject(new Error('The chart waited for the write lock')), 2000);
         }),
       ]);
-      expect(summary.weeks[0]!.plannedSeconds.value).toBe(5400);
+      expect(summary.weeks).toEqual([{ weekStart: '2029-01-08' }]);
       expect(summary.nights).toMatchObject([{ date: '2029-01-09', hrvMilliseconds: 52 }]);
     } finally {
       clearTimeout(timer);

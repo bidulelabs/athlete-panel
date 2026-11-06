@@ -53,6 +53,11 @@ export const chartsSummaryInputSchema = z
   );
 export const chartsWeekSchema = z.object({
   weekStart: dateSchema,
+});
+export const chartsBucketSchema = z.object({
+  startDate: dateSchema,
+  endDate: dateSchema,
+  partial: z.boolean(),
   plannedSeconds: historyMeasureSchema,
   recordedSeconds: historyMeasureSchema,
   recordedSecondsBySport: z.record(z.enum(chartsSports), historyMeasureSchema),
@@ -63,11 +68,6 @@ export const chartsWeekSchema = z.object({
     elevationMeters: z.number(),
     distanceMeters: z.number(),
   }),
-});
-export const chartsBucketSchema = chartsWeekSchema.omit({ weekStart: true }).extend({
-  startDate: dateSchema,
-  endDate: dateSchema,
-  partial: z.boolean(),
 });
 export const chartsVolumeSchema = z.object({
   grouping: z.enum(chartsGroupings),

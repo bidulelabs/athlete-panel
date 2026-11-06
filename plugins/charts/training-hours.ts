@@ -1,4 +1,9 @@
-import type { ChartsSummary, ChartsGrouping } from '@athlete-panel/contracts';
+import {
+  chartsSports,
+  sportTypeLabel,
+  type ChartsSummary,
+  type ChartsGrouping,
+} from '@athlete-panel/contracts';
 import { type MetricTotal } from '../training/public/shared';
 
 export type TrainingHoursBucket = {
@@ -60,4 +65,12 @@ export function hasSessions(summary: ChartsSummary) {
   return (summary.volume?.buckets ?? []).some(
     (week) => sessionCount(week.recordedSeconds) > 0 || sessionCount(week.plannedSeconds) > 0,
   );
+}
+
+export function emptyTrainingTitle(summary: ChartsSummary) {
+  const sports = summary.volume?.sports ?? chartsSports;
+  if (sports.length === chartsSports.length) return 'No training in this period';
+  return sports.length === 1
+    ? `No ${sportTypeLabel(sports[0]!).toLowerCase()} sessions in this period`
+    : 'No sessions for the selected sports in this period';
 }

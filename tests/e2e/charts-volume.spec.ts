@@ -1,13 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 import { chartsSummaryInputSchema, type ChartsSummaryInput } from '@athlete-panel/contracts';
 import { chartsSummary } from '../../plugins/charts/summary';
-import { elevationAndHeartRateWorkspace } from '../fixtures/charts';
+import { activity, elevationAndHeartRateWorkspace } from '../fixtures/charts';
 
 const password = process.env.E2E_PASSWORD;
 if (!password) throw new Error('Set E2E_PASSWORD for the isolated synthetic instance.');
 
-async function openCharts(page: Page, theme = 'dark') {
-  const state = elevationAndHeartRateWorkspace();
+async function openCharts(page: Page, theme = 'dark', state = elevationAndHeartRateWorkspace()) {
   state.workouts = state.workouts.map((item, index) => ({
     ...item,
     sport: index % 2 ? 'cycling' : 'running',
@@ -46,6 +45,52 @@ async function onlySport(page: Page, sport: string) {
 test.afterEach(async ({ page }) => page.unrouteAll({ behavior: 'ignoreErrors' }));
 
 for (const theme of ['dark', 'light']) {
+  test(`empty volume results describe the selected sports (${theme})`, async ({ page }, info) => {
+    const state = elevationAndHeartRateWorkspace();
+    state.activities = [
+      { ...activity(9901, '2029-11-05', 3600), elevationMeters: 100, distanceMeters: 5000 },
+    ];
+    state.workouts = [];
+    state.events = [];
+    await openCharts(page, theme, state);
+    if (info.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 900 });
+    for (const template of ['Training hours', 'Training by sport', 'Weekly climbing']) {
+      await page.getByRole('button', { name: 'All templates', exact: true }).click();
+      await page.getByRole('button', { name: new RegExp(`^${template}`) }).click();
+      await expect(page.getByRole('figure').first()).toBeVisible();
+      await onlySport(page, 'Cycling');
+      await expect(
+        page.getByRole('heading', { name: 'No cycling sessions in this period', exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole('figure')).toHaveCount(0);
+      await page.getByRole('button', { name: /^Sports:/ }).click();
+      await page.getByRole('checkbox', { name: 'Swimming', exact: true }).check();
+      await page.keyboard.press('Escape');
+      await expect(
+        page.getByRole('heading', {
+          name: 'No sessions for the selected sports in this period',
+          exact: true,
+        }),
+      ).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      await page.screenshot({
+        path: `.runtime/charts/empty-sports-${template.replaceAll(' ', '-')}-${info.project.name}-${theme}.png`,
+        fullPage: true,
+      });
+      await page.getByRole('button', { name: /^Sports:/ }).click();
+      await page.getByRole('button', { name: 'All sports', exact: true }).click();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('figure').first()).toBeVisible();
+      await page.getByRole('combobox', { name: 'Period', exact: true }).selectOption('4');
+      await expect(
+        page.getByRole('heading', { name: 'No training in this period', exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole('figure')).toHaveCount(0);
+    }
+  });
+
   test(`volume controls filter both totals and group without changing dates (${theme})`, async ({
     page,
   }, info) => {

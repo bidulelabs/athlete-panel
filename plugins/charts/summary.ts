@@ -98,7 +98,7 @@ export function chartsSummary(
   const calendarWeeks = Array.from({ length: weeks }, (_, index) =>
     weeklySummary(state, addDays(weekStart, index * 7)),
   );
-  const project = (period: CalendarWeek, selected: readonly ChartsSport[] = chartsSports) => {
+  const project = (period: CalendarWeek, selected: readonly ChartsSport[]) => {
     const recordedSecondsBySport = sumBySport(
       period.sportBreakdown,
       (value) => value.durationSeconds,
@@ -136,7 +136,7 @@ export function chartsSummary(
     };
   };
   return {
-    weeks: calendarWeeks.map((week) => ({ weekStart: week.startDate, ...project(week) })),
+    weeks: calendarWeeks.map((week) => ({ weekStart: week.startDate })),
     volume: isChartsVolumeTemplate(template)
       ? {
           grouping,

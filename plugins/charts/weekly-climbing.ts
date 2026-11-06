@@ -1,5 +1,6 @@
 import {
   chartsSports,
+  type ChartsBucket,
   type ChartsSport,
   type ChartsSummary,
   type Profile,
@@ -28,10 +29,7 @@ function elevationLabel(measure: MetricTotal, units: UnitSystem) {
   return `${elevation} (${measure.missingCount} of ${sessionCount(measure)} sessions without elevation)`;
 }
 
-function measureRunningClimb(
-  climb: ChartsSummary['weeks'][number]['runningClimb'],
-  units: UnitSystem,
-) {
+function measureRunningClimb(climb: ChartsBucket['runningClimb'], units: UnitSystem) {
   if (!climb.sessionCount) return { value: null, label: 'No running' };
   if (!climb.measuredSessionCount) return { value: null, label: 'Not measured' };
   const value =

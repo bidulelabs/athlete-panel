@@ -1,5 +1,6 @@
 'use client';
 
+import type { ChartsGrouping } from '@athlete-panel/contracts';
 import type { ReactNode } from 'react';
 import {
   addDays,
@@ -14,11 +15,33 @@ import {
 
 export type LegendItem = { label: string; keyClass: string };
 
-export const weekLabel = (week: { weekStart: string; inProgress: boolean }) =>
-  `Week of ${dateLabel(week.weekStart)}${week.inProgress ? ' (in progress)' : ''}`;
+export const groupingLabels = {
+  day: { title: 'Daily', column: 'Day' },
+  week: { title: 'Weekly', column: 'Week' },
+  month: { title: 'Monthly', column: 'Month' },
+};
 
-export function periodText(weeks: { weekStart: string }[]) {
-  return `from ${dateLabel(weeks[0]!.weekStart)} to ${dateLabel(addDays(weeks.at(-1)!.weekStart, 6), { day: 'numeric', month: 'short', year: 'numeric' })}`;
+export function bucketLabel(bucket: {
+  startDate: string;
+  grouping: ChartsGrouping;
+  inProgress: boolean;
+  partial: boolean;
+}) {
+  const label =
+    bucket.grouping === 'month'
+      ? dateLabel(bucket.startDate, { month: 'long', year: 'numeric' })
+      : `${bucket.grouping === 'week' ? 'Week of ' : ''}${dateLabel(bucket.startDate)}`;
+  return `${label}${bucket.partial ? ' (partial)' : ''}${bucket.inProgress ? ' (in progress)' : ''}`;
+}
+
+export function periodText(
+  periods: ({ weekStart: string } | { startDate: string; endDate: string })[],
+) {
+  const first = periods[0]!,
+    last = periods.at(-1)!;
+  const from = 'startDate' in first ? first.startDate : first.weekStart;
+  const to = 'endDate' in last ? last.endDate : addDays(last.weekStart, 6);
+  return `from ${dateLabel(from)} to ${dateLabel(to, { day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
 
 export function ChartFigure({

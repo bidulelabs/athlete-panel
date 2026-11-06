@@ -5,12 +5,12 @@ import { CartesianGrid, ComposedChart, Line, ReferenceLine, XAxis, YAxis } from 
 import type { TooltipContentProps } from 'recharts';
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@athlete-panel/ui/components/chart';
 import { dateLabel } from '@athlete-panel/ui';
-import { weekLabel } from './chart-figure';
-import type { TrainingHoursWeek } from './training-hours';
+import { bucketLabel } from './chart-figure';
+import type { TrainingHoursBucket } from './training-hours';
 
 type TooltipRows<Week> = (week: Week) => [label: string, value: string][];
 
-function WeekTooltip<Week extends TrainingHoursWeek>({
+function WeekTooltip<Week extends TrainingHoursBucket>({
   active,
   payload,
   rows,
@@ -19,7 +19,7 @@ function WeekTooltip<Week extends TrainingHoursWeek>({
   if (!active || !week) return null;
   return (
     <div className="charts-tooltip">
-      <strong>{weekLabel(week)}</strong>
+      <strong>{bucketLabel(week)}</strong>
       <dl>
         {[...rows(week), ...(week.races.length ? [['Race', week.races.join(', ')]] : [])].map(
           ([label, value]) => (
@@ -34,7 +34,7 @@ function WeekTooltip<Week extends TrainingHoursWeek>({
   );
 }
 
-export function WeeklyChart<Week extends TrainingHoursWeek>({
+export function GroupedChart<Week extends TrainingHoursBucket>({
   weeks,
   yLabel,
   planned,
@@ -54,8 +54,13 @@ export function WeeklyChart<Week extends TrainingHoursWeek>({
       <ComposedChart data={weeks} margin={{ top: 28, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke="var(--line)" />
         <XAxis
-          dataKey="weekStart"
-          tickFormatter={(weekStart: string) => dateLabel(weekStart)}
+          dataKey="startDate"
+          tickFormatter={(startDate: string) =>
+            dateLabel(
+              startDate,
+              weeks[0]?.grouping === 'month' ? { month: 'short', year: 'numeric' } : undefined,
+            )
+          }
           tickLine={false}
           axisLine={{ stroke: 'var(--line)' }}
           interval="preserveStartEnd"
@@ -77,8 +82,8 @@ export function WeeklyChart<Week extends TrainingHoursWeek>({
           .filter((week) => week.races.length > 0)
           .map((week) => (
             <ReferenceLine
-              key={week.weekStart}
-              x={week.weekStart}
+              key={week.startDate}
+              x={week.startDate}
               stroke="var(--chart-race)"
               strokeWidth={1.5}
               label={{

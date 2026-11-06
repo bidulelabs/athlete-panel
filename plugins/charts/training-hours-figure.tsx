@@ -4,8 +4,8 @@ import type { ChartsSummary } from '@athlete-panel/contracts';
 import { lazy, Suspense } from 'react';
 import { ChartColumn } from 'lucide-react';
 import { duration, EmptyState } from '@athlete-panel/ui';
-import { ChartFigure, periodText, weekLabel } from './chart-figure';
-import { hasSessions, trainingHoursWeeks } from './training-hours';
+import { ChartFigure, periodText, bucketLabel, groupingLabels } from './chart-figure';
+import { hasSessions, trainingHoursBuckets } from './training-hours';
 
 const TrainingHoursChart = lazy(() => import('./training-hours-chart'));
 
@@ -24,11 +24,13 @@ export function TrainingHoursFigure({
         Planned and recorded sessions will appear here.
       </EmptyState>
     );
-  const weeks = trainingHoursWeeks(summary, today, duration);
+  const grouping = summary.volume!.grouping;
+  const labels = groupingLabels[grouping];
+  const weeks = trainingHoursBuckets(summary, today, duration);
   return (
     <ChartFigure
-      title="Weekly training hours"
-      description={`Recorded hours as bars and planned hours as a dashed line, per week ${periodText(weeks)}. Races are vertical lines.`}
+      title={`${labels.title} training hours`}
+      description={`Recorded hours as bars and planned hours as a dashed line, per ${grouping} ${periodText(weeks)}. Races are vertical lines.`}
       legend={[
         { label: 'Recorded', keyClass: 'charts-key-recorded' },
         { label: 'Planned', keyClass: 'charts-key-planned' },
@@ -40,10 +42,10 @@ export function TrainingHoursFigure({
           <TrainingHoursChart weeks={weeks} />
         </Suspense>
       }
-      headers={['Week', 'Recorded', 'Planned', 'Races']}
+      headers={[labels.column, 'Recorded', 'Planned', 'Races']}
       rows={weeks.map((week) => ({
-        key: week.weekStart,
-        cells: [weekLabel(week), week.recordedLabel, week.plannedLabel, week.races.join(', ')],
+        key: week.startDate,
+        cells: [bucketLabel(week), week.recordedLabel, week.plannedLabel, week.races.join(', ')],
       }))}
     />
   );

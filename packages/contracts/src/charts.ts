@@ -13,13 +13,6 @@ export const chartsTemplates = [
   'estimated-training-load',
 ] as const;
 export const chartsLongLoadAverageDays = 42;
-export const chartsSummaryInputSchema = z
-  .object({
-    template: z.enum(chartsTemplates),
-    weekStart: dateSchema,
-    weeks: z.number().int().min(1).max(chartsMaxWeeks),
-  })
-  .strict();
 export const chartsSports = [
   'running',
   'cycling',
@@ -29,6 +22,35 @@ export const chartsSports = [
   'other',
 ] as const;
 export type ChartsSport = (typeof chartsSports)[number];
+export const chartsGroupings = ['day', 'week', 'month'] as const;
+export type ChartsGrouping = (typeof chartsGroupings)[number];
+export const chartsVolumeTemplates = [
+  'training-hours',
+  'training-by-sport',
+  'weekly-climbing',
+] as const;
+export const isChartsVolumeTemplate = (template: string) =>
+  chartsVolumeTemplates.some((value) => value === template);
+const selectedSportsSchema = z
+  .array(z.enum(chartsSports))
+  .min(1)
+  .max(chartsSports.length)
+  .refine((sports) => new Set(sports).size === sports.length, 'Choose each sport only once.');
+export const chartsSummaryInputSchema = z
+  .object({
+    template: z.enum(chartsTemplates),
+    weekStart: dateSchema,
+    weeks: z.number().int().min(1).max(chartsMaxWeeks),
+    grouping: z.enum(chartsGroupings).optional(),
+    sports: selectedSportsSchema.optional(),
+  })
+  .strict()
+  .refine(
+    (input) =>
+      isChartsVolumeTemplate(input.template) ||
+      (input.grouping === undefined && input.sports === undefined),
+    'Sport selection and grouping are only supported by the volume templates.',
+  );
 export const chartsWeekSchema = z.object({
   weekStart: dateSchema,
   plannedSeconds: historyMeasureSchema,
@@ -42,6 +64,20 @@ export const chartsWeekSchema = z.object({
     distanceMeters: z.number(),
   }),
 });
+export const chartsBucketSchema = chartsWeekSchema.omit({ weekStart: true }).extend({
+  startDate: dateSchema,
+  endDate: dateSchema,
+  partial: z.boolean(),
+});
+export const chartsVolumeSchema = z.object({
+  grouping: z.enum(chartsGroupings),
+  sports: selectedSportsSchema,
+  buckets: z
+    .array(chartsBucketSchema)
+    .min(1)
+    .max(chartsMaxWeeks * 7),
+});
+export type ChartsBucket = z.infer<typeof chartsBucketSchema>;
 export const chartsRaceSchema = z.object({ id: idSchema, date: dateSchema, title: z.string() });
 export const chartsSessionSchema = z.object({
   id: idSchema,
@@ -64,6 +100,7 @@ export const chartsLoadSessionSchema = z.object({
 });
 export const chartsSummarySchema = z.object({
   weeks: z.array(chartsWeekSchema),
+  volume: chartsVolumeSchema.nullable(),
   races: z.array(chartsRaceSchema),
   sessions: z.array(chartsSessionSchema),
   nights: z.array(chartsNightSchema),

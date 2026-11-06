@@ -1,8 +1,11 @@
-import type { ChartsSummary } from '@athlete-panel/contracts';
-import { addDays, type MetricTotal } from '../training/public/shared';
+import type { ChartsSummary, ChartsGrouping } from '@athlete-panel/contracts';
+import { type MetricTotal } from '../training/public/shared';
 
-export type TrainingHoursWeek = {
-  weekStart: string;
+export type TrainingHoursBucket = {
+  startDate: string;
+  endDate: string;
+  grouping: ChartsGrouping;
+  partial: boolean;
   inProgress: boolean;
   recordedHours: number | null;
   plannedHours: number | null;
@@ -18,39 +21,43 @@ export function durationLabel(measure: MetricTotal, format: (seconds: number) =>
   return `${format(measure.value)} (${measure.missingCount} of ${sessionCount(measure)} sessions without duration)`;
 }
 
-export function trainingHoursWeeks(
+export function trainingHoursBuckets(
   summary: ChartsSummary,
   today: string,
   format: (seconds: number) => string,
-): TrainingHoursWeek[] {
-  return summary.weeks.map(({ weekStart, recordedSeconds, plannedSeconds }) => {
-    const weekEnd = addDays(weekStart, 6);
-    const upcoming = weekStart > today;
-    const noPlan = sessionCount(plannedSeconds) === 0;
-    const noSessions = sessionCount(recordedSeconds) === 0;
-    return {
-      weekStart,
-      inProgress: weekStart <= today && today <= weekEnd,
-      recordedHours:
-        upcoming || noSessions || recordedSeconds.value === null
-          ? null
-          : recordedSeconds.value / 3600,
-      plannedHours: noPlan || plannedSeconds.value === null ? null : plannedSeconds.value / 3600,
-      recordedLabel: upcoming
-        ? 'Upcoming'
-        : noSessions
-          ? 'No sessions recorded'
-          : durationLabel(recordedSeconds, format),
-      plannedLabel: noPlan ? 'No plan' : durationLabel(plannedSeconds, format),
-      races: summary.races
-        .filter((race) => race.date >= weekStart && race.date <= weekEnd)
-        .map((race) => race.title),
-    };
-  });
+): TrainingHoursBucket[] {
+  return (summary.volume?.buckets ?? []).map(
+    ({ startDate, endDate, partial, recordedSeconds, plannedSeconds }) => {
+      const upcoming = startDate > today;
+      const noPlan = sessionCount(plannedSeconds) === 0;
+      const noSessions = sessionCount(recordedSeconds) === 0;
+      return {
+        startDate,
+        endDate,
+        partial,
+        grouping: summary.volume!.grouping,
+        inProgress: startDate <= today && today <= endDate,
+        recordedHours:
+          upcoming || noSessions || recordedSeconds.value === null
+            ? null
+            : recordedSeconds.value / 3600,
+        plannedHours: noPlan || plannedSeconds.value === null ? null : plannedSeconds.value / 3600,
+        recordedLabel: upcoming
+          ? 'Upcoming'
+          : noSessions
+            ? 'No sessions recorded'
+            : durationLabel(recordedSeconds, format),
+        plannedLabel: noPlan ? 'No plan' : durationLabel(plannedSeconds, format),
+        races: summary.races
+          .filter((race) => race.date >= startDate && race.date <= endDate)
+          .map((race) => race.title),
+      };
+    },
+  );
 }
 
 export function hasSessions(summary: ChartsSummary) {
-  return summary.weeks.some(
+  return (summary.volume?.buckets ?? []).some(
     (week) => sessionCount(week.recordedSeconds) > 0 || sessionCount(week.plannedSeconds) > 0,
   );
 }

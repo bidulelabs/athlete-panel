@@ -2,18 +2,18 @@
 
 import { sportTypeLabel, type ChartsSport } from '@athlete-panel/contracts';
 import { sportBars } from './sport-bars';
-import type { TrainingBySportWeek } from './training-by-sport';
-import { WeeklyChart } from './weekly-chart';
+import type { TrainingBySportBucket } from './training-by-sport';
+import { GroupedChart } from './grouped-chart';
 
 export default function TrainingBySportChart({
   weeks,
   sports,
 }: {
-  weeks: TrainingBySportWeek[];
+  weeks: TrainingBySportBucket[];
   sports: ChartsSport[];
 }) {
   return (
-    <WeeklyChart
+    <GroupedChart
       weeks={weeks}
       yLabel="Hours"
       planned
@@ -28,6 +28,6 @@ export default function TrainingBySportChart({
       ]}
     >
       {sportBars(weeks, sports, (sport) => `hoursBySport.${sport}`)}
-    </WeeklyChart>
+    </GroupedChart>
   );
 }

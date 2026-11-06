@@ -157,6 +157,61 @@ it('refuses a selection longer than 53 weeks', async () => {
   ).rejects.toThrow();
 });
 
+it('returns filtered daily and clipped monthly volume from stored records without changing the selected dates', async () => {
+  const sql = connection();
+  const records = [
+    ['training', 'workout', plannedWorkout(30, '2028-02-29', 5400)],
+    ['training', 'workout', { ...plannedWorkout(31, '2028-03-01', 3600), sport: 'cycling' }],
+    [
+      'activity_records',
+      'activity',
+      { ...activity(32, '2028-02-29', 3600), elevationMeters: 250, distanceMeters: 10000 },
+    ],
+    ['activity_records', 'activity', { ...activity(33, '2028-03-01', 7200), sport: 'cycling' }],
+  ] as const;
+  for (const [schema, kind, record] of records)
+    await sql`insert into ${sql(schema + '.records')}(kind,id,revision,data) values(${kind},${record.id},1,${sql.json(record)})`;
+  const base = {
+    template: 'training-hours',
+    weekStart: '2028-02-27',
+    weeks: 2,
+    sports: ['running'],
+  };
+  const daily = await charts.operations.summary({ ...base, grouping: 'day' });
+  const monthly = await charts.operations.summary({ ...base, grouping: 'month' });
+  expect(chartsSummarySchema.parse(monthly)).toEqual(monthly);
+  expect(daily.volume!.buckets).toHaveLength(14);
+  expect(monthly.volume!.buckets.map((b) => [b.startDate, b.endDate, b.partial])).toEqual([
+    ['2028-02-27', '2028-02-29', true],
+    ['2028-03-01', '2028-03-11', true],
+  ]);
+  expect(monthly.volume!.buckets[0]).toMatchObject({
+    plannedSeconds: { value: 5400, knownCount: 1, missingCount: 0 },
+    recordedSeconds: { value: 3600, knownCount: 1, missingCount: 0 },
+    runningClimb: { elevationMeters: 250, distanceMeters: 10000 },
+  });
+  expect(monthly.volume!.buckets[1]!.recordedSeconds.knownCount).toBe(0);
+  expect(monthly.volume!.buckets[1]!.plannedSeconds.knownCount).toBe(0);
+  expect(monthly.weeks).toEqual(daily.weeks);
+});
+
+it('refuses unsupported filters before loading workspace records', async () => {
+  const select = vi.spyOn(repositories.activity, 'select');
+  try {
+    for (const input of [
+      { template: 'training-hours', sports: [] },
+      { template: 'training-hours', grouping: 'year' },
+      { template: 'estimated-training-load', sports: ['running'] },
+    ])
+      await expect(
+        charts.operations.summary({ weekStart: '2028-02-27', weeks: 2, ...input }),
+      ).rejects.toThrow();
+    expect(select).not.toHaveBeenCalled();
+  } finally {
+    select.mockRestore();
+  }
+});
+
 it('loads the chart while a save holds the write lock', async () => {
   const sql = connection();
   const workout = plannedWorkout(1, '2029-01-09', 5400);

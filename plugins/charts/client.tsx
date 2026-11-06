@@ -1,6 +1,13 @@
 'use client';
 
-import { chartsMaxWeeks, type ChartsSummaryInput } from '@athlete-panel/contracts';
+import {
+  chartsMaxWeeks,
+  chartsSports,
+  isChartsVolumeTemplate,
+  type ChartsGrouping,
+  type ChartsSport,
+  type ChartsSummaryInput,
+} from '@athlete-panel/contracts';
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
@@ -24,6 +31,7 @@ import { TrainingLoadFigure } from './training-load-figure';
 import { useChartsSummary } from './use-charts-summary';
 import { WeeklyClimbingFigure } from './weekly-climbing-figure';
 import { WorkoutHeartRateFigure } from './workout-heart-rate-figure';
+import { VolumeControls } from './volume-controls';
 import './charts.css';
 
 const templates = [
@@ -127,6 +135,9 @@ function TemplatePage({
 }) {
   const { weekStartsOn } = useWorkspace();
   const currentWeek = startOfWeek(today, weekStartsOn);
+  const [sports, setSports] = useState<ChartsSport[]>([...chartsSports]);
+  const [grouping, setGrouping] = useState<ChartsGrouping>('week');
+  const volume = isChartsVolumeTemplate(template.id);
   const [period, setPeriod] = useState<Period>('12');
   const [customFrom, setCustomFrom] = useState(addDays(currentWeek, -7 * 11));
   const [customTo, setCustomTo] = useState(today);
@@ -146,8 +157,19 @@ function TemplatePage({
     );
     return weeks > chartsMaxWeeks
       ? `Choose a period of at most ${chartsMaxWeeks} weeks.`
-      : { template: template.id, weekStart, weeks };
-  }, [template.id, period, currentWeek, season, customFrom, customTo, weekStartsOn]);
+      : { template: template.id, weekStart, weeks, ...(volume ? { sports, grouping } : {}) };
+  }, [
+    template.id,
+    period,
+    currentWeek,
+    season,
+    customFrom,
+    customTo,
+    weekStartsOn,
+    volume,
+    sports,
+    grouping,
+  ]);
   const chart = useChartsSummary(typeof selection === 'string' ? null : selection);
   return (
     <>
@@ -168,6 +190,14 @@ function TemplatePage({
             ))}
           </NativeSelect>
         </Field>
+        {volume && (
+          <VolumeControls
+            sports={sports}
+            grouping={grouping}
+            onSportsChange={setSports}
+            onGroupingChange={setGrouping}
+          />
+        )}
         {period === 'custom' && (
           <>
             <Field label="From">

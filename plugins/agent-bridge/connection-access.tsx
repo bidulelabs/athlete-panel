@@ -78,6 +78,7 @@ export function ConnectionAccess({
   const [historyPreset, setHistoryPreset] = useState('4weeks');
   const [planningPreset, setPlanningPreset] = useState('short');
   const [planning, setPlanning] = useState(true);
+  const [allowEventCreation, setAllowEventCreation] = useState(true);
   const [historyRange, setHistoryRange] = useState<Range>({ from: addDays(today, -27), to: today });
   const [planningRange, setPlanningRange] = useState<Range>({
     from: today,
@@ -174,6 +175,14 @@ export function ConnectionAccess({
               Your assistant can also read existing training and context in this period.
             </p>
             <ErrorMessage error={errors.planning ?? null} />
+            <label className="checkbox-row">
+              <Checkbox
+                name="allowEventCreation"
+                checked={allowEventCreation}
+                onCheckedChange={(value) => setAllowEventCreation(value === true)}
+              />
+              Allow proposals to create races and goals
+            </label>
           </>
         )}
       </div>
@@ -274,6 +283,8 @@ export function ConnectionAccess({
               {planning ? (
                 <>
                   {range(planningRange)}
+                  <br />
+                  Create races and goals: {allowEventCreation ? 'permitted' : 'not permitted'}
                   <br />
                   Can also read profile, goals, availability, zones, training, events, injuries,
                   activities and health in this period.

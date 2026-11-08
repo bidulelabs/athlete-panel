@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { planSchema, workoutSchema, type EntityChange } from '@athlete-panel/contracts';
+import {
+  eventSchema,
+  planSchema,
+  workoutSchema,
+  type EntityChange,
+} from '@athlete-panel/contracts';
 import { proposalRows } from '../../plugins/agent-bridge/proposal-diff';
 import {
   groupChangesByWeek,
+  groupChangesByMonth,
   planTitlesById,
   summarizeProposal,
 } from '../../plugins/agent-bridge/proposal-weeks';
@@ -38,6 +44,49 @@ const titlesByWeek = (changes: EntityChange[], weekStartsOn: 0 | 1) =>
   }));
 
 describe('proposal review weeks', () => {
+  it('groups event dates and includes them in mixed summaries without derived date fields', () => {
+    const event = eventSchema.parse({
+      id: plan.id,
+      revision: 1,
+      title: 'Race target',
+      kind: 'race',
+      date: '2027-01-03',
+    });
+    const change: EntityChange = { entity: 'event', id: event.id, before: null, after: event };
+    expect(summarizeProposal([change])).toMatchObject({
+      from: event.date,
+      to: event.date,
+      added: 1,
+    });
+    expect(groupChangesByWeek([change], 1)[0]?.weekStart).toBe('2026-12-28');
+    expect(groupChangesByWeek([change], 0)[0]?.weekStart).toBe('2027-01-03');
+    expect(groupChangesByMonth([change])[0]?.month).toBe('2027-01');
+    expect(summarizeProposal([created(2, 'Preparation', '2026-11-08'), change])).toMatchObject({
+      from: '2026-11-08',
+      to: event.date,
+      added: 2,
+    });
+    expect(proposalRows(change)).toContainEqual({
+      field: 'Type',
+      before: 'Not present',
+      after: 'Race',
+    });
+    expect(proposalRows(change)).toContainEqual({
+      field: 'Date',
+      before: 'Not present',
+      after: event.date,
+    });
+    const moved: EntityChange = {
+      ...change,
+      before: event,
+      after: { ...event, revision: 2, date: '2027-02-01' },
+    };
+    expect(summarizeProposal([moved])).toMatchObject({ from: event.date, to: '2027-02-01' });
+    expect(groupChangesByMonth([moved])[0]?.month).toBe('2027-02');
+    expect(groupChangesByMonth([{ ...change, before: event, after: null }])[0]?.month).toBe(
+      '2027-01',
+    );
+  });
   it('splits a Sunday and the next Monday only when weeks start on Monday', () => {
     const changes = [
       created(1, 'Monday run', '2026-11-02'),

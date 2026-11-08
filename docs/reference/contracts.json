@@ -2252,6 +2252,9 @@
                           "includeNotes": {
                             "default": false,
                             "type": "boolean"
+                          },
+                          "allowEventCreation": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -18739,6 +18742,9 @@
                         "includeNotes": {
                           "default": false,
                           "type": "boolean"
+                        },
+                        "allowEventCreation": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -18890,6 +18896,9 @@
                             },
                             "includeNotes": {
                               "default": false,
+                              "type": "boolean"
+                            },
+                            "allowEventCreation": {
                               "type": "boolean"
                             }
                           },
@@ -28897,6 +28906,9 @@
                                 "includeNotes": {
                                   "default": false,
                                   "type": "boolean"
+                                },
+                                "allowEventCreation": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
@@ -29087,6 +29099,9 @@
                         },
                         "includeNotes": {
                           "default": false,
+                          "type": "boolean"
+                        },
+                        "allowEventCreation": {
                           "type": "boolean"
                         }
                       },
@@ -29283,6 +29298,9 @@
                                 },
                                 "includeNotes": {
                                   "default": false,
+                                  "type": "boolean"
+                                },
+                                "allowEventCreation": {
                                   "type": "boolean"
                                 }
                               },
@@ -29506,6 +29524,9 @@
                                 },
                                 "includeNotes": {
                                   "default": false,
+                                  "type": "boolean"
+                                },
+                                "allowEventCreation": {
                                   "type": "boolean"
                                 }
                               },
@@ -33994,6 +34015,59 @@
             "expectedRevision"
           ],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "const": "event.create"
+            },
+            "values": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "date": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "race",
+                    "goal"
+                  ]
+                },
+                "notes": {
+                  "default": "",
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "id": {
+                  "description": "Optional UUID for the new record. A later command of the same batch can use it as schedule.planId.",
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "required": [
+                "title",
+                "date",
+                "kind",
+                "notes"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "action",
+            "values"
+          ],
+          "additionalProperties": false
         }
       ]
     }
@@ -35693,6 +35767,9 @@
                   },
                   "includeNotes": {
                     "default": false,
+                    "type": "boolean"
+                  },
+                  "allowEventCreation": {
                     "type": "boolean"
                   }
                 },
@@ -37690,6 +37767,9 @@
                     "includeNotes": {
                       "default": false,
                       "type": "boolean"
+                    },
+                    "allowEventCreation": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -37885,6 +37965,9 @@
                             },
                             "includeNotes": {
                               "default": false,
+                              "type": "boolean"
+                            },
+                            "allowEventCreation": {
                               "type": "boolean"
                             }
                           },

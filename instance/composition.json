@@ -9,7 +9,7 @@
     {
       "path": "plugins/training",
       "enabled": true,
-      "version": "2.1.0"
+      "version": "2.2.0"
     },
     {
       "path": "plugins/activity-records",
@@ -39,7 +39,7 @@
     {
       "path": "plugins/agent-bridge",
       "enabled": true,
-      "version": "2.2.0"
+      "version": "2.3.0"
     },
     {
       "path": "personal-plugins/cycling-sleep",

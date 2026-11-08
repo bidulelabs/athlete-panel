@@ -579,6 +579,12 @@ const noteUpdateCommand = z
   .object({ action: z.literal('note.update'), ...existing, values: notePatchSchema })
   .strict();
 const noteDeleteCommand = z.object({ action: z.literal('note.delete'), ...existing }).strict();
+const agentEventCreateCommand = z
+  .object({
+    action: z.literal('event.create'),
+    values: eventValuesSchema.extend({ ...createId, kind: z.enum(['race', 'goal']) }),
+  })
+  .strict();
 export const agentCommandSchema = z.discriminatedUnion('action', [
   planCreateCommand,
   planUpdateCommand,
@@ -592,6 +598,7 @@ export const agentCommandSchema = z.discriminatedUnion('action', [
   noteCreateCommand,
   noteUpdateCommand,
   noteDeleteCommand,
+  agentEventCreateCommand,
 ]);
 export const AGENT_COMMAND_LIMIT = 1500;
 export const AGENT_PROPOSAL_BYTES = 4 * 1024 * 1024;
@@ -688,7 +695,11 @@ function calendarRange(scope: { from: string; to: string }, years: number, ctx: 
     });
 }
 export const planningScopeSchema = z
-  .object(agentScopeFields)
+  .object({
+    ...agentScopeFields,
+    // Absence must remain absent in saved scopes; old grants never gain permission.
+    allowEventCreation: z.boolean().optional(),
+  })
   .strict()
   .superRefine((scope, ctx) => calendarRange(scope, 1, ctx));
 export const historyCategorySchema = z.enum(['activities', 'health', 'training', 'context']);
@@ -795,6 +806,7 @@ export function describeAgentAccess(scope: GrantScope): string[] {
     ...(planning
       ? [
           `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
+          `Create races and goals: ${planning.allowEventCreation === true ? 'permitted within the proposal dates' : 'not permitted'}.`,
         ]
       : ['Proposal submission is not permitted.']),
     'Applying training changes requires your review and explicit approval in Athlete Panel.',

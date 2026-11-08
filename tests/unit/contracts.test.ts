@@ -4,6 +4,8 @@ import {
   activitySchema,
   agentCommandSchema,
   agentCommandsSchema,
+  grantScopeSchema,
+  planningScopeSchema,
   commandSchema,
   completionSchema,
   dateSchema,
@@ -180,7 +182,8 @@ describe('agent command contract', () => {
         expectedRevision: 1,
         values: { status: 'completed', performedDate: '2026-10-24' },
       },
-      { action: 'event.create', values: { title: 'Race', date: '2026-10-25' } },
+      { action: 'event.update', id, expectedRevision: 1, values: { title: 'Race' } },
+      { action: 'event.delete', id, expectedRevision: 1 },
     ]) {
       expect(commandSchema.safeParse(command).success).toBe(true);
       expect(agentCommandSchema.safeParse(command).error?.issues).toMatchObject([
@@ -223,7 +226,42 @@ describe('agent command contract', () => {
         if (isNumber(property) && !property.description) undescribed.push(`${path}.${name}`);
     };
     visit(contract, 'agentCommands');
-    expect((contract.items as { oneOf: unknown[] }).oneOf).toHaveLength(12);
+    expect((contract.items as { oneOf: unknown[] }).oneOf).toHaveLength(13);
     expect(undescribed).toEqual([]);
+  });
+});
+
+describe('agent event permissions', () => {
+  it('requires an explicit supported event kind without changing owner defaults', () => {
+    const event = { action: 'event.create', values: { title: 'Target', date: '2026-11-08' } };
+    expect(commandSchema.safeParse(event).success).toBe(true);
+    for (const kind of ['race', 'goal'])
+      expect(
+        agentCommandSchema.safeParse({ ...event, values: { ...event.values, kind } }).success,
+      ).toBe(true);
+    for (const kind of [undefined, 'other'])
+      expect(
+        agentCommandSchema.safeParse({ ...event, values: { ...event.values, kind } }).success,
+      ).toBe(false);
+  });
+
+  it('preserves old scope shapes and accepts permission only in modern planning', () => {
+    const scope = { from: '2026-11-01', to: '2026-11-30', includeNotes: false };
+    expect(planningScopeSchema.parse(scope)).toEqual(scope);
+    expect(grantScopeSchema.parse(scope)).toEqual(scope);
+    for (const allowEventCreation of [true, false]) {
+      expect(planningScopeSchema.parse({ ...scope, allowEventCreation })).toEqual({
+        ...scope,
+        allowEventCreation,
+      });
+      expect(grantScopeSchema.safeParse({ ...scope, allowEventCreation }).success).toBe(false);
+      expect(
+        grantScopeSchema.safeParse({
+          version: 2,
+          planning: null,
+          history: { ...scope, categories: ['context'], weekStartsOn: 1, allowEventCreation },
+        }).success,
+      ).toBe(false);
+    }
   });
 });

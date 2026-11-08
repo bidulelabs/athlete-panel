@@ -70,7 +70,9 @@ export async function readWorkspaceResponse(range: {
         cross join lateral (values
           (c->>'beforeEffectiveDate'), (c->>'afterEffectiveDate'),
           (case when c->>'entity'='plan' then c#>>'{before,startDate}' end),
-          (case when c->>'entity'='plan' then c#>>'{after,startDate}' end)
+          (case when c->>'entity'='plan' then c#>>'{after,startDate}' end),
+          (case when c->>'entity'='event' then c#>>'{before,date}' end),
+          (case when c->>'entity'='event' then c#>>'{after,date}' end)
         ) d(date)) as "dateBounds" from host.proposals order by created_at desc limit 50`,
       sql<
         GrantRow[]

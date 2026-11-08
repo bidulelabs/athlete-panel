@@ -17,7 +17,12 @@ import {
 } from '@athlete-panel/ui';
 import type { Entity, ProposalDetails } from '@athlete-panel/contracts';
 import { proposalRows } from './proposal-diff';
-import { calendarDate, groupChangesByWeek, groupChangesByMonth } from './proposal-weeks';
+import {
+  calendarDate,
+  recordDates,
+  groupChangesByWeek,
+  groupChangesByMonth,
+} from './proposal-weeks';
 function recordLabel(record: Entity | null): string | undefined {
   if (!record) return undefined;
   if ('title' in record) return record.title;
@@ -121,12 +126,15 @@ export function ReviewChange({
   const [expanded, setExpanded] = useState(false);
   const record = change.after ?? change.before;
   const date = calendarDate(change);
-  const dateChanged =
-    change.before && change.after && change.beforeEffectiveDate !== change.afterEffectiveDate;
+  const dates = recordDates(change);
+  const dateChanged = change.before && change.after && dates.before !== dates.after;
   const summaryFacts = [
     date && dateLabel(date, weekdayDate),
-    dateChanged &&
-      `moved from ${change.beforeEffectiveDate ? dateLabel(change.beforeEffectiveDate) : 'unscheduled'}`,
+    dateChanged && `moved from ${dates.before ? dateLabel(dates.before) : 'unscheduled'}`,
+    change.entity === 'event' &&
+      record &&
+      'kind' in record &&
+      (record.kind === 'race' ? 'Race' : record.kind === 'goal' ? 'Goal' : 'Event'),
     record &&
       'startDate' in record &&
       record.startDate &&

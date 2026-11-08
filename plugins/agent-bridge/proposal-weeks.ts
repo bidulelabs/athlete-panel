@@ -1,8 +1,18 @@
 import type { EntityChange } from '@athlete-panel/contracts';
 import { startOfWeek, type WeekStartsOn } from '../../packages/ui/src/calendar-dates';
 
-export const calendarDate = (change: EntityChange) =>
-  change.afterEffectiveDate ?? change.beforeEffectiveDate ?? null;
+export function recordDates(change: EntityChange): { before: string | null; after: string | null } {
+  if (change.entity === 'event')
+    return {
+      before: change.before && 'date' in change.before ? change.before.date : null,
+      after: change.after && 'date' in change.after ? change.after.date : null,
+    };
+  return { before: change.beforeEffectiveDate ?? null, after: change.afterEffectiveDate ?? null };
+}
+export const calendarDate = (change: EntityChange) => {
+  const dates = recordDates(change);
+  return dates.after ?? dates.before;
+};
 
 export function groupChangesByWeek<Change extends EntityChange>(
   changes: readonly Change[],
@@ -51,8 +61,8 @@ export function summarizeProposal(changes: readonly EntityChange[]) {
   const dates = changes
     .flatMap((change) =>
       [
-        change.beforeEffectiveDate,
-        change.afterEffectiveDate,
+        recordDates(change).before,
+        recordDates(change).after,
         ...(change.entity === 'plan'
           ? [change.before, change.after].map((record) =>
               record && 'startDate' in record ? record.startDate : null,

@@ -19,7 +19,8 @@ import {
 } from '@athlete-panel/ui';
 import { ConnectAgentDialog, ConnectionApproval } from './connections-client';
 import { ConnectedAgents } from './connections-list';
-import { ProposalLoader } from './proposal-dialog';
+import { ProposalLoader, type ProposalReceipt } from './proposal-dialog';
+import { AppliedProposal } from './proposal-receipt';
 import './review.css';
 const isPending = ({ status }: { status: string }) =>
   ['pending', 'validated', 'proposed', 'ready'].includes(status);
@@ -30,6 +31,7 @@ export default function AgentBridgePage(_: PluginPageProps) {
   const [connectOpen, setConnectOpen] = useState(false);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [proposalId, setProposalId] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<ProposalReceipt | null>(null);
   const action = useAction();
   useEffect(() => {
     setConnectionId(new URLSearchParams(window.location.search).get('connect'));
@@ -82,6 +84,9 @@ export default function AgentBridgePage(_: PluginPageProps) {
           </Button>
         }
       />
+      {receipt && (
+        <AppliedProposal key={receipt.id} receipt={receipt} onDismiss={() => setReceipt(null)} />
+      )}
       <div className="agent-intro">
         <div>
           <h2>Plan with your preferred agent</h2>
@@ -190,7 +195,13 @@ export default function AgentBridgePage(_: PluginPageProps) {
             </p>
           </div>
           {connectOpen && <ConnectAgentDialog onClose={() => setConnectOpen(false)} />}
-          {proposal && <ProposalLoader proposal={proposal} onClose={() => setProposalId(null)} />}
+          {proposal && (
+            <ProposalLoader
+              proposal={proposal}
+              onClose={() => setProposalId(null)}
+              onApplied={setReceipt}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </>

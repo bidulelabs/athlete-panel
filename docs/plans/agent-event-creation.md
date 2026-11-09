@@ -78,3 +78,11 @@ Rebased the feature onto main `127c82c`, preserving its Charts changes and both 
 Logs for this review use `/tmp/athlete-events-pr-*.log`. Private CLI configuration, exported context/proposals, runtime artifacts and screenshots remain excluded from the commit.
 
 The PR verification server and its dedicated PostgreSQL project were removed after the checks. The separate owner preview on port 3037 remains running.
+
+## PR review follow-up — 2026-11-09
+
+The owner requested assessment of the review comments. The reviewer approved PR #95 with one [optional Unicode-normalization observation](https://github.com/bidulelabs/athlete-panel/pull/95#discussion_r4510558615). It was confirmed: composed and decomposed spellings of “Trail des Écrins” bypassed both submission duplicate rejection and the later review/application conflict check. Four new integration cases failed before the fix; the existing case/whitespace case passed.
+
+The comparison key now uses Unicode NFC after case and whitespace normalization. Stored event titles are preserved, accents remain significant, and same-title events on different dates remain permitted. Regression coverage exercises both encoding directions, existing and same-batch duplicates across kinds, and duplicates introduced before application of a mixed proposal. The feature specification and existing Unreleased entry document this refinement. No new contract, migration, UI change or extra version bump is needed for this unreleased correction.
+
+Verification passed after the fix: `pnpm check` (385 unit tests in 46 files plus the configured static/documentation checks), full integration (269 tests in 19 files), and production web/worker builds. The first repository check requested formatter line wrapping; the formatted rerun passed. No browser suite was repeated for this comparison-only change; desktop/mobile UI evidence above remains the prior verification. The dedicated `athlete-panel-events-unicode` project used loopback port 52793 and disposable `athlete_panel_test`, and was removed after testing. Logs are `/tmp/athlete-events-unicode-before.log`, `/tmp/athlete-events-unicode-check-final.log`, `/tmp/athlete-events-unicode-integration.log` and `/tmp/athlete-events-unicode-build.log`.

@@ -174,7 +174,8 @@ function assertEventCreation(change: EntityChange, after: WorkspaceState, scope:
     'Creating event notes requires notes access.',
     403,
   );
-  const title = (value: string) => value.trim().replace(/\s+/gu, ' ').toLowerCase();
+  const title = (value: string) =>
+    value.trim().replace(/\s+/gu, ' ').toLowerCase().normalize('NFC');
   assert(
     !after.events.some(
       (other) =>

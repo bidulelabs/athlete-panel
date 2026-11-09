@@ -190,10 +190,36 @@ it('blocks normalized duplicates across kinds and within the same batch', async 
   await draft(token, [event({ title: 'Different target' }), event({ date: range.from })]);
 });
 
-const program = (): CommandInput[] => {
+it.each([
+  ['composed', 'Trail des Écrins', 'Trail des E\u0301crins'],
+  ['decomposed', 'Trail des E\u0301crins', 'Trail des Écrins'],
+])('blocks Unicode-equivalent titles with a %s existing title', async (_, stored, proposed) => {
+  await owner([
+    { action: 'event.create', values: { title: stored, date: range.to, kind: 'other' } },
+  ]);
+  const { token } = await access();
+  await expect(draft(token, [event({ title: proposed })])).rejects.toMatchObject({
+    code: 'duplicate_event',
+  });
+  await expect(
+    draft(token, [
+      event({ title: stored, date: range.from }),
+      event({ title: proposed, date: range.from, kind: 'goal' }),
+    ]),
+  ).rejects.toMatchObject({ code: 'duplicate_event' });
+  expect(await connection()`select id from host.proposals`).toHaveLength(0);
+  expect((await loadWorkspace()).events).toMatchObject([{ title: stored }]);
+  // Canonical equivalence does not remove meaningful accents or merge different dates.
+  await draft(token, [
+    event({ title: 'Trail des Ecrins' }),
+    event({ title: proposed, date: range.from }),
+  ]);
+});
+
+const program = (title = 'Winter race'): CommandInput[] => {
   const planId = randomUUID();
   return [
-    { action: 'event.create', values: { title: 'Winter race', date: range.to, kind: 'race' } },
+    { action: 'event.create', values: { title, date: range.to, kind: 'race' } },
     {
       action: 'plan.create',
       values: { id: planId, title: 'Race preparation', startDate: range.from },
@@ -204,11 +230,15 @@ const program = (): CommandInput[] => {
     },
   ];
 };
-it('blocks a duplicate added after submission even with acknowledgement of current context', async () => {
+it.each([
+  ['Winter race', 'WINTER RACE'],
+  ['Trail des Écrins', 'Trail des E\u0301crins'],
+  ['Trail des E\u0301crins', 'Trail des Écrins'],
+])('blocks a later duplicate of %s even with context acknowledgement', async (title, duplicate) => {
   const { token } = await access();
-  const { submitted } = await draft(token, program());
+  const { submitted } = await draft(token, program(title));
   await owner([
-    { action: 'event.create', values: { title: 'WINTER RACE', date: range.to, kind: 'goal' } },
+    { action: 'event.create', values: { title: duplicate, date: range.to, kind: 'goal' } },
   ]);
   const review = await reviewProposal(submitted);
   expect(review.applicability).toBe('conflict');

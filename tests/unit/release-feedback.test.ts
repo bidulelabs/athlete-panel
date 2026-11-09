@@ -170,6 +170,29 @@ describe('complete, readable proposal review', () => {
       }),
     ).toEqual([{ field: 'Calendar date', before: '2026-10-25', after: '2026-10-26' }]);
   });
+  it('shows a step changed from a duration to a lap button end', () => {
+    const before = {
+      ...workout,
+      steps: [
+        {
+          kind: 'warmup' as const,
+          durationSeconds: 1200,
+          distanceMeters: null,
+          target: null,
+          notes: '',
+        },
+      ],
+    };
+    const after = {
+      ...before,
+      steps: [{ ...before.steps[0]!, durationSeconds: null, endsOnLapButton: true }],
+    };
+    expect(proposalRows({ entity: 'workout', id: workout.id, before, after })).toContainEqual({
+      field: 'Intervals · Step 1 · Ends on lap button',
+      before: 'Not present',
+      after: 'Yes',
+    });
+  });
   it('expands interval targets, creations and deletions without losing fields', () => {
     const after = {
       ...workout,

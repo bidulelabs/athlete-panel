@@ -83,7 +83,11 @@ function IntervalRow({
   onChange: (step: any) => void;
   onRemove: () => void;
 }) {
-  const distanceBased = step.distanceMeters !== null;
+  const measure = step.endsOnLapButton
+    ? 'lapButton'
+    : step.distanceMeters !== null
+      ? 'distance'
+      : 'time';
   return (
     <div className="interval-editor-row">
       <Field label="Phase">
@@ -97,36 +101,42 @@ function IntervalRow({
           <option value="cooldown">Cool down</option>
         </NativeSelect>
       </Field>
-      <Field label={distanceBased ? 'Distance · meters' : 'Duration · minutes'}>
-        <Input
-          required
-          type="number"
-          min="0.01"
-          step="any"
-          value={(distanceBased ? step.distanceMeters : step.durationSeconds / 60) ?? ''}
-          onChange={(event) =>
-            onChange({
-              ...step,
-              ...(distanceBased
-                ? { distanceMeters: Number(event.target.value) }
-                : { durationSeconds: Number(event.target.value) * 60 }),
-            })
-          }
-        />
-      </Field>
+      {measure === 'lapButton' ? (
+        <div />
+      ) : (
+        <Field label={measure === 'distance' ? 'Distance · meters' : 'Duration · minutes'}>
+          <Input
+            required
+            type="number"
+            min="0.01"
+            step="any"
+            value={(measure === 'distance' ? step.distanceMeters : step.durationSeconds / 60) ?? ''}
+            onChange={(event) =>
+              onChange({
+                ...step,
+                ...(measure === 'distance'
+                  ? { distanceMeters: Number(event.target.value) }
+                  : { durationSeconds: Number(event.target.value) * 60 }),
+              })
+            }
+          />
+        </Field>
+      )}
       <Field label="Measure">
         <NativeSelect
-          value={distanceBased ? 'distance' : 'time'}
+          value={measure}
           onChange={(event) =>
             onChange({
               ...step,
               durationSeconds: event.target.value === 'time' ? 300 : null,
               distanceMeters: event.target.value === 'distance' ? 1000 : null,
+              endsOnLapButton: event.target.value === 'lapButton' || undefined,
             })
           }
         >
           <option value="time">Time</option>
           <option value="distance">Distance</option>
+          <option value="lapButton">Lap button</option>
         </NativeSelect>
       </Field>
       <Button

@@ -18,7 +18,16 @@ import type {
   TrainingEvent,
   Workout,
 } from '@athlete-panel/contracts';
-import { ArrowUpRight, Flag, HeartPulse, Moon, NotebookPen, Pencil, Trash2 } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Flag,
+  Target,
+  HeartPulse,
+  Moon,
+  NotebookPen,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import {
   dateLabel,
   distance,
@@ -114,8 +123,14 @@ export function ContextCard({ item, onClick }: { item: ContextItem; onClick: () 
         : item.record.description || item.record.notes;
   return (
     <CalendarCard
-      tone={item.kind}
-      icon={contextIcon(item.kind)}
+      tone={item.kind === 'event' && item.record.kind === 'goal' ? 'goal' : item.kind}
+      icon={
+        item.kind === 'event' && item.record.kind === 'goal' ? (
+          <Target size={16} />
+        ) : (
+          contextIcon(item.kind)
+        )
+      }
       title={contextTitle(item)}
       label={`Open ${item.kind} ${contextTitle(item)}`}
       onClick={onClick}

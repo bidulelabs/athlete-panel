@@ -9,7 +9,6 @@ import {
   ErrorMessage,
   Modal,
   dateLabel,
-  sportLabel,
   requestId,
   useAction,
   useWorkspace,
@@ -21,13 +20,18 @@ import {
   type ProposalDetails,
 } from '@athlete-panel/contracts';
 import { summarizeProposal, planTitlesById } from './proposal-weeks';
-import { ProposedEdits, ReviewChange } from './proposal-changes';
+import { ReviewChange } from './proposal-changes';
+import { ProposalBrowser } from './proposal-browser';
+import { changeAction, describeTypes } from './proposal-presentation';
+export type ProposalReceipt = { id: string; summary: string; from?: string; count: number };
 export function ProposalLoader({
   proposal,
   onClose,
+  onApplied,
 }: {
   proposal: ProposalSummary;
   onClose: () => void;
+  onApplied: (receipt: ProposalReceipt) => void;
 }) {
   const { request } = useWorkspace();
   const [details, setDetails] = useState<ProposalDetails | null>(null);
@@ -47,19 +51,37 @@ export function ProposalLoader({
       active = false;
     };
   }, [proposal.id, request, retry]);
-  if (details) return <ProposalDialog proposal={details} onClose={onClose} />;
   return (
-    <Modal open onClose={onClose} title="Review proposed changes">
-      <div className="dialog-body">
-        <p role="status">Loading proposed edits…</p>
-        <ErrorMessage error={error} />
-        {error && <Button onClick={() => setRetry((v) => v + 1)}>Retry details</Button>}
-      </div>
+    <Modal
+      open
+      onClose={onClose}
+      title="Review proposed changes"
+      wide
+      className="proposal-review-dialog"
+      focusHeading
+    >
+      {details ? (
+        <ProposalDialog proposal={details} onClose={onClose} onApplied={onApplied} />
+      ) : (
+        <div className="dialog-body">
+          <p role="status">Loading proposed edits…</p>
+          <ErrorMessage error={error} />
+          {error && <Button onClick={() => setRetry((v) => v + 1)}>Retry details</Button>}
+        </div>
+      )}
     </Modal>
   );
 }
 
-function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onClose: () => void }) {
+function ProposalDialog({
+  proposal,
+  onClose,
+  onApplied,
+}: {
+  proposal: ProposalDetails;
+  onClose: () => void;
+  onApplied: (receipt: ProposalReceipt) => void;
+}) {
   const { request, data } = useWorkspace();
   const planTitles = planTitlesById(data.plans, proposal.changes);
   const action = useAction();
@@ -68,6 +90,7 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onCl
   const [review, setReview] = useState<ProposalReview | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewVersion, setReviewVersion] = useState(0);
+  const [rejecting, setRejecting] = useState(false);
   const pending = proposal.status === 'pending';
   const overview = summarizeProposal(proposal.changes);
   const canApply =
@@ -104,96 +127,112 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onCl
     };
   }, [proposal.id, proposal.digest, pending, reviewVersion]);
   return (
-    <Modal
-      open
-      onClose={onClose}
-      title="Review proposed changes"
-      description={proposal.summary || 'Training adjustment'}
-      wide
-    >
-      <div className="dialog-body">
+    <>
+      <div
+        className="dialog-body proposal-review-body"
+        tabIndex={0}
+        role="region"
+        aria-label="Proposal content"
+      >
         <section className="proposal-overview" aria-label="Proposal overview">
+          {proposal.summary && <p className="proposal-summary">{proposal.summary}</p>}
           {overview.from && (
             <p className="proposal-overview-dates">
-              {dateLabel(overview.from, { day: 'numeric', month: 'short', year: 'numeric' })} –{' '}
-              {dateLabel(overview.to!, { day: 'numeric', month: 'short', year: 'numeric' })}
+              {dateLabel(overview.from, { day: 'numeric', month: 'short', year: 'numeric' })}
+              {overview.to !== overview.from && (
+                <>
+                  {' '}
+                  – {dateLabel(overview.to!, { day: 'numeric', month: 'short', year: 'numeric' })}
+                </>
+              )}
             </p>
           )}
-          {!!overview.sports.length && <p>{overview.sports.map(sportLabel).join(' · ')}</p>}
-          <dl className="proposal-counts">
-            <div>
-              <dt>Added</dt>
-              <dd>{overview.added}</dd>
-            </div>
-            <div>
-              <dt>Changed</dt>
-              <dd>{overview.changed}</dd>
-            </div>
-            <div>
-              <dt>Deleted</dt>
-              <dd>{overview.deleted}</dd>
-            </div>
+          <dl className="proposal-outcomes">
+            {(['create', 'update', 'delete'] as const).map((action) => {
+              const changes = proposal.changes.filter((change) => changeAction(change) === action);
+              return (
+                changes.length > 0 && (
+                  <div key={action} className={action === 'delete' ? 'proposal-deletions' : ''}>
+                    <dt>{{ create: 'Add', update: 'Update', delete: 'Delete' }[action]}</dt>
+                    <dd>{describeTypes(changes)}</dd>
+                  </div>
+                )
+              );
+            })}
           </dl>
-          <p className="muted-text">
-            Open a month, week or record to inspect the exact edits. Apply saves this entire
-            proposal together.
-          </p>
+          {review && (
+            <p className="proposal-expiration">
+              Apply before{' '}
+              {new Date(review.expiresAt).toLocaleString(undefined, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })}
+            </p>
+          )}
         </section>
-        <div className="form-inline" style={{ justifyContent: 'space-between', marginBottom: 17 }}>
-          <Badge className="badge accent">{proposal.status}</Badge>
-          <span className="muted-text">
-            {proposal.changes?.length ?? 0} change{proposal.changes?.length === 1 ? '' : 's'}
-          </span>
-        </div>
+        {!pending && <Badge className="badge">{proposal.status}</Badge>}
         {proposal.warnings?.map((warning, index) => (
           <Alert role="status" className="callout" key={index}>
             {typeof warning === 'string' ? warning : (warning.message ?? JSON.stringify(warning))}
           </Alert>
         ))}
-        {pending && !review && !reviewError && (
-          <p role="status">Checking proposal and current context…</p>
-        )}
-        {reviewError && (
-          <>
-            <ErrorMessage error={reviewError} />
-            <Button variant="outline" onClick={() => setReviewVersion((value) => value + 1)}>
-              Retry review
-            </Button>
-          </>
-        )}
-        {review && (
-          <p className="muted-text">
-            Apply before {new Date(review.expiresAt).toLocaleString()} · Seven days from submission
-          </p>
-        )}
-        {review?.conflicts.map((conflict) => (
-          <Alert className="callout" key={conflict.code}>
-            {conflict.message}
-          </Alert>
-        ))}
         {!!review?.contextChanges.length && (
-          <section aria-label="Changed context">
-            <h3>What changed since the agent read your data</h3>
+          <section className="proposal-context" aria-label="Changed context">
+            <h3>Already changed on your calendar</h3>
             <p>
-              The agent hadn’t seen these changes when it planned your training. Review them before
-              deciding whether to apply the proposed edits.
+              The agent hadn’t seen these changes. They are already saved, separate from the
+              proposed edits below.
             </p>
-            {review.contextChanges.map((change, index) => (
-              <ReviewChange
-                change={change}
-                planTitles={planTitles}
-                caption="When the agent read your data and now"
-                key={index}
-              />
-            ))}
+            <details open={review.contextChanges.length <= 5}>
+              <summary>
+                {review.contextChanges.length} change{review.contextChanges.length === 1 ? '' : 's'}{' '}
+                since the agent read your data
+              </summary>
+              {review.contextChanges.map((change, index) => (
+                <ReviewChange
+                  change={change}
+                  planTitles={planTitles}
+                  caption="When the agent read your data and now"
+                  context
+                  key={index}
+                />
+              ))}
+            </details>
           </section>
         )}
         <section aria-label="Proposed edits">
-          <h3>Proposed edits</h3>
-          <ProposedEdits changes={proposal.changes} planTitles={planTitles} />
+          <ProposalBrowser changes={proposal.changes} planTitles={planTitles} />
         </section>
+      </div>
+      <div className="proposal-review-footer">
+        {pending && (
+          <div className="proposal-review-state" role="status">
+            <strong>
+              {reviewError
+                ? 'Review unavailable'
+                : !review
+                  ? 'Checking proposal and current context…'
+                  : !canApply
+                    ? 'Blocked'
+                    : review.applicability === 'review-required'
+                      ? 'Needs review · calendar context changed'
+                      : 'Ready for your review'}
+            </strong>
+            {review?.conflicts.map((conflict, index) => (
+              <p key={`${conflict.code}:${index}`}>{conflict.message}</p>
+            ))}
+            {reviewError && (
+              <>
+                <p>{reviewError}</p>
+                <Button variant="outline" onClick={() => setReviewVersion((value) => value + 1)}>
+                  Retry review
+                </Button>
+              </>
+            )}
+          </div>
+        )}
         {canApply && (
-          <label className="checkbox-row" style={{ marginTop: 22 }}>
+          <label className="checkbox-row">
             <Checkbox
               checked={acknowledged}
               onCheckedChange={(value) => setAcknowledged(value === true)}
@@ -204,18 +243,30 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onCl
           </label>
         )}
         <ErrorMessage error={action.error} />
+        {pending && (
+          <p className="proposal-apply-scope">
+            Apply saves all {proposal.changes.length} changes together, including any hidden by
+            filters.
+          </p>
+        )}
         <div className="dialog-actions">
           {pending ? (
             <>
               <Button
-                variant="outline"
-                className="button"
+                variant="ghost"
+                className="button proposal-reject"
                 disabled={action.busy}
-                onClick={() =>
-                  action.run(() => request('agent-bridge', 'reject', { id: proposal.id }), onClose)
-                }
+                onClick={() => {
+                  setRejecting(true);
+                  void action
+                    .run(() => request('agent-bridge', 'reject', { id: proposal.id }), onClose)
+                    .finally(() => setRejecting(false));
+                }}
               >
-                Reject proposal
+                {rejecting ? 'Rejecting…' : 'Reject proposal'}
+              </Button>
+              <Button variant="outline" disabled={action.busy} onClick={onClose}>
+                Review later
               </Button>
               <Button
                 variant="default"
@@ -224,7 +275,7 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onCl
                 onClick={() =>
                   action.run(async () => {
                     try {
-                      return await request('agent-bridge', 'apply', {
+                      const result = await request('agent-bridge', 'apply', {
                         id: proposal.id,
                         digest: proposal.digest,
                         idempotencyKey,
@@ -232,6 +283,13 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onCl
                           ? { reviewedContextDigest: review.currentContextDigest }
                           : {}),
                       });
+                      onApplied({
+                        id: result.id,
+                        summary: describeTypes(proposal.changes),
+                        from: overview.from,
+                        count: proposal.changes.length,
+                      });
+                      return result;
                     } catch (error) {
                       setAcknowledged(false);
                       setReview(null);
@@ -242,7 +300,7 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onCl
                 }
               >
                 <CheckCircle2 size={16} />
-                {action.busy ? 'Applying…' : 'Apply reviewed changes'}
+                {action.busy && !rejecting ? 'Applying…' : 'Apply reviewed changes'}
               </Button>
             </>
           ) : (
@@ -252,6 +310,6 @@ function ProposalDialog({ proposal, onClose }: { proposal: ProposalDetails; onCl
           )}
         </div>
       </div>
-    </Modal>
+    </>
   );
 }

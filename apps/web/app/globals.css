@@ -20,6 +20,10 @@
   --accent-line: rgba(255, 117, 31, 0.35);
   --success: #8eaa8e;
   --danger: #f29187;
+  --fact-workout: #aab8c7;
+  --fact-race: #e3ad77;
+  --fact-goal: #8cbbed;
+  --fact-note: #b9b17e;
   --shadow: 0 24px 90px #0008;
   font-family:
     Inter,
@@ -48,6 +52,10 @@
   --accent-line: #f8be98;
   --success: #356c40;
   --danger: #bc443a;
+  --fact-workout: #4b6075;
+  --fact-race: #864c17;
+  --fact-goal: #28639a;
+  --fact-note: #75691f;
   --shadow: 0 24px 90px #18202822;
 }
 * {

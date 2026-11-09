@@ -28,22 +28,19 @@
   --fact-color: #b4a0e5;
 }
 .calendar-fact-note {
-  --fact-color: #b9b17e;
+  --fact-color: var(--fact-note);
 }
 .calendar-fact-event {
-  --fact-color: #e3ad77;
+  --fact-color: var(--fact-race);
+}
+.calendar-fact-goal {
+  --fact-color: var(--fact-goal);
 }
 .calendar-fact-injury {
   --fact-color: #e09b9b;
 }
 :root[data-theme='light'] .calendar-fact-sleep {
   --fact-color: #7553ab;
-}
-:root[data-theme='light'] .calendar-fact-note {
-  --fact-color: #807326;
-}
-:root[data-theme='light'] .calendar-fact-event {
-  --fact-color: #864c17;
 }
 :root[data-theme='light'] .calendar-fact-injury {
   --fact-color: #b24e51;

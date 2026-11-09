@@ -7,6 +7,11 @@ import { syntheticDay } from '../fixtures/historical';
 const password = process.env.E2E_PASSWORD;
 if (!password) throw new Error('Isolated E2E_PASSWORD required.');
 
+test.afterEach(async ({ page }) => {
+  // Finish intercepted workspace reads before Playwright disposes their request context.
+  await page.unrouteAll({ behavior: 'wait' });
+});
+
 test('a plan-only proposal shows its date before owner approval in both themes', async ({
   page,
   request,
@@ -30,6 +35,7 @@ test('a plan-only proposal shows its date before owner approval in both themes',
   expect(access.ok()).toBe(true);
   const { token, grant } = await access.json();
   let proposalId: string | undefined;
+  let appliedChangeId: string | undefined;
   try {
     const headers = { Authorization: `Bearer ${token}` };
     const context = await (await request.get('/api/agent/context', { headers })).json();
@@ -62,9 +68,7 @@ test('a plan-only proposal shows its date before owner approval in both themes',
         document.documentElement.dataset.theme = value;
         document.documentElement.classList.toggle('dark', value === 'dark');
       }, theme);
-      await expect(dialog.locator('.proposal-overview-dates')).toHaveText(
-        '3 Nov 2026 – 3 Nov 2026',
-      );
+      await expect(dialog.locator('.proposal-overview-dates')).toHaveText('3 Nov 2026');
       await expect(
         dialog.getByRole('button', { name: 'Apply reviewed changes', exact: true }),
       ).toBeDisabled();
@@ -77,8 +81,21 @@ test('a plan-only proposal shows its date before owner approval in both themes',
         animations: 'disabled',
       });
     }
+    await dialog.getByRole('checkbox').check();
+    const appliedResponse = page.waitForResponse((r) => r.url().endsWith('/agent-bridge/apply'));
+    await dialog.getByRole('button', { name: 'Apply reviewed changes' }).click();
+    const applied = await appliedResponse;
+    expect(applied.ok(), await applied.text()).toBe(true);
+    appliedChangeId = (await applied.json()).id;
+    await expect(page.getByRole('region', { name: 'Proposal result' })).toContainText(
+      'Saved 1 change: 1 plan.',
+    );
   } finally {
-    if (proposalId) expect((await owner('reject', { id: proposalId })).ok()).toBe(true);
+    if (appliedChangeId)
+      expect(
+        (await owner('undo', { id: appliedChangeId, idempotencyKey: randomUUID() })).ok(),
+      ).toBe(true);
+    else if (proposalId) expect((await owner('reject', { id: proposalId })).ok()).toBe(true);
     expect((await owner('revoke', { id: grant.id })).ok()).toBe(true);
   }
 });
@@ -312,7 +329,7 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
     await expect(dialog.locator('.review-technical pre').first()).not.toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Apply reviewed changes' })).toBeDisabled();
     await expect(
-      dialog.getByRole('heading', { name: 'What changed since the agent read your data' }),
+      dialog.getByRole('heading', { name: 'Already changed on your calendar' }),
     ).toBeVisible();
     await expect(dialog.getByRole('region', { name: 'Changed context' })).toContainText(run.title);
     await expect(dialog.getByRole('region', { name: 'Changed context' })).toContainText(
@@ -523,19 +540,50 @@ test('owner reviews a multi-week proposal one line per record, grouped by week',
       });
     await expect(edits.getByRole('region')).toHaveCount(3);
     await expect(edits.locator('details.proposal-diff')).toHaveCount(7);
-    await expect(week('Plans').locator('summary.proposal-diff-summary')).toHaveText([
-      `Create ${planTitle} starts Tue 2 Mar`,
+    await expect(week('Plans')).toContainText(planTitle);
+    await expect(week('Plans')).toContainText('starts Tue 2 Mar');
+    await expect(week('Week of 1 Mar 2027').locator('.proposal-diff-title')).toHaveText([
+      'Synthetic intervals',
+      'Synthetic removed run',
+      'Synthetic rest',
     ]);
-    await expect(week('Week of 1 Mar 2027').locator('summary.proposal-diff-summary')).toHaveText([
-      'Create Synthetic intervals Tue 2 Mar · Running · 1h · 10.0 km',
-      'Delete Synthetic removed run Thu 4 Mar · Running · 40m',
-      'Create Synthetic rest Fri 5 Mar · Rest day',
+    await expect(week('Week of 8 Mar 2027').locator('.proposal-diff-title')).toHaveText([
+      'Synthetic moved run',
+      'Synthetic travel note',
+      'Synthetic long run',
     ]);
-    await expect(week('Week of 8 Mar 2027').locator('summary.proposal-diff-summary')).toHaveText([
-      'Update Synthetic moved run Wed 10 Mar · moved from 2 Mar · Running · 40m',
-      'Create Synthetic travel note Thu 11 Mar',
-      'Create Synthetic long run Sat 13 Mar · Running · 1h 30m',
-    ]);
+    await expect(line('Synthetic intervals').locator('.proposal-diff-facts')).toContainText(
+      'Tue 2 Mar · Running · 1h · 10.0 km',
+    );
+    await expect(line('Synthetic removed run').locator('.proposal-action')).toHaveText('Delete');
+    await expect(week('Week of 1 Mar 2027').locator('.proposal-group-counts')).toContainText(
+      '1 deletion',
+    );
+    await expect(line('Synthetic moved run').locator('.proposal-diff-facts')).toContainText(
+      'moved from 2 Mar',
+    );
+    await expect(line('Synthetic travel note').locator('.proposal-type')).toHaveText('Note');
+    await edits.getByRole('button', { name: 'Find changes' }).click();
+    const search = edits.getByLabel('Search changes');
+    for (const query of ['2027-03-02', '2 Mar', 'Tue 2 Mar']) {
+      await search.fill(query);
+      await expect(edits.locator('.proposal-diff-title')).toHaveText([
+        planTitle,
+        'Synthetic intervals',
+        'Synthetic moved run',
+      ]);
+    }
+    for (const [query, title] of [
+      ['Wed 10 Mar', 'Synthetic moved run'],
+      ['4 Mar', 'Synthetic removed run'],
+      ['11 Mar', 'Synthetic travel note'],
+    ]) {
+      await search.fill(query!);
+      await expect(edits.locator('.proposal-diff-title')).toHaveText([title!]);
+    }
+    await search.fill('Mar');
+    await expect(edits.locator('details.proposal-diff')).toHaveCount(7);
+    await edits.getByRole('button', { name: 'Clear filters' }).click();
     for (const details of await edits.locator('details.proposal-diff').all())
       await expect(details).not.toHaveAttribute('open');
     const intervals = line('Synthetic intervals');

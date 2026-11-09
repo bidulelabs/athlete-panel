@@ -153,6 +153,12 @@ for (const theme of ['light', 'dark']) {
       await edits.getByLabel('Search changes').fill('No matching synthetic item');
       await expect(edits.getByText(/No changes match these filters/)).toBeVisible();
       await edits.getByRole('button', { name: 'Clear filters' }).click();
+      const displayedDate = await eventRow.locator('.proposal-diff-facts').innerText();
+      for (const query of [date, displayedDate]) {
+        await edits.getByLabel('Search changes').fill(query);
+        await expect(edits.locator('.proposal-diff')).toHaveCount(5);
+      }
+      await edits.getByRole('button', { name: 'Clear filters' }).click();
       await edits.getByLabel('Item type').selectOption('race');
       await expect(edits.locator('.proposal-diff')).toHaveCount(1);
       await expect(edits.getByRole('status')).toContainText('Apply includes all');

@@ -35,6 +35,7 @@ test('a plan-only proposal shows its date before owner approval in both themes',
   expect(access.ok()).toBe(true);
   const { token, grant } = await access.json();
   let proposalId: string | undefined;
+  let appliedChangeId: string | undefined;
   try {
     const headers = { Authorization: `Bearer ${token}` };
     const context = await (await request.get('/api/agent/context', { headers })).json();
@@ -80,8 +81,21 @@ test('a plan-only proposal shows its date before owner approval in both themes',
         animations: 'disabled',
       });
     }
+    await dialog.getByRole('checkbox').check();
+    const appliedResponse = page.waitForResponse((r) => r.url().endsWith('/agent-bridge/apply'));
+    await dialog.getByRole('button', { name: 'Apply reviewed changes' }).click();
+    const applied = await appliedResponse;
+    expect(applied.ok(), await applied.text()).toBe(true);
+    appliedChangeId = (await applied.json()).id;
+    await expect(page.getByRole('region', { name: 'Proposal result' })).toContainText(
+      'Saved 1 change: 1 plan.',
+    );
   } finally {
-    if (proposalId) expect((await owner('reject', { id: proposalId })).ok()).toBe(true);
+    if (appliedChangeId)
+      expect(
+        (await owner('undo', { id: appliedChangeId, idempotencyKey: randomUUID() })).ok(),
+      ).toBe(true);
+    else if (proposalId) expect((await owner('reject', { id: proposalId })).ok()).toBe(true);
     expect((await owner('revoke', { id: grant.id })).ok()).toBe(true);
   }
 });
@@ -549,6 +563,27 @@ test('owner reviews a multi-week proposal one line per record, grouped by week',
       'moved from 2 Mar',
     );
     await expect(line('Synthetic travel note').locator('.proposal-type')).toHaveText('Note');
+    await edits.getByRole('button', { name: 'Find changes' }).click();
+    const search = edits.getByLabel('Search changes');
+    for (const query of ['2027-03-02', '2 Mar', 'Tue 2 Mar']) {
+      await search.fill(query);
+      await expect(edits.locator('.proposal-diff-title')).toHaveText([
+        planTitle,
+        'Synthetic intervals',
+        'Synthetic moved run',
+      ]);
+    }
+    for (const [query, title] of [
+      ['Wed 10 Mar', 'Synthetic moved run'],
+      ['4 Mar', 'Synthetic removed run'],
+      ['11 Mar', 'Synthetic travel note'],
+    ]) {
+      await search.fill(query!);
+      await expect(edits.locator('.proposal-diff-title')).toHaveText([title!]);
+    }
+    await search.fill('Mar');
+    await expect(edits.locator('details.proposal-diff')).toHaveCount(7);
+    await edits.getByRole('button', { name: 'Clear filters' }).click();
     for (const details of await edits.locator('details.proposal-diff').all())
       await expect(details).not.toHaveAttribute('open');
     const intervals = line('Synthetic intervals');

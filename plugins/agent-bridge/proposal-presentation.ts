@@ -1,4 +1,9 @@
 import type { EntityChange } from '@athlete-panel/contracts';
+import { dateLabel } from '@athlete-panel/ui';
+
+export const proposalDateOptions = { weekday: 'short', day: 'numeric', month: 'short' } as const;
+const searchableDate = (date: string | null | undefined) =>
+  date ? `${date} ${dateLabel(date, proposalDateOptions)}` : '';
 
 export function changeType(change: EntityChange): string {
   const record = change.after ?? change.before;
@@ -50,26 +55,26 @@ export function describeTypes(changes: readonly EntityChange[]) {
 }
 
 export function matchesChange(change: EntityChange, query: string, type: string, action: string) {
+  if ((type && changeType(change) !== type) || (action && changeAction(change) !== action))
+    return false;
+  const needle = query.trim().toLocaleLowerCase();
+  if (!needle) return true;
   const search = [
     ...[change.before, change.after].flatMap((record) =>
       record
         ? [
             'title' in record ? record.title : '',
             'sport' in record ? record.sport : '',
-            'date' in record ? record.date : '',
-            'startDate' in record ? record.startDate : '',
+            'date' in record ? searchableDate(record.date) : '',
+            'startDate' in record ? searchableDate(record.startDate) : '',
           ]
         : [],
     ),
     typeLabels[changeType(change)],
-    change.beforeEffectiveDate,
-    change.afterEffectiveDate,
+    searchableDate(change.beforeEffectiveDate),
+    searchableDate(change.afterEffectiveDate),
   ]
     .join(' ')
     .toLocaleLowerCase();
-  return (
-    (!type || changeType(change) === type) &&
-    (!action || changeAction(change) === action) &&
-    search.includes(query.trim().toLocaleLowerCase())
-  );
+  return search.includes(needle);
 }

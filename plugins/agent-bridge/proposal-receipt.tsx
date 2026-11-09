@@ -31,7 +31,7 @@ export function AppliedProposal({
           <p>
             {undone
               ? 'All changes in this proposal were undone.'
-              : `Saved ${receipt.count} changes: ${receipt.summary}.`}
+              : `Saved ${receipt.count} change${receipt.count === 1 ? '' : 's'}: ${receipt.summary}.`}
           </p>
         </div>
         <Button

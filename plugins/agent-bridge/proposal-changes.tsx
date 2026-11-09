@@ -24,6 +24,7 @@ import {
   changeAction,
   describeTypes,
   typeLabels,
+  proposalDateOptions,
 } from './proposal-presentation';
 import {
   calendarDate,
@@ -70,7 +71,6 @@ function GroupSummary({ changes }: { changes: ProposalDetails['changes'] }) {
     </span>
   );
 }
-const weekdayDate = { weekday: 'short', day: 'numeric', month: 'short' } as const;
 
 export function ProposedEdits({
   changes,
@@ -170,12 +170,12 @@ export function ReviewChange({
   const dates = recordDates(change);
   const dateChanged = change.before && change.after && dates.before !== dates.after;
   const summaryFacts = [
-    date && dateLabel(date, weekdayDate),
+    date && dateLabel(date, proposalDateOptions),
     dateChanged && `moved from ${dates.before ? dateLabel(dates.before) : 'unscheduled'}`,
     record &&
       'startDate' in record &&
       record.startDate &&
-      `starts ${dateLabel(record.startDate, weekdayDate)}`,
+      `starts ${dateLabel(record.startDate, proposalDateOptions)}`,
     record && 'kind' in record && record.kind === 'rest' && 'Rest day',
     record && 'sport' in record && record.sport && sportLabel(record.sport),
     record &&

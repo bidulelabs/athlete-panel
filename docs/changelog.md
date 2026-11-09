@@ -5,17 +5,20 @@ Use the documentation link for the version you installed. Each release page incl
 ## Unreleased
 
 - Charts adds six templates: Training hours, Training by sport, Workout heart rate, Weekly climbing, Resting heart rate and HRV, and Estimated training load. Training hours, Training by sport and Weekly climbing support selected sports grouped by day, week or month. Planned and recorded hours use the same filter; empty results identify the sport selection, and partial periods and missing measurements remain labelled. Sport bars remain visible in long daily views on phones. Arrow keys move the chart tooltip even while the mouse pointer rests on the chart. Activate Charts with the matching web/worker build through the [coordinated upgrade procedure](development.md#coordinated-upgrades-and-plugin-activation), then reload open browser tabs; no SQL migration or athlete-data conversion is required.
-
+- Agents can propose new races and dated goals, alone or with a training plan. New planning connections enable this by default with an option to turn it off; existing connections require fresh approval. You still review and apply every proposal, and duplicate events are blocked, including identical accented titles with different Unicode encodings.
 - Health opens on the last 30 days. You can choose 7, 30 or 90 days and browse earlier dates without moving your planning calendar.
 - Activities labels duration and distance totals as partial when measurements are missing. Each total shows how many activities lack that measurement.
 - Garmin activity imports preserve elevation loss, maximum heart rate and time in five heart-rate zones when Garmin supplies them.
 - Agent workspace lists pending proposals first and keeps applied and rejected proposals in a collapsible history.
 - If only activity or health records change while an agent prepares a training proposal, you can review those changes alongside the proposal. You must acknowledge the differences before applying it.
 - GitHub release pages show what changed and how to upgrade before the fresh install instructions.
+- A workout interval can end when you press the lap button instead of after a time or a distance, for example an open warm-up. Workout details show it as “Until lap button”, and agents can propose it. Steps saved this way cannot be read by an older release, so roll back with the matching pre-upgrade backup.
 
 ### Upgrade steps
 
 If an agent read planning context before the upgrade and still has an unsubmitted draft, have it read the context again before submitting.
+
+For event proposals, update application and agent CLI source together and reload browser tabs. Use the normal coordinated upgrade procedure to record the new plugin composition; no SQL migration is added. Earlier releases cannot read grants carrying the new event permission or event proposals: rollback after those records exist requires the matching pre-upgrade backup. See [event proposal upgrade guidance](development.md#event-proposal-upgrade).
 
 ## v0.3.0 (2026-11-02)
 

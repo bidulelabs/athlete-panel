@@ -58,6 +58,10 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     const codeField = page.getByLabel('Approval code', { exact: true });
     await codeField.fill(code.toLowerCase());
     await page.getByLabel('Access expires after').selectOption('4');
+    await expect(page.getByLabel('Allow proposals to create races and goals')).toBeChecked();
+    await expect(page.getByRole('region', { name: 'Access summary' })).toContainText(
+      'Create races and goals: permitted',
+    );
     await page.evaluate(() => {
       document.documentElement.dataset.theme = 'light';
     });
@@ -96,6 +100,10 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     expect(await context.done).toBe(0);
     const exported = JSON.parse(await readFile(join(directory, 'context.json'), 'utf8'));
     expect(exported.scope.includeNotes).toBe(false);
+    expect(exported.scope.allowEventCreation).toBe(true);
+    expect(process.output()).toContain(
+      'Create races and goals: permitted within the proposal dates',
+    );
     const headers = { Authorization: `Bearer ${saved.token}` };
     const discovery = await page.request.post('/api/agent/history-discover', { headers, data: {} });
     expect(discovery.ok()).toBe(true);
@@ -126,6 +134,7 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     expect((await outOfScope.json()).error.code).toBe('out_of_scope');
     await page.getByRole('button', { name: 'Back to Agent workspace' }).click();
     const row = page.locator('.proposal-row').filter({ hasText: label });
+    await expect(row).toContainText('Create races and goals: permitted within the proposal dates');
     await row.getByRole('button', { name: 'Disconnect', exact: true }).click();
     await expect(row).toContainText('Disconnected');
     const disconnected = await cli(baseURL!, config, [
@@ -143,6 +152,82 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+for (const analysisOnly of [false, true]) {
+  test(`event permission is denied after ${analysisOnly ? 'choosing analysis only' : 'opting out'}`, async ({
+    page,
+    request,
+    baseURL,
+  }) => {
+    const started = await request.post('/api/agent/connect', {
+      data: { label: 'Synthetic event opt-out' },
+    });
+    expect(started.ok()).toBe(true);
+    const pending = await started.json();
+    let grantId: string | undefined;
+    try {
+      await page.goto(`/agent?connect=${pending.id}`);
+      await page.getByLabel('Password', { exact: true }).fill(password!);
+      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+      const checkbox = page.getByLabel('Allow proposals to create races and goals');
+      await expect(checkbox).toBeChecked();
+      if (analysisOnly) {
+        await page.getByLabel('Can it suggest training changes?').selectOption('no');
+        await expect(checkbox).toHaveCount(0);
+      } else {
+        await checkbox.uncheck();
+        await expect(page.getByRole('region', { name: 'Access summary' })).toContainText(
+          'Create races and goals: not permitted',
+        );
+      }
+      await page.getByLabel('Approval code', { exact: true }).fill(pending.code);
+      const response = page.waitForResponse((r) =>
+        r.url().endsWith('/agent-bridge/approve-connection'),
+      );
+      await page.getByRole('button', { name: 'Approve connection', exact: true }).click();
+      const approved = await (await response).json();
+      grantId = approved.grant.id;
+      expect(approved.grant.planning).toEqual(
+        analysisOnly ? null : expect.objectContaining({ allowEventCreation: false }),
+      );
+      const headers = { Authorization: `Bearer ${pending.token}` };
+      const contextResponse = await request.get('/api/agent/context', { headers });
+      expect(contextResponse.status()).toBe(analysisOnly ? 403 : 200);
+      const context = analysisOnly ? null : await contextResponse.json();
+      const denied = await request.post('/api/agent/propose', {
+        headers,
+        data: {
+          summary: 'Synthetic denied event',
+          idempotencyKey: randomUUID(),
+          contextDigest: context?.contextDigest ?? 'a'.repeat(64),
+          commands: [
+            {
+              action: 'event.create',
+              values: {
+                title: 'Denied race',
+                kind: 'race',
+                date: context?.scope.from ?? '2026-11-08',
+              },
+            },
+          ],
+        },
+      });
+      expect(denied.status()).toBe(403);
+      expect((await denied.json()).error.code).toBe('forbidden');
+    } finally {
+      if (grantId)
+        await page.request.post('/api/plugins/agent-bridge/revoke', {
+          headers: { Origin: baseURL! },
+          data: { id: grantId },
+        });
+      else
+        await request.post('/api/agent/connect-cancel', {
+          headers: { Authorization: `Bearer ${pending.token}` },
+          data: {},
+        });
+    }
+  });
+}
 
 test('declining preserves an existing local credential and never issues agent access', async ({
   page,

@@ -139,26 +139,39 @@ export const intervalStepSchema = z
   .object({
     kind: z.enum(['warmup', 'work', 'recovery', 'cooldown']),
     durationSeconds: nullableNumber
-      .describe('Step duration in seconds. Set exactly one of durationSeconds and distanceMeters.')
+      .describe(
+        'Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton.',
+      )
       .default(null),
     distanceMeters: nullableNumber
-      .describe('Step distance in meters. Set exactly one of durationSeconds and distanceMeters.')
+      .describe(
+        'Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton.',
+      )
       .default(null),
+    endsOnLapButton: z
+      .boolean()
+      .describe(
+        'True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton.',
+      )
+      .optional(),
     target: targetSchema.nullable().default(null),
     notes: privateNotes(notes).default(''),
   })
   .strict()
   .superRefine((step, ctx) => {
-    const time = step.durationSeconds !== null && step.durationSeconds > 0;
-    const distance = step.distanceMeters !== null && step.distanceMeters > 0;
+    const endConditionCount = [
+      step.durationSeconds !== null,
+      step.distanceMeters !== null,
+      step.endsOnLapButton,
+    ].filter(Boolean).length;
     if (
-      time === distance ||
-      (step.durationSeconds !== null && !time) ||
-      (step.distanceMeters !== null && !distance)
+      endConditionCount !== 1 ||
+      (step.durationSeconds !== null && step.durationSeconds <= 0) ||
+      (step.distanceMeters !== null && step.distanceMeters <= 0)
     ) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Each interval needs exactly one positive duration or distance.',
+        message: 'Each interval needs exactly one positive duration, distance or lap button end.',
       });
     }
   });
@@ -579,6 +592,12 @@ const noteUpdateCommand = z
   .object({ action: z.literal('note.update'), ...existing, values: notePatchSchema })
   .strict();
 const noteDeleteCommand = z.object({ action: z.literal('note.delete'), ...existing }).strict();
+const agentEventCreateCommand = z
+  .object({
+    action: z.literal('event.create'),
+    values: eventValuesSchema.extend({ ...createId, kind: z.enum(['race', 'goal']) }),
+  })
+  .strict();
 export const agentCommandSchema = z.discriminatedUnion('action', [
   planCreateCommand,
   planUpdateCommand,
@@ -592,6 +611,7 @@ export const agentCommandSchema = z.discriminatedUnion('action', [
   noteCreateCommand,
   noteUpdateCommand,
   noteDeleteCommand,
+  agentEventCreateCommand,
 ]);
 export const AGENT_COMMAND_LIMIT = 1500;
 export const AGENT_PROPOSAL_BYTES = 4 * 1024 * 1024;
@@ -688,7 +708,11 @@ function calendarRange(scope: { from: string; to: string }, years: number, ctx: 
     });
 }
 export const planningScopeSchema = z
-  .object(agentScopeFields)
+  .object({
+    ...agentScopeFields,
+    // Absence must remain absent in saved scopes; old grants never gain permission.
+    allowEventCreation: z.boolean().optional(),
+  })
   .strict()
   .superRefine((scope, ctx) => calendarRange(scope, 1, ctx));
 export const historyCategorySchema = z.enum(['activities', 'health', 'training', 'context']);
@@ -795,6 +819,7 @@ export function describeAgentAccess(scope: GrantScope): string[] {
     ...(planning
       ? [
           `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
+          `Create races and goals: ${planning.allowEventCreation === true ? 'permitted within the proposal dates' : 'not permitted'}.`,
         ]
       : ['Proposal submission is not permitted.']),
     'Applying training changes requires your review and explicit approval in Athlete Panel.',

@@ -201,6 +201,12 @@ Configuration defaults to `~/.config/athlete-panel/agent.json`; `ATHLETE_PANEL_A
 
 Advanced compatibility: an owner-created manual grant can still be configured using `pnpm agent configure --url https://your-instance.example --token-stdin < /secure/agent-grant.txt`. This command refuses interactive terminal input and recommends browser connection instead. Remote connections require HTTPS, credentials are never put in browser URLs, and CLI HTTP requests do not follow redirects.
 
+#### Event proposal upgrade
+
+Agent Bridge 2.3 and Training 2.2 add reviewed race/goal creation. Upgrade the application and CLI checkout together, regenerate/build the matched composition, and reload browser tabs. Follow the complete [local update](#updating-a-local-checkout) or [coordinated upgrade](#coordinated-upgrades-and-plugin-activation) procedure, including composition activation; there is no new SQL migration. Existing grants and pending proposals keep their original scopes. New browser planning approvals enable event creation by default with an option to turn it off. Reconnect to grant it to an existing agent; historical-only access cannot create events.
+
+Old strict scope parsers reject grants containing `allowEventCreation`, including explicit false, and old proposal parsers reject event commands. Do not roll older artifacts back over storage containing those records. Use the matching pre-upgrade backup and normal recovery procedure. Existing event records themselves retain their original storage format.
+
 ### Historical review and annual planning commands
 
 Historical ranges include both endpoints and may extend through the fifth calendar anniversary; planning ranges through the first. February 29 anniversaries clamp to February 28 in non-leap years. Existing grants retain their old dates and do not gain history access. Future scheduled records are permitted. The browser captures the current resolved week boundary for the review.

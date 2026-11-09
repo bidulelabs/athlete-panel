@@ -24,6 +24,12 @@ function paceLabel(seconds: number) {
   const rounded = Math.round(seconds);
   return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`;
 }
+function endLabel(step: Interval, units: 'metric' | 'imperial') {
+  if (step.endsOnLapButton) return 'Until lap button';
+  return step.durationSeconds !== null
+    ? timeLabel(step.durationSeconds)
+    : distance(step.distanceMeters, units);
+}
 function targetLabel(target: NonNullable<Interval['target']>, units: 'metric' | 'imperial') {
   const range = (format: (value: number) => string) =>
     target.min === target.max ? format(target.min) : `${format(target.min)}–${format(target.max)}`;
@@ -44,11 +50,7 @@ export function prescriptionPreview(steps: WorkoutStep[], units: 'metric' | 'imp
   const work = repeatedWork ?? steps.find((step) => step.kind === 'work');
   if (!work || work.kind === 'repeat')
     return steps.length ? `${steps.length} session ${steps.length === 1 ? 'step' : 'steps'}` : '';
-  const length =
-    work.durationSeconds !== null
-      ? timeLabel(work.durationSeconds)
-      : distance(work.distanceMeters, units);
-  return `${repeat && repeatedWork ? `${repeat.times} × ` : ''}${length}${work.target ? ` · ${targetLabel(work.target, units)}` : ''}`;
+  return `${repeat && repeatedWork ? `${repeat.times} × ` : ''}${endLabel(work, units)}${work.target ? ` · ${targetLabel(work.target, units)}` : ''}`;
 }
 
 function IntervalDetails({ step, units }: { step: Interval; units: 'metric' | 'imperial' }) {
@@ -56,11 +58,7 @@ function IntervalDetails({ step, units }: { step: Interval; units: 'metric' | 'i
     <li className="prescription-step">
       <div className="prescription-line">
         <span>{phaseLabels[step.kind]}</span>
-        <strong>
-          {step.durationSeconds !== null
-            ? timeLabel(step.durationSeconds)
-            : distance(step.distanceMeters, units)}
-        </strong>
+        <strong>{endLabel(step, units)}</strong>
       </div>
       {step.target && <p className="prescription-target">{targetLabel(step.target, units)}</p>}
       {step.notes && <p className="prescription-note">{step.notes}</p>}

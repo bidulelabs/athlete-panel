@@ -12,6 +12,7 @@ const labels: Record<string, string> = {
   endDate: 'End date',
   order: 'Position in day',
   steps: 'Intervals',
+  endsOnLapButton: 'Ends on lap button',
   sport: 'Sport group',
   sportSubgroup: 'Sport subgroup',
   plannedElevationGainMeters: 'Planned elevation gain',
@@ -34,6 +35,9 @@ const readable = (key: string) =>
   labels[key] ??
   key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (first) => first.toUpperCase());
 const words: Record<string, string> = {
+  race: 'Race',
+  goal: 'Goal',
+  other: 'Other',
   rest: 'Rest day',
   workout: 'Training session',
   independent: 'Independent workout',

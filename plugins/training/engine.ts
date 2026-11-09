@@ -33,6 +33,13 @@ export function applyCommands(
   options: { actor: 'owner' | 'agent'; idFactory?: () => string },
 ): MutationResult {
   const initial = validateWorkspace(input);
+  // Validate the narrower agent payload before owner defaults can fill missing fields.
+  if (options.actor === 'agent')
+    for (const command of inputs) {
+      if (!agentActions.has(command.action))
+        fail('FORBIDDEN', 'This command is not available to the training agent.');
+      agentCommandSchema.parse(command);
+    }
   const commands = (
     options.actor === 'agent'
       ? commandsSchema.element.array().min(1).max(AGENT_COMMAND_LIMIT)
@@ -41,8 +48,6 @@ export function applyCommands(
   const state: WorkspaceState = structuredClone(initial);
   const context = createCommandContext(initial, state, options);
   for (const command of commands) {
-    if (options.actor === 'agent' && !agentActions.has(command.action))
-      fail('FORBIDDEN', 'This command is not available to the training agent.');
     switch (command.action) {
       case 'profile.set':
         handleProfile(context, command);

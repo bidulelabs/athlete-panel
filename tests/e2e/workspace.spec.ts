@@ -39,49 +39,56 @@ test('private pages and workspace data reject unauthenticated access', async ({
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
 });
 
-test('create, edit, log completion and reload a manual workout', async ({ page }, info) => {
-  const title = `E2E ${info.project.name} ride ${Date.now()}`;
-  await login(page);
-  await page.getByRole('button', { name: 'Add workout', exact: true }).click();
-  const create = page.getByRole('dialog');
-  await create.getByLabel('Workout title').fill(title);
-  await create.getByRole('combobox', { name: 'Sport group', exact: true }).selectOption('running');
-  await create.getByLabel('Duration · minutes', { exact: true }).fill('45');
-  await create.getByLabel('Distance · km', { exact: true }).fill('8');
-  await create.getByLabel('Scheduled date').fill(await today(page));
-  await create.getByRole('button', { name: 'Add workout', exact: true }).click();
-  await expect(create).not.toBeVisible();
-  const trigger = page.getByRole('button', { name: `Open ${title}`, exact: true });
-  await expect(trigger).toBeVisible();
-  await trigger.click();
-  const inspector = page.getByRole('complementary', { name: 'Workout details' });
-  await inspector.getByRole('button', { name: 'Edit', exact: true }).click();
-  const edit = page.getByRole('dialog', { name: 'Edit workout', exact: true });
-  await edit.getByLabel('Workout description').fill('Keep the effort conversational.');
-  await edit.getByRole('button', { name: 'Save workout', exact: true }).click();
-  await expect(edit).not.toBeVisible();
-  await expect(inspector.getByText('Keep the effort conversational.')).toBeVisible();
-  await inspector.getByRole('button', { name: 'Log workout', exact: true }).click();
-  const completion = page.getByRole('dialog', { name: 'Log completion', exact: true });
-  await completion.getByLabel('Actual duration · minutes').fill('42');
-  await completion.getByLabel('Actual distance · km').fill('7.5');
-  await completion.getByLabel('Perceived effort · RPE 1–10').fill('4');
-  await completion.getByRole('button', { name: 'Save completion' }).click();
-  await expect(completion).not.toBeVisible();
-  await expect(inspector.locator('.completion-state')).toContainText('completed');
-  await page.reload();
-  await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
-  await expect(inspector.locator('.completion-state')).toContainText('completed');
-  await expect(inspector.getByText('42m', { exact: true })).toBeVisible();
-  await expect(inspector.getByText('7.5 km', { exact: true })).toBeVisible();
-  await expect(inspector.getByText('4 / 10', { exact: true })).toBeVisible();
-  if (info.project.name === 'mobile') {
-    const rect = await inspector.boundingBox();
-    expect(rect!.y).toBeGreaterThanOrEqual(50);
-    expect(rect!.y).toBeLessThan(70);
-    expect(rect!.height).toBeGreaterThan(600);
-  }
-});
+for (const theme of ['light', 'dark']) {
+  test(`create, edit, log completion and reload a manual workout in ${theme}`, async ({
+    page,
+  }, info) => {
+    await page.addInitScript((value) => localStorage.setItem('athlete-panel-theme', value), theme);
+    const title = `E2E ${info.project.name} ride ${Date.now()}`;
+    await login(page);
+    await page.getByRole('button', { name: 'Add workout', exact: true }).click();
+    const create = page.getByRole('dialog');
+    await create.getByLabel('Workout title').fill(title);
+    await create
+      .getByRole('combobox', { name: 'Sport group', exact: true })
+      .selectOption('running');
+    await create.getByLabel('Duration · minutes', { exact: true }).fill('45');
+    await create.getByLabel('Distance · km', { exact: true }).fill('8');
+    await create.getByLabel('Scheduled date').fill(await today(page));
+    await create.getByRole('button', { name: 'Add workout', exact: true }).click();
+    await expect(create).not.toBeVisible();
+    const trigger = page.getByRole('button', { name: `Open ${title}`, exact: true });
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    const inspector = page.getByRole('complementary', { name: 'Workout details' });
+    await inspector.getByRole('button', { name: 'Edit', exact: true }).click();
+    const edit = page.getByRole('dialog', { name: 'Edit workout', exact: true });
+    await edit.getByLabel('Workout description').fill('Keep the effort conversational.');
+    await edit.getByRole('button', { name: 'Save workout', exact: true }).click();
+    await expect(edit).not.toBeVisible();
+    await expect(inspector.getByText('Keep the effort conversational.')).toBeVisible();
+    await inspector.getByRole('button', { name: 'Log workout', exact: true }).click();
+    const completion = page.getByRole('dialog', { name: 'Log completion', exact: true });
+    await completion.getByLabel('Actual duration · minutes').fill('42');
+    await completion.getByLabel('Actual distance · km').fill('7.5');
+    await completion.getByLabel('Perceived effort · RPE 1–10').fill('4');
+    await completion.getByRole('button', { name: 'Save completion' }).click();
+    await expect(completion).not.toBeVisible();
+    await expect(inspector.locator('.completion-state')).toContainText('completed');
+    await page.reload();
+    await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
+    await expect(inspector.locator('.completion-state')).toContainText('completed');
+    await expect(inspector.getByText('42m', { exact: true })).toBeVisible();
+    await expect(inspector.getByText('7.5 km', { exact: true })).toBeVisible();
+    await expect(inspector.getByText('4 / 10', { exact: true })).toBeVisible();
+    if (info.project.name === 'mobile') {
+      const rect = await inspector.boundingBox();
+      expect(rect!.y).toBeGreaterThanOrEqual(50);
+      expect(rect!.y).toBeLessThan(70);
+      expect(rect!.height).toBeGreaterThan(600);
+    }
+  });
+}
 
 test('plan-relative sessions persist with an explicit plan start', async ({ page }, info) => {
   const planTitle = `E2E ${info.project.name} block ${Date.now()}`;

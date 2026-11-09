@@ -420,6 +420,48 @@ test('edits keep stored durations the owner did not change', async ({ page }) =>
   expect(sent[2]!.values.durationSeconds).toBe(30);
 });
 
+test('a warm-up ends on the lap button in the editor and the details', async ({ page }) => {
+  const { data } = await preview(page);
+  const sent: { values: { steps: unknown[] } }[] = [];
+  await page.route('**/api/plugins/training/mutate', async (route) => {
+    sent.push(...route.request().postDataJSON().commands);
+    await route.fulfill({ json: { id: crypto.randomUUID(), changes: [] } });
+  });
+  await page.getByRole('button', { name: 'Add workout', exact: true }).first().click();
+  const editor = page.getByRole('dialog', { name: 'Add workout' });
+  await page.getByLabel('Workout title').fill('Hill repeats');
+  await page.getByRole('button', { name: 'Add intervals', exact: true }).click();
+  await page.getByRole('button', { name: 'Add interval', exact: true }).click();
+  await page.getByRole('button', { name: 'Add interval', exact: true }).click();
+  const intervals = editor.locator('.interval-editor-row');
+  await intervals.first().getByLabel('Phase').selectOption('warmup');
+  await intervals.first().getByLabel('Measure').selectOption('lapButton');
+  await expect(intervals.first().getByLabel('Duration · minutes')).toHaveCount(0);
+  await intervals.last().getByLabel('Measure').selectOption('lapButton');
+  await intervals.last().getByLabel('Measure').selectOption('time');
+  await editor.getByRole('button', { name: 'Add workout', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]!.values.steps).toEqual([
+    {
+      kind: 'warmup',
+      durationSeconds: null,
+      distanceMeters: null,
+      endsOnLapButton: true,
+      target: null,
+      notes: '',
+    },
+    { kind: 'work', durationSeconds: 300, distanceMeters: null, target: null, notes: '' },
+  ]);
+  data.workouts[3]!.steps[0] = sent[0]!.values.steps[0] as (typeof data.workouts)[3]['steps'][0];
+  await page.reload();
+  await page.getByRole('button', { name: 'Open Threshold intervals', exact: true }).click();
+  await expect(
+    page
+      .getByRole('complementary', { name: 'Workout details' })
+      .getByRole('region', { name: 'Workout prescription' }),
+  ).toContainText('Until lap button');
+});
+
 test('a new interval target starts empty and cannot be saved until filled', async ({ page }) => {
   await preview(page);
   const sent: { values: { steps: { target: unknown }[] } }[] = [];

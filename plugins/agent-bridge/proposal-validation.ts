@@ -3,12 +3,12 @@ import {
   type EntityChange,
   type WorkspaceState,
   type WorkoutStep,
-  agentScopeSchema,
+  type PlanningScope,
+  type TrainingEvent,
 } from '../../packages/contracts/src';
-import { z } from 'zod';
 import { assert } from '../../packages/host/src/errors';
 import { effectiveDate } from '../training/public/server';
-type Scope = z.infer<typeof agentScopeSchema>;
+type Scope = PlanningScope;
 export const hasExerciseInstructions = (
   exercises: WorkspaceState['workouts'][number]['exercises'],
 ) => exercises?.some((exercise) => Boolean(exercise.instructions)) ?? false;
@@ -142,6 +142,53 @@ export function assertReadableSources(commands: Command[], state: WorkspaceState
     }
   }
 }
+function assertEventCreation(change: EntityChange, after: WorkspaceState, scope: Scope) {
+  assert(
+    scope.allowEventCreation === true,
+    'forbidden',
+    'This grant does not allow creating races or goals. Approve a new connection with event creation enabled.',
+    403,
+  );
+  assert(
+    change.before === null && change.after !== null,
+    'forbidden',
+    'Agents may only create events, not update or delete them.',
+    403,
+  );
+  const event = change.after as TrainingEvent;
+  assert(
+    event.kind === 'race' || event.kind === 'goal',
+    'forbidden',
+    'Agents may only create races and dated goals.',
+    403,
+  );
+  assert(
+    event.date >= scope.from && event.date <= scope.to,
+    'out_of_scope',
+    'Event dates must stay within the proposal dates.',
+    403,
+  );
+  assert(
+    scope.includeNotes || event.notes === '',
+    'forbidden',
+    'Creating event notes requires notes access.',
+    403,
+  );
+  const title = (value: string) =>
+    value.trim().replace(/\s+/gu, ' ').toLowerCase().normalize('NFC');
+  assert(
+    !after.events.some(
+      (other) =>
+        other.id !== event.id &&
+        other.date === event.date &&
+        title(other.title) === title(event.title),
+    ),
+    'duplicate_event',
+    'An event with this title and date already exists. Use the existing event and submit a replacement proposal.',
+    409,
+  );
+}
+
 export function assertBounded(
   changes: EntityChange[],
   before: WorkspaceState,
@@ -149,6 +196,10 @@ export function assertBounded(
   scope: Scope,
 ) {
   for (const change of changes) {
+    if (change.entity === 'event') {
+      assertEventCreation(change, after, scope);
+      continue;
+    }
     assert(
       ['plan', 'workout', 'note'].includes(change.entity),
       'forbidden',

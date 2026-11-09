@@ -25,13 +25,15 @@ import {
   type PluginPageProps,
 } from '@athlete-panel/ui';
 import { ChevronRight, Copy, Edit3, Layers, Moon, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 
 import { mutate, WorkoutEditor, WorkoutInspector } from './editors';
 import { addDays } from './dates';
 import { planWeeks, plannedDuration } from './plan-workouts';
 import { prescriptionPreview } from './prescription';
 import { TrainingHistory } from './history';
+import { AddPhaseButton, PhaseBlock } from './phases';
+import { planPhases, planSections } from './plan-phases';
 import './plans.css';
 function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
   const { request } = useWorkspace();
@@ -177,6 +179,85 @@ function WorkoutSummary({ workout }: { workout: Workout }) {
   );
 }
 
+function PlanWeek({
+  plan,
+  week,
+  days,
+  onOpen,
+  onEdit,
+}: {
+  plan: Plan;
+  week: number;
+  days: ReturnType<typeof planWeeks>[number]['days'];
+  onOpen: (workout: Workout) => void;
+  onEdit: (workout: Workout) => void;
+}) {
+  return (
+    <section className="plans-week" aria-label={`Week ${week}`}>
+      <header className="plans-week-heading">
+        <h4>Week {week}</h4>
+        <span>
+          {plan.startDate
+            ? `${dateLabel(addDays(plan.startDate, (week - 1) * 7))} – ${dateLabel(addDays(plan.startDate, week * 7 - 1), { day: 'numeric', month: 'short', year: 'numeric' })}`
+            : `Days ${(week - 1) * 7 + 1}–${week * 7}`}
+        </span>
+        <DurationSummary workouts={days.flatMap(([, entries]) => entries)} />
+      </header>
+      {days.map(([day, entries]) => (
+        <div className="plans-day" key={day}>
+          <h5 className="plans-day-label">
+            <span>Day {day}</span>
+            {plan.startDate && (
+              <span>
+                {dateLabel(addDays(plan.startDate, day - 1), {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </span>
+            )}
+          </h5>
+          <div className="plans-day-sessions">
+            {entries.map((workout) => (
+              <div className="plans-session" key={workout.id}>
+                <Button
+                  variant="unstyled"
+                  className="plans-session-open"
+                  aria-label={`Open ${workout.title}`}
+                  onClick={() => onOpen(workout)}
+                >
+                  {workout.kind === 'rest' ? (
+                    <Moon size={18} />
+                  ) : (
+                    <SportIcon sport={workout.sport} size={18} />
+                  )}
+                  <span className="plans-session-copy">
+                    <strong>{workout.title}</strong>
+                    <WorkoutSummary workout={workout} />
+                    {workout.completion && (
+                      <span className="plans-session-status">{workout.completion.status}</span>
+                    )}
+                  </span>
+                  <ChevronRight size={16} className="plans-chevron" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="plans-edit-workout"
+                  aria-label={`Edit ${workout.title}`}
+                  onClick={() => onEdit(workout)}
+                >
+                  <Edit3 size={14} />
+                  <span>Edit</span>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function PlanDetails({
   plan,
   onClose,
@@ -197,6 +278,12 @@ function PlanDetails({
   );
   const selected = workouts.find((workout) => workout.id === selectedId);
   const weeks = planWeeks(workouts);
+  const phases = planPhases(plan, data.plans, data.periods);
+  const sections = planSections(
+    phases,
+    plan,
+    weeks.map(({ week }) => week),
+  );
   return (
     <Modal
       open
@@ -276,6 +363,13 @@ function PlanDetails({
           <div className="plans-schedule-heading">
             <h3>Workouts</h3>
             <span>Weeks from the plan’s first day</span>
+            {plan.startDate && (
+              <AddPhaseButton
+                defaultStartDate={
+                  phases.length ? addDays(phases.at(-1)!.endDate, 1) : plan.startDate
+                }
+              />
+            )}
           </div>
           {!weeks.length ? (
             <div className="plans-empty">
@@ -285,74 +379,26 @@ function PlanDetails({
                 Add first workout
               </Button>
             </div>
-          ) : (
-            weeks.map(({ week, days }) => (
-              <section className="plans-week" key={week} aria-label={`Week ${week}`}>
-                <header className="plans-week-heading">
-                  <h4>Week {week}</h4>
-                  <span>
-                    {plan.startDate
-                      ? `${dateLabel(addDays(plan.startDate, (week - 1) * 7))} – ${dateLabel(addDays(plan.startDate, week * 7 - 1), { day: 'numeric', month: 'short', year: 'numeric' })}`
-                      : `Days ${(week - 1) * 7 + 1}–${week * 7}`}
-                  </span>
-                  <DurationSummary workouts={days.flatMap(([, entries]) => entries)} />
-                </header>
-                {days.map(([day, entries]) => (
-                  <div className="plans-day" key={day}>
-                    <h5 className="plans-day-label">
-                      <span>Day {day}</span>
-                      {plan.startDate && (
-                        <span>
-                          {dateLabel(addDays(plan.startDate, day - 1), {
-                            weekday: 'short',
-                            day: 'numeric',
-                            month: 'short',
-                          })}
-                        </span>
-                      )}
-                    </h5>
-                    <div className="plans-day-sessions">
-                      {entries.map((workout) => (
-                        <div className="plans-session" key={workout.id}>
-                          <Button
-                            variant="unstyled"
-                            className="plans-session-open"
-                            aria-label={`Open ${workout.title}`}
-                            onClick={() => setSelectedId(workout.id)}
-                          >
-                            {workout.kind === 'rest' ? (
-                              <Moon size={18} />
-                            ) : (
-                              <SportIcon sport={workout.sport} size={18} />
-                            )}
-                            <span className="plans-session-copy">
-                              <strong>{workout.title}</strong>
-                              <WorkoutSummary workout={workout} />
-                              {workout.completion && (
-                                <span className="plans-session-status">
-                                  {workout.completion.status}
-                                </span>
-                              )}
-                            </span>
-                            <ChevronRight size={16} className="plans-chevron" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="plans-edit-workout"
-                            aria-label={`Edit ${workout.title}`}
-                            onClick={() => setWorkoutEdit(workout)}
-                          >
-                            <Edit3 size={14} />
-                            <span>Edit</span>
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </section>
-            ))
-          )}
+          ) : null}
+          {sections.map(({ phase, weeks: sectionWeeks }) => {
+            const weekSections = sectionWeeks.map((week) => (
+              <PlanWeek
+                key={week}
+                plan={plan}
+                week={week}
+                days={weeks.find((entry) => entry.week === week)!.days}
+                onOpen={(workout) => setSelectedId(workout.id)}
+                onEdit={setWorkoutEdit}
+              />
+            ));
+            return phase ? (
+              <PhaseBlock key={phase.id} phase={phase}>
+                {weekSections}
+              </PhaseBlock>
+            ) : (
+              <Fragment key={`weeks-${sectionWeeks[0]}`}>{weekSections}</Fragment>
+            );
+          })}
         </div>
       </div>
       {selected && (

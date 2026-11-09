@@ -2,6 +2,7 @@ import { isolatedDatabaseUrl } from '../support/test-database';
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { closeDatabase, connection } from '../../packages/host/src/db';
+import { canonical, digest } from '../../packages/host/src/crypto';
 import { migrate } from '../../packages/host/src/migrations';
 import { loadWorkspace } from '../../instance/services';
 import { mutate } from '../../plugins/training/service';
@@ -454,6 +455,37 @@ it.each([false, true])('handles legacy context with changed=%s', async (changed)
   if (changed)
     await expect(applyProposal(request)).rejects.toMatchObject({ code: 'legacy_context_changed' });
   else await applyProposal(request);
+});
+it('reviews and applies a proposal saved before plan phases existed', async () => {
+  const { input } = await proposal();
+  const sql = connection();
+  const [stored] = await sql<
+    {
+      context: { snapshot: Record<string, unknown> };
+      commands: unknown;
+      changes: unknown;
+      summary: string;
+    }[]
+  >`select context,commands,changes,summary from host.proposals where id=${input.id}`;
+  const { periods, ...snapshotBeforePhases } = stored!.context.snapshot;
+  expect(periods).toEqual([]);
+  const contextDigest = digest(canonical(snapshotBeforePhases));
+  const proposalDigest = digest(
+    canonical({
+      commands: stored!.commands,
+      changes: stored!.changes,
+      contextDigest,
+      summary: stored!.summary,
+    }),
+  );
+  await sql`update host.proposals set digest=${proposalDigest},context=${sql.json({ ...stored!.context, digest: contextDigest, snapshot: snapshotBeforePhases } as never)} where id=${input.id}`;
+  const pending = { id: input.id, digest: proposalDigest };
+  expect(await reviewProposal(pending)).toMatchObject({
+    applicability: 'ready',
+    contextChanges: [],
+  });
+  await applyProposal({ ...pending, idempotencyKey: randomUUID() });
+  expect((await loadWorkspace()).workouts[0]?.durationSeconds).toBe(1800);
 });
 it('rejects tampering with stored commands while retaining the submitted digest', async () => {
   const { input } = await proposal();

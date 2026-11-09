@@ -68,6 +68,7 @@ export function boundedContext(state: WorkspaceState, scope: Scope) {
     events: state.events
       .filter((e) => within(e.date))
       .map((e) => (scope.includeNotes ? e : { ...e, notes: '' })),
+    periods: state.periods.filter((p) => p.startDate <= scope.to && p.endDate >= scope.from),
     injuries: state.injuries
       .filter((i) => i.startDate <= scope.to && (i.endDate === null || i.endDate >= scope.from))
       .map((i) => (scope.includeNotes ? i : { ...i, notes: '' })),

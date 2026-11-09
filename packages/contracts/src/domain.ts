@@ -376,6 +376,57 @@ export const eventValuesSchema = z
   .strict();
 export const eventSchema = eventValuesSchema.extend(base);
 export type TrainingEvent = z.infer<typeof eventSchema>;
+const weeklyRange = z
+  .object({ min: nonnegativeSchema, max: nonnegativeSchema })
+  .strict()
+  .refine((range) => range.min <= range.max, {
+    path: ['max'],
+    message: 'Maximum must be at least minimum.',
+  });
+const weeklyTarget = z
+  .object({
+    firstWeek: weeklyRange,
+    lastWeek: weeklyRange.describe(
+      'Weeks between the first and the last are interpolated linearly.',
+    ),
+  })
+  .strict();
+export const periodRoles = ['base', 'build', 'peak', 'taper', 'recovery'] as const;
+const periodFieldsWithoutDefaults = {
+  name: text,
+  role: z.enum(periodRoles),
+  startDate: dateSchema.describe(
+    'First day of the period. A week belongs to the period holding its first day.',
+  ),
+  endDate: dateSchema.describe('Last day of the period.'),
+  focus: z
+    .string()
+    .trim()
+    .max(120)
+    .describe('What the phase trains, such as "VO2max" or "Taper for the spring marathon".'),
+  weeklyDurationSeconds: weeklyTarget
+    .nullable()
+    .describe('Weekly training time in seconds, every sport included.'),
+  weeklyDistanceMeters: weeklyTarget.nullable().describe('Weekly distance in meters.'),
+  weeklyElevationGainMeters: weeklyTarget.nullable().describe('Weekly elevation gain in meters.'),
+};
+export const periodValuesSchema = z
+  .object({
+    ...periodFieldsWithoutDefaults,
+    focus: periodFieldsWithoutDefaults.focus.default(''),
+    weeklyDurationSeconds: periodFieldsWithoutDefaults.weeklyDurationSeconds.default(null),
+    weeklyDistanceMeters: periodFieldsWithoutDefaults.weeklyDistanceMeters.default(null),
+    weeklyElevationGainMeters: periodFieldsWithoutDefaults.weeklyElevationGainMeters.default(null),
+  })
+  .strict();
+export const periodSchema = periodValuesSchema
+  .extend(base)
+  .refine((value) => value.endDate >= value.startDate, {
+    path: ['endDate'],
+    message: 'End date cannot be before start date.',
+  });
+export type Period = z.infer<typeof periodSchema>;
+export type WeeklyTarget = z.infer<typeof weeklyTarget>;
 export const injuryValuesSchema = z
   .object({
     bodyPart: text,
@@ -468,6 +519,7 @@ export const workspaceStateSchema = z
     workouts: z.array(workoutSchema),
     notes: z.array(noteSchema),
     events: z.array(eventSchema),
+    periods: z.array(periodSchema).default([]),
     injuries: z.array(injurySchema),
     activities: z.array(activitySchema),
     health: z.array(healthRecordSchema),
@@ -480,6 +532,7 @@ export const emptyWorkspace = (): WorkspaceState => ({
   workouts: [],
   notes: [],
   events: [],
+  periods: [],
   injuries: [],
   activities: [],
   health: [],
@@ -527,6 +580,7 @@ const eventPatchSchema = nonemptyPatch(
     .object({ title: text, date: dateSchema, kind: z.enum(['race', 'goal', 'other']), notes })
     .strict(),
 );
+const periodPatchSchema = nonemptyPatch(z.object(periodFieldsWithoutDefaults).strict());
 const injuryPatchSchema = nonemptyPatch(
   z
     .object({
@@ -654,6 +708,11 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('event.update'), ...existing, values: eventPatchSchema }).strict(),
   z.object({ action: z.literal('event.delete'), ...existing }).strict(),
   z
+    .object({ action: z.literal('period.create'), values: periodValuesSchema.extend(createId) })
+    .strict(),
+  z.object({ action: z.literal('period.update'), ...existing, values: periodPatchSchema }).strict(),
+  z.object({ action: z.literal('period.delete'), ...existing }).strict(),
+  z
     .object({ action: z.literal('injury.create'), values: injuryValuesSchema.extend(createId) })
     .strict(),
   z.object({ action: z.literal('injury.update'), ...existing, values: injuryPatchSchema }).strict(),
@@ -663,9 +722,9 @@ export type Command = z.infer<typeof commandSchema>;
 export type CommandInput = z.input<typeof commandSchema>;
 export const commandsSchema = z.array(commandSchema).min(1).max(200);
 export type EntityKind =
-  'profile' | 'plan' | 'workout' | 'note' | 'event' | 'injury' | 'activity' | 'health';
+  'profile' | 'plan' | 'workout' | 'note' | 'event' | 'period' | 'injury' | 'activity' | 'health';
 export type Entity =
-  Profile | Plan | Workout | Note | TrainingEvent | Injury | Activity | HealthRecord;
+  Profile | Plan | Workout | Note | TrainingEvent | Period | Injury | Activity | HealthRecord;
 export type EntityChange = {
   entity: EntityKind;
   id: string;

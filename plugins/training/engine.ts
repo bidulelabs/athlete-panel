@@ -14,6 +14,7 @@ import { handleCompletion } from './engine/handlers/completion';
 import { handleEvent } from './engine/handlers/event';
 import { handleInjury } from './engine/handlers/injury';
 import { handleNote } from './engine/handlers/note';
+import { handlePeriod } from './engine/handlers/period';
 import { handlePlan } from './engine/handlers/plan';
 import { handleProfile } from './engine/handlers/profile';
 import { handleWorkout } from './engine/handlers/workout';
@@ -80,6 +81,11 @@ export function applyCommands(
       case 'event.update':
       case 'event.delete':
         handleEvent(context, command);
+        break;
+      case 'period.create':
+      case 'period.update':
+      case 'period.delete':
+        handlePeriod(context, command);
         break;
       case 'injury.create':
       case 'injury.update':

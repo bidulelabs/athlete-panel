@@ -302,6 +302,7 @@ Workout libraries, automatic activity matching, advanced training-load/recovery 
 | [Shared interface](docs/features/shared-ui.md) | Component ownership, themes, modal behavior and migration constraints |
 | [Garmin sport planning](docs/features/garmin-sport-planning.md) | Sport hierarchy, rest, elevation, strength, notes and recorded metrics |
 | [Training workspace](docs/features/training-workspace.md)       | Planning, calendar, completion, linking, cards and weekly summaries                                  |
+| [Plan phases](docs/features/plan-phases.md) | Phases inside training plans, with a focus and optional weekly hours, distance and climbing targets |
 | [Garmin import and health](docs/features/garmin-import.md)      | Authentication, normalized records, history traversal, coverage and limits                           |
 | [Activity summary coverage](docs/features/activity-summary.md) | Recorded duration/distance, missing measurements and filtered totals |
 | [Health history](docs/features/health-history.md) | Recent health review, date presets and independent Calendar navigation |

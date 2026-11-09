@@ -52,6 +52,7 @@ function contextChanges(
     ['workouts', 'workout'],
     ['notes', 'note'],
     ['events', 'event'],
+    ['periods', 'period'],
     ['injuries', 'injury'],
     ['activities', 'activity'],
     ['health', 'health'],
@@ -121,15 +122,16 @@ export async function evaluateProposal(tx: Transaction, input: { id: string; dig
   const before = await loadWorkspace(tx, context.scope);
   const current = boundedContext(before, context.scope);
   review.currentContextDigest = digest(canonical(current));
-  const changed = review.currentContextDigest !== context.digest;
+  let changed = review.currentContextDigest !== context.digest;
   if ('snapshot' in context) {
     assert(
-      digest(canonical(context.snapshot)) === context.digest,
+      digest(canonical((proposal.context as { snapshot: unknown }).snapshot)) === context.digest,
       'digest_mismatch',
       'The saved context no longer matches its digest.',
       409,
     );
     review.contextChanges = contextChanges(context.snapshot, current);
+    changed = review.contextChanges.length > 0;
   }
   try {
     assertReadableSources(commands, before, context.scope);

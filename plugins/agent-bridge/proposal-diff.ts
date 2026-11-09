@@ -34,6 +34,9 @@ const readable = (key: string) =>
   labels[key] ??
   key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (first) => first.toUpperCase());
 const words: Record<string, string> = {
+  race: 'Race',
+  goal: 'Goal',
+  other: 'Other',
   rest: 'Rest day',
   workout: 'Training session',
   independent: 'Independent workout',

@@ -956,7 +956,8 @@ describe('transactional training and external-agent workflow', () => {
         expectedRevision: 1,
         values: { status: 'completed', performedDate: '2026-10-24' },
       },
-      { action: 'event.create', values: { title: 'Race', date: '2026-10-25' } },
+      { action: 'event.update', id: id(3), expectedRevision: 1, values: { title: 'Race' } },
+      { action: 'event.delete', id: id(3), expectedRevision: 1 },
     ];
     for (const command of ownerOnlyCommands)
       await expect(

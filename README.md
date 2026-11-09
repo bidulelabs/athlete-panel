@@ -203,6 +203,8 @@ pnpm agent propose --file private-exports/proposal.json
 
 The agent prepares the proposal file using the [training skill](.agents/skills/athlete-panel-training-planning/SKILL.md) and shared schemas. You review the exact diff in **Agent workspace** and apply it yourself. Validation, scope and freshness checks run again at application time; a stale or invalid batch writes nothing.
 
+New planning connections also allow proposals to create races and dated goals by default. Uncheck **Allow proposals to create races and goals** during approval to disable this. Existing connections keep their original permissions; reconnect to enable event creation. Events use the same proposal dates and notes permission, and can be reviewed/applied together with a training plan. Agents cannot edit or delete existing events. Obvious duplicates are blocked, including when an event is added while a proposal is awaiting review.
+
 The CLI saves its credential in `~/.config/athlete-panel/agent.json` with owner-only file permissions. It is **not encrypted on disk**. Grants expire, and you can revoke them in the app. The agent may read or propose only within the access you approved. Context and proposal files can contain personal data; keep them private and out of version control.
 
 ### Build a personal extension

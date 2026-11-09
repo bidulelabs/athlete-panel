@@ -181,6 +181,7 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
                         from: String(form.get('from')),
                         to: String(form.get('to')),
                         includeNotes: form.get('includeNotes') === 'on',
+                        allowEventCreation: form.get('allowEventCreation') === 'on',
                       },
                   expiresInHours: Number(form.get('expiresInHours')),
                 });

@@ -440,6 +440,38 @@ describe('pure training engine', () => {
     expect(deleted.state.workouts[0]).toMatchObject({ order: 1, revision: 3 });
     expect(deleted.changes).toHaveLength(2);
   });
+  it('restricts agent event creation to explicit races and goals', () => {
+    for (const kind of ['race', 'goal'] as const) {
+      expect(
+        applyCommands(
+          emptyWorkspace(),
+          [{ action: 'event.create', values: { title: 'Target', date: '2026-11-08', kind } }],
+          { actor: 'agent' },
+        ).state.events[0]?.kind,
+      ).toBe(kind);
+    }
+    for (const kind of ['other', undefined] as const) {
+      expect(() =>
+        applyCommands(
+          emptyWorkspace(),
+          [{ action: 'event.create', values: { title: 'Target', date: '2026-11-08', kind } }],
+          { actor: 'agent' },
+        ),
+      ).toThrow();
+    }
+    for (const command of [
+      {
+        action: 'event.update' as const,
+        id: id(1),
+        expectedRevision: 1,
+        values: { title: 'Changed' },
+      },
+      { action: 'event.delete' as const, id: id(1), expectedRevision: 1 },
+    ])
+      expect(() => applyCommands(emptyWorkspace(), [command], { actor: 'agent' })).toThrow(
+        /not available/,
+      );
+  });
   it('restricts agent writes to pending prescription and notes', () => {
     const state = training();
     expect(() =>

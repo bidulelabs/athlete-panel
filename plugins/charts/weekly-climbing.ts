@@ -5,14 +5,9 @@ import {
   type ChartsSummary,
   type Profile,
 } from '@athlete-panel/contracts';
-import { type MetricTotal } from '../training/public/shared';
+import { targetRangeLabel, type MetricTotal } from '../training/public/shared';
 import { perSport } from './training-by-sport';
-import {
-  sessionCount,
-  targetRangeLabel,
-  trainingHoursBuckets,
-  type TrainingHoursBucket,
-} from './training-hours';
+import { sessionCount, trainingHoursBuckets, type TrainingHoursBucket } from './training-hours';
 
 export type UnitSystem = Profile['units'];
 export type ClimbingBucket = TrainingHoursBucket & {

@@ -4,7 +4,7 @@ import {
   type ChartsSummary,
   type ChartsGrouping,
 } from '@athlete-panel/contracts';
-import { type MetricTotal } from '../training/public/shared';
+import { targetRangeLabel, type MetricTotal } from '../training/public/shared';
 
 export type TrainingHoursBucket = {
   startDate: string;
@@ -26,16 +26,6 @@ export function durationLabel(measure: MetricTotal, format: (seconds: number) =>
   if (measure.value === null) return 'Duration missing';
   if (!measure.missingCount) return format(measure.value);
   return `${format(measure.value)} (${measure.missingCount} of ${sessionCount(measure)} sessions without duration)`;
-}
-
-export function targetRangeLabel(
-  target: { min: number; max: number } | null,
-  format: (value: number) => string,
-) {
-  if (!target) return 'No target';
-  return format(target.min) === format(target.max)
-    ? format(target.min)
-    : `${format(target.min)}–${format(target.max)}`;
 }
 
 export function trainingHoursBuckets(

@@ -28,3 +28,10 @@ export function weekTargets(periods: readonly Period[], weekStart: string): Week
     weeklyElevationGainMeters: atWeek(period.weeklyElevationGainMeters),
   };
 }
+
+export function targetRangeLabel(target: TargetRange | null, format: (value: number) => string) {
+  if (!target) return 'No target';
+  return format(target.min) === format(target.max)
+    ? format(target.min)
+    : `${format(target.min)}–${format(target.max)}`;
+}

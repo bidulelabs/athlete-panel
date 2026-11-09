@@ -418,7 +418,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                              "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                             },
                             "distanceMeters": {
                               "default": null,
@@ -431,7 +431,11 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                              "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                            },
+                            "endsOnLapButton": {
+                              "type": "boolean",
+                              "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                             },
                             "target": {
                               "default": null,
@@ -528,7 +532,7 @@
                                         "type": "null"
                                       }
                                     ],
-                                    "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                    "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                   },
                                   "distanceMeters": {
                                     "default": null,
@@ -541,7 +545,11 @@
                                         "type": "null"
                                       }
                                     ],
-                                    "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                    "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                  },
+                                  "endsOnLapButton": {
+                                    "type": "boolean",
+                                    "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                   },
                                   "target": {
                                     "default": null,
@@ -3698,7 +3706,7 @@
                                           "type": "null"
                                         }
                                       ],
-                                      "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                      "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                     },
                                     "distanceMeters": {
                                       "default": null,
@@ -3711,7 +3719,11 @@
                                           "type": "null"
                                         }
                                       ],
-                                      "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                      "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                    },
+                                    "endsOnLapButton": {
+                                      "type": "boolean",
+                                      "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                     },
                                     "target": {
                                       "default": null,
@@ -3808,7 +3820,7 @@
                                                 "type": "null"
                                               }
                                             ],
-                                            "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                            "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                           },
                                           "distanceMeters": {
                                             "default": null,
@@ -3821,7 +3833,11 @@
                                                 "type": "null"
                                               }
                                             ],
-                                            "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                            "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                          },
+                                          "endsOnLapButton": {
+                                            "type": "boolean",
+                                            "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                           },
                                           "target": {
                                             "default": null,
@@ -4245,7 +4261,7 @@
                                           "type": "null"
                                         }
                                       ],
-                                      "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                      "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                     },
                                     "distanceMeters": {
                                       "default": null,
@@ -4258,7 +4274,11 @@
                                           "type": "null"
                                         }
                                       ],
-                                      "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                      "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                    },
+                                    "endsOnLapButton": {
+                                      "type": "boolean",
+                                      "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                     },
                                     "target": {
                                       "default": null,
@@ -4355,7 +4375,7 @@
                                                 "type": "null"
                                               }
                                             ],
-                                            "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                            "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                           },
                                           "distanceMeters": {
                                             "default": null,
@@ -4368,7 +4388,11 @@
                                                 "type": "null"
                                               }
                                             ],
-                                            "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                            "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                          },
+                                          "endsOnLapButton": {
+                                            "type": "boolean",
+                                            "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                           },
                                           "target": {
                                             "default": null,
@@ -6120,7 +6144,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -6133,7 +6157,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -6230,7 +6258,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -6243,7 +6271,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -6689,7 +6721,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -6702,7 +6734,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -6799,7 +6835,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -6812,7 +6848,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -9336,7 +9376,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -9349,7 +9389,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -9446,7 +9490,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -9459,7 +9503,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -9905,7 +9953,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -9918,7 +9966,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -10015,7 +10067,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -10028,7 +10080,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -12569,7 +12625,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -12582,7 +12638,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -12679,7 +12739,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -12692,7 +12752,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -13138,7 +13202,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -13151,7 +13215,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -13248,7 +13316,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -13261,7 +13329,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -16216,7 +16288,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -16229,7 +16301,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -16326,7 +16402,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -16339,7 +16415,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -16785,7 +16865,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -16798,7 +16878,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -16895,7 +16979,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -16908,7 +16992,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -19840,7 +19928,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -19853,7 +19941,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -19950,7 +20042,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -19963,7 +20055,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -20409,7 +20505,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -20422,7 +20518,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -20519,7 +20619,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -20532,7 +20632,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -23085,7 +23189,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -23098,7 +23202,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -23195,7 +23303,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -23208,7 +23316,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -23654,7 +23766,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -23667,7 +23779,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -23764,7 +23880,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -23777,7 +23893,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -26341,7 +26461,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -26354,7 +26474,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -26451,7 +26575,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -26464,7 +26588,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -26910,7 +27038,7 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "distanceMeters": {
                                           "default": null,
@@ -26923,7 +27051,11 @@
                                               "type": "null"
                                             }
                                           ],
-                                          "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                          "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                        },
+                                        "endsOnLapButton": {
+                                          "type": "boolean",
+                                          "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                         },
                                         "target": {
                                           "default": null,
@@ -27020,7 +27152,7 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "distanceMeters": {
                                                 "default": null,
@@ -27033,7 +27165,11 @@
                                                     "type": "null"
                                                   }
                                                 ],
-                                                "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                                "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                              },
+                                              "endsOnLapButton": {
+                                                "type": "boolean",
+                                                "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                               },
                                               "target": {
                                                 "default": null,
@@ -30837,7 +30973,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                            "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                           },
                           "distanceMeters": {
                             "default": null,
@@ -30850,7 +30986,11 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                            "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                          },
+                          "endsOnLapButton": {
+                            "type": "boolean",
+                            "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                           },
                           "target": {
                             "default": null,
@@ -30947,7 +31087,7 @@
                                       "type": "null"
                                     }
                                   ],
-                                  "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                  "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                 },
                                 "distanceMeters": {
                                   "default": null,
@@ -30960,7 +31100,11 @@
                                       "type": "null"
                                     }
                                   ],
-                                  "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                  "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                },
+                                "endsOnLapButton": {
+                                  "type": "boolean",
+                                  "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                 },
                                 "target": {
                                   "default": null,
@@ -31384,7 +31528,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                            "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                           },
                           "distanceMeters": {
                             "default": null,
@@ -31397,7 +31541,11 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                            "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                          },
+                          "endsOnLapButton": {
+                            "type": "boolean",
+                            "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                           },
                           "target": {
                             "default": null,
@@ -31494,7 +31642,7 @@
                                       "type": "null"
                                     }
                                   ],
-                                  "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                  "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                 },
                                 "distanceMeters": {
                                   "default": null,
@@ -31507,7 +31655,11 @@
                                       "type": "null"
                                     }
                                   ],
-                                  "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                  "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                },
+                                "endsOnLapButton": {
+                                  "type": "boolean",
+                                  "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                 },
                                 "target": {
                                   "default": null,
@@ -32847,7 +32999,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                            "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                           },
                           "distanceMeters": {
                             "default": null,
@@ -32860,7 +33012,11 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                            "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                          },
+                          "endsOnLapButton": {
+                            "type": "boolean",
+                            "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                           },
                           "target": {
                             "default": null,
@@ -32957,7 +33113,7 @@
                                       "type": "null"
                                     }
                                   ],
-                                  "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                  "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                 },
                                 "distanceMeters": {
                                   "default": null,
@@ -32970,7 +33126,11 @@
                                       "type": "null"
                                     }
                                   ],
-                                  "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                  "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                },
+                                "endsOnLapButton": {
+                                  "type": "boolean",
+                                  "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                 },
                                 "target": {
                                   "default": null,
@@ -33394,7 +33554,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                            "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                           },
                           "distanceMeters": {
                             "default": null,
@@ -33407,7 +33567,11 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                            "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                          },
+                          "endsOnLapButton": {
+                            "type": "boolean",
+                            "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                           },
                           "target": {
                             "default": null,
@@ -33504,7 +33668,7 @@
                                       "type": "null"
                                     }
                                   ],
-                                  "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                                  "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                 },
                                 "distanceMeters": {
                                   "default": null,
@@ -33517,7 +33681,11 @@
                                       "type": "null"
                                     }
                                   ],
-                                  "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                                  "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                                },
+                                "endsOnLapButton": {
+                                  "type": "boolean",
+                                  "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                                 },
                                 "target": {
                                   "default": null,
@@ -34412,7 +34580,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                        "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                       },
                       "distanceMeters": {
                         "default": null,
@@ -34425,7 +34593,11 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                        "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                      },
+                      "endsOnLapButton": {
+                        "type": "boolean",
+                        "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                       },
                       "target": {
                         "default": null,
@@ -34522,7 +34694,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Step duration in seconds. Set exactly one of durationSeconds and distanceMeters."
+                              "description": "Step duration in seconds. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                             },
                             "distanceMeters": {
                               "default": null,
@@ -34535,7 +34707,11 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Step distance in meters. Set exactly one of durationSeconds and distanceMeters."
+                              "description": "Step distance in meters. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
+                            },
+                            "endsOnLapButton": {
+                              "type": "boolean",
+                              "description": "True when the step has no set length and ends when the athlete presses the lap button. Set exactly one of durationSeconds, distanceMeters and endsOnLapButton."
                             },
                             "target": {
                               "default": null,

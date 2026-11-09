@@ -133,6 +133,25 @@ describe('versioned domain contracts', () => {
     ])
       expect(workoutStepSchema.safeParse(invalid).success).toBe(false);
   });
+  it('accepts a step that ends on the lap button and keeps older steps readable', () => {
+    expect(workoutStepSchema.parse({ kind: 'warmup', endsOnLapButton: true })).toMatchObject({
+      durationSeconds: null,
+      distanceMeters: null,
+      endsOnLapButton: true,
+    });
+    expect(workoutStepSchema.parse({ kind: 'work', durationSeconds: 60 })).not.toHaveProperty(
+      'endsOnLapButton',
+    );
+  });
+  it('refuses a lap button end together with a duration or a distance, and a step with no end', () => {
+    for (const invalid of [
+      { kind: 'warmup', endsOnLapButton: true, durationSeconds: 600 },
+      { kind: 'warmup', endsOnLapButton: true, distanceMeters: 1000 },
+      { kind: 'warmup', endsOnLapButton: false },
+      { kind: 'warmup' },
+    ])
+      expect(workoutStepSchema.safeParse(invalid).success).toBe(false);
+  });
   it('requires provenance-consistent completion and a partial reason', () => {
     const values = {
       status: 'completed',
@@ -206,6 +225,22 @@ describe('agent command contract', () => {
       expect(agentCommandSchema.safeParse(command).error?.issues).toMatchObject([
         { code: 'unrecognized_keys' },
       ]);
+  });
+
+  it('lets an agent propose a warm-up that ends on the lap button', () => {
+    const workout = create(3600);
+    expect(
+      agentCommandSchema.safeParse({
+        ...workout,
+        values: {
+          ...workout.values,
+          steps: [
+            { kind: 'warmup', endsOnLapButton: true },
+            { kind: 'work', durationSeconds: 1200 },
+          ],
+        },
+      }).success,
+    ).toBe(true);
   });
 
   it('gives every number field of the agent contract a description', () => {

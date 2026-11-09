@@ -12,6 +12,7 @@ Use the documentation link for the version you installed. Each release page incl
 - Agent workspace lists pending proposals first and keeps applied and rejected proposals in a collapsible history.
 - If only activity or health records change while an agent prepares a training proposal, you can review those changes alongside the proposal. You must acknowledge the differences before applying it.
 - GitHub release pages show what changed and how to upgrade before the fresh install instructions.
+- A workout interval can end when you press the lap button instead of after a time or a distance, for example an open warm-up. Workout details show it as “Until lap button”, and agents can propose it. Steps saved this way cannot be read by an older release, so roll back with the matching pre-upgrade backup.
 
 ### Upgrade steps
 

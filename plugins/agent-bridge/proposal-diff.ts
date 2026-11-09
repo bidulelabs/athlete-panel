@@ -12,6 +12,7 @@ const labels: Record<string, string> = {
   endDate: 'End date',
   order: 'Position in day',
   steps: 'Intervals',
+  endsOnLapButton: 'Ends on lap button',
   sport: 'Sport group',
   sportSubgroup: 'Sport subgroup',
   plannedElevationGainMeters: 'Planned elevation gain',

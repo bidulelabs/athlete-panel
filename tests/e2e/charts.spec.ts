@@ -377,6 +377,32 @@ for (const theme of ['dark', 'light'] as const)
     await takeScreenshots(page, 'resting-heart-rate-hrv', info.project.name, theme);
   });
 
+test('resting heart rate and HRV count a single possible daily minimum as one night', async ({
+  page,
+}) => {
+  const state = nightsWorkspace();
+  const onlyMinimum = state.health.find(
+    (record) => record.metric === 'restingHeartRateBpm' && record.localDate >= '2030-01-01',
+  )!.localDate;
+  state.health = state.health.map((record) =>
+    record.metric === 'restingHeartRateBpm'
+      ? {
+          ...record,
+          provenance: {
+            ...record.provenance!,
+            restingHeartRateMayBeMinimum: record.localDate === onlyMinimum,
+          },
+        }
+      : record,
+  );
+  await openTrainingHours(page, 'dark', state);
+  await page.getByRole('button', { name: 'All templates' }).click();
+  await page.getByRole('button', { name: /^Resting heart rate and HRV/ }).click();
+  await expect(page.getByRole('figure').first()).toContainText(
+    'On 1 night the resting heart rate is a possible daily minimum',
+  );
+});
+
 test('resting heart rate and HRV show an empty state without nights', async ({ page }) => {
   await openTrainingHours(page, 'dark', chartsWorkspace());
   await page.getByRole('button', { name: 'All templates' }).click();
@@ -446,6 +472,24 @@ test('estimated training load keeps the averages of earlier sessions through a r
       .filter({ has: page.getByRole('cell', { name: '7 Jan', exact: true }) })
       .getByRole('cell'),
   ).toHaveText(['7 Jan', 'No sessions recorded', /^\d+$/, /^\d+$/]);
+});
+
+test('estimated training load counts a single day without duration as one day', async ({
+  page,
+}) => {
+  const state = trainingLoadWorkspace();
+  state.activities = state.activities
+    .filter((activity) => activity.localDate === '2030-01-08')
+    .map((activity) => ({ ...activity, durationSeconds: null }));
+  await openTrainingHours(page, 'dark', state);
+  await page.getByRole('button', { name: 'All templates' }).click();
+  await page.getByRole('button', { name: /^Estimated training load/ }).click();
+  await page.getByRole('combobox', { name: 'Period' }).selectOption('custom');
+  await page.getByRole('textbox', { name: 'From' }).fill('2030-01-07');
+  await page.getByRole('textbox', { name: 'To' }).fill('2030-01-13');
+  await expect(page.getByRole('figure')).toContainText(
+    '1 day has a session without duration; it is left out of the averages.',
+  );
 });
 
 test('estimated training load asks for resting and maximum heart rate first', async ({ page }) => {

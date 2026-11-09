@@ -95,6 +95,24 @@ test('training hours chart answers the keyboard with the focused week', async ({
   await expect(page.locator('.charts-tooltip')).toContainText('Week of');
 });
 
+test('the keyboard moves the tooltip while the pointer rests on the chart', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'mobile', 'A phone has no resting pointer.');
+  await openTrainingHours(page, 'dark');
+  const chart = page.getByRole('application');
+  await chart.scrollIntoViewIfNeeded();
+  const chartBox = (await chart.boundingBox())!;
+  const tickBox = (await chart.getByText('7 Jan', { exact: true }).boundingBox())!;
+  await chart.hover({
+    position: { x: tickBox.x + tickBox.width / 2 - chartBox.x, y: chartBox.height / 2 },
+  });
+  await expect(page.locator('.charts-tooltip')).toContainText('Week of 7 Jan');
+  await chart.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.charts-tooltip')).toContainText('Week of 5 Nov');
+});
+
 test('training hours asks the server for the season and custom weeks and refuses a reversed range', async ({
   page,
 }) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ChartsGrouping } from '@athlete-panel/contracts';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import {
   addDays,
   dateLabel,
@@ -44,6 +44,15 @@ export function periodText(
   return `from ${dateLabel(from)} to ${dateLabel(to, { day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
 
+function endMouseHoverOnArrowKey(event: KeyboardEvent<HTMLElement>) {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+  (event.target as Element)
+    .closest('.recharts-wrapper')
+    ?.dispatchEvent(
+      new MouseEvent('mouseout', { bubbles: true, relatedTarget: event.currentTarget }),
+    );
+}
+
 export function ChartFigure({
   title,
   description,
@@ -62,7 +71,12 @@ export function ChartFigure({
   rows: { key: string; cells: ReactNode[] }[];
 }) {
   return (
-    <figure className="charts-figure" aria-busy={loading} data-loading={loading}>
+    <figure
+      className="charts-figure"
+      aria-busy={loading}
+      data-loading={loading}
+      onKeyDown={endMouseHoverOnArrowKey}
+    >
       <figcaption>
         <h2>{title}</h2>
         <p>{description}</p>

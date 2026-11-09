@@ -51,13 +51,16 @@ export function TrainingLoadFigure({
   const daysWithoutHeartRate = pastDays.filter((day) => day.hasSessionWithoutHeartRate).length;
   const daysWithoutDuration = pastDays.filter((day) => day.hasSessionWithoutDuration).length;
   const missingInputs = [
-    daysWithoutHeartRate && `${daysWithoutHeartRate} days have a session without heart rate`,
-    daysWithoutDuration && `${daysWithoutDuration} days have a session without duration`,
+    daysWithoutHeartRate &&
+      `${daysWithoutHeartRate} ${daysWithoutHeartRate === 1 ? 'day has' : 'days have'} a session without heart rate`,
+    daysWithoutDuration &&
+      `${daysWithoutDuration} ${daysWithoutDuration === 1 ? 'day has' : 'days have'} a session without duration`,
   ].filter(Boolean);
+  const leftOut = daysWithoutHeartRate + daysWithoutDuration === 1 ? 'it is' : 'they are';
   return (
     <ChartFigure
       title="Estimated training load"
-      description={`An estimate, not a measurement: each day's load (Banister TRIMP) as bars, with its ${shortAverageDays}-day average (from ${shortAverageMinimumDays} days) and ${chartsLongLoadAverageDays}-day average (from ${longAverageMinimumDays} days) as lines, ${periodText(summary.weeks)}. Each session counts its minutes, weighted by where its average heart rate sits between your resting ${restingHeartRateBpm} and maximum ${maxHeartRateBpm} bpm.${missingInputs.length ? ` ${missingInputs.join(' and ')}; they are left out of the averages.` : ''}`}
+      description={`An estimate, not a measurement: each day's load (Banister TRIMP) as bars, with its ${shortAverageDays}-day average (from ${shortAverageMinimumDays} days) and ${chartsLongLoadAverageDays}-day average (from ${longAverageMinimumDays} days) as lines, ${periodText(summary.weeks)}. Each session counts its minutes, weighted by where its average heart rate sits between your resting ${restingHeartRateBpm} and maximum ${maxHeartRateBpm} bpm.${missingInputs.length ? ` ${missingInputs.join(' and ')}; ${leftOut} left out of the averages.` : ''}`}
       legend={[
         { label: 'Daily load', keyClass: 'charts-key-load' },
         { label: `${shortAverageDays}-day average`, keyClass: 'charts-key-average' },

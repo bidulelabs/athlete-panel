@@ -153,10 +153,13 @@ for (const theme of ['light', 'dark']) {
       await edits.getByLabel('Search changes').fill('No matching synthetic item');
       await expect(edits.getByText(/No changes match these filters/)).toBeVisible();
       await edits.getByRole('button', { name: 'Clear filters' }).click();
+      // Inserting a workout can also reorder existing workouts on this date.
+      const matchingTitles = await edits.locator('.proposal-diff-title').allTextContents();
       const displayedDate = await eventRow.locator('.proposal-diff-facts').innerText();
       for (const query of [date, displayedDate]) {
         await edits.getByLabel('Search changes').fill(query);
-        await expect(edits.locator('.proposal-diff')).toHaveCount(5);
+        await expect(edits.locator('.proposal-diff[data-action="create"]')).toHaveCount(5);
+        await expect(edits.locator('.proposal-diff-title')).toHaveText(matchingTitles);
       }
       await edits.getByRole('button', { name: 'Clear filters' }).click();
       await edits.getByLabel('Item type').selectOption('race');

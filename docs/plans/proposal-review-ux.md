@@ -55,3 +55,11 @@ The UI commit was rebased onto `origin/main` at `97ea2df`, excluding the already
 | Patch and documentation review | `git diff --check` passed. Feature, design, changelog and execution record agree with the implementation; no new contract, migration or architecture ownership change. |
 
 Final-run logs are `.runtime/proposal-review/pr-check.log`, `pr-integration.log`, `pr-build.log` and `pr-browser.log`. The temporary verification preview is stopped after the run; the owner's port-3039 preview remains separate. The complete browser matrix and local-setup rehearsal are left to CI; these local results do not establish deployment.
+
+## Visible summary follow-up
+
+On 2026-11-09 the owner asked to keep the plan summary visible at the top by default on desktop and mobile and update PR #100. The full stored proposal summary now appears directly above the dates and outcome counts, with no disclosure required. Line breaks are preserved and long text wraps; the application deadline remains visible beneath the counts. The feature specification, design record and existing changelog entry reflect this preference.
+
+Actual verification: `pnpm check` passed (390 unit tests, no lint errors, 178 warnings), web/worker build passed, and the same five desktop/mobile browser suites passed 48 cases with two deliberate skips. The mixed-proposal scenarios explicitly assert that the exact summary is in the viewport before any scrolling or disclosure interaction. Screenshots from all four desktop/mobile and light/dark combinations were inspected, including the 320px phone layout; summary, close and approval controls remain visible. Logs are `.runtime/proposal-review/summary-check.log`, `summary-build.log` and `summary-browser.log`; screenshot names remain `proposal-types-{desktop,mobile}-{light,dark}.png` under `.runtime/browser/`.
+
+This follow-up changes presentation only. Integration tests were not rerun; the prior 269 passing cases remain the recorded server verification. The fresh port-3042 preview and its temporary database are stopped/removed after verification. No private-server deployment or replacement of the existing owner preview is included.

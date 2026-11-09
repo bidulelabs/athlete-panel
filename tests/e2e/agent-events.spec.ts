@@ -102,6 +102,8 @@ for (const theme of ['light', 'dark']) {
       await page.keyboard.press('Escape');
       await expect(trigger).toBeFocused();
       await trigger.press('Enter');
+      await expect(dialog.locator('.proposal-summary')).toHaveText(summary);
+      await expect(dialog.locator('.proposal-summary')).toBeInViewport();
       const edits = dialog.getByRole('region', { name: 'Proposed edits', exact: true });
       for (const kind of ['workout', 'race', 'goal', 'note']) {
         await expect(edits.locator(`.proposal-type-${kind}`).first()).toBeVisible();

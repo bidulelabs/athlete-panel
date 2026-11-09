@@ -328,18 +328,21 @@
 .proposal-deletions {
   color: var(--danger);
 }
-.proposal-explanation > summary,
 .proposal-context > details > summary {
   min-height: 44px;
   cursor: pointer;
   padding-block: 12px;
   font-size: 13px;
 }
-.proposal-explanation p {
+.proposal-summary {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  margin-bottom: 12px;
+}
+.proposal-expiration {
   color: var(--muted);
-  margin-block: 4px 12px;
+  font-size: 12px;
+  margin-top: 12px;
 }
 .proposal-context {
   border: 1px solid var(--line);

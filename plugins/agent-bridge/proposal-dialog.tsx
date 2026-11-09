@@ -135,6 +135,7 @@ function ProposalDialog({
         aria-label="Proposal content"
       >
         <section className="proposal-overview" aria-label="Proposal overview">
+          {proposal.summary && <p className="proposal-summary">{proposal.summary}</p>}
           {overview.from && (
             <p className="proposal-overview-dates">
               {dateLabel(overview.from, { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -159,20 +160,14 @@ function ProposalDialog({
               );
             })}
           </dl>
-          {(proposal.summary || review) && (
-            <details className="proposal-explanation">
-              <summary>Agent’s explanation</summary>
-              <p>{proposal.summary}</p>
-              {review && (
-                <p className="muted-text">
-                  Apply before{' '}
-                  {new Date(review.expiresAt).toLocaleString(undefined, {
-                    dateStyle: 'medium',
-                    timeStyle: 'short',
-                  })}
-                </p>
-              )}
-            </details>
+          {review && (
+            <p className="proposal-expiration">
+              Apply before{' '}
+              {new Date(review.expiresAt).toLocaleString(undefined, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })}
+            </p>
           )}
         </section>
         {!pending && <Badge className="badge">{proposal.status}</Badge>}

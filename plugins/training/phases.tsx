@@ -20,11 +20,12 @@ import { Edit3, Plus, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { mutate } from './editors';
+import { editedWeeksInside } from './phase-targets';
 import { storedFromUnitField, unitFieldText } from './unit-field';
 
 type TargetFieldName =
   'weeklyDurationSeconds' | 'weeklyDistanceMeters' | 'weeklyElevationGainMeters';
-type TargetField = { name: TargetFieldName; label: string; unit: string; factor: number };
+export type TargetField = { name: TargetFieldName; label: string; unit: string; factor: number };
 
 export function targetFields(units: string): TargetField[] {
   const imperial = units === 'imperial';
@@ -129,6 +130,65 @@ function TargetFields({ target, field }: { target: WeeklyTarget | null; field: T
   );
 }
 
+function DroppedEditedWeeksNotice({
+  phase,
+  startDate,
+  endDate,
+}: {
+  phase: Period;
+  startDate: string;
+  endDate: string;
+}) {
+  if (!startDate || !endDate) return null;
+  const kept = editedWeeksInside(phase, startDate, endDate);
+  const dropped = Object.keys(phase.editedWeeks).filter((weekStart) => !(weekStart in kept));
+  if (!dropped.length) return null;
+  return (
+    <p role="status" className="phase-dropped-weeks">
+      Saving drops the edited {dropped.length === 1 ? 'week' : 'weeks'} of{' '}
+      {dropped.map((weekStart) => dateLabel(weekStart)).join(', ')}, now outside the phase.
+    </p>
+  );
+}
+
+function PhaseDateFields({
+  phase,
+  defaultStartDate,
+}: {
+  phase?: Period;
+  defaultStartDate?: string;
+}) {
+  const [dates, setDates] = useState({
+    startDate: phase?.startDate ?? defaultStartDate ?? '',
+    endDate: phase?.endDate ?? '',
+  });
+  return (
+    <>
+      <div className="form-grid phase-dates">
+        <Field label="First day">
+          <Input
+            required
+            name="startDate"
+            type="date"
+            defaultValue={phase?.startDate ?? defaultStartDate}
+            onChange={(event) => setDates({ ...dates, startDate: event.target.value })}
+          />
+        </Field>
+        <Field label="Last day">
+          <Input
+            required
+            name="endDate"
+            type="date"
+            defaultValue={phase?.endDate ?? ''}
+            onChange={(event) => setDates({ ...dates, endDate: event.target.value })}
+          />
+        </Field>
+      </div>
+      {phase && <DroppedEditedWeeksNotice phase={phase} {...dates} />}
+    </>
+  );
+}
+
 function PhaseEditor({
   phase,
   defaultStartDate,
@@ -147,7 +207,7 @@ function PhaseEditor({
       open
       onClose={onClose}
       title={phase ? 'Edit phase' : 'Add a phase'}
-      description="Targets are optional. They move in a straight line from the first week to the last."
+      description="Targets are optional. They move in a straight line from the first week to the last, except weeks set by hand."
     >
       <form
         className="dialog-body"
@@ -201,19 +261,7 @@ function PhaseEditor({
             placeholder="e.g. VO2max, threshold on flat"
           />
         </Field>
-        <div className="form-grid phase-dates">
-          <Field label="First day">
-            <Input
-              required
-              name="startDate"
-              type="date"
-              defaultValue={phase?.startDate ?? defaultStartDate}
-            />
-          </Field>
-          <Field label="Last day">
-            <Input required name="endDate" type="date" defaultValue={phase?.endDate ?? ''} />
-          </Field>
-        </div>
+        <PhaseDateFields phase={phase} defaultStartDate={defaultStartDate} />
         {fields.map((field) => (
           <TargetFields key={field.name} field={field} target={phase?.[field.name] ?? null} />
         ))}

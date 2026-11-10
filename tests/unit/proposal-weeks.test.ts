@@ -7,6 +7,7 @@ import {
   type EntityChange,
 } from '@athlete-panel/contracts';
 import { proposalRows } from '../../plugins/agent-bridge/proposal-diff';
+import { editedWeekFacts } from '../../plugins/agent-bridge/proposal-presentation';
 import {
   groupChangesByWeek,
   groupChangesByMonth,
@@ -267,6 +268,56 @@ describe('phase in review', () => {
       before: 'Not present',
       after: '3280.84 ft',
     });
+  });
+
+  it('reads an edited week by its date, in hours and profile units', () => {
+    const edited = periodSchema.parse({
+      ...period,
+      revision: 2,
+      editedWeeks: {
+        '2026-11-16': { weeklyDurationSeconds: { min: 21600, max: 28800 } },
+        '2026-11-30': { weeklyElevationGainMeters: { min: 600, max: 800 } },
+      },
+    });
+    expect(
+      proposalRows({ entity: 'period', before: period, after: edited } as EntityChange),
+    ).toEqual([
+      {
+        field: 'Edited weeks · Week of 2026-11-16 · Weekly hours · Minimum',
+        before: 'Not present',
+        after: '6 h',
+      },
+      {
+        field: 'Edited weeks · Week of 2026-11-16 · Weekly hours · Maximum',
+        before: 'Not present',
+        after: '8 h',
+      },
+      {
+        field: 'Edited weeks · Week of 2026-11-30 · Weekly climbing · Minimum',
+        before: 'Not present',
+        after: '600 m',
+      },
+      {
+        field: 'Edited weeks · Week of 2026-11-30 · Weekly climbing · Maximum',
+        before: 'Not present',
+        after: '800 m',
+      },
+    ]);
+  });
+
+  it('names each edited week with its hours target in the summary', () => {
+    const edited = periodSchema.parse({
+      ...period,
+      editedWeeks: {
+        '2026-11-16': { weeklyDurationSeconds: { min: 21600, max: 28800 } },
+        '2026-11-30': { weeklyElevationGainMeters: { min: 600, max: 800 } },
+      },
+    });
+    expect(editedWeekFacts(edited)).toEqual([
+      'week of Mon 16 Nov edited to 6h–8h',
+      expect.stringMatching(/^week of Mon 30 Nov edited to \d+h/),
+    ]);
+    expect(editedWeekFacts(period)).toEqual([]);
   });
 
   it('dates the change from the first to the last day of the period', () => {

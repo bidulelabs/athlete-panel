@@ -362,6 +362,30 @@
 .plans-phase .plans-meta {
   margin-top: 6px;
 }
+.phase-weeks {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.phase-weeks summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.phase-weeks li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+.phase-week-name {
+  min-width: 9em;
+  color: var(--muted);
+}
+.phase-dropped-weeks {
+  color: var(--accent-ink);
+  font-size: 13px;
+}
 .phase-target {
   margin: 0 0 8px;
   padding: 0;

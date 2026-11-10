@@ -34,6 +34,7 @@ import { prescriptionPreview } from './prescription';
 import { TrainingHistory } from './history';
 import { AddPhaseButton, PhaseBlock } from './phases';
 import { planPhases, planSections } from './plan-phases';
+import { PhaseWeekTargets } from './phase-weeks';
 import './plans.css';
 function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
   const { request } = useWorkspace();
@@ -393,6 +394,7 @@ function PlanDetails({
             ));
             return phase ? (
               <PhaseBlock key={phase.id} phase={phase}>
+                <PhaseWeekTargets phase={phase} />
                 {weekSections}
               </PhaseBlock>
             ) : (

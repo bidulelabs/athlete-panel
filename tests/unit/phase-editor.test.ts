@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { WeeklyTarget } from '@athlete-panel/contracts';
 import { readTargetFromForm, targetFields } from '../../plugins/training/phases';
 import { unitFieldText } from '../../plugins/training/unit-field';
+import { readEditedWeek } from '../../plugins/training/phase-weeks';
 
 const target = (first: number, last: number): WeeklyTarget => ({
   firstWeek: { min: first, max: first },
@@ -51,5 +52,27 @@ describe('phase editor', () => {
       form.set(`${field.name}.${key}`, '1000');
     expect(readTargetFromForm(form, field, undefined)!.firstWeek.min).toBeCloseTo(304.8);
     expect(readTargetFromForm(new FormData(), field, undefined)).toBeNull();
+  });
+});
+
+describe('week target editor', () => {
+  const fields = targetFields('metric');
+  const calculated = {
+    weeklyDurationSeconds: { min: 33600, max: 40800 },
+    weeklyDistanceMeters: null,
+    weeklyElevationGainMeters: { min: 1400, max: 1600 },
+  };
+
+  it('stores only the ticked targets and keeps an untouched calculated value exact', () => {
+    const form = new FormData();
+    form.set('weeklyDurationSeconds.min', unitFieldText(33600, 3600));
+    form.set('weeklyDurationSeconds.max', '8');
+    expect(readEditedWeek(form, fields, calculated)).toEqual({
+      weeklyDurationSeconds: { min: 33600, max: 28800 },
+    });
+  });
+
+  it('reads no edited week when no target is ticked', () => {
+    expect(readEditedWeek(new FormData(), fields, calculated)).toBeNull();
   });
 });

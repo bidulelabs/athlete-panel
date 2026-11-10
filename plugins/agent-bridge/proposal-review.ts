@@ -113,7 +113,12 @@ export async function evaluateProposal(tx: Transaction, input: { id: string; dig
   );
   assert(
     digest(
-      canonical({ commands, changes, contextDigest: context.digest, summary: proposal.summary }),
+      canonical({
+        commands: proposal.commands,
+        changes: proposal.changes,
+        contextDigest: context.digest,
+        summary: proposal.summary,
+      }),
     ) === proposal.digest,
     'digest_mismatch',
     'The stored proposal no longer matches its immutable digest.',

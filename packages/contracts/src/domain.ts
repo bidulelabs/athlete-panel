@@ -394,6 +394,26 @@ const weeklyTarget = z
     ),
   })
   .strict();
+const editedWeek = z
+  .object({
+    weeklyDurationSeconds: weeklyRange.optional(),
+    weeklyDistanceMeters: weeklyRange.optional(),
+    weeklyElevationGainMeters: weeklyRange.optional(),
+  })
+  .strict()
+  .refine(
+    (week) =>
+      week.weeklyDurationSeconds || week.weeklyDistanceMeters || week.weeklyElevationGainMeters,
+    { message: 'An edited week sets at least one target.' },
+  );
+const editedWeeks = z
+  .record(dateSchema, editedWeek)
+  .describe(
+    'Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks.',
+  );
+export const editedWeekStartsInside = (monday: string, startDate: string, endDate: string) =>
+  startDate <= monday &&
+  new Date(Date.parse(monday) - 86400000).toISOString().slice(0, 10) <= endDate;
 export const periodRoles = ['base', 'build', 'peak', 'taper', 'recovery'] as const;
 const periodFieldsWithoutDefaults = {
   name: text,
@@ -412,6 +432,7 @@ const periodFieldsWithoutDefaults = {
     .describe('Weekly training time in seconds, every sport included.'),
   weeklyDistanceMeters: weeklyTarget.nullable().describe('Weekly distance in meters.'),
   weeklyElevationGainMeters: weeklyTarget.nullable().describe('Weekly elevation gain in meters.'),
+  editedWeeks,
 };
 export const periodValuesSchema = z
   .object({
@@ -420,6 +441,7 @@ export const periodValuesSchema = z
     weeklyDurationSeconds: periodFieldsWithoutDefaults.weeklyDurationSeconds.default(null),
     weeklyDistanceMeters: periodFieldsWithoutDefaults.weeklyDistanceMeters.default(null),
     weeklyElevationGainMeters: periodFieldsWithoutDefaults.weeklyElevationGainMeters.default(null),
+    editedWeeks: editedWeeks.default({}),
   })
   .strict();
 export const periodSchema = periodValuesSchema
@@ -427,8 +449,23 @@ export const periodSchema = periodValuesSchema
   .refine((value) => value.endDate >= value.startDate, {
     path: ['endDate'],
     message: 'End date cannot be before start date.',
-  });
+  })
+  .refine(
+    (value) =>
+      Object.keys(value.editedWeeks).every(
+        (monday) => new Date(`${monday}T12:00:00Z`).getUTCDay() === 1,
+      ),
+    { path: ['editedWeeks'], message: 'Edited weeks are keyed by the Monday of the week.' },
+  )
+  .refine(
+    (value) =>
+      Object.keys(value.editedWeeks).every((monday) =>
+        editedWeekStartsInside(monday, value.startDate, value.endDate),
+      ),
+    { path: ['editedWeeks'], message: 'Edited weeks must start inside their phase.' },
+  );
 export type Period = z.infer<typeof periodSchema>;
+export type EditedWeek = z.infer<typeof editedWeek>;
 export type WeeklyTarget = z.infer<typeof weeklyTarget>;
 export const injuryValuesSchema = z
   .object({

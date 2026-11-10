@@ -1183,6 +1183,81 @@
                     ],
                     "description": "Weekly elevation gain in meters."
                   },
+                  "editedWeeks": {
+                    "default": {},
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "weeklyDurationSeconds": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "weeklyDistanceMeters": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "weeklyElevationGainMeters": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                  },
                   "id": {
                     "type": "string",
                     "format": "uuid",
@@ -1203,6 +1278,7 @@
                   "weeklyDurationSeconds",
                   "weeklyDistanceMeters",
                   "weeklyElevationGainMeters",
+                  "editedWeeks",
                   "id",
                   "revision"
                 ],
@@ -5657,6 +5733,81 @@
                             ],
                             "description": "Weekly elevation gain in meters."
                           },
+                          "editedWeeks": {
+                            "default": {},
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "weeklyDurationSeconds": {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Lowest weekly value, in the unit named by the target field."
+                                    },
+                                    "max": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Highest weekly value, in the unit named by the target field."
+                                    }
+                                  },
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "weeklyDistanceMeters": {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Lowest weekly value, in the unit named by the target field."
+                                    },
+                                    "max": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Highest weekly value, in the unit named by the target field."
+                                    }
+                                  },
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "weeklyElevationGainMeters": {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Lowest weekly value, in the unit named by the target field."
+                                    },
+                                    "max": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Highest weekly value, in the unit named by the target field."
+                                    }
+                                  },
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                          },
                           "id": {
                             "description": "Optional UUID for the new record. A later command of the same batch can use it as schedule.planId.",
                             "type": "string",
@@ -5672,7 +5823,8 @@
                           "focus",
                           "weeklyDurationSeconds",
                           "weeklyDistanceMeters",
-                          "weeklyElevationGainMeters"
+                          "weeklyElevationGainMeters",
+                          "editedWeeks"
                         ],
                         "additionalProperties": false
                       }
@@ -5911,6 +6063,80 @@
                               }
                             ],
                             "description": "Weekly elevation gain in meters."
+                          },
+                          "editedWeeks": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "weeklyDurationSeconds": {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Lowest weekly value, in the unit named by the target field."
+                                    },
+                                    "max": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Highest weekly value, in the unit named by the target field."
+                                    }
+                                  },
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "weeklyDistanceMeters": {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Lowest weekly value, in the unit named by the target field."
+                                    },
+                                    "max": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Highest weekly value, in the unit named by the target field."
+                                    }
+                                  },
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "weeklyElevationGainMeters": {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Lowest weekly value, in the unit named by the target field."
+                                    },
+                                    "max": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Highest weekly value, in the unit named by the target field."
+                                    }
+                                  },
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
                           }
                         },
                         "additionalProperties": false
@@ -8529,6 +8755,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -8549,6 +8850,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -8775,6 +9077,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -8795,6 +9172,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -12294,6 +12672,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -12314,6 +12767,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -12540,6 +12994,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -12560,6 +13089,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -16076,6 +16606,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -16096,6 +16701,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -16322,6 +16928,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -16342,6 +17023,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -20272,6 +20954,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -20292,6 +21049,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -20518,6 +21276,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -20538,6 +21371,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -24457,6 +25291,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -24477,6 +25386,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -24703,6 +25613,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -24723,6 +25708,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -28251,6 +29237,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -28271,6 +29332,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -28497,6 +29559,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -28517,6 +29654,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -32056,6 +33194,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -32076,6 +33289,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -32302,6 +33516,81 @@
                                 ],
                                 "description": "Weekly elevation gain in meters."
                               },
+                              "editedWeeks": {
+                                "default": {},
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "object",
+                                  "properties": {
+                                    "weeklyDurationSeconds": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyDistanceMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "weeklyElevationGainMeters": {
+                                      "type": "object",
+                                      "properties": {
+                                        "min": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Lowest weekly value, in the unit named by the target field."
+                                        },
+                                        "max": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Highest weekly value, in the unit named by the target field."
+                                        }
+                                      },
+                                      "required": [
+                                        "min",
+                                        "max"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -32322,6 +33611,7 @@
                               "weeklyDurationSeconds",
                               "weeklyDistanceMeters",
                               "weeklyElevationGainMeters",
+                              "editedWeeks",
                               "id",
                               "revision"
                             ],
@@ -37256,6 +38546,81 @@
                   ],
                   "description": "Weekly elevation gain in meters."
                 },
+                "editedWeeks": {
+                  "default": {},
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "weeklyDurationSeconds": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "weeklyDistanceMeters": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "weeklyElevationGainMeters": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                },
                 "id": {
                   "description": "Optional UUID for the new record. A later command of the same batch can use it as schedule.planId.",
                   "type": "string",
@@ -37271,7 +38636,8 @@
                 "focus",
                 "weeklyDurationSeconds",
                 "weeklyDistanceMeters",
-                "weeklyElevationGainMeters"
+                "weeklyElevationGainMeters",
+                "editedWeeks"
               ],
               "additionalProperties": false
             }
@@ -37510,6 +38876,80 @@
                     }
                   ],
                   "description": "Weekly elevation gain in meters."
+                },
+                "editedWeeks": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "weeklyDurationSeconds": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "weeklyDistanceMeters": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "weeklyElevationGainMeters": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
                 }
               },
               "additionalProperties": false
@@ -39534,6 +40974,81 @@
                   ],
                   "description": "Weekly elevation gain in meters."
                 },
+                "editedWeeks": {
+                  "default": {},
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "weeklyDurationSeconds": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "weeklyDistanceMeters": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "weeklyElevationGainMeters": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+                },
                 "id": {
                   "description": "Optional UUID for the new record. A later command of the same batch can use it as schedule.planId.",
                   "type": "string",
@@ -39549,7 +41064,8 @@
                 "focus",
                 "weeklyDurationSeconds",
                 "weeklyDistanceMeters",
-                "weeklyElevationGainMeters"
+                "weeklyElevationGainMeters",
+                "editedWeeks"
               ],
               "additionalProperties": false
             }
@@ -39788,6 +41304,80 @@
                     }
                   ],
                   "description": "Weekly elevation gain in meters."
+                },
+                "editedWeeks": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "weeklyDurationSeconds": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "weeklyDistanceMeters": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "weeklyElevationGainMeters": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Lowest weekly value, in the unit named by the target field."
+                          },
+                          "max": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Highest weekly value, in the unit named by the target field."
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
                 }
               },
               "additionalProperties": false
@@ -41010,6 +42600,81 @@
               ],
               "description": "Weekly elevation gain in meters."
             },
+            "editedWeeks": {
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "weeklyDurationSeconds": {
+                    "type": "object",
+                    "properties": {
+                      "min": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Lowest weekly value, in the unit named by the target field."
+                      },
+                      "max": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Highest weekly value, in the unit named by the target field."
+                      }
+                    },
+                    "required": [
+                      "min",
+                      "max"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "weeklyDistanceMeters": {
+                    "type": "object",
+                    "properties": {
+                      "min": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Lowest weekly value, in the unit named by the target field."
+                      },
+                      "max": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Highest weekly value, in the unit named by the target field."
+                      }
+                    },
+                    "required": [
+                      "min",
+                      "max"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "weeklyElevationGainMeters": {
+                    "type": "object",
+                    "properties": {
+                      "min": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Lowest weekly value, in the unit named by the target field."
+                      },
+                      "max": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Highest weekly value, in the unit named by the target field."
+                      }
+                    },
+                    "required": [
+                      "min",
+                      "max"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Weeks whose targets are set by hand, keyed by the Monday of the week, so a change of week start keeps them. A target left out stays calculated from the first and last weeks."
+            },
             "id": {
               "type": "string",
               "format": "uuid",
@@ -41030,6 +42695,7 @@
             "weeklyDurationSeconds",
             "weeklyDistanceMeters",
             "weeklyElevationGainMeters",
+            "editedWeeks",
             "id",
             "revision"
           ],

@@ -33,6 +33,7 @@ const labels: Record<string, string> = {
   weeklyDurationSeconds: 'Weekly hours',
   weeklyDistanceMeters: 'Weekly distance',
   weeklyElevationGainMeters: 'Weekly climbing',
+  editedWeeks: 'Edited weeks',
   firstWeek: 'First week',
   lastWeek: 'Last week',
 };
@@ -67,10 +68,10 @@ function valueText(
   parent: Record<string, unknown>,
   units: 'metric' | 'imperial',
   plans: Record<string, string>,
-  topLevelKey: string,
+  path: string[],
 ) {
-  const key =
-    topLevelKey.startsWith('weekly') && ['min', 'max'].includes(leafKey) ? topLevelKey : leafKey;
+  const weeklyField = path.find((part) => part.startsWith('weekly'));
+  const key = weeklyField && ['min', 'max'].includes(leafKey) ? weeklyField : leafKey;
   if (value === undefined) return 'Not present';
   if (value === null) return key.toLowerCase().includes('date') ? 'Unscheduled' : 'Not set';
   if (value === '') return 'Empty';
@@ -141,11 +142,13 @@ export function proposalRows(
             ? `${path[index - 1] === 'exercises' ? 'Exercise' : 'Step'} ${Number(part) + 1}`
             : path.length === 1 && part === 'notes' && change.entity === 'workout'
               ? 'Workout description'
-              : readable(part),
+              : path[index - 1] === 'editedWeeks'
+                ? `Week of ${part}`
+                : readable(part),
         )
         .join(' · '),
-      before: valueText(before, key, beforeParent, units, plans, path[0]!),
-      after: valueText(after, key, afterParent, units, plans, path[0]!),
+      before: valueText(before, key, beforeParent, units, plans, path),
+      after: valueText(after, key, afterParent, units, plans, path),
     });
   };
   visit(change.before ?? {}, change.after ?? {}, []);

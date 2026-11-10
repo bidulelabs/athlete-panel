@@ -1,5 +1,6 @@
 import { periodSchema, type Command } from '@athlete-panel/contracts';
 import type { CommandContext } from '../context';
+import { editedWeeksInside } from '../../phase-targets';
 
 export function handlePeriod(
   context: CommandContext,
@@ -14,7 +15,9 @@ export function handlePeriod(
       break;
     }
     case 'period.update': {
-      Object.assign(get(state.periods, command.id, command.expectedRevision), command.values);
+      const period = get(state.periods, command.id, command.expectedRevision);
+      Object.assign(period, command.values);
+      if (!command.values.editedWeeks) period.editedWeeks = editedWeeksInside(period);
       break;
     }
     case 'period.delete': {

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 import { type CommandInput } from '@athlete-panel/contracts';
 import { isolatedDatabaseUrl } from '../support/test-database';
+import { canonical, digest } from '../../packages/host/src/crypto';
 import { closeDatabase, connection } from '../../packages/host/src/db';
 import { migrate } from '../../packages/host/src/migrations';
 import { loadWorkspace } from '../../instance/services';
@@ -12,6 +13,7 @@ import {
   contextForToken,
   createGrant,
   proposalDetails,
+  reviewProposal,
   submitProposal,
   undoChange,
 } from '../../plugins/agent-bridge/service';
@@ -145,4 +147,63 @@ it('updates and deletes a period inside the proposal dates, refuses one outside 
   ]);
   await applyProposal({ ...deleted, idempotencyKey: randomUUID() });
   expect((await loadWorkspace()).periods.map((p) => p.id)).toEqual([outside]);
+});
+
+it('reviews and applies a phase proposal saved before edited weeks existed', async () => {
+  const { token } = await access();
+  const { id } = await submit(token, [createPeriod()]);
+  const sql = connection();
+  const [stored] = await sql<
+    { commands: unknown; changes: unknown; summary: string; context: { digest: string } }[]
+  >`select commands,changes,summary,context from host.proposals where id=${id}`;
+  const withoutEditedWeeks = (value: unknown) =>
+    JSON.parse(JSON.stringify(value, (key, field) => (key === 'editedWeeks' ? undefined : field)));
+  const commands = withoutEditedWeeks(stored!.commands);
+  const changes = withoutEditedWeeks(stored!.changes);
+  expect(JSON.stringify(changes)).not.toContain('editedWeeks');
+  const proposalDigest = digest(
+    canonical({
+      commands,
+      changes,
+      contextDigest: stored!.context.digest,
+      summary: stored!.summary,
+    }),
+  );
+  await sql`update host.proposals set commands=${sql.json(commands)},changes=${sql.json(changes)},digest=${proposalDigest} where id=${id}`;
+  const pending = { id, digest: proposalDigest };
+  expect(await reviewProposal(pending)).toMatchObject({ applicability: 'ready' });
+  await applyProposal({ ...pending, idempotencyKey: randomUUID() });
+  expect((await loadWorkspace()).periods).toMatchObject([{ name: 'Winter base', editedWeeks: {} }]);
+});
+
+it('lets an agent edit one week of a phase with the phase permission, not without it', async () => {
+  const phaseId = randomUUID();
+  await owner([
+    { action: 'period.create', values: { id: phaseId, ...periodValues() } } as CommandInput,
+  ]);
+  const lighterWeek = {
+    action: 'period.update',
+    id: phaseId,
+    expectedRevision: 1,
+    values: {
+      editedWeeks: { '2026-11-16': { weeklyDurationSeconds: { min: 21600, max: 28800 } } },
+    },
+  };
+  const { token: withoutPermission } = await access(false);
+  await expect(submit(withoutPermission, [lighterWeek])).rejects.toMatchObject({
+    code: 'forbidden',
+  });
+  const { token } = await access();
+  const outsideThePhase = {
+    ...lighterWeek,
+    values: { editedWeeks: { '2027-02-08': { weeklyDurationSeconds: { min: 0, max: 1 } } } },
+  };
+  await expect(submit(token, [outsideThePhase])).rejects.toThrow(/inside their phase/);
+  const submitted = await submit(token, [lighterWeek]);
+  await applyProposal({ ...submitted, idempotencyKey: randomUUID() });
+  const [phase] = (await loadWorkspace()).periods;
+  expect(phase).toMatchObject({
+    editedWeeks: lighterWeek.values.editedWeeks,
+    weeklyDurationSeconds: weeklyHours,
+  });
 });

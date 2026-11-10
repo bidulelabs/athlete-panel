@@ -115,7 +115,7 @@ for (const theme of ['dark', 'light']) {
       true,
     );
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(page.getByRole('button', { name: `Open ${title}`, exact: true })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: title })).toHaveCount(1);
   });
 }
 test('failed date navigation retains last loaded dates and can retry', async ({ page }) => {

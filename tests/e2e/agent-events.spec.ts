@@ -199,9 +199,7 @@ for (const theme of ['light', 'dark']) {
       await expect(raceCard).toBeVisible();
       await expect(goalCard).toBeVisible();
       await expect(noteCard).toBeVisible();
-      await expect(
-        calendar.getByRole('button', { name: `Open Warm-up ${suffix}`, exact: true }),
-      ).toBeVisible();
+      await expect(calendar.getByRole('button', { name: `Warm-up ${suffix}` })).toBeVisible();
       expect(
         await raceCard.evaluate((el) => getComputedStyle(el).getPropertyValue('--fact-color')),
       ).not.toBe(
@@ -233,9 +231,7 @@ for (const theme of ['light', 'dark']) {
       await expect(
         page.getByRole('button', { name: `Open event ${title}`, exact: true }),
       ).toHaveCount(0);
-      await expect(
-        page.getByRole('button', { name: `Open Warm-up ${suffix}`, exact: true }),
-      ).toHaveCount(0);
+      await expect(page.getByRole('button', { name: `Warm-up ${suffix}` })).toHaveCount(0);
     } finally {
       if (auditId && !undone) await owner('undo', { id: auditId, idempotencyKey: randomUUID() });
       if (proposalId && !auditId) await owner('reject', { id: proposalId });

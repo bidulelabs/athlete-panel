@@ -730,8 +730,9 @@ svg {
 .first-workout-banner > svg {
   color: var(--accent);
 }
-.first-workout-banner h3 {
+.first-workout-banner h2 {
   font-size: 13px;
+  letter-spacing: normal;
 }
 .first-workout-banner p {
   font-size: 11px;

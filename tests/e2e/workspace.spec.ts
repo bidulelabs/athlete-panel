@@ -57,7 +57,7 @@ for (const theme of ['light', 'dark']) {
     await create.getByLabel('Scheduled date').fill(await today(page));
     await create.getByRole('button', { name: 'Add workout', exact: true }).click();
     await expect(create).not.toBeVisible();
-    const trigger = page.getByRole('button', { name: `Open ${title}`, exact: true });
+    const trigger = page.getByRole('button', { name: title });
     await expect(trigger).toBeVisible();
     await trigger.click();
     const inspector = page.getByRole('complementary', { name: 'Workout details' });
@@ -76,7 +76,7 @@ for (const theme of ['light', 'dark']) {
     await expect(completion).not.toBeVisible();
     await expect(inspector.locator('.completion-state')).toContainText('completed');
     await page.reload();
-    await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
+    await page.getByRole('button', { name: title }).click();
     await expect(inspector.locator('.completion-state')).toContainText('completed');
     await expect(inspector.getByText('42m', { exact: true })).toBeVisible();
     await expect(inspector.getByText('7.5 km', { exact: true })).toBeVisible();
@@ -160,7 +160,7 @@ test('keyboard dialog controls, theme persistence and failed-save recovery', asy
   await expect(dialog.getByLabel('Workout title')).toHaveValue(title);
   await dialog.getByRole('button', { name: 'Add workout', exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole('button', { name: `Open ${title}`, exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: title })).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

@@ -1014,11 +1014,13 @@
                             "properties": {
                               "min": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Lowest weekly value, in the unit named by the target field."
                               },
                               "max": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Highest weekly value, in the unit named by the target field."
                               }
                             },
                             "required": [
@@ -1032,11 +1034,13 @@
                             "properties": {
                               "min": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Lowest weekly value, in the unit named by the target field."
                               },
                               "max": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Highest weekly value, in the unit named by the target field."
                               }
                             },
                             "required": [
@@ -1070,11 +1074,13 @@
                             "properties": {
                               "min": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Lowest weekly value, in the unit named by the target field."
                               },
                               "max": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Highest weekly value, in the unit named by the target field."
                               }
                             },
                             "required": [
@@ -1088,11 +1094,13 @@
                             "properties": {
                               "min": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Lowest weekly value, in the unit named by the target field."
                               },
                               "max": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Highest weekly value, in the unit named by the target field."
                               }
                             },
                             "required": [
@@ -1126,11 +1134,13 @@
                             "properties": {
                               "min": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Lowest weekly value, in the unit named by the target field."
                               },
                               "max": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Highest weekly value, in the unit named by the target field."
                               }
                             },
                             "required": [
@@ -1144,11 +1154,13 @@
                             "properties": {
                               "min": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Lowest weekly value, in the unit named by the target field."
                               },
                               "max": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "description": "Highest weekly value, in the unit named by the target field."
                               }
                             },
                             "required": [
@@ -2494,6 +2506,9 @@
                             "type": "boolean"
                           },
                           "allowEventCreation": {
+                            "type": "boolean"
+                          },
+                          "allowPhaseChanges": {
                             "type": "boolean"
                           }
                         },
@@ -5473,11 +5488,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5491,11 +5508,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5529,11 +5548,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5547,11 +5568,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5585,11 +5608,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5603,11 +5628,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5718,11 +5745,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5736,11 +5765,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5773,11 +5804,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5791,11 +5824,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5828,11 +5863,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -5846,11 +5883,13 @@
                                     "properties": {
                                       "min": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Lowest weekly value, in the unit named by the target field."
                                       },
                                       "max": {
                                         "type": "number",
-                                        "minimum": 0
+                                        "minimum": 0,
+                                        "description": "Highest weekly value, in the unit named by the target field."
                                       }
                                     },
                                     "required": [
@@ -8321,11 +8360,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8339,11 +8380,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8377,11 +8420,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8395,11 +8440,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8433,11 +8480,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8451,11 +8500,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8555,11 +8606,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8573,11 +8626,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8611,11 +8666,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8629,11 +8686,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8667,11 +8726,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -8685,11 +8746,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12062,11 +12125,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12080,11 +12145,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12118,11 +12185,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12136,11 +12205,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12174,11 +12245,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12192,11 +12265,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12296,11 +12371,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12314,11 +12391,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12352,11 +12431,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12370,11 +12451,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12408,11 +12491,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -12426,11 +12511,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -15820,11 +15907,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -15838,11 +15927,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -15876,11 +15967,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -15894,11 +15987,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -15932,11 +16027,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -15950,11 +16047,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -16054,11 +16153,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -16072,11 +16173,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -16110,11 +16213,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -16128,11 +16233,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -16166,11 +16273,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -16184,11 +16293,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -19992,11 +20103,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20010,11 +20123,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20048,11 +20163,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20066,11 +20183,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20104,11 +20223,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20122,11 +20243,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20226,11 +20349,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20244,11 +20369,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20282,11 +20409,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20300,11 +20429,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20338,11 +20469,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -20356,11 +20489,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -21592,6 +21727,9 @@
                         },
                         "allowEventCreation": {
                           "type": "boolean"
+                        },
+                        "allowPhaseChanges": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -21746,6 +21884,9 @@
                               "type": "boolean"
                             },
                             "allowEventCreation": {
+                              "type": "boolean"
+                            },
+                            "allowPhaseChanges": {
                               "type": "boolean"
                             }
                           },
@@ -24147,11 +24288,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24165,11 +24308,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24203,11 +24348,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24221,11 +24368,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24259,11 +24408,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24277,11 +24428,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24381,11 +24534,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24399,11 +24554,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24437,11 +24594,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24455,11 +24614,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24493,11 +24654,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -24511,11 +24674,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -27917,11 +28082,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -27935,11 +28102,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -27973,11 +28142,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -27991,11 +28162,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -28029,11 +28202,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -28047,11 +28222,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -28151,11 +28328,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -28169,11 +28348,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -28207,11 +28388,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -28225,11 +28408,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -28263,11 +28448,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -28281,11 +28468,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -31698,11 +31887,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -31716,11 +31907,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -31754,11 +31947,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -31772,11 +31967,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -31810,11 +32007,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -31828,11 +32027,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -31932,11 +32133,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -31950,11 +32153,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -31988,11 +32193,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -32006,11 +32213,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -32044,11 +32253,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -32062,11 +32273,13 @@
                                         "properties": {
                                           "min": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Lowest weekly value, in the unit named by the target field."
                                           },
                                           "max": {
                                             "type": "number",
-                                            "minimum": 0
+                                            "minimum": 0,
+                                            "description": "Highest weekly value, in the unit named by the target field."
                                           }
                                         },
                                         "required": [
@@ -33331,6 +33544,9 @@
                                 },
                                 "allowEventCreation": {
                                   "type": "boolean"
+                                },
+                                "allowPhaseChanges": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
@@ -33524,6 +33740,9 @@
                           "type": "boolean"
                         },
                         "allowEventCreation": {
+                          "type": "boolean"
+                        },
+                        "allowPhaseChanges": {
                           "type": "boolean"
                         }
                       },
@@ -33723,6 +33942,9 @@
                                   "type": "boolean"
                                 },
                                 "allowEventCreation": {
+                                  "type": "boolean"
+                                },
+                                "allowPhaseChanges": {
                                   "type": "boolean"
                                 }
                               },
@@ -33949,6 +34171,9 @@
                                   "type": "boolean"
                                 },
                                 "allowEventCreation": {
+                                  "type": "boolean"
+                                },
+                                "allowPhaseChanges": {
                                   "type": "boolean"
                                 }
                               },
@@ -36862,11 +37087,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -36880,11 +37107,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -36918,11 +37147,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -36936,11 +37167,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -36974,11 +37207,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -36992,11 +37227,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -37107,11 +37344,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -37125,11 +37364,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -37162,11 +37403,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -37180,11 +37423,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -37217,11 +37462,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -37235,11 +37482,13 @@
                           "properties": {
                             "min": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
                             },
                             "max": {
                               "type": "number",
-                              "minimum": 0
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
                             }
                           },
                           "required": [
@@ -39063,6 +39312,521 @@
             "values"
           ],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "const": "period.create"
+            },
+            "values": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "base",
+                    "build",
+                    "peak",
+                    "taper",
+                    "recovery"
+                  ]
+                },
+                "startDate": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "description": "First day of the period. A week belongs to the period holding its first day."
+                },
+                "endDate": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "description": "Last day of the period."
+                },
+                "focus": {
+                  "default": "",
+                  "type": "string",
+                  "maxLength": 120,
+                  "description": "What the phase trains, such as \"VO2max\" or \"Taper for the spring marathon\"."
+                },
+                "weeklyDurationSeconds": {
+                  "default": null,
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "firstWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "lastWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Weeks between the first and the last are interpolated linearly."
+                        }
+                      },
+                      "required": [
+                        "firstWeek",
+                        "lastWeek"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Weekly training time in seconds, every sport included."
+                },
+                "weeklyDistanceMeters": {
+                  "default": null,
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "firstWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "lastWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Weeks between the first and the last are interpolated linearly."
+                        }
+                      },
+                      "required": [
+                        "firstWeek",
+                        "lastWeek"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Weekly distance in meters."
+                },
+                "weeklyElevationGainMeters": {
+                  "default": null,
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "firstWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "lastWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Weeks between the first and the last are interpolated linearly."
+                        }
+                      },
+                      "required": [
+                        "firstWeek",
+                        "lastWeek"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Weekly elevation gain in meters."
+                },
+                "id": {
+                  "description": "Optional UUID for the new record. A later command of the same batch can use it as schedule.planId.",
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "required": [
+                "name",
+                "role",
+                "startDate",
+                "endDate",
+                "focus",
+                "weeklyDurationSeconds",
+                "weeklyDistanceMeters",
+                "weeklyElevationGainMeters"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "action",
+            "values"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "const": "period.update"
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Id of the existing record."
+            },
+            "expectedRevision": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Revision of the record when it was read. The command is refused if the record changed since."
+            },
+            "values": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "base",
+                    "build",
+                    "peak",
+                    "taper",
+                    "recovery"
+                  ]
+                },
+                "startDate": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "description": "First day of the period. A week belongs to the period holding its first day."
+                },
+                "endDate": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "description": "Last day of the period."
+                },
+                "focus": {
+                  "type": "string",
+                  "maxLength": 120,
+                  "description": "What the phase trains, such as \"VO2max\" or \"Taper for the spring marathon\"."
+                },
+                "weeklyDurationSeconds": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "firstWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "lastWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Weeks between the first and the last are interpolated linearly."
+                        }
+                      },
+                      "required": [
+                        "firstWeek",
+                        "lastWeek"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Weekly training time in seconds, every sport included."
+                },
+                "weeklyDistanceMeters": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "firstWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "lastWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Weeks between the first and the last are interpolated linearly."
+                        }
+                      },
+                      "required": [
+                        "firstWeek",
+                        "lastWeek"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Weekly distance in meters."
+                },
+                "weeklyElevationGainMeters": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "firstWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "lastWeek": {
+                          "type": "object",
+                          "properties": {
+                            "min": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Lowest weekly value, in the unit named by the target field."
+                            },
+                            "max": {
+                              "type": "number",
+                              "minimum": 0,
+                              "description": "Highest weekly value, in the unit named by the target field."
+                            }
+                          },
+                          "required": [
+                            "min",
+                            "max"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Weeks between the first and the last are interpolated linearly."
+                        }
+                      },
+                      "required": [
+                        "firstWeek",
+                        "lastWeek"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Weekly elevation gain in meters."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "action",
+            "id",
+            "expectedRevision",
+            "values"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "const": "period.delete"
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Id of the existing record."
+            },
+            "expectedRevision": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Revision of the record when it was read. The command is refused if the record changed since."
+            }
+          },
+          "required": [
+            "action",
+            "id",
+            "expectedRevision"
+          ],
+          "additionalProperties": false
         }
       ]
     }
@@ -40077,11 +40841,13 @@
                       "properties": {
                         "min": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Lowest weekly value, in the unit named by the target field."
                         },
                         "max": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Highest weekly value, in the unit named by the target field."
                         }
                       },
                       "required": [
@@ -40095,11 +40861,13 @@
                       "properties": {
                         "min": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Lowest weekly value, in the unit named by the target field."
                         },
                         "max": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Highest weekly value, in the unit named by the target field."
                         }
                       },
                       "required": [
@@ -40133,11 +40901,13 @@
                       "properties": {
                         "min": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Lowest weekly value, in the unit named by the target field."
                         },
                         "max": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Highest weekly value, in the unit named by the target field."
                         }
                       },
                       "required": [
@@ -40151,11 +40921,13 @@
                       "properties": {
                         "min": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Lowest weekly value, in the unit named by the target field."
                         },
                         "max": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Highest weekly value, in the unit named by the target field."
                         }
                       },
                       "required": [
@@ -40189,11 +40961,13 @@
                       "properties": {
                         "min": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Lowest weekly value, in the unit named by the target field."
                         },
                         "max": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Highest weekly value, in the unit named by the target field."
                         }
                       },
                       "required": [
@@ -40207,11 +40981,13 @@
                       "properties": {
                         "min": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Lowest weekly value, in the unit named by the target field."
                         },
                         "max": {
                           "type": "number",
-                          "minimum": 0
+                          "minimum": 0,
+                          "description": "Highest weekly value, in the unit named by the target field."
                         }
                       },
                       "required": [
@@ -41005,6 +41781,9 @@
                     "type": "boolean"
                   },
                   "allowEventCreation": {
+                    "type": "boolean"
+                  },
+                  "allowPhaseChanges": {
                     "type": "boolean"
                   }
                 },
@@ -43005,6 +43784,9 @@
                     },
                     "allowEventCreation": {
                       "type": "boolean"
+                    },
+                    "allowPhaseChanges": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -43203,6 +43985,9 @@
                               "type": "boolean"
                             },
                             "allowEventCreation": {
+                              "type": "boolean"
+                            },
+                            "allowPhaseChanges": {
                               "type": "boolean"
                             }
                           },

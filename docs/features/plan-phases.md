@@ -8,7 +8,7 @@ Outside scope: generating or prefilling workouts from phases, automatic load or 
 
 ## Intended behavior
 
-Specification status: draft. Covered so far: stored phases, editing them inside a plan, the Charts target band and the Calendar week header; agent proposals follow in a separate change.
+Specification status: draft. Covers stored phases, editing them inside a plan, the Charts target band, the Calendar week header and agent proposals.
 
 Requirement source: [issue #97](https://github.com/bidulelabs/athlete-panel/issues/97), the owner's answers on it (ski touring counts fully in hours; phases stand on calendar dates, across plans) and the 2026-11-10 review summary (phases inside the plan view, optional targets, a focus per phase).
 
@@ -22,7 +22,7 @@ Requirement source: [issue #97](https://github.com/bidulelabs/athlete-panel/issu
 - Deleting a phase leaves workouts as they are.
 - **Charts** draws the hours target behind Training hours and Training by sport, and the climbing target behind Weekly climbing, into future weeks, only for weeks whose phase has that target; **Plan phases** in Period shows every phase. Details in [Charts](charts.md).
 - **Calendar:** a week inside a phase with an hours target shows Target, Planned and Recorded hours side by side; Planned always comes from workouts, and with no workouts the target takes the place of **No plan**. Details in [Training workspace](training-workspace.md).
-- Agents read the phases that touch their planning dates as context, focus included. They cannot create, change or delete phases yet.
+- Agents read the phases that touch their planning dates as context, focus included. With the **Allow proposals to change plan phases** permission, they propose phase changes within their proposal dates through the usual owner review, in the same proposal as the workouts. Details in [Agent training](agent-training.md#plan-phase-proposals).
 
 ## Acceptance scenarios
 
@@ -37,7 +37,7 @@ Requirement source: [issue #97](https://github.com/bidulelabs/athlete-panel/issu
 | Owner saves a phase without touching a target, such as 8.25 h | The stored target is kept as it was, not rounded through the form | `tests/unit/phase-editor.test.ts`, `tests/e2e/plan-phases.spec.ts` |
 | Owner unticks distance while editing | Distance target removed | `tests/e2e/plan-phases.spec.ts` |
 | Agent proposal still pending from before this change | Its saved context still matches its digest; it reviews as ready and applies | `tests/integration/proposal-review.test.ts` |
-| Agent sends `period.create` | Refused: not available to the training agent | `tests/unit/plan-phases.test.ts` |
+| Agent sends `period.create` without the phase permission | Refused, nothing stored | `tests/integration/agent-periods.test.ts` |
 | Agent planning read | Only phases touching the grant dates are shared | `tests/unit/plan-phases.test.ts` |
 | Workspace read for any date range | Every phase is returned, focus included | `tests/integration/plan-phases.test.ts` |
 | Week inside a phase, first week of a phase not aligned with the week start, one-week phase | Target interpolated by week; the week takes the phase holding its first day; first week target | `tests/unit/phase-targets.test.ts` |

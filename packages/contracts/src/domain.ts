@@ -377,7 +377,10 @@ export const eventValuesSchema = z
 export const eventSchema = eventValuesSchema.extend(base);
 export type TrainingEvent = z.infer<typeof eventSchema>;
 const weeklyRange = z
-  .object({ min: nonnegativeSchema, max: nonnegativeSchema })
+  .object({
+    min: nonnegativeSchema.describe('Lowest weekly value, in the unit named by the target field.'),
+    max: nonnegativeSchema.describe('Highest weekly value, in the unit named by the target field.'),
+  })
   .strict()
   .refine((range) => range.min <= range.max, {
     path: ['max'],
@@ -652,6 +655,13 @@ const agentEventCreateCommand = z
     values: eventValuesSchema.extend({ ...createId, kind: z.enum(['race', 'goal']) }),
   })
   .strict();
+const periodCreateCommand = z
+  .object({ action: z.literal('period.create'), values: periodValuesSchema.extend(createId) })
+  .strict();
+const periodUpdateCommand = z
+  .object({ action: z.literal('period.update'), ...existing, values: periodPatchSchema })
+  .strict();
+const periodDeleteCommand = z.object({ action: z.literal('period.delete'), ...existing }).strict();
 export const agentCommandSchema = z.discriminatedUnion('action', [
   planCreateCommand,
   planUpdateCommand,
@@ -666,6 +676,9 @@ export const agentCommandSchema = z.discriminatedUnion('action', [
   noteUpdateCommand,
   noteDeleteCommand,
   agentEventCreateCommand,
+  periodCreateCommand,
+  periodUpdateCommand,
+  periodDeleteCommand,
 ]);
 export const AGENT_COMMAND_LIMIT = 1500;
 export const AGENT_PROPOSAL_BYTES = 4 * 1024 * 1024;
@@ -707,11 +720,9 @@ export const commandSchema = z.discriminatedUnion('action', [
     .strict(),
   z.object({ action: z.literal('event.update'), ...existing, values: eventPatchSchema }).strict(),
   z.object({ action: z.literal('event.delete'), ...existing }).strict(),
-  z
-    .object({ action: z.literal('period.create'), values: periodValuesSchema.extend(createId) })
-    .strict(),
-  z.object({ action: z.literal('period.update'), ...existing, values: periodPatchSchema }).strict(),
-  z.object({ action: z.literal('period.delete'), ...existing }).strict(),
+  periodCreateCommand,
+  periodUpdateCommand,
+  periodDeleteCommand,
   z
     .object({ action: z.literal('injury.create'), values: injuryValuesSchema.extend(createId) })
     .strict(),
@@ -771,6 +782,7 @@ export const planningScopeSchema = z
     ...agentScopeFields,
     // Absence must remain absent in saved scopes; old grants never gain permission.
     allowEventCreation: z.boolean().optional(),
+    allowPhaseChanges: z.boolean().optional(),
   })
   .strict()
   .superRefine((scope, ctx) => calendarRange(scope, 1, ctx));
@@ -879,6 +891,7 @@ export function describeAgentAccess(scope: GrantScope): string[] {
       ? [
           `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
           `Create races and goals: ${planning.allowEventCreation === true ? 'permitted within the proposal dates' : 'not permitted'}.`,
+          `Change plan phases: ${planning.allowPhaseChanges === true ? 'permitted for phases within the proposal dates' : 'not permitted'}.`,
         ]
       : ['Proposal submission is not permitted.']),
     'Applying training changes requires your review and explicit approval in Athlete Panel.',

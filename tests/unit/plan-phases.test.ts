@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  describeAgentAccess,
   emptyWorkspace,
   periodSchema,
   planSchema,
@@ -123,10 +124,22 @@ describe('plan phases', () => {
 });
 
 describe('phases for agents', () => {
-  it('refuses period commands from an agent', () => {
-    expect(() => run(emptyWorkspace(), [createPeriod()], 'agent')).toThrow(
-      'This command is not available to the training agent.',
+  it('accepts period commands from the training agent', () => {
+    const state = run(emptyWorkspace(), [createPeriod()], 'agent');
+    expect(state.periods).toHaveLength(1);
+    expect(
+      run(state, [{ action: 'period.delete', id: id(1), expectedRevision: 1 }], 'agent').periods,
+    ).toEqual([]);
+  });
+
+  it('describes the phase permission of a planning grant', () => {
+    const planning = { from: '2026-11-01', to: '2027-10-31', includeNotes: false };
+    const describe = (scope: Record<string, unknown>) =>
+      describeAgentAccess({ version: 2, history: null, planning: { ...planning, ...scope } });
+    expect(describe({ allowPhaseChanges: true })).toContain(
+      'Change plan phases: permitted for phases within the proposal dates.',
     );
+    expect(describe({})).toContain('Change plan phases: not permitted.');
   });
 
   it('loads a workspace saved without periods as an empty list', () => {

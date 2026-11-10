@@ -24,6 +24,7 @@ export const typeLabels: Record<string, string> = {
   health: 'Health record',
   injury: 'Injury',
   profile: 'Profile',
+  period: 'Phase',
 };
 export const changeAction = (change: EntityChange) =>
   !change.before ? 'create' : !change.after ? 'delete' : 'update';
@@ -33,7 +34,9 @@ export function changeTitle(change: EntityChange) {
     ? record.title
     : record && 'bodyPart' in record
       ? record.bodyPart
-      : (typeLabels[changeType(change)] ?? change.entity);
+      : record && 'role' in record
+        ? record.name
+        : (typeLabels[changeType(change)] ?? change.entity);
 }
 
 export function typeCounts(changes: readonly EntityChange[]) {

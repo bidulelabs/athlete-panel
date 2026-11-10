@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   eventSchema,
+  periodSchema,
   planSchema,
   workoutSchema,
   type EntityChange,
@@ -227,5 +228,49 @@ it('groups month-boundary weeks without duplicating moves or deletions and summa
     added: 1,
     changed: 1,
     deleted: 1,
+  });
+});
+
+describe('phase in review', () => {
+  const period = periodSchema.parse({
+    id: '00000000-0000-4000-8000-000000000020',
+    revision: 1,
+    name: 'Winter base',
+    role: 'base',
+    startDate: '2026-11-02',
+    endDate: '2027-01-31',
+    weeklyDurationSeconds: {
+      firstWeek: { min: 28800, max: 32400 },
+      lastWeek: { min: 36000, max: 39600 },
+    },
+    weeklyElevationGainMeters: {
+      firstWeek: { min: 1000, max: 1200 },
+      lastWeek: { min: 1600, max: 1800 },
+    },
+  });
+  const change = { entity: 'period', before: null, after: period } as EntityChange;
+
+  it('reads targets in hours and profile units, and the role in words', () => {
+    expect(proposalRows(change)).toEqual(
+      expect.arrayContaining([
+        { field: 'Role', before: 'Not present', after: 'Base' },
+        { field: 'Weekly hours · First week · Minimum', before: 'Not present', after: '8 h' },
+        {
+          field: 'Weekly climbing · Last week · Maximum',
+          before: 'Not present',
+          after: '1800 m',
+        },
+      ]),
+    );
+    expect(proposalRows(change, 'imperial')).toContainEqual({
+      field: 'Weekly climbing · First week · Minimum',
+      before: 'Not present',
+      after: '3280.84 ft',
+    });
+  });
+
+  it('dates the change from the first to the last day of the period', () => {
+    expect(groupChangesByWeek([change], 1).map((week) => week.weekStart)).toEqual(['2026-11-02']);
+    expect(summarizeProposal([change])).toMatchObject({ from: '2026-11-02', to: '2027-01-31' });
   });
 });

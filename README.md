@@ -205,6 +205,8 @@ The agent prepares the proposal file using the [training skill](.agents/skills/a
 
 New planning connections also allow proposals to create races and dated goals by default. Uncheck **Allow proposals to create races and goals** during approval to disable this. Existing connections keep their original permissions; reconnect to enable event creation. Events use the same proposal dates and notes permission, and can be reviewed/applied together with a training plan. Agents cannot edit or delete existing events. Obvious duplicates are blocked, including when an event is added while a proposal is awaiting review.
 
+They also allow proposals to change [plan phases](docs/features/plan-phases.md) by default: phases with a focus and optional weekly hours, distance and climbing targets, within the proposal dates. Uncheck **Allow proposals to change plan phases** during approval to disable this; existing connections need to reconnect.
+
 The CLI saves its credential in `~/.config/athlete-panel/agent.json` with owner-only file permissions. It is **not encrypted on disk**. Grants expire, and you can revoke them in the app. The agent may read or propose only within the access you approved. Context and proposal files can contain personal data; keep them private and out of version control.
 
 ### Build a personal extension

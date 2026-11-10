@@ -7,6 +7,11 @@ export function recordDates(change: EntityChange): { before: string | null; afte
       before: change.before && 'date' in change.before ? change.before.date : null,
       after: change.after && 'date' in change.after ? change.after.date : null,
     };
+  if (change.entity === 'period')
+    return {
+      before: change.before && 'startDate' in change.before ? change.before.startDate : null,
+      after: change.after && 'startDate' in change.after ? change.after.startDate : null,
+    };
   return { before: change.beforeEffectiveDate ?? null, after: change.afterEffectiveDate ?? null };
 }
 export const calendarDate = (change: EntityChange) => {
@@ -66,6 +71,11 @@ export function summarizeProposal(changes: readonly EntityChange[]) {
         ...(change.entity === 'plan'
           ? [change.before, change.after].map((record) =>
               record && 'startDate' in record ? record.startDate : null,
+            )
+          : []),
+        ...(change.entity === 'period'
+          ? [change.before, change.after].map((record) =>
+              record && 'endDate' in record ? record.endDate : null,
             )
           : []),
       ].filter((date): date is string => Boolean(date)),

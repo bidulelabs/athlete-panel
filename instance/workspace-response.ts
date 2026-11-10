@@ -72,7 +72,11 @@ export async function readWorkspaceResponse(range: {
           (case when c->>'entity'='plan' then c#>>'{before,startDate}' end),
           (case when c->>'entity'='plan' then c#>>'{after,startDate}' end),
           (case when c->>'entity'='event' then c#>>'{before,date}' end),
-          (case when c->>'entity'='event' then c#>>'{after,date}' end)
+          (case when c->>'entity'='event' then c#>>'{after,date}' end),
+          (case when c->>'entity'='period' then c#>>'{before,startDate}' end),
+          (case when c->>'entity'='period' then c#>>'{after,startDate}' end),
+          (case when c->>'entity'='period' then c#>>'{before,endDate}' end),
+          (case when c->>'entity'='period' then c#>>'{after,endDate}' end)
         ) d(date)) as "dateBounds" from host.proposals order by created_at desc limit 50`,
       sql<
         GrantRow[]

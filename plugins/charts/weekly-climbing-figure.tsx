@@ -5,7 +5,7 @@ import { lazy, Suspense } from 'react';
 import { Mountain } from 'lucide-react';
 import { EmptyState, useWorkspace } from '@athlete-panel/ui';
 import { ChartFigure, periodText, bucketLabel, groupingLabels } from './chart-figure';
-import { emptyTrainingTitle, hasSessions } from './training-hours';
+import { emptyTrainingTitle, hasSessionsOrTargets, hasTargets } from './training-hours';
 import { sportsWithElevation, climbUnitLabel, climbingBuckets } from './weekly-climbing';
 
 const ElevationChart = lazy(() => import('./elevation-chart'));
@@ -21,7 +21,7 @@ export function WeeklyClimbingFigure({
   loading: boolean;
 }) {
   const units = useWorkspace().data.profile?.units ?? 'metric';
-  if (!hasSessions(summary))
+  if (!hasSessionsOrTargets(summary))
     return (
       <EmptyState icon={<Mountain size={25} />} title={emptyTrainingTitle(summary)}>
         Planned and recorded sessions will appear here.
@@ -31,18 +31,20 @@ export function WeeklyClimbingFigure({
   const labels = groupingLabels[grouping];
   const weeks = climbingBuckets(summary, today, units);
   const sports = sportsWithElevation(summary);
+  const target = hasTargets(weeks);
   const raceKey = summary.races.length ? [{ label: 'Race', keyClass: 'charts-key-race' }] : [];
   const distanceName = units === 'imperial' ? 'mile' : 'kilometre';
   return (
     <>
       <ChartFigure
         title={`${labels.title} elevation gain by sport`}
-        description={`Recorded elevation gain per sport as stacked bars, in ${units === 'imperial' ? 'feet' : 'metres'}, per ${grouping} ${periodText(weeks)}. Races are vertical lines.`}
+        description={`Recorded elevation gain per sport as stacked bars, in ${units === 'imperial' ? 'feet' : 'metres'}${target ? ', phase target as a band' : ''}, per ${grouping} ${periodText(weeks)}. Races are vertical lines.`}
         legend={[
           ...sports.map((sport) => ({
             label: sportTypeLabel(sport),
             keyClass: `charts-key-${sport}`,
           })),
+          ...(target ? [{ label: 'Target', keyClass: 'charts-key-target' }] : []),
           ...raceKey,
         ]}
         loading={loading}
@@ -51,12 +53,18 @@ export function WeeklyClimbingFigure({
             <ElevationChart weeks={weeks} sports={sports} units={units} />
           </Suspense>
         }
-        headers={[labels.column, ...sports.map(sportTypeLabel), 'Races']}
+        headers={[
+          labels.column,
+          ...sports.map(sportTypeLabel),
+          ...(target ? ['Target'] : []),
+          'Races',
+        ]}
         rows={weeks.map((week) => ({
           key: week.startDate,
           cells: [
             bucketLabel(week),
             ...sports.map((sport) => week.elevationLabelBySport[sport]),
+            ...(target ? [week.targetLabel] : []),
             week.races.join(', '),
           ],
         }))}

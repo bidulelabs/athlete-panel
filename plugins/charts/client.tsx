@@ -78,6 +78,7 @@ const periods = {
   '12': 'Last 12 weeks',
   '52': 'Last 52 weeks',
   season: 'This season',
+  phases: 'Plan phases',
   custom: 'Custom dates',
 } as const;
 type Period = keyof typeof periods;
@@ -88,11 +89,25 @@ const weekCount = (from: string, to: string) =>
 export default function ChartsPage({ data }: PluginPageProps) {
   const [template, setTemplate] = useState<Template | null>(null);
   const today = localDate(new Date(), data.profile?.timezone);
+  const phaseDates = useMemo(
+    () =>
+      data.periods.length
+        ? {
+            from: data.periods.map((period) => period.startDate).sort()[0]!,
+            to: data.periods
+              .map((period) => period.endDate)
+              .sort()
+              .at(-1)!,
+          }
+        : null,
+    [data.periods],
+  );
   return template ? (
     <TemplatePage
       template={template}
       today={today}
       season={seasonStart(data, today)}
+      phaseDates={phaseDates}
       onBack={() => setTemplate(null)}
     />
   ) : (
@@ -126,11 +141,13 @@ function TemplatePage({
   template,
   today,
   season,
+  phaseDates,
   onBack,
 }: {
   template: Template;
   today: string;
   season: string;
+  phaseDates: { from: string; to: string } | null;
   onBack: () => void;
 }) {
   const { weekStartsOn } = useWorkspace();
@@ -149,12 +166,13 @@ function TemplatePage({
         ? customFrom
         : period === 'season'
           ? season
-          : addDays(currentWeek, -7 * (Number(period) - 1));
+          : period === 'phases' && phaseDates
+            ? phaseDates.from
+            : addDays(currentWeek, -7 * (Number(period) - 1));
+    const to =
+      period === 'custom' ? customTo : period === 'phases' && phaseDates ? phaseDates.to : today;
     const weekStart = startOfWeek(from, weekStartsOn);
-    const weeks = weekCount(
-      weekStart,
-      period === 'custom' ? startOfWeek(customTo, weekStartsOn) : currentWeek,
-    );
+    const weeks = weekCount(weekStart, startOfWeek(to, weekStartsOn));
     return weeks > chartsMaxWeeks
       ? `Choose a period of at most ${chartsMaxWeeks} weeks.`
       : { template: template.id, weekStart, weeks, ...(volume ? { sports, grouping } : {}) };
@@ -163,6 +181,7 @@ function TemplatePage({
     period,
     currentWeek,
     season,
+    phaseDates,
     customFrom,
     customTo,
     weekStartsOn,
@@ -183,11 +202,13 @@ function TemplatePage({
             value={period}
             onChange={(event) => setPeriod(event.target.value as Period)}
           >
-            {Object.entries(periods).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
+            {Object.entries(periods)
+              .filter(([value]) => value !== 'phases' || phaseDates)
+              .map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
           </NativeSelect>
         </Field>
         {volume && (

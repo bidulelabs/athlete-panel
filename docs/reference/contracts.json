@@ -34370,6 +34370,54 @@
                               "distanceMeters"
                             ],
                             "additionalProperties": false
+                          },
+                          "targetSeconds": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "min": {
+                                    "type": "number"
+                                  },
+                                  "max": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "min",
+                                  "max"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Phase target for the bucket, every sport included; null for days, a sport selection, weeks outside every phase or a phase without this target."
+                          },
+                          "targetElevationMeters": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "min": {
+                                    "type": "number"
+                                  },
+                                  "max": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "min",
+                                  "max"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Phase target for the bucket, every sport included; null for days, a sport selection, weeks outside every phase or a phase without this target."
                           }
                         },
                         "required": [
@@ -34380,7 +34428,9 @@
                           "recordedSeconds",
                           "recordedSecondsBySport",
                           "recordedElevationMetersBySport",
-                          "runningClimb"
+                          "runningClimb",
+                          "targetSeconds",
+                          "targetElevationMeters"
                         ],
                         "additionalProperties": false
                       }

@@ -15,8 +15,11 @@ import {
   addDays,
   weeklySummary,
   summarizeRange,
+  weekTargets,
   type MetricTotal,
   type SportBreakdown,
+  type TargetRange,
+  type WeekTargets,
 } from '../training/public/shared';
 import { bucketRanges } from './bucket-ranges';
 
@@ -135,6 +138,24 @@ export function chartsSummary(
       },
     };
   };
+  const bucketTarget = (
+    bucket: { startDate: string; endDate: string },
+    weeklyTargetName: keyof WeekTargets,
+  ) => {
+    if (grouping === 'day' || sports.length < chartsSports.length) return null;
+    const weekParts = calendarWeeks.flatMap((week): TargetRange[] => {
+      const weekTarget = weekTargets(state.periods, week.startDate)?.[weeklyTargetName];
+      const from = week.startDate > bucket.startDate ? week.startDate : bucket.startDate;
+      const to = week.endDate < bucket.endDate ? week.endDate : bucket.endDate;
+      const daysInBucket = Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1;
+      return weekTarget && daysInBucket > 0
+        ? [{ min: (weekTarget.min * daysInBucket) / 7, max: (weekTarget.max * daysInBucket) / 7 }]
+        : [];
+    });
+    return weekParts.length
+      ? weekParts.reduce((sum, part) => ({ min: sum.min + part.min, max: sum.max + part.max }))
+      : null;
+  };
   return {
     weeks: calendarWeeks.map((week) => ({ weekStart: week.startDate })),
     volume: isChartsVolumeTemplate(template)
@@ -147,6 +168,8 @@ export function chartsSummary(
               grouping === 'week' ? calendarWeeks[index]! : summarizeRange(state, range),
               sports,
             ),
+            targetSeconds: bucketTarget(range, 'weeklyDurationSeconds'),
+            targetElevationMeters: bucketTarget(range, 'weeklyElevationGainMeters'),
           })),
         }
       : null,

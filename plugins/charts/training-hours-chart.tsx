@@ -15,6 +15,7 @@ export default function TrainingHoursChart({ weeks }: { weeks: TrainingHoursBuck
       weeks={weeks}
       yLabel="Hours"
       planned
+      target
       config={config}
       tooltipRows={(week) => [
         ['Recorded', week.recordedLabel],

@@ -256,15 +256,15 @@ export const registry = [
   {
     "path": "plugins/charts",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "1.2.0",
     "manifest": {
       "id": "charts",
       "name": "Charts",
       "description": "Training trends across weeks and months",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "hostApi": "^1.3.0",
       "dependencies": {
-        "training": "^2.1.0"
+        "training": "^2.3.0"
       },
       "optionalDependencies": {},
       "required": false,

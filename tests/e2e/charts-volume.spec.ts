@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
-import { chartsSummaryInputSchema, type ChartsSummaryInput } from '@athlete-panel/contracts';
+import {
+  chartsSummaryInputSchema,
+  periodSchema,
+  type ChartsSummaryInput,
+} from '@athlete-panel/contracts';
 import { chartsSummary } from '../../plugins/charts/summary';
 import { activity, elevationAndHeartRateWorkspace } from '../fixtures/charts';
 
@@ -324,4 +328,85 @@ test('a slower previous grouping cannot replace the current result', async ({ pa
   await page.getByText('View values', { exact: true }).click();
   await expect(page.getByRole('table').getByRole('row')).toHaveCount(85);
   await expect(page.getByRole('heading', { name: 'Monthly training hours' })).toHaveCount(0);
+});
+
+test('phase target shows in every volume chart', async ({ page }) => {
+  const state = elevationAndHeartRateWorkspace();
+  state.periods = [
+    periodSchema.parse({
+      id: '30000000-0000-4000-8000-000000000001',
+      revision: 1,
+      name: 'Winter build',
+      role: 'build',
+      startDate: '2029-12-01',
+      endDate: '2030-03-31',
+      weeklyDurationSeconds: {
+        firstWeek: { min: 28800, max: 32400 },
+        lastWeek: { min: 36000, max: 39600 },
+      },
+      weeklyElevationGainMeters: {
+        firstWeek: { min: 1000, max: 1200 },
+        lastWeek: { min: 1600, max: 1800 },
+      },
+    }),
+  ];
+  const selections = await openCharts(page, 'dark', state);
+  await page.getByLabel('Period').selectOption('Plan phases');
+  await expect.poll(() => selections.at(-1)?.weeks).toBeGreaterThan(16);
+  for (const template of ['Training hours', 'Training by sport', 'Weekly climbing']) {
+    await page.getByRole('button', { name: 'All templates', exact: true }).click();
+    await page.getByRole('button', { name: new RegExp(`^${template}`) }).click();
+    await page.getByLabel('Period').selectOption('Plan phases');
+    const figure = page.getByRole('figure').first();
+    await expect(figure.getByRole('list', { name: 'Legend' })).toContainText('Target');
+    await expect(figure.locator('.charts-target').first()).toBeVisible();
+    await figure.getByRole('application').focus();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.charts-tooltip')).toContainText(/Target\d/);
+    await figure.getByText('View values').click();
+    await expect(figure.getByRole('columnheader', { name: 'Target' })).toBeVisible();
+    await expect(figure.getByRole('row').last()).toContainText(
+      template === 'Weekly climbing' ? '1,600 m–1,800 m' : '10h–11h',
+    );
+    await onlySport(page, 'Running');
+    await expect(figure.getByRole('list', { name: 'Legend' })).not.toContainText('Target');
+  }
+});
+
+test('a one-week target and an equal minimum and maximum stay visible', async ({ page }) => {
+  const state = elevationAndHeartRateWorkspace();
+  const hours = (min: number, max: number) => ({
+    firstWeek: { min: min * 3600, max: max * 3600 },
+    lastWeek: { min: min * 3600, max: max * 3600 },
+  });
+  state.periods = [
+    periodSchema.parse({
+      id: '30000000-0000-4000-8000-000000000002',
+      revision: 1,
+      name: 'Christmas week',
+      role: 'recovery',
+      startDate: '2029-12-24',
+      endDate: '2029-12-30',
+      weeklyDurationSeconds: hours(8, 9),
+    }),
+    periodSchema.parse({
+      id: '30000000-0000-4000-8000-000000000003',
+      revision: 1,
+      name: 'Steady base',
+      role: 'base',
+      startDate: '2030-01-07',
+      endDate: '2030-01-20',
+      weeklyDurationSeconds: hours(10, 10),
+    }),
+  ];
+  await openCharts(page, 'dark', state);
+  const bands = page.getByRole('figure').first().locator('.charts-target');
+  await expect(bands).toHaveCount(3);
+  for (const band of await bands.all()) {
+    await expect(band).toBeVisible();
+    const box = (await band.boundingBox())!;
+    expect(box.width).toBeGreaterThan(10);
+    expect(box.height).toBeGreaterThanOrEqual(3);
+  }
 });

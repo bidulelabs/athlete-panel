@@ -19,6 +19,7 @@ export default function ElevationChart({
       weeks={weeks}
       yLabel={elevationUnitLabel(units)}
       planned={false}
+      target
       config={{}}
       tooltipRows={(week) =>
         week.sessionSports.map((sport): [string, string] => [

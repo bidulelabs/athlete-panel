@@ -197,14 +197,12 @@ test('one annual proposal stays pending until owner acknowledgement and applies 
       .getByRole('button', { name: 'Review', exact: true })
       .click();
     const dialog = page.getByRole('dialog'),
-      apply = dialog.getByRole('button', { name: 'Apply reviewed changes', exact: true });
+      apply = dialog.getByRole('button', { name: /^Apply all \d+ changes?$/, exact: true });
     await expect(apply).toBeDisabled();
-    await expect(dialog.locator('.proposal-apply-scope')).toBeVisible();
-    await expect(dialog.locator('.proposal-apply-scope')).toContainText(
-      'Apply saves all 1500 changes together',
-    );
+    await expect(apply).toHaveText('Apply all 1500 changes');
+    await expect(dialog.locator('.proposal-apply-scope')).toHaveCount(0);
     await expect(
-      dialog.getByText('I have reviewed these changes and want to apply them.'),
+      dialog.getByText('I have reviewed all 1500 changes and want to apply them.'),
     ).toBeVisible();
     const reviewMs = performance.now() - reviewStarted;
     await expect(dialog.getByRole('region', { name: 'Proposal overview' })).toContainText(

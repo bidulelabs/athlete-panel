@@ -1,5 +1,5 @@
 'use client';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Button, Field, Input, NativeSelect } from '@athlete-panel/ui';
 import type { ProposalDetails } from '@athlete-panel/contracts';
@@ -9,9 +9,11 @@ import { matchesChange, typeCounts, typeLabels } from './proposal-presentation';
 export function ProposalBrowser({
   changes,
   planTitles,
+  onFilterChange,
 }: {
   changes: ProposalDetails['changes'];
   planTitles: Record<string, string>;
+  onFilterChange: (filtered: boolean) => void;
 }) {
   const [query, setQuery] = useState('');
   const [type, setType] = useState('');
@@ -19,6 +21,7 @@ export function ProposalBrowser({
   const [expanded, setExpanded] = useState(false);
   const filterId = useId();
   const filtered = Boolean(query.trim() || type || action);
+  useEffect(() => onFilterChange(filtered), [filtered, onFilterChange]);
   const visible = useMemo(
     () => changes.filter((change) => matchesChange(change, query, type, action)),
     [changes, query, type, action],
@@ -84,7 +87,7 @@ export function ProposalBrowser({
         </div>
       )}
       {visible.length ? (
-        <ProposedEdits changes={visible} planTitles={planTitles} />
+        <ProposedEdits changes={visible} planTitles={planTitles} collapsed={changes.length > 20} />
       ) : (
         <p className="proposal-no-results">
           No changes match these filters. Try another title, type or action.

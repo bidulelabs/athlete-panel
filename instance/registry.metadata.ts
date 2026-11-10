@@ -134,16 +134,16 @@ export const registry = [
   {
     "path": "plugins/calendar",
     "enabled": true,
-    "version": "2.0.0",
+    "version": "2.1.0",
     "manifest": {
       "id": "calendar",
       "name": "Training calendar",
       "description": "Plan and review your week",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "hostApi": "^1.1.0",
       "dependencies": {
         "athlete": "^1.2.0",
-        "training": "^2.0.0",
+        "training": "^2.3.0",
         "activity-records": "^2.0.0"
       },
       "optionalDependencies": {},

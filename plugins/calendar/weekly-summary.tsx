@@ -33,7 +33,9 @@ import {
 } from '@athlete-panel/ui';
 import {
   comparisonPercent,
+  targetRangeLabel,
   type MetricTotal,
+  type TargetRange,
   type TrainingSummary,
   type RecordedSession,
 } from '../training/public/shared';
@@ -46,6 +48,8 @@ const compact = (metric: MetricTotal, format: Format) =>
 const noPlan = (metric: MetricTotal) => metric.missingCount === 0 && metric.value === 0;
 const compactPlanned = (metric: MetricTotal, format: Format) =>
   metric.knownCount === 0 && noPlan(metric) ? 'No plan' : compact(metric, format);
+const targetReplacesNoPlan = (planned: MetricTotal, target: TargetRange | null) =>
+  target !== null && planned.knownCount === 0 && noPlan(planned);
 function HeaderMetric({
   label,
   info,
@@ -109,6 +113,7 @@ function HeaderComparison({
   actual,
   format,
   unit,
+  target = null,
 }: {
   label: string;
   icon: ReactNode;
@@ -116,17 +121,19 @@ function HeaderComparison({
   actual: MetricTotal;
   format: Format;
   unit: string;
+  target?: TargetRange | null;
 }) {
   const missing = planned.missingCount + actual.missingCount;
   return (
     <HeaderMetric
       label={label}
-      info={`Recorded / planned, ${unit}. ${actual.knownCount} recorded and ${planned.knownCount} planned measurements available.${missing ? ` ${missing} measurements missing.` : ''}`}
+      info={`Recorded / planned, ${unit}${target ? ', then the target of the phase' : ''}. ${actual.knownCount} recorded and ${planned.knownCount} planned measurements available.${missing ? ` ${missing} measurements missing.` : ''}`}
       icon={icon}
       partial={missing > 0}
     >
       <strong>{compact(actual, format)}</strong>
-      <span> / {compactPlanned(planned, format)}</span>
+      {!targetReplacesNoPlan(planned, target) && <span> / {compactPlanned(planned, format)}</span>}
+      {target && <span> · Target {targetRangeLabel(target, format)}</span>}
     </HeaderMetric>
   );
 }
@@ -259,6 +266,7 @@ export function WeeklySummary({
   hrv,
   units,
   today,
+  durationTarget,
   onSession,
 }: {
   summary: TrainingSummary;
@@ -266,6 +274,7 @@ export function WeeklySummary({
   hrv: WeeklyHrv;
   units: 'metric' | 'imperial';
   today: string;
+  durationTarget: TargetRange | null;
   onSession: (session: RecordedSession) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -301,6 +310,7 @@ export function WeeklySummary({
             planned={summary.planned.durationSeconds}
             actual={summary.actual.durationSeconds}
             format={duration}
+            target={durationTarget}
           />
           <HeaderComparison
             label="Running distance"
@@ -373,7 +383,13 @@ export function WeeklySummary({
             label="Duration"
             icon={<Timer />}
             value={compact(summary.actual.durationSeconds, duration)}
-            hint={`Planned: ${compactPlanned(summary.planned.durationSeconds, duration)}`}
+            hint={[
+              durationTarget && `Target: ${targetRangeLabel(durationTarget, duration)}`,
+              !targetReplacesNoPlan(summary.planned.durationSeconds, durationTarget) &&
+                `Planned: ${compactPlanned(summary.planned.durationSeconds, duration)}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           />
           <BandMetric
             label="Running distance"

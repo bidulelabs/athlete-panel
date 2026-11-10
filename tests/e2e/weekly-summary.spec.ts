@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { periodSchema } from '@athlete-panel/contracts';
 import { weeklyFixture } from '../fixtures/weekly';
 
 const password = process.env.E2E_PASSWORD;
@@ -429,4 +430,40 @@ test('week summaries fit the full width/theme matrix, long imperial values and y
   await page.getByLabel('Go to date').fill('2030-12-30');
   await expect(week.locator('.week-summary-date')).toContainText('30 Dec 2030 – 5 Jan 2031');
   expect(mutations()).toBe(0);
+});
+
+test('the week target shows beside planned hours, and in place of No plan without workouts', async ({
+  page,
+}) => {
+  const { data } = await preview(page);
+  data.periods = [
+    periodSchema.parse({
+      id: '30000000-0000-4000-8000-000000000001',
+      revision: 1,
+      name: 'January base',
+      role: 'base',
+      startDate: '2030-01-07',
+      endDate: '2030-01-20',
+      weeklyDurationSeconds: {
+        firstWeek: { min: 28800, max: 32400 },
+        lastWeek: { min: 36000, max: 39600 },
+      },
+    }),
+  ];
+  await refresh(page);
+  const [planned, empty, outside] = await page.locator('.calendar-week').all();
+  const duration = (week: typeof empty) => week!.getByRole('button', { name: /^Duration:/ });
+  await expect(duration(planned)).toContainText(/ \/ \d+h.* · Target 8h–9h$/);
+  await expect(duration(planned)).toHaveAttribute('aria-description', /target of the phase/);
+  await expect(duration(empty)).toHaveText(/^Duration: — · Target 10h–11h$/);
+  await expect(duration(outside)).toContainText('— / No plan');
+  await expect(duration(outside)).not.toContainText('Target');
+  await planned!.getByRole('button', { name: /^Expand summary/ }).click();
+  await expect(planned!.locator('.week-metric-band')).toContainText(
+    /Target: 8h–9h · Planned: \d+h/,
+  );
+  await empty!.getByRole('button', { name: /^Expand summary/ }).click();
+  const emptyDuration = empty!.locator('.week-band-metric').filter({ hasText: /^Duration/ });
+  await expect(emptyDuration).toContainText('Target: 10h–11h');
+  await expect(emptyDuration).not.toContainText('Planned');
 });

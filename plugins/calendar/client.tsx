@@ -26,7 +26,7 @@ import {
   type PluginPageProps,
 } from '@athlete-panel/ui';
 import { effectiveDate } from '../training/public/shared';
-import { weeklySummary } from '../training/public/shared';
+import { weeklySummary, weekTargets } from '../training/public/shared';
 import { WeeklySummary } from './weekly-summary';
 import { weeklySleep, weeklyHrv } from './weekly-sleep';
 import { WorkoutEditor, WorkoutInspector } from '../training/public/client';
@@ -331,6 +331,9 @@ export default function CalendarPage({ data }: PluginPageProps) {
                   hrv={weeklyHrv(data.health, weekStart, today)}
                   units={data.profile?.units ?? 'metric'}
                   today={today}
+                  durationTarget={
+                    weekTargets(data.periods, weekStart)?.weeklyDurationSeconds ?? null
+                  }
                   onSession={(session) => {
                     if (session.kind === 'activity')
                       setDetail({ kind: 'activity', id: session.id });

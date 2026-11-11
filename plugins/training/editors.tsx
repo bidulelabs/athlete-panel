@@ -40,7 +40,7 @@ import {
   type PluginPageProps,
 } from '@athlete-panel/ui';
 import { ArrowDown, ArrowUp, Copy, Edit3, Link2, Plus, Repeat2, Trash2, X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { effectiveDate } from './dates';
 import { matchingDate } from './activity-matching';
 import { WorkoutStatus, WorkoutSource } from './completion-state';
@@ -802,6 +802,7 @@ export function WorkoutInspector({
   const action = useAction();
   const date = effectiveDate(workout, data.plans);
   const completion = workout.completion;
+  const unlinkDescriptionId = useId();
   async function reorder(direction: -1 | 1) {
     if (!date) return;
     const siblings = data.workouts
@@ -954,12 +955,27 @@ export function WorkoutInspector({
                 <p>This session has not been logged yet.</p>
               </>
             )}
+            {completion?.source === 'garmin' && (
+              <p className="form-footnote" id={unlinkDescriptionId}>
+                Unlink returns this workout to Planned and clears its logged results, effort, reason
+                and notes. The Garmin activity is kept.
+                {completion.linkMethod === 'automatic' && (
+                  <>
+                    {' '}
+                    To restore a previous manual log, open Training plans → Recent changes and
+                    choose Undo on the automatic link before unlinking. Later edits can prevent
+                    Undo.
+                  </>
+                )}
+              </p>
+            )}
             {completion && (
               <Button
                 variant="link"
                 className="text-button"
                 style={{ marginTop: 8 }}
                 disabled={action.busy}
+                aria-describedby={completion.source === 'garmin' ? unlinkDescriptionId : undefined}
                 onClick={() =>
                   action.run(() =>
                     mutate(request, [

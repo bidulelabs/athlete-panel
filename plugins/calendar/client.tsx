@@ -138,7 +138,6 @@ function Day({
             <ActivityCard
               key={activity.id}
               activity={activity}
-              linked={false}
               units={data.profile?.units}
               onClick={() => onCard({ kind: 'activity', id: activity.id })}
             />

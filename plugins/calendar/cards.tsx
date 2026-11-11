@@ -217,12 +217,10 @@ export function ContextCard({ item, onClick }: { item: ContextItem; onClick: () 
 
 export function ActivityCard({
   activity,
-  linked,
   units,
   onClick,
 }: {
   activity: Activity;
-  linked: boolean;
   units?: string;
   onClick: () => void;
 }) {
@@ -240,7 +238,7 @@ export function ActivityCard({
           ? 'Distance unavailable'
           : distance(activity.distanceMeters, units)}
       </span>
-      <span className="calendar-fact-tag">{linked ? 'Garmin linked' : 'Garmin · Not linked'}</span>
+      <span className="calendar-fact-tag">Garmin · Not linked</span>
     </CalendarCard>
   );
 }

@@ -127,6 +127,24 @@ describe('automatic activity matching', () => {
     );
     expect(edited.state.workouts[0]?.completion?.linkMethod).toBe('automatic');
   });
+  it('preserves automatic provenance when an owner repeats the same link through the API command', () => {
+    const linked = applyCommands(fixture(), match(), { actor: 'owner', linkMethod: 'automatic' });
+    const workout = linked.state.workouts[0]!;
+    const repeated = applyCommands(
+      linked.state,
+      [
+        {
+          action: 'workout.link',
+          id: workout.id,
+          expectedRevision: workout.revision,
+          activityId: id(2),
+        },
+      ],
+      { actor: 'owner' },
+    );
+    expect(repeated.state.workouts[0]?.completion?.linkMethod).toBe('automatic');
+    expect(repeated.state.workouts[0]?.completion).toEqual(workout.completion);
+  });
   it('does not substitute the scheduled day for a different performed date', () => {
     const state = fixture();
     state.workouts[0] = workoutSchema.parse({

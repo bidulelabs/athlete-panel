@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-Give the private application consistent, accessible controls while retaining its compact training notebook identity. This covers login, navigation, onboarding, all bundled plugin pages and editors, and the cycling/sleep extension. Orange accents, graphite/light themes, native date entry, compact desktop calendar and phone session lists remain.
+Give the private application consistent, accessible controls while retaining its compact training notebook identity. This covers login, navigation, onboarding, all bundled plugin pages and editors, and explicitly enabled personal extensions. Orange accents, graphite/light themes, native date entry, compact desktop calendar and phone session lists remain.
 
 Backend APIs, training rules, stored preferences, public training DTOs and database migrations are outside this change.
 

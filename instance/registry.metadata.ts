@@ -326,17 +326,17 @@ export const registry = [
     }
   },
   {
-    "path": "personal-plugins/cycling-sleep",
-    "enabled": true,
-    "version": "1.1.0",
+    "path": "personal-plugins/printable-training-week",
+    "enabled": false,
+    "version": "1.0.0",
     "manifest": {
-      "id": "cycling-sleep",
-      "name": "Cycling & sleep",
-      "description": "Compare cycling volume with recorded nightly sleep",
-      "version": "1.1.0",
-      "hostApi": "^1.0.0",
+      "id": "printable-training-week",
+      "name": "Printable training week",
+      "description": "Print a week of planned sessions, intervals and strength exercises",
+      "version": "1.0.0",
+      "hostApi": "^1.1.0",
       "dependencies": {
-        "activity-records": "^2.0.0"
+        "training": "^2.2.0"
       },
       "optionalDependencies": {},
       "required": false,
@@ -344,9 +344,9 @@ export const registry = [
       "public": {},
       "routes": [
         {
-          "path": "/cycling-sleep",
-          "title": "Cycling & sleep",
-          "icon": "ChartNoAxesCombined"
+          "path": "/printable-training-week",
+          "title": "Printable week",
+          "icon": "CalendarDays"
         }
       ],
       "slots": [],

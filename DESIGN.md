@@ -175,7 +175,7 @@ The inspector retains the selected session context and makes the next action eas
 
 Use compact, full-width plan rows for discovery, with bounded description previews and wrapping metadata. A shared dialog contains the complete plan: a distinct action toolbar, rendered Markdown at 14px/1.7 with a 70ch maximum measure, and flat week/day groups. Week bands use the raised surface; dates occupy a small desktop rail and move above sessions on phones. Workout titles lead, factual summaries support, and Edit stays separate from inspection. Phone plan dialogs use a scrollable bottom sheet with a fixed title/close region and 44px controls. The existing workout Sheet can layer over a plan at every viewport; calendar inspector behavior remains responsive as before.
 
-Recent changes is a secondary header action. Use the shared right-side Sheet, full width on phones, with a persistent title/close region and a scrolling flat list. Each entry leads with its action and item name, followed by timestamp and count. Details expand in place; Undo sits separately and requires confirmation. Controls keep 44px touch targets and use the paired surface, text and border tokens.
+Recent changes is a secondary header action. Use the shared `HistorySheet` also used by Agent Bridge, full width on phones, with a persistent title/close region and a scrolling flat list. Each entry leads with its action and item name, followed by timestamp and count. Details expand in place; Undo sits separately and requires confirmation. Controls keep 44px touch targets and use the paired surface, text and border tokens.
 
 ### Operational feedback
 

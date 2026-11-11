@@ -119,7 +119,7 @@ Use `--bg`, `--sidebar`, `--surface`, `--surface-raised`, `--hover`, `--text`, `
 
 ### Semantic facts
 
-Recorded activities use restrained green; sleep uses violet; notes use olive; races and other events use amber; goals use blue; injury context uses rose. Proposal workouts use slate with the existing sport icon, races a flag, goals a target, and notes a notebook. The shared `--fact-workout`, `--fact-race`, `--fact-goal` and `--fact-note` tokens in global CSS provide paired theme colors for review and [calendar cards](plugins/calendar/cards.css). Icons and words carry the same meaning so color is supplementary. Destructive buttons pair `--danger` with `--on-danger`; small orange text uses `--accent-ink`, which darkens in the light theme independently of orange button fills. Above-plan volume is not automatically a success state.
+Calendar cards use the Sea glass palette: completed workouts and imported activities use teal, partial sessions and events use apricot, planned workouts and goals use slate blue, notes use lavender, sleep uses periwinkle, and injury context uses rose. Skipped and rest cards stay neutral. Paired card fills and inks belong to [calendar card CSS](plugins/calendar/cards.css). Proposal review retains its shared `--fact-workout`, `--fact-race`, `--fact-goal` and `--fact-note` tokens: slate workouts with sport icons, amber races with flags, blue goals with targets, and olive notes with notebooks. Icons and words carry the same meaning so color is supplementary. Destructive buttons pair `--danger` with `--on-danger`; small orange text uses `--accent-ink`, which darkens in the light theme independently of orange button fills. Above-plan volume is not automatically a success state.
 
 ## Typography
 
@@ -133,9 +133,9 @@ Weekly comparisons use tabular numerals. Units remain adjacent to their values, 
 
 The desktop shell has a fixed 218px sidebar, 32px workspace padding and a seven-column calendar. The sidebar reduces to 190px below 1250px. The phone shell replaces it with a sticky navigation bar below 760px; calendar days become a vertical list with a date rail.
 
-The workout inspector sits beside the calendar at wide widths and becomes a shared Radix modal Sheet at 1050px and below. Calendar detail dialogs become bottom sheets below 600px. Weekly headers use container queries so they respond to the available calendar width, including when the inspector is open.
+The workout inspector sits beside the calendar at wide widths and becomes a shared Radix modal Sheet at 1535px and below. Calendar detail dialogs become bottom sheets below 600px. Weekly headers use container queries so they respond to the available calendar width, including when the inspector is open.
 
-The calendar's combined toolbar uses a 29px title, an add action and date navigation with a single range label. Desktop always uses the compact seven-column planner with its adjacent inspector; there is no layout selector. Phones use a day list with add controls in the 44px date rail, leaving the rest of the row for readable cards. Feature composition belongs in [calendar layout CSS](plugins/calendar/layout.css).
+The calendar's combined toolbar uses a 29px title, an add action and date navigation with a single range label. Desktop preserves the compact seven-column planner, with inspector placement responding to available width; there is no layout selector. Phones use a day list with add controls in the 44px date rail, leaving the rest of the row for readable cards. Feature composition belongs in [calendar layout CSS](plugins/calendar/layout.css).
 
 Keep related labels, values and actions close. Separate weeks and detail sections with space or a single restrained boundary. Preserve compact planning density while making essential text and phone actions usable. The recurring spacing values in the frontmatter are observed conventions, not an exhaustive enforced scale.
 
@@ -161,7 +161,7 @@ Primary actions use orange with a contrasting dark foreground. Secondary actions
 
 ### Calendar cards
 
-Cards present sport/type, title, then essential duration or context. Selection is separate from completion. Imported facts and planned workouts retain their distinct meanings. Full details remain one action away. Empty days offer an identifiable creation control.
+Workout cards present sport, title, explicit status, recorded results and supporting planned values, followed by a separate source footer. A subtle 2px inset edge supplements completed and partial status text. Recorded values use stronger weight with a small label above on desktop and an inline label on phones; phone values increase to 14px. A thin divider separates Garmin linked or Logged manually from the measurements and any cross-date label. Completed uses a check and teal; Partial uses a dashed circle and apricot; Planned uses a slate-blue circle; Skipped and Rest use distinct neutral icons and text. The Sea glass fills, readable secondary text and subtle tinted dividers follow both themes without changing the card structure. Garmin linked and Logged manually are separate from completion status. Same-day linked pairs share one card. Cross-date entries identify the performed or planned day. Essential state labels wrap, and accessible descriptions include states and measurements. Selection uses an orange outline while retaining the status fill; hover strengthens the semantic border. Completion and selection remain independent. The inspector uses a modal Sheet below 1536px, leaving the seven-column calendar readable; at larger widths it sits beside the calendar. Full details remain one action away. Empty days offer an identifiable creation control.
 
 ### Weekly summary
 

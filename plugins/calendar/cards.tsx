@@ -8,8 +8,8 @@ import {
   AlertDialogCancel,
 } from '@athlete-panel/ui';
 import { Button } from '@athlete-panel/ui';
-import { sportSelectionLabel } from '@athlete-panel/contracts';
-import { useState, type ReactNode } from 'react';
+import { sportSelectionLabel, isRest } from '@athlete-panel/contracts';
+import { useId, useState, type ReactNode } from 'react';
 import type {
   Activity,
   CommandInput,
@@ -42,9 +42,73 @@ import {
   useWorkspace,
 } from '@athlete-panel/ui';
 import { effectiveDate } from '../training/public/shared';
-import { mutate } from '../training/public/client';
+import { mutate, WorkoutStatus, WorkoutSource, LinkWorkoutDialog } from '../training/public/client';
 import type { SleepNight } from './projection';
 import './cards.css';
+
+export function WorkoutCard({
+  workout,
+  plannedDate,
+  actual = false,
+  selected = false,
+  units,
+  onClick,
+}: {
+  workout: Workout;
+  plannedDate: string;
+  actual?: boolean;
+  selected?: boolean;
+  units?: string;
+  onClick: () => void;
+}) {
+  const description = useId();
+  const completion = workout.completion;
+  const recorded = completion && completion.status !== 'skipped';
+  const crossDate = recorded && completion.performedDate !== plannedDate;
+  return (
+    <Button
+      variant="unstyled"
+      className={`calendar-session ${selected ? 'selected' : ''}`}
+      data-status={isRest(workout) ? 'rest' : (completion?.status ?? 'planned')}
+      onClick={onClick}
+      aria-label={`Open ${actual ? 'actual ' : ''}${workout.title}`}
+      aria-describedby={description}
+      aria-pressed={selected}
+    >
+      <span className="calendar-session-sport">
+        <SportIcon sport={workout.sport} size={16} />
+        {isRest(workout) ? 'Rest day' : sportSelectionLabel(workout)}
+      </span>
+      <strong>{workout.title}</strong>
+      <span id={description} className="calendar-session-details">
+        <WorkoutStatus workout={workout} />
+        {recorded && (
+          <span className="calendar-session-recorded">
+            <span className="calendar-session-measure-label">Recorded</span>{' '}
+            {time(completion.durationSeconds)} ·{' '}
+            {completion.distanceMeters === null
+              ? 'Distance unavailable'
+              : distance(completion.distanceMeters, units)}
+          </span>
+        )}
+        {!isRest(workout) && (
+          <span className="calendar-session-planned">
+            Planned {time(workout.durationSeconds)}
+            {workout.distanceMeters !== null ? ` · ${distance(workout.distanceMeters, units)}` : ''}
+          </span>
+        )}
+        {crossDate && (
+          <span className="calendar-session-date">
+            {actual
+              ? `Planned ${dateLabel(plannedDate)}`
+              : `Performed ${dateLabel(completion.performedDate)}`}
+          </span>
+        )}
+        <WorkoutSource workout={workout} />
+      </span>
+    </Button>
+  );
+}
 
 export type ContextItem =
   | { kind: 'note'; record: Note }
@@ -80,18 +144,20 @@ function CalendarCard({
   onClick: () => void;
   children: ReactNode;
 }) {
+  const description = useId();
   return (
     <Button
       variant="unstyled"
       type="button"
       className={`calendar-fact-card calendar-fact-${tone}`}
       aria-label={label}
+      aria-describedby={description}
       onClick={onClick}
     >
       <span className="calendar-fact-icon" aria-hidden="true">
         {icon}
       </span>
-      <span className="calendar-fact-copy">
+      <span className="calendar-fact-copy" id={description}>
         <strong>{title}</strong>
         {children}
       </span>
@@ -169,9 +235,12 @@ export function ActivityCard({
       onClick={onClick}
     >
       <span>
-        {duration(activity.durationSeconds)} · {distance(activity.distanceMeters, units)}
+        Recorded {time(activity.durationSeconds)} ·{' '}
+        {activity.distanceMeters === null
+          ? 'Distance unavailable'
+          : distance(activity.distanceMeters, units)}
       </span>
-      <span className="calendar-fact-tag">{linked ? 'Linked activity' : 'Garmin activity'}</span>
+      <span className="calendar-fact-tag">{linked ? 'Garmin linked' : 'Garmin · Not linked'}</span>
     </CalendarCard>
   );
 }
@@ -441,6 +510,7 @@ export function ActivityDetails({
   onOpenWorkout: (id: string) => void;
 }) {
   const { data } = useWorkspace();
+  const [linking, setLinking] = useState(false);
   const units = data.profile?.units ?? 'metric';
   return (
     <Detail
@@ -501,11 +571,17 @@ export function ActivityDetails({
             </p>
           </>
         ) : (
-          <p>No workout linked. You can link this activity from a workout’s details.</p>
+          <>
+            <p>No workout linked.</p>
+            <Button variant="outline" onClick={() => setLinking(true)}>
+              Link workout
+            </Button>
+          </>
         )}
       </section>
       <p className="calendar-detail-source">Imported measurements are read-only.</p>
       <CloseButton onClose={onClose} />
+      {linking && <LinkWorkoutDialog activity={activity} onClose={() => setLinking(false)} />}
     </Detail>
   );
 }

@@ -53,12 +53,12 @@ export const registry = [
   {
     "path": "plugins/training",
     "enabled": true,
-    "version": "2.2.0",
+    "version": "2.3.0",
     "manifest": {
       "id": "training",
       "name": "Training",
       "description": "Plans, workouts and recorded completion",
-      "version": "2.2.0",
+      "version": "2.3.0",
       "hostApi": "^1.3.0",
       "dependencies": {},
       "optionalDependencies": {},
@@ -134,16 +134,16 @@ export const registry = [
   {
     "path": "plugins/calendar",
     "enabled": true,
-    "version": "2.0.0",
+    "version": "2.1.0",
     "manifest": {
       "id": "calendar",
       "name": "Training calendar",
       "description": "Plan and review your week",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "hostApi": "^1.1.0",
       "dependencies": {
         "athlete": "^1.2.0",
-        "training": "^2.0.0",
+        "training": "^2.3.0",
         "activity-records": "^2.0.0"
       },
       "optionalDependencies": {},
@@ -168,15 +168,16 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "2.2.0",
+    "version": "2.3.0",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "2.2.0",
+      "version": "2.3.0",
       "hostApi": "^1.2.0",
       "dependencies": {
-        "activity-records": "^2.0.0"
+        "activity-records": "^2.0.0",
+        "training": "^2.3.0"
       },
       "optionalDependencies": {},
       "required": false,
@@ -205,14 +206,16 @@ export const registry = [
         "migrations/002-coverage-quality.sql",
         "migrations/003-scan-diagnostics.sql",
         "migrations/004-recovery-scheduling.sql",
-        "migrations/005-history-reads.sql"
+        "migrations/005-history-reads.sql",
+        "migrations/006-automatic-linking.sql"
       ],
       "services": [],
       "jobs": [
         "garmin-history",
         "garmin-recent",
         "garmin-catchup",
-        "garmin-reconcile"
+        "garmin-reconcile",
+        "garmin-match-activities"
       ],
       "capabilities": [
         "network:personal.connectapi.garmin.com",
@@ -358,4 +361,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="561a156e9c683dda818c7d6befeea466eb9978cb7aafeca799bff91e32f25481";
+export const schemaSignature="1cd923771b4134d38b576c3707a0894c00cbc50b9bff52dcdd367eeb14c3ab8f";

@@ -3,25 +3,15 @@
 import { Button } from '@athlete-panel/ui';
 import { useMemo, useState } from 'react';
 import type { Injury, Note, TrainingEvent, WorkspaceState } from '@athlete-panel/contracts';
-import {
-  CheckCircle2,
-  Flag,
-  NotebookPen,
-  Plus,
-  CalendarDays,
-  HeartPulse,
-  ArrowUpRight,
-} from 'lucide-react';
+import { Flag, NotebookPen, Plus, CalendarDays, HeartPulse, ArrowUpRight } from 'lucide-react';
 import {
   AddButton,
   addDays,
   dateLabel,
   DateNavigation,
-  duration,
   ExtensionSlot,
   localDate,
   Modal,
-  SportIcon,
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
@@ -33,6 +23,7 @@ import { WorkoutEditor, WorkoutInspector } from '../training/public/client';
 import { ContextEditor } from '../athlete/public/client';
 import {
   ActivityCard,
+  WorkoutCard,
   ActivityDetails,
   ContextCard,
   ContextDetails,
@@ -120,54 +111,49 @@ function Day({
       </div>
       <div className="calendar-day-content">
         {workouts.map((workout) => (
-          <Button
-            variant="unstyled"
-            className={`calendar-workout ${selectedId === workout.id ? 'selected' : ''} ${workout.completion?.status === 'completed' ? 'complete' : ''}`}
+          <WorkoutCard
             key={workout.id}
-            onClick={() => onWorkout(workout.id)}
-            aria-label={`Open ${workout.title}`}
-          >
-            <div className="workout-icon-row">
-              <SportIcon sport={workout.sport} size={18} />
-              {workout.completion?.status === 'completed' && (
-                <CheckCircle2 className="complete-check" size={12} />
-              )}
-            </div>
-            <strong>{workout.title}</strong>
-            <span>
-              {workout.kind === 'rest' ? 'Rest day' : duration(workout.durationSeconds)}
-              {workout.completion?.status === 'partial'
-                ? ' · Partial'
-                : workout.completion?.status === 'skipped'
-                  ? ' · Skipped'
-                  : ''}
-            </span>
-          </Button>
-        ))}
-        {activities.map((activity) => (
-          <ActivityCard
-            key={activity.id}
-            activity={activity}
-            linked={data.workouts.some((workout) => workout.completion?.activityId === activity.id)}
+            workout={workout}
+            plannedDate={date}
+            selected={selectedId === workout.id}
             units={data.profile?.units}
-            onClick={() => onCard({ kind: 'activity', id: activity.id })}
+            onClick={() => onWorkout(workout.id)}
           />
         ))}
+        {activities.map((activity) => {
+          const linked = data.workouts.find(
+            (workout) => workout.completion?.activityId === activity.id,
+          );
+          return linked ? (
+            <WorkoutCard
+              key={activity.id}
+              workout={linked}
+              actual
+              plannedDate={effectiveDate(linked, data.plans)!}
+              selected={selectedId === linked.id}
+              units={data.profile?.units}
+              onClick={() => onWorkout(linked.id)}
+            />
+          ) : (
+            <ActivityCard
+              key={activity.id}
+              activity={activity}
+              linked={false}
+              units={data.profile?.units}
+              onClick={() => onCard({ kind: 'activity', id: activity.id })}
+            />
+          );
+        })}
         {manualActuals.map((workout) => (
-          <Button
-            variant="unstyled"
-            className="calendar-workout complete"
+          <WorkoutCard
             key={`actual-${workout.id}`}
+            workout={workout}
+            actual
+            plannedDate={effectiveDate(workout, data.plans)!}
+            selected={selectedId === workout.id}
+            units={data.profile?.units}
             onClick={() => onWorkout(workout.id)}
-            aria-label={`Open actual ${workout.title}`}
-          >
-            <div className="workout-icon-row">
-              <SportIcon sport={workout.sport} size={17} />
-              <CheckCircle2 className="complete-check" size={12} />
-            </div>
-            <strong>{workout.title}</strong>
-            <span>{duration(workout.completion!.durationSeconds)} · Actual</span>
-          </Button>
+          />
         ))}
         {sleep.map((night) => (
           <SleepCard

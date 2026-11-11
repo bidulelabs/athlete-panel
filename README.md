@@ -288,7 +288,7 @@ The [operator checklist](docs/release-readiness.md#operator-acceptance-on-the-in
 - Record real harness discovery and browser-launch behavior on supported environments.
 - Measure representative history performance and restore times.
 
-Workout libraries, automatic activity matching, advanced training-load/recovery calculations, FIT/GPS analysis, offline editing, native notifications and MCP remain deferred. They are not release commitments. The current application is an online, English-language web workspace for one athlete.
+Workout libraries, advanced training-load/recovery calculations, FIT/GPS analysis, offline editing, native notifications and MCP remain deferred. They are not release commitments. The current application is an online, English-language web workspace for one athlete.
 
 ## Documentation
 

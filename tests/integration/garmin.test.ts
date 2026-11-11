@@ -12,7 +12,7 @@ import {
 } from '../../packages/host/src/jobs';
 import { loadWorkspace } from '../../instance/services';
 import { recordsRepository } from '../../plugins/activity-records/repository';
-import { mutate } from '../../plugins/training/service';
+import { mutate, undoChange } from '../../plugins/training/service';
 import {
   configure,
   disconnect,
@@ -80,7 +80,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     await migrate();
   });
   beforeEach(async () => {
-    await connection()`truncate host.jobs, host.proposals, agent_bridge.planning_reads,host.grants, host.changes, host.idempotency, athlete.records, training.records, activity_records.records, garmin.coverage, garmin.scan_state, garmin.scheduler`;
+    await connection()`truncate host.jobs, host.proposals, agent_bridge.planning_reads,host.grants, host.changes, host.idempotency, athlete.records, training.records, activity_records.records, garmin.coverage, garmin.scan_state, garmin.scheduler, garmin.activity_matches`;
     await connection()`delete from host.settings where key in ('garmin','garminToken','maintenance')`;
     activities = [activityRow()];
     sleepRows = [];
@@ -132,7 +132,11 @@ describe('durable Garmin worker with synthetic Personal API', () => {
 
   async function takeStep(): Promise<{ job: Job; saved: Record<string, any> }> {
     await connection()`update host.jobs set next_run_at=now() where status='queued'`;
-    const job = await claimJob(randomUUID());
+    let job = await claimJob(randomUUID());
+    while (job?.kind === 'garmin-match-activities') {
+      await runGarminJob(job);
+      job = await claimJob(randomUUID());
+    }
     expect(job).not.toBeNull();
     await runGarminJob(job!);
     const [saved] = await connection()`select * from host.jobs where id=${job!.id}`;
@@ -1178,5 +1182,164 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     const [healthy] = await connection()`select value from host.settings where key='worker'`;
     expect(healthy.value).toMatchObject({ state: 'healthy', consecutiveFailures: 0 });
     await connection()`delete from host.settings where key='worker'`;
+  });
+  async function plannedRide(manual = false) {
+    const id = randomUUID();
+    await mutate({
+      idempotencyKey: randomUUID(),
+      commands: [
+        {
+          action: 'workout.create',
+          values: {
+            id,
+            title: 'Matching ride',
+            sport: 'cycling',
+            schedule: { kind: 'independent', date: day },
+            durationSeconds: 4000,
+          },
+        },
+      ],
+    });
+    if (manual)
+      await mutate({
+        idempotencyKey: randomUUID(),
+        commands: [
+          {
+            action: 'workout.complete',
+            id,
+            expectedRevision: 1,
+            values: {
+              status: 'partial',
+              performedDate: day,
+              durationSeconds: 2400,
+              distanceMeters: 15000,
+              rpe: 6,
+              reason: 'Shortened',
+              notes: 'Keep my notes',
+            },
+          },
+        ],
+      });
+    return id;
+  }
+  async function matchStep() {
+    const job = await claimJob(randomUUID());
+    expect(job?.kind).toBe('garmin-match-activities');
+    await runGarminJob(job!);
+    return job!;
+  }
+  it('links only after pagination closes, audits independently, and restores manual values on undo', async () => {
+    await bootstrap();
+    const id = await plannedRide(true);
+    await takeStep();
+    expect((await loadWorkspace()).workouts.find((w) => w.id === id)?.completion?.source).toBe(
+      'manual',
+    );
+    await takeStep();
+    const job = await matchStep();
+    const state = await loadWorkspace();
+    expect(state.workouts[0]?.completion).toMatchObject({
+      source: 'garmin',
+      linkMethod: 'automatic',
+      status: 'partial',
+      durationSeconds: 3600,
+      distanceMeters: 20000,
+      rpe: 6,
+      reason: 'Shortened',
+      notes: 'Keep my notes',
+    });
+    const [audit] = await connection()`select * from host.changes where actor='system'`;
+    expect(audit.changes).toHaveLength(1);
+    expect(audit.changes[0].entity).toBe('workout');
+    await runGarminJob(job); // stale duplicate claim cannot repeat the mutation
+    expect(await connection()`select id from host.changes where actor='system'`).toHaveLength(1);
+    await undoChange({ id: audit.id, idempotencyKey: randomUUID() });
+    expect((await loadWorkspace()).workouts[0]?.completion).toMatchObject({
+      source: 'manual',
+      durationSeconds: 2400,
+      notes: 'Keep my notes',
+    });
+    expect((await loadWorkspace()).activities).toHaveLength(1);
+    await scheduleCursor({ phase: 'recent-activities' });
+    await takeStep();
+    await takeStep();
+    expect(await connection()`select * from garmin.activity_matches`).toHaveLength(0);
+    expect((await loadWorkspace()).workouts[0]?.completion?.source).toBe('manual');
+  });
+  it('keeps two same-day sessions on separate provider pages ambiguous, across worker restart', async () => {
+    await bootstrap();
+    await plannedRide();
+    let page = 0;
+    blockActivity = async () =>
+      response(page < 2 ? [activityRow({ activityId: String(700 + page++) })] : []);
+    await takeStep();
+    await closeDatabase(); // staging and cursor survive a new connection/worker
+    await takeStep();
+    expect((await loadWorkspace()).workouts[0]?.completion).toBeNull();
+    await takeStep();
+    await matchStep();
+    expect((await loadWorkspace()).workouts[0]?.completion).toBeNull();
+    expect(await connection()`select * from garmin.activity_matches`).toHaveLength(0);
+  });
+  it('discards rejected scans and cancelled imports without speculative links', async () => {
+    await bootstrap();
+    await plannedRide();
+    activities.push(activityRow({ activityId: '901', startTimeGMT: 'invalid' }));
+    await takeStep();
+    await takeStep();
+    expect(await connection()`select * from garmin.activity_matches`).toHaveLength(0);
+    expect((await loadWorkspace()).workouts[0]?.completion).toBeNull();
+    activities = [activityRow({ activityId: '902' })];
+    await scheduleCursor({ phase: 'recent-activities' });
+    await takeStep();
+    expect(await connection()`select * from garmin.activity_matches`).toHaveLength(1);
+    await disconnect();
+    expect(await connection()`select * from garmin.activity_matches`).toHaveLength(0);
+  });
+  it('retains eligibility across an import failure and pause, and never relinks an explicit unlink', async () => {
+    await bootstrap();
+    const id = await plannedRide();
+    await takeStep();
+    nextFailure = { status: 503 };
+    await takeStep();
+    expect(await connection()`select * from garmin.activity_matches`).toHaveLength(1);
+    await pause({ paused: true });
+    await pause({ paused: false });
+    await takeStep();
+    await matchStep();
+    activities = [activityRow({ duration: 3700 })];
+    await scheduleCursor({ phase: 'recent-activities' });
+    await takeStep();
+    await takeStep();
+    const linked = (await loadWorkspace()).workouts.find((w) => w.id === id)!;
+    expect(linked.completion).toMatchObject({ linkMethod: 'automatic', durationSeconds: 3700 });
+    expect(await connection()`select id from host.changes where actor='system'`).toHaveLength(1);
+    await mutate({
+      idempotencyKey: randomUUID(),
+      commands: [{ action: 'workout.unlink', id, expectedRevision: linked.revision }],
+    });
+    activities = [activityRow({ duration: 3900 })];
+    await scheduleCursor({ phase: 'recent-activities' });
+    await takeStep();
+    await takeStep();
+    expect((await loadWorkspace()).workouts[0]?.completion).toBeNull();
+    expect((await loadWorkspace()).activities[0]?.durationSeconds).toBe(3900);
+  });
+  it('honors a manual link and unlink between import and automatic matching', async () => {
+    await bootstrap();
+    const id = await plannedRide();
+    await takeStep();
+    const activity = (await loadWorkspace()).activities[0]!;
+    await mutate({
+      idempotencyKey: randomUUID(),
+      commands: [{ action: 'workout.link', id, expectedRevision: 1, activityId: activity.id }],
+    });
+    await mutate({
+      idempotencyKey: randomUUID(),
+      commands: [{ action: 'workout.unlink', id, expectedRevision: 2 }],
+    });
+    await takeStep();
+    await matchStep();
+    expect((await loadWorkspace()).workouts[0]?.completion).toBeNull();
   });
 });

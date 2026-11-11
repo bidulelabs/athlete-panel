@@ -2,10 +2,11 @@
   "id": "garmin",
   "name": "Garmin import",
   "description": "Personal API activities and health imports",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "hostApi": "^1.2.0",
   "dependencies": {
-    "activity-records": "^2.0.0"
+    "activity-records": "^2.0.0",
+    "training": "^2.3.0"
   },
   "required": false,
   "routes": [
@@ -20,10 +21,17 @@
     "migrations/002-coverage-quality.sql",
     "migrations/003-scan-diagnostics.sql",
     "migrations/004-recovery-scheduling.sql",
-    "migrations/005-history-reads.sql"
+    "migrations/005-history-reads.sql",
+    "migrations/006-automatic-linking.sql"
   ],
   "services": [],
-  "jobs": ["garmin-history", "garmin-recent", "garmin-catchup", "garmin-reconcile"],
+  "jobs": [
+    "garmin-history",
+    "garmin-recent",
+    "garmin-catchup",
+    "garmin-reconcile",
+    "garmin-match-activities"
+  ],
   "capabilities": ["network:personal.connectapi.garmin.com", "secret:garmin-key"],
   "server": "server.ts",
   "schema": "garmin",

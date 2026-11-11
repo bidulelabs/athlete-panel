@@ -28,7 +28,7 @@ Local operation uses the [persistent PostgreSQL container](../compose.local.yml)
 | Calendar/health  | Workspace and factual daily projections                                                    | [Calendar](../plugins/calendar), [health](../plugins/health)                  |
 | Charts           | Chart templates over Calendar range totals with sport filters and grouping                               | [Charts](../plugins/charts)                                                   |
 | Agent bridge     | Browser-approved CLI pairing, scoped exports, immutable proposal review, atomic apply/undo | [Bridge](../plugins/agent-bridge/service.ts)                                  |
-| Owner extension  | Weekly cycling duration and recorded sleep comparison                                      | [Personal plugin](../personal-plugins/cycling-sleep)                          |
+| Owner extension  | Optional printable planned week (disabled by default)                                      | [Personal plugin](../personal-plugins/printable-training-week)                          |
 
 The web root installs the shared UI provider and Tailwind discovers the UI package source. Shared semantic styles map to the existing `data-theme` palette through prefixed tokens. Plugins import public components and retain all domain composition and calculations. Workout editors mount above responsive inspector boundaries; a nested editor defers its inspector's 1050px mode switch. See [shared UI](features/shared-ui.md) and [ADR 007](decisions/007-shared-shadcn-ui.md).
 

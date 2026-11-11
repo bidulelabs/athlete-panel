@@ -35,7 +35,6 @@ test('shared controls and all app pages retain usable themes, navigation and key
       '/garmin',
       '/agent',
       '/plugins',
-      '/cycling-sleep',
     ]) {
       await page.goto(path);
       await expect(page.locator('.page-content')).toBeVisible();

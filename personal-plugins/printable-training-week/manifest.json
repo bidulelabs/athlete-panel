@@ -1,0 +1,17 @@
+{
+  "id": "printable-training-week",
+  "name": "Printable training week",
+  "description": "Print a week of planned sessions, intervals and strength exercises",
+  "version": "1.0.0",
+  "hostApi": "^1.1.0",
+  "dependencies": { "training": "^2.2.0" },
+  "required": false,
+  "routes": [
+    { "path": "/printable-training-week", "title": "Printable week", "icon": "CalendarDays" }
+  ],
+  "migrations": [],
+  "services": [],
+  "jobs": [],
+  "capabilities": [],
+  "client": "client.tsx"
+}

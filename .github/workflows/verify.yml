@@ -71,6 +71,7 @@ jobs:
       fail-fast: false
       matrix:
         project: [desktop, mobile]
+        composition: [default, printable-week]
     services:
       postgres: *test-postgres
     env: *test-env
@@ -79,7 +80,19 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
+      - name: Prepare explicitly enabled example composition
+        if: matrix.composition == 'printable-week'
+        run: |
+          mkdir -p .runtime
+          node --input-type=module - <<'JS'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const composition = JSON.parse(readFileSync('instance/composition.json', 'utf8'));
+          composition.plugins.find(entry => entry.path === 'personal-plugins/printable-training-week').enabled = true;
+          writeFileSync('.runtime/printable-week-composition.json', JSON.stringify(composition));
+          JS
       - run: pnpm build
+        env:
+          ATHLETE_PANEL_INSTANCE_PATH: ${{ matrix.composition == 'printable-week' && '.runtime/printable-week-composition.json' || 'instance/composition.json' }}
       - run: pnpm exec playwright install --with-deps chromium
       - name: Seed and start isolated production server
         env:
@@ -94,14 +107,22 @@ jobs:
           for attempt in $(seq 1 30); do if curl --fail --silent http://127.0.0.1:3000/api/health; then exit 0; fi; sleep 1; done
           cat /tmp/athlete-panel-web.log
           exit 1
-      - run: pnpm test:e2e --project=${{ matrix.project }}
+      - name: Verify default application
+        if: matrix.composition == 'default'
+        run: pnpm test:e2e --project=${{ matrix.project }}
+      - name: Verify explicitly enabled example
+        if: matrix.composition == 'printable-week'
+        env:
+          PRINTABLE_TRAINING_WEEK_E2E: 'true'
+        run: pnpm test:e2e tests/e2e/printable-week.spec.ts --project=${{ matrix.project }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
-          name: verification-evidence-${{ matrix.project }}
+          name: verification-evidence-${{ matrix.composition }}-${{ matrix.project }}
           path: |
             .runtime/playwright-report
             .runtime/playwright-results
+            .runtime/printable-week-review
 
   verify:
     if: always()

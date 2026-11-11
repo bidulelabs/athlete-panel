@@ -6,10 +6,22 @@ const password = process.env.E2E_PASSWORD;
 if (!password) throw new Error('Set E2E_PASSWORD for the isolated synthetic instance.');
 
 for (const view of [
-  { path: '/agent', title: 'Change history', width: 560 },
-  { path: '/plans', title: 'Recent changes', width: 500 },
+  {
+    path: '/agent',
+    title: 'Change history',
+    description: 'Recent changes across your training.',
+    width: 560,
+    plugin: 'agent-bridge',
+  },
+  {
+    path: '/plans',
+    title: 'Recent changes',
+    description: 'Review recent edits across your training.',
+    width: 500,
+    plugin: 'training',
+  },
 ]) {
-  test(`${view.title} shares bounded history, dismissal and confirmation behavior`, async ({
+  test(`${view.title} preserves its description, dismissal and confirmation behavior`, async ({
     page,
   }, info) => {
     const changes: AuditSummary[] = Array.from({ length: 50 }, (_, index) => ({
@@ -47,7 +59,7 @@ for (const view of [
       for (const width of [1440, 390, 320]) {
         await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
         await trigger.click();
-        await expect(sheet).toContainText('Latest 50 changes across your training.');
+        await expect(sheet.locator('[data-slot="sheet-description"]')).toHaveText(view.description);
         const close = sheet.getByRole('button', { name: `Close ${view.title.toLowerCase()}` });
         await expect(close).toBeFocused();
         expect((await sheet.boundingBox())!.width).toBe(width === 1440 ? view.width : width);
@@ -83,7 +95,52 @@ for (const view of [
     changes.pop();
     await page.reload();
     await trigger.click();
-    await expect(sheet).not.toContainText('Latest 50 changes');
+    await expect(sheet.locator('[data-slot="sheet-description"]')).toHaveText(view.description);
     expect(undoRequests).toBe(0);
+    await page.keyboard.press('Escape');
+    let failedUndoRequests = 0;
+    await page.route(`**/api/plugins/${view.plugin}/undo`, async (route) => {
+      failedUndoRequests++;
+      expect(route.request().postDataJSON().id).toBe(changes[39]!.id);
+      await route.fulfill({
+        status: 409,
+        json: { error: { message: 'Synthetic later edit prevents undo' } },
+      });
+    });
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+      }, theme);
+      for (const width of [1440, 390, 320]) {
+        await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
+        await trigger.click();
+        await expect(sheet.getByRole('alert')).toHaveCount(0);
+        const undo = sheet.getByRole('button', { name: 'Undo', exact: true }).nth(39);
+        await undo.click();
+        await confirmation.getByRole('button', { name: 'Undo change', exact: true }).click();
+        const error = sheet.getByRole('alert');
+        await expect(error).toContainText('Synthetic later edit prevents undo');
+        await expect(error).toBeInViewport();
+        await expect(
+          sheet.getByRole('button', { name: `Close ${view.title.toLowerCase()}` }),
+        ).toBeInViewport();
+        expect(
+          await sheet.locator('.history-sheet-scroll').evaluate((el) => el.scrollTop),
+        ).toBeGreaterThan(1000);
+        await expect(undo).toBeEnabled();
+        await page.screenshot({
+          path: `.runtime/browser/history-error-${view.path.slice(1)}-${info.project.name}-${width}-${theme}.png`,
+          animations: 'disabled',
+        });
+        await page.keyboard.press('Escape');
+        await expect(trigger).toBeFocused();
+      }
+    }
+    expect(failedUndoRequests).toBe(6);
+    changes.splice(0);
+    await page.reload();
+    await trigger.click();
+    await expect(sheet.locator('[data-slot="sheet-description"]')).toHaveText(view.description);
+    await expect(sheet).toContainText('No changes yet');
   });
 }

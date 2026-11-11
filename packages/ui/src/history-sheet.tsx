@@ -14,12 +14,9 @@ import {
 } from './components/sheet';
 import { useConfirmationLayer } from './provider';
 
-const HISTORY_PREVIEW_LIMIT = 50;
-
 export function HistorySheet({
   title,
   description,
-  entryCount,
   trigger,
   onOpen,
   notice,
@@ -28,7 +25,6 @@ export function HistorySheet({
 }: {
   title: string;
   description: string;
-  entryCount: number;
   trigger: ReactElement;
   onOpen: () => void;
   notice?: ReactNode;
@@ -64,11 +60,7 @@ export function HistorySheet({
         <header className="history-sheet-header">
           <div>
             <SheetTitle>{title}</SheetTitle>
-            <SheetDescription>
-              {entryCount === HISTORY_PREVIEW_LIMIT
-                ? `Latest ${HISTORY_PREVIEW_LIMIT} changes across your training.`
-                : description}
-            </SheetDescription>
+            <SheetDescription>{description}</SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label={`Close ${title.toLowerCase()}`}>

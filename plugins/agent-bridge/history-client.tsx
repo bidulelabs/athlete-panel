@@ -19,10 +19,10 @@ export function AgentHistory() {
   return (
     <HistorySheet
       title="Change history"
-      description="Changes across your training."
-      entryCount={envelope.changes.length}
+      description="Recent changes across your training."
       className="agent-history-sheet"
       onOpen={() => action.setError(null)}
+      notice={action.error && <ErrorMessage error={action.error} />}
       trigger={
         <Button variant="ghost">
           <History size={16} aria-hidden="true" />
@@ -30,7 +30,6 @@ export function AgentHistory() {
         </Button>
       }
     >
-      <ErrorMessage error={action.error} />
       {envelope.changes.length ? (
         envelope.changes.map((change) => (
           <div className="agent-history-row" key={change.id}>

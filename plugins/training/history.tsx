@@ -179,8 +179,7 @@ export function TrainingHistory() {
   return (
     <HistorySheet
       title="Recent changes"
-      description="Review edits across your training."
-      entryCount={envelope.changes.length}
+      description="Review recent edits across your training."
       className="training-history-sheet"
       onOpen={() => action.setError(null)}
       notice={action.error && <ErrorMessage error={action.error} />}

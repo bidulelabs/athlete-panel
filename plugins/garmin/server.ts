@@ -15,6 +15,7 @@ export default {
     'garmin-history': runGarminJob,
     'garmin-catchup': runGarminJob,
     'garmin-reconcile': runGarminJob,
+    'garmin-match-activities': runGarminJob,
   },
   schedule: scheduleRecent,
 } satisfies ServerPlugin;

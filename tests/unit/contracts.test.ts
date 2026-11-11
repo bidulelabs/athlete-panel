@@ -169,6 +169,27 @@ describe('versioned domain contracts', () => {
       completionSchema.safeParse({ ...values, status: 'skipped', durationSeconds: 60 }).success,
     ).toBe(false);
   });
+  it.each(['manual', 'automatic'] as const)(
+    'restricts %s linking provenance to Garmin completions',
+    (linkMethod) => {
+      const values = {
+        status: 'completed',
+        performedDate: '2026-10-24',
+        source: 'manual',
+        activityId: null,
+        linkMethod,
+      };
+      const result = completionSchema.safeParse(values);
+      expect(result.success).toBe(false);
+      if (!result.success)
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({ path: ['linkMethod'] }),
+        );
+      expect(
+        completionSchema.safeParse({ ...values, source: 'garmin', activityId: id }).success,
+      ).toBe(true);
+    },
+  );
   it('validates timezone and ascending sport zone upper bounds', () => {
     expect(
       profileValuesSchema.safeParse({

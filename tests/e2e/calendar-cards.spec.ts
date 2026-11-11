@@ -26,7 +26,7 @@ async function preview(page: Page) {
   await expect(page.locator('[data-date="2030-01-06"]')).toBeVisible();
   return { fixture, mutations: () => mutations };
 }
-const dialog = (page: Page) => page.getByRole('dialog');
+const dialog = (page: Page) => page.getByRole('dialog').last();
 const metric = (page: Page, name: string) =>
   dialog(page)
     .locator('dl > div')

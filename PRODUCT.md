@@ -22,7 +22,7 @@ One self-hosted workspace with source plugins and optional external agents. Ther
 
 Desktop week planning needs scanable dates, planned versus recorded values, accessible workout details and efficient edits. Phone use prioritizes finding the relevant day, inspecting a session and recording completion with clear, reachable actions. Both light and dark themes are supported.
 
-The athlete can combine workouts with notes, events and injury constraints, review factual weekly summaries, and explicitly link an imported activity. Preserve drafts on failed or stale saves. See the [training workspace specification](docs/features/training-workspace.md).
+The athlete can combine workouts with notes, events and injury constraints, review factual weekly summaries, and review automatic Garmin links or explicitly link an imported activity. Preserve drafts on failed or stale saves. See the [training workspace specification](docs/features/training-workspace.md).
 
 ## Capabilities and Constraints
 

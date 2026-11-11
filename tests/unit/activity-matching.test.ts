@@ -7,7 +7,10 @@ import {
   profileSchema,
   workoutSchema,
 } from '@athlete-panel/contracts';
-import { automaticActivityMatches } from '../../plugins/training/activity-matching';
+import {
+  automaticActivityMatches,
+  isLinkableWorkout,
+} from '../../plugins/training/activity-matching';
 import { applyCommands } from '../../plugins/training/engine';
 
 const id = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -135,6 +138,8 @@ describe('automatic activity matching', () => {
         performedDate: '2026-10-23',
       },
     });
+    // Manual selection remains available across dates; only automatic matching requires same day.
+    expect(isLinkableWorkout(state.workouts[0], state.plans)).toBe(true);
     expect(match(state)).toEqual([]);
   });
   it('respects exact subtypes and unresolved sports', () => {

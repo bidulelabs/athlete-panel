@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { canLinkSport, isRest, sportSelectionLabel, type Activity } from '@athlete-panel/contracts';
+import { canLinkSport, sportSelectionLabel, type Activity } from '@athlete-panel/contracts';
 import {
   Button,
   Modal,
@@ -15,8 +15,7 @@ import {
   useAction,
   useWorkspace,
 } from '@athlete-panel/ui';
-import { effectiveDate } from './dates';
-import { matchingDate } from './activity-matching';
+import { isLinkableWorkout, matchingDate } from './activity-matching';
 import { mutate } from './editors';
 
 export function LinkWorkoutDialog({
@@ -32,12 +31,7 @@ export function LinkWorkoutDialog({
   const [candidates] = useState(() =>
     data.workouts
       .filter(
-        (workout) =>
-          !isRest(workout) &&
-          workout.completion?.source !== 'garmin' &&
-          workout.completion?.status !== 'skipped' &&
-          effectiveDate(workout, data.plans) &&
-          canLinkSport(workout, activity),
+        (workout) => isLinkableWorkout(workout, data.plans) && canLinkSport(workout, activity),
       )
       .map((workout) => ({ workout, date: matchingDate(workout, data.plans)! }))
       .sort(

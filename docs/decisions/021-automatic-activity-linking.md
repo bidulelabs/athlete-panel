@@ -14,12 +14,12 @@ Completed and linked sessions are difficult to distinguish in the calendar. Manu
 
 Stage only newly inserted activity identities in Garmin-owned storage. Match after successful activity pagination without rejected records, processing one date per transaction through Training's public server service. Require uniqueness on both sides using normalized local dates and existing sport/subgroup compatibility. Use performed dates for manual logs and scheduled dates for pending workouts. Replace manual measurements while retaining status and annotations, as explicitly selected by the owner.
 
-Use existing domain validation, locking and audit. Audit each automatic association separately from imported facts, expose server-controlled linking provenance, and consume candidates even when ambiguous. Existing rows and corrections are not enrolled. Check prior explicit associations before matching so an unlink during the scan is respected.
+Use existing domain validation, locking and audit. Audit each automatic association separately from imported facts, expose server-controlled linking provenance, and consume candidates even when ambiguous. Previously stored rows and corrections are not enrolled; newly imported older sessions are eligible, including initial history imports. Check prior explicit associations before matching so an unlink during the scan is respected. Bound that lookup by the earliest importing job's creation timestamp with a host-owned audit timestamp index. Newly inserted activity IDs cannot have earlier associations, and the bound remains stable through retries and restarts.
 
 ## Consequences
 
 - Expected benefit: clearer recorded results with less manual reconciliation and no arbitrary tie-breaking.
-- Costs: additive staging storage, a worker job and public Training service dependency; matching waits for scan completion. Existing history still requires explicit linking.
+- Costs: additive staging storage, an audit timestamp index, a worker job and public Training service dependency; matching waits for scan completion. Previously stored activities still require explicit linking.
 - Compatibility: old strict completion parsers cannot read new provenance. Upgrade matched artifacts and use backup-based rollback.
 - Reconsider when the owner requests historical reconciliation, duration-based disambiguation or different matching preferences.
 

@@ -61,15 +61,21 @@ export async function runActivityMatchingJob(job: Job) {
     >`select local_date::text as date from garmin.activity_matches where ready and source_account_id=${config.accountId} order by local_date limit 1`;
     let linked = 0;
     if (day) {
-      const candidates = await tx<
-        { id: string }[]
-      >`select activity_id as id from garmin.activity_matches where ready and source_account_id=${config.accountId} and local_date=${day.date}`;
-      linked = await autoLinkImportedActivities(
-        tx,
-        day.date,
-        candidates.map((item) => item.id),
-      );
-      await tx`delete from garmin.activity_matches where activity_id=any(${candidates.map((item) => item.id)})`;
+      const [candidates] = await tx<
+        { ids: string[]; started_at: Date }[]
+      >`select array_agg(m.activity_id) as ids,min(j.created_at) as started_at
+        from garmin.activity_matches m join host.jobs j on j.id=m.import_job_id
+        where m.ready and m.source_account_id=${config.accountId} and m.local_date=${day.date}
+        group by m.local_date`;
+      if (candidates) {
+        linked = await autoLinkImportedActivities(
+          tx,
+          day.date,
+          candidates.ids,
+          candidates.started_at,
+        );
+        await tx`delete from garmin.activity_matches where activity_id=any(${candidates.ids})`;
+      }
     }
     const [remaining] =
       await tx`select activity_id from garmin.activity_matches where ready and source_account_id=${config.accountId} limit 1`;

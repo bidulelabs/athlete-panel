@@ -13,6 +13,16 @@ export function matchingDate(workout: Workout, plans: WorkspaceState['plans']): 
   return scheduled ? (workout.completion?.performedDate ?? scheduled) : null;
 }
 
+/** Shared eligibility; manual linking may still select a different activity date. */
+export function isLinkableWorkout(workout: Workout, plans: WorkspaceState['plans']): boolean {
+  return (
+    !isRest(workout) &&
+    workout.completion?.status !== 'skipped' &&
+    workout.completion?.source !== 'garmin' &&
+    matchingDate(workout, plans) !== null
+  );
+}
+
 /** Evaluate the whole bipartite candidate set before taking any links. Order cannot break ties. */
 export function automaticActivityMatches(
   state: WorkspaceState,
@@ -23,13 +33,7 @@ export function automaticActivityMatches(
   const activities = state.activities.filter(
     (activity) => !linked.has(activity.id) && activity.localDate <= today,
   );
-  const workouts = state.workouts.filter(
-    (workout) =>
-      !isRest(workout) &&
-      workout.completion?.status !== 'skipped' &&
-      workout.completion?.source !== 'garmin' &&
-      matchingDate(workout, state.plans) !== null,
-  );
+  const workouts = state.workouts.filter((workout) => isLinkableWorkout(workout, state.plans));
   const candidates = workouts.map((workout) => ({
     workout,
     activities: activities.filter(

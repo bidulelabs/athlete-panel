@@ -30,6 +30,7 @@ import {
   type GarminSyncCursor,
 } from '../../plugins/garmin/sync';
 import { GARMIN_HEALTH_HISTORY_START } from '../../plugins/garmin/history-policy';
+import { HEALTH_STREAMS } from '../../plugins/garmin/normalize';
 import { GARMIN_ORIGIN, GARMIN_TOKEN_PATH } from '../../plugins/garmin/transport';
 import { contextForToken, createGrant, submitProposal } from '../../plugins/agent-bridge/service';
 import { readHistory } from '../../plugins/agent-bridge/history';
@@ -1183,7 +1184,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     expect(healthy.value).toMatchObject({ state: 'healthy', consecutiveFailures: 0 });
     await connection()`delete from host.settings where key='worker'`;
   });
-  async function plannedRide(manual = false) {
+  async function plannedRide(manual = false, date = day) {
     const id = randomUUID();
     await mutate({
       idempotencyKey: randomUUID(),
@@ -1194,7 +1195,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
             id,
             title: 'Matching ride',
             sport: 'cycling',
-            schedule: { kind: 'independent', date: day },
+            schedule: { kind: 'independent', date },
             durationSeconds: 4000,
           },
         },
@@ -1210,7 +1211,7 @@ describe('durable Garmin worker with synthetic Personal API', () => {
             expectedRevision: 1,
             values: {
               status: 'partial',
-              performedDate: day,
+              performedDate: date,
               durationSeconds: 2400,
               distanceMeters: 15000,
               rpe: 6,
@@ -1228,6 +1229,43 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     await runGarminJob(job!);
     return job!;
   }
+  it('matches newly discovered older sessions during initial history, without reenrolling stored rows', async () => {
+    await bootstrap();
+    const date = '2015-04-12'; // Older than both the recent window and the health-history boundary.
+    const id = await plannedRide(false, date);
+    activities = [];
+    await takeStep();
+    for (const _stream of HEALTH_STREAMS) await takeStep();
+    const [history] = await connection()`select payload from host.jobs where kind='garmin-history'`;
+    expect(history.payload.cursor).toMatchObject({ mode: 'initial', phase: 'history-activities' });
+    activities = [
+      activityRow({ startTimeGMT: `${date} 06:00:00`, startTimeLocal: `${date} 08:00:00` }),
+    ];
+    await takeStep();
+    expect(await connection()`select phase,ready from garmin.activity_matches`).toEqual([
+      { phase: 'history-activities', ready: false },
+    ]);
+    expect((await loadWorkspace()).workouts.find((w) => w.id === id)?.completion).toBeNull();
+    await takeStep();
+    await matchStep();
+    expect((await loadWorkspace()).workouts.find((w) => w.id === id)?.completion).toMatchObject({
+      source: 'garmin',
+      linkMethod: 'automatic',
+      performedDate: date,
+    });
+    const [audit] = await connection()`select id from host.changes where actor='system'`;
+    await undoChange({ id: audit.id, idempotencyKey: randomUUID() });
+    activities[0]!.duration = 3700;
+    await scheduleCursor({ mode: 'initial', phase: 'history-activities' });
+    await takeStep();
+    await takeStep();
+    expect(await connection()`select * from garmin.activity_matches`).toHaveLength(0);
+    const state = await loadWorkspace();
+    expect(state.workouts.find((w) => w.id === id)?.completion).toBeNull();
+    expect(state.activities).toHaveLength(1);
+    expect(state.activities[0]?.durationSeconds).toBe(3700);
+    expect(await connection()`select id from host.changes where actor='system'`).toHaveLength(1);
+  });
   it('links only after pagination closes, audits independently, and restores manual values on undo', async () => {
     await bootstrap();
     const id = await plannedRide(true);
@@ -1325,21 +1363,32 @@ describe('durable Garmin worker with synthetic Personal API', () => {
     expect((await loadWorkspace()).workouts[0]?.completion).toBeNull();
     expect((await loadWorkspace()).activities[0]?.durationSeconds).toBe(3900);
   });
-  it('honors a manual link and unlink between import and automatic matching', async () => {
-    await bootstrap();
-    const id = await plannedRide();
-    await takeStep();
-    const activity = (await loadWorkspace()).activities[0]!;
-    await mutate({
-      idempotencyKey: randomUUID(),
-      commands: [{ action: 'workout.link', id, expectedRevision: 1, activityId: activity.id }],
-    });
-    await mutate({
-      idempotencyKey: randomUUID(),
-      commands: [{ action: 'workout.unlink', id, expectedRevision: 2 }],
-    });
-    await takeStep();
-    await matchStep();
-    expect((await loadWorkspace()).workouts[0]?.completion).toBeNull();
-  });
+  it.each(['unlink', 'undo'] as const)(
+    'honors manual %s across a delayed scan and worker restart',
+    async (action) => {
+      await bootstrap();
+      const id = await plannedRide();
+      await takeStep();
+      const activity = (await loadWorkspace()).activities[0]!;
+      const linked = await mutate({
+        idempotencyKey: randomUUID(),
+        commands: [{ action: 'workout.link', id, expectedRevision: 1, activityId: activity.id }],
+      });
+      if (action === 'undo') await undoChange({ id: linked.id, idempotencyKey: randomUUID() });
+      else
+        await mutate({
+          idempotencyKey: randomUUID(),
+          commands: [{ action: 'workout.unlink', id, expectedRevision: 2 }],
+        });
+      // Simulate a long pause. Matching must retain the importing job's original lower bound,
+      // not its latest update time, matching job creation, or an arbitrary recent-history cutoff.
+      await connection()`update host.jobs set created_at=now()-interval '31 days' where kind='garmin-history'`;
+      await connection()`update host.changes set created_at=now()-interval '30 days'`;
+      await closeDatabase();
+      await takeStep();
+      await matchStep();
+      expect((await loadWorkspace()).workouts[0]?.completion).toBeNull();
+      expect(await connection()`select id from host.changes where actor='system'`).toHaveLength(0);
+    },
+  );
 });

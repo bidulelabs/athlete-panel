@@ -219,9 +219,7 @@ function ProposalDialog({
                   ? 'Checking proposal and current context…'
                   : !canApply
                     ? 'Blocked'
-                    : review.applicability === 'review-required'
-                      ? 'Needs review · calendar context changed'
-                      : 'Ready for your review'}
+                    : 'Needs review · calendar context changed'}
             </strong>
             {review?.conflicts.map((conflict, index) => (
               <p key={`${conflict.code}:${index}`}>{conflict.message}</p>

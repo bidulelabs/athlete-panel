@@ -32,6 +32,9 @@ import {
   groupChangesByWeek,
   groupChangesByMonth,
 } from './proposal-weeks';
+
+const MONTH_GROUP_CHANGE_LIMIT = 200;
+
 export function ProposalType({ type, record }: { type: string; record?: Entity | null }) {
   const Icon =
     type === 'race'
@@ -84,7 +87,9 @@ export function ProposedEdits({
   filtered: boolean;
 }) {
   const months = groupChangesByMonth(changes);
-  if (months.filter((month) => month.month).length <= 2 && changes.length <= 200)
+  const exceedsInlineLimit = changes.length > MONTH_GROUP_CHANGE_LIMIT;
+  const collapseWeeks = collapsed || exceedsInlineLimit;
+  if (months.filter((month) => month.month).length <= 2 && !exceedsInlineLimit)
     return <ProposedEditsByWeek changes={changes} planTitles={planTitles} collapsed={collapsed} />;
   return months.map((month) =>
     month.month ? (
@@ -92,14 +97,14 @@ export function ProposedEdits({
         key={month.month}
         month={month}
         planTitles={planTitles}
-        collapsed={!filtered}
+        collapsed={!filtered || exceedsInlineLimit}
       />
     ) : (
       <ProposedEditsByWeek
         key="undated"
         changes={month.changes}
         planTitles={planTitles}
-        collapsed={collapsed}
+        collapsed={collapseWeeks}
       />
     ),
   );

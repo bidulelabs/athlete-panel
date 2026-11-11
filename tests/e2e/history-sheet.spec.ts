@@ -89,7 +89,7 @@ for (const view of [
     await expect(
       sheet.getByRole('button', { name: `Close ${view.title.toLowerCase()}` }),
     ).toBeFocused();
-    await page.mouse.click(8, 100);
+    await page.locator('[data-slot="sheet-overlay"]').click({ position: { x: 8, y: 100 } });
     await expect(sheet).toHaveCount(0);
     await expect(trigger).toBeFocused();
     changes.pop();

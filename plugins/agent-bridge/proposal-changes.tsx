@@ -75,18 +75,25 @@ function GroupSummary({ changes }: { changes: ProposalDetails['changes'] }) {
 export function ProposedEdits({
   changes,
   planTitles,
-  collapsed = changes.length > 20,
+  collapsed,
+  filtered,
 }: {
   changes: ProposalDetails['changes'];
   planTitles: Record<string, string>;
-  collapsed?: boolean;
+  collapsed: boolean;
+  filtered: boolean;
 }) {
   const months = groupChangesByMonth(changes);
   if (months.filter((month) => month.month).length <= 2 && changes.length <= 200)
     return <ProposedEditsByWeek changes={changes} planTitles={planTitles} collapsed={collapsed} />;
   return months.map((month) =>
     month.month ? (
-      <ProposalMonth key={month.month} month={month} planTitles={planTitles} />
+      <ProposalMonth
+        key={month.month}
+        month={month}
+        planTitles={planTitles}
+        collapsed={!filtered}
+      />
     ) : (
       <ProposedEditsByWeek
         key="undated"
@@ -101,20 +108,30 @@ export function ProposedEdits({
 function ProposalMonth({
   month,
   planTitles,
+  collapsed,
 }: {
   month: { month: string | null; changes: ProposalDetails['changes'] };
   planTitles: Record<string, string>;
+  collapsed: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!collapsed);
   return (
-    <details className="proposal-month" onToggle={(event) => setExpanded(event.currentTarget.open)}>
+    <details
+      className="proposal-month"
+      open={expanded}
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+    >
       <summary>
         <strong>{dateLabel(`${month.month}-01`, { month: 'long', year: 'numeric' })}</strong>
         <GroupSummary changes={month.changes} />
         <ChevronRight size={16} aria-hidden="true" />
       </summary>
       {expanded && (
-        <ProposedEditsByWeek changes={month.changes} planTitles={planTitles} collapsed />
+        <ProposedEditsByWeek
+          changes={month.changes}
+          planTitles={planTitles}
+          collapsed={collapsed}
+        />
       )}
     </details>
   );
@@ -123,9 +140,9 @@ function ProposalMonth({
 function ProposedEditsByWeek({
   changes,
   planTitles,
-  collapsed = false,
+  collapsed,
 }: {
-  collapsed?: boolean;
+  collapsed: boolean;
   changes: ProposalDetails['changes'];
   planTitles: Record<string, string>;
 }) {
@@ -154,7 +171,7 @@ function ProposalWeek({
     ? `Week of ${dateLabel(week.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })}`
     : 'Plans';
   return (
-    <section className="proposal-week" aria-label={title} key={week.weekStart ?? 'undated'}>
+    <section className="proposal-week" aria-label={title}>
       <details open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
         <summary className="proposal-week-heading">
           <h4>{title}</h4>

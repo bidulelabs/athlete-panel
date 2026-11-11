@@ -27,7 +27,7 @@ function ConnectionRow({
 }: {
   grant: GrantSummary;
   now: number;
-  onRevoked: () => void;
+  onRevoked: (id: string) => void;
 }) {
   const { request } = useWorkspace();
   const action = useAction();
@@ -46,11 +46,14 @@ function ConnectionRow({
   const revoke = async () => {
     if (
       await confirm(
-        `Disconnect “${grant.label || 'Training agent'}”? This revokes its access and prevents applying any pending proposals associated with this connection.`,
+        `${active ? 'Disconnect' : 'Revoke access for'} “${grant.label || 'Training agent'}”? This revokes its access and prevents applying any pending proposals associated with this connection.`,
         active ? 'Disconnect agent' : 'Revoke access',
       )
     )
-      void action.run(() => request('agent-bridge', 'revoke', { id: grant.id }), onRevoked);
+      void action.run(
+        () => request('agent-bridge', 'revoke', { id: grant.id }),
+        () => onRevoked(grant.id),
+      );
   };
   return (
     <Collapsible className="agent-connection-row">
@@ -109,7 +112,18 @@ function ConnectionRow({
 export function ConnectedAgents() {
   const { envelope } = useWorkspace();
   const [now, setNow] = useState(Date.now);
+  const [revokedId, setRevokedId] = useState<string | null>(null);
   const inactiveSummary = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (
+      revokedId &&
+      envelope.grants.some((grant) => grant.id === revokedId && grant.revoked) &&
+      inactiveSummary.current
+    ) {
+      inactiveSummary.current.focus();
+      setRevokedId(null);
+    }
+  }, [revokedId, envelope.grants]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(timer);
@@ -121,12 +135,7 @@ export function ConnectedAgents() {
     (grant) => grant.revoked || Date.parse(grant.expiresAt) <= now,
   );
   const row = (grant: GrantSummary) => (
-    <ConnectionRow
-      key={grant.id}
-      grant={grant}
-      now={now}
-      onRevoked={() => requestAnimationFrame(() => inactiveSummary.current?.focus())}
-    />
+    <ConnectionRow key={grant.id} grant={grant} now={now} onRevoked={setRevokedId} />
   );
   return (
     <>

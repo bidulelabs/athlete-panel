@@ -6,6 +6,8 @@ import type { ProposalDetails } from '@athlete-panel/contracts';
 import { ProposedEdits } from './proposal-changes';
 import { matchesChange, typeCounts, typeLabels } from './proposal-presentation';
 
+const EXPANDED_CHANGE_LIMIT = 20;
+
 export function ProposalBrowser({
   changes,
   planTitles,
@@ -87,7 +89,13 @@ export function ProposalBrowser({
         </div>
       )}
       {visible.length ? (
-        <ProposedEdits changes={visible} planTitles={planTitles} collapsed={changes.length > 20} />
+        <ProposedEdits
+          key={JSON.stringify([query.trim(), type, action])}
+          changes={visible}
+          planTitles={planTitles}
+          filtered={filtered}
+          collapsed={!filtered && changes.length > EXPANDED_CHANGE_LIMIT}
+        />
       ) : (
         <p className="proposal-no-results">
           No changes match these filters. Try another title, type or action.

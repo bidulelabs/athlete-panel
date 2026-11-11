@@ -141,10 +141,20 @@ test('connection details retain exact scopes while inactive grants stay collapse
   await expect(row('History reviewer')).not.toContainText('Private notes shared');
   for (const color of ['light', 'dark']) {
     await theme(page, color);
-    await page.screenshot({
-      animations: 'disabled',
-      path: `.runtime/browser/agent-connections-${info.project.name}-${color}.png`,
-    });
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
+      const access = row('Combined reviewer').getByRole('button', { name: 'Access details' });
+      const height = () => access.evaluate((el) => el.getBoundingClientRect().height);
+      if (width === 1440) await expect.poll(height).toBeLessThanOrEqual(40);
+      else await expect.poll(height).toBeGreaterThanOrEqual(44);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      await page.screenshot({
+        animations: 'disabled',
+        path: `.runtime/browser/agent-connections-${info.project.name}-${width}-${color}.png`,
+      });
+    }
   }
   await row('Combined reviewer').getByRole('button', { name: 'Access details' }).click();
   await expect(row('Combined reviewer')).toContainText('2025-11-01 through 2026-11-30');
@@ -166,6 +176,11 @@ test('connection details retain exact scopes while inactive grants stay collapse
   await expect(row('Expired reviewer')).toContainText(
     'Revoking also prevents applying existing pending proposals',
   );
+  await row('Expired reviewer').getByRole('button', { name: 'Revoke access' }).click();
+  await expect(page.getByRole('alertdialog')).toContainText(
+    'Revoke access for “Expired reviewer”?',
+  );
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   grants.splice(0, grants.length, grants[1]!);
   await page.reload();
   await expect(page.getByRole('tabpanel', { name: 'Proposals' })).toContainText(
@@ -201,8 +216,28 @@ test('revocation supports cancellation, preserves errors, then moves the grant t
   await page.getByRole('button', { name: 'Disconnect agent', exact: true }).click();
   await expect(row).toContainText('Synthetic revocation failure');
   await expect(row.getByRole('button', { name: 'Disconnect', exact: true })).toBeEnabled();
+  let releaseRefresh!: () => void;
+  const refreshGate = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  let startedRefresh!: () => void;
+  const refreshStarted = new Promise<void>((resolve) => {
+    startedRefresh = resolve;
+  });
+  await page.route('**/api/workspace?*', async (route) => {
+    startedRefresh();
+    await refreshGate;
+    await route.fallback();
+  });
   await row.getByRole('button', { name: 'Disconnect', exact: true }).click();
   await page.getByRole('button', { name: 'Disconnect agent', exact: true }).click();
+  await refreshStarted;
+  try {
+    await expect(page.locator('.agent-archive > summary')).toHaveCount(0);
+    await expect(row).toBeVisible();
+  } finally {
+    releaseRefresh();
+  }
   await expect(page.getByRole('heading', { name: 'No active connections' })).toBeInViewport();
   await expect(page.locator('.agent-archive > summary')).toBeFocused();
   await expect(row).toBeHidden();
@@ -305,6 +340,18 @@ test('review keeps the full summary, retries details and lazily opens medium-siz
   await expect(apply).toBeDisabled();
   await dialog.getByRole('button', { name: 'Find changes' }).click();
   await dialog.getByLabel('Search changes').fill('Synthetic plan 1');
+  await expect(dialog.locator('.proposal-diff')).toHaveCount(11);
+  await dialog.locator('.proposal-week-heading').click();
+  await expect(dialog.locator('.proposal-diff')).toHaveCount(0);
+  await dialog.getByLabel('Search changes').fill('Synthetic plan 2');
+  await expect(dialog.locator('.proposal-diff')).toHaveCount(3);
+  await dialog.getByLabel('Search changes').fill('No matching plan');
+  await expect(dialog.locator('.proposal-no-results')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Clear filters' }).click();
+  await expect(dialog.locator('.proposal-diff')).toHaveCount(0);
+  await expect(dialog.locator('.proposal-week-heading')).toBeVisible();
+  await dialog.getByLabel('Search changes').fill('Synthetic plan 1');
+  await expect(dialog.locator('.proposal-diff')).toHaveCount(11);
   await expect(dialog.locator('.proposal-apply-scope')).toContainText(
     'including those hidden by filters',
   );

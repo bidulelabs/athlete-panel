@@ -231,6 +231,18 @@ test('one annual proposal stays pending until owner acknowledgement and applies 
         true,
       );
     }
+    await dialog.getByRole('button', { name: 'Find changes' }).click();
+    await dialog.getByLabel('Search changes').fill('Synthetic new 1');
+    await expect(dialog.locator('.proposal-diff')).toHaveCount(111);
+    await expect(dialog.locator('.proposal-month:not([open])')).toHaveCount(0);
+    await expect(dialog.locator('.proposal-week > details:not([open])')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Clear filters' }).click();
+    await expect(dialog.locator('.proposal-week')).toHaveCount(0);
+    await dialog.getByLabel('Search changes').fill('Synthetic new 1');
+    await expect(dialog.locator('.proposal-diff')).toHaveCount(111);
+    await expect(dialog.locator('.proposal-apply-scope')).toContainText(
+      'Apply includes all 1500 changes',
+    );
     await dialog.getByRole('checkbox').check();
     const applyStarted = performance.now();
     await apply.click();

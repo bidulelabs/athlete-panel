@@ -62,10 +62,6 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.agent-workspace button,
-.agent-history-sheet button {
-  min-height: 44px;
-}
 .agent-workspace .empty-state {
   padding: 32px 16px;
 }
@@ -176,6 +172,10 @@
   margin-top: 12px;
 }
 @media (max-width: 760px) {
+  .agent-workspace button,
+  .agent-history-sheet button {
+    min-height: 44px;
+  }
   .agent-workspace .page-header {
     align-items: flex-start;
     flex-direction: column;

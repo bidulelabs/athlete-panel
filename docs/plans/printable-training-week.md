@@ -31,6 +31,12 @@ Verified locally on 2026-11-11:
 
 Final restoration completed: `pnpm generate`, the repeated `pnpm check` (390 unit tests) and the final default `pnpm build` passed. Both the composition and generated metadata retain `enabled: false`; the generated client imports neither example. The temporary preview processes and this task’s disposable database service were stopped. The unrelated Next-generated environment declaration was restored to its original contents.
 
+## PR review follow-up
+
+[Review on PR #116](https://github.com/bidulelabs/athlete-panel/pull/116#pullrequestreview-5859758125) found no blocking issues and identified one optional leftover: the Plugins page’s **Create with agent** dialog still suggested comparing cycling volume with sleep. Updated that default request to a printable week with planned sessions, intervals, strength exercises and optional notes, matching the documented example. This is a copy-only change; no plugin state or activation behavior changes.
+
+CI on the reviewed revision `b337bfb` passed all verification jobs, including both browser compositions and all three container rehearsals; the release-publication job was correctly skipped for a PR. Follow-up validation passed: `pnpm format:check`, `pnpm typecheck`, `pnpm docs:check` (65 files) and `git diff --check`.
+
 ## Deployment
 
 No deployment requested or performed. Default composition must remain disabled after local verification. Activation and rollback follow the [development guide](../development.md#printable-training-week-example).

@@ -7,7 +7,7 @@ import {
   type MutationResult,
   type WorkspaceState,
 } from '@athlete-panel/contracts';
-import { createCommandContext } from './engine/context';
+import { createCommandContext, type EngineOptions } from './engine/context';
 import { fail } from './engine/errors';
 import { finalize } from './engine/finalize';
 import { handleCompletion } from './engine/handlers/completion';
@@ -31,7 +31,7 @@ const agentActions = new Set<string>(
 export function applyCommands(
   input: WorkspaceState,
   inputs: readonly CommandInput[] | readonly Command[],
-  options: { actor: 'owner' | 'agent'; idFactory?: () => string },
+  options: EngineOptions,
 ): MutationResult {
   const initial = validateWorkspace(input);
   // Validate the narrower agent payload before owner defaults can fill missing fields.

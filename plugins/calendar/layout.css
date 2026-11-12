@@ -67,7 +67,7 @@
   font-size: 11px;
 }
 
-@media (min-width: 1051px) {
+@media (min-width: 1536px) {
   .calendar-workspace .calendar-layout:not(.no-inspector) {
     grid-template-columns: minmax(0, 1fr) 296px;
   }
@@ -75,10 +75,9 @@
     padding-left: 16px;
   }
 }
-
-@media (min-width: 1051px) and (max-width: 1240px) {
-  .calendar-workspace .calendar-layout:not(.no-inspector) {
-    grid-template-columns: minmax(0, 1fr) 260px;
+@media (max-width: 1535px) {
+  .calendar-workspace .calendar-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -143,32 +142,5 @@
   .calendar-workspace .calendar-fact-card {
     padding: 12px;
     gap: 9px;
-  }
-}
-
-/* Keep compact cards readable beside the inspector near its overlay breakpoint. */
-@media (min-width: 1051px) and (max-width: 1240px) {
-  .calendar-workspace .calendar-layout:not(.no-inspector) .calendar-workout {
-    padding: 8px 5px;
-  }
-  .calendar-workspace .calendar-layout:not(.no-inspector) .calendar-workout strong {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .calendar-workspace .calendar-layout:not(.no-inspector) .calendar-fact-card {
-    display: flex;
-    flex-direction: column;
-    padding: 6px;
-    gap: 4px;
-  }
-  .calendar-workspace .calendar-layout:not(.no-inspector) .calendar-fact-copy {
-    width: 100%;
-  }
-  .calendar-workspace .calendar-layout:not(.no-inspector) .calendar-fact-copy > span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 }

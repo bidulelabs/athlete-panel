@@ -178,9 +178,9 @@ def main():
         (candidate/'plugins/athlete/migrations/990-hosted-rehearsal.sql').write_text('create table athlete.hosted_rehearsal (id integer primary key); insert into athlete.hosted_rehearsal values(1);\n')
         # A real owner extension travels with source/image, composition and recovery snapshots.
         custom=candidate/'personal-plugins/owner-example';custom.mkdir()
-        custom_manifest=json.loads((candidate/'personal-plugins/cycling-sleep/manifest.json').read_text())
-        custom_manifest.update(id='owner-example',name='Owner example',routes=[{'path':'/owner-example','title':'Owner example','icon':'ChartNoAxesCombined'}])
-        (custom/'manifest.json').write_text(json.dumps(custom_manifest));(custom/'client.tsx').write_text("'use client';\nexport default function OwnerExample(){return <p>Synthetic owner extension</p>;}\n")
+        fixture=candidate/'tests/fixtures/owner-plugin'
+        custom_manifest=json.loads((fixture/'manifest.json').read_text())
+        (custom/'manifest.json').write_text(json.dumps(custom_manifest));(custom/'client.tsx').write_text((fixture/'client.tsx').read_text())
         composition=json.loads((candidate/'instance/composition.json').read_text());composition['plugins'].append({'path':'personal-plugins/owner-example','version':custom_manifest['version'],'enabled':True})
         (candidate/'instance/composition.json').write_text(json.dumps(composition))
         candidate_remote=None

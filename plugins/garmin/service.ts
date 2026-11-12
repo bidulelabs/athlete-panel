@@ -49,6 +49,7 @@ import {
   retireReconciliation,
 } from './recovery';
 import { RECOVERY_STREAMS } from './recovery-policy';
+import { stageActivityMatches, scheduleActivityMatching, runActivityMatchingJob } from './matching';
 
 const configurationSchema = z.object({
   lastErrorCode: z.string().nullable().optional(),
@@ -251,6 +252,7 @@ export async function disconnect() {
     }
     await tx`delete from host.settings where key='garminToken'`;
     await tx`update host.jobs set status='cancelled',lease_owner=null,lease_until=null where plugin_id='garmin' and status in ('queued','running','paused')`;
+    await tx`delete from garmin.activity_matches`;
   });
   return { connected: false };
 }
@@ -382,6 +384,7 @@ export async function scheduleRecent() {
     await retireReconciliation(tx);
     const config = await getConfiguration(tx);
     if (!config?.encryptedKey || config.paused) return;
+    await scheduleActivityMatching(tx);
     await tx`update host.jobs set priority=case when kind='garmin-recent' then 30 when payload#>>'{cursor,activityFrom}' is not null then 20 else 10 end where plugin_id='garmin' and kind in ('garmin-recent','garmin-history') and status in ('queued','running','paused','disabled')`;
     const latestRecentJobs = await tx<
       { created_at: Date; status: string }[]
@@ -453,6 +456,7 @@ function clientFor(config: Configuration) {
   return client;
 }
 export async function runGarminJob(job: Job) {
+  if (job.kind === 'garmin-match-activities') return runActivityMatchingJob(job);
   if (job.kind === 'garmin-reconcile') {
     await transaction((tx) => retireReconciliation(tx, job));
     return;
@@ -586,6 +590,16 @@ export async function runGarminJob(job: Job) {
       // A conflicting sport correction remains a visible retryable window after owner reconciliation.
       await loadWorkspace(tx, undefined, selection);
       const coverage = step.coverage;
+      await stageActivityMatches(
+        tx,
+        job.id,
+        coverage,
+        changes.flatMap((change) =>
+          change.entity === 'activity' && change.before === null
+            ? [activitySchema.parse(change.after)]
+            : [],
+        ),
+      );
       if (reverifiedIdentity)
         await tx`delete from garmin.coverage where status='failed' and stream='identity' and start_date='0001-01-01' and end_date=${cursor.today}`;
       // Old releases keyed errors by phase and the whole backfill start instead of the actual stream/window.

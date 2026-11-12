@@ -38,7 +38,8 @@ export {
   FieldError,
 } from './components/field';
 
-export * from './provider';
+export { UiProvider, useConfirm } from './provider';
+export { HistorySheet } from './history-sheet';
 
 export * from './components/tabs';
 export { MarkdownContent } from './markdown-content';

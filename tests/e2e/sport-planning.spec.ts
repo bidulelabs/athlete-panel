@@ -117,7 +117,7 @@ for (const theme of ['dark', 'light'] as const) {
     await link.getByRole('combobox').selectOption(calendarId(503));
     await link.getByRole('button', { name: 'Link activity', exact: true }).click();
     await expect(link).not.toBeVisible();
-    await expect(inspector).toContainText('partial');
+    await expect(inspector.getByText('Partial', { exact: true })).toBeVisible();
     await expect(inspector).toContainText('Turned around safely.');
     await expect(inspector).toContainText('230');
     await inspector.evaluate((element) => {

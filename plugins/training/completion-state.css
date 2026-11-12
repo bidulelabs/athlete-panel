@@ -1,0 +1,40 @@
+.workout-status,
+.workout-source {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.workout-status {
+  font-weight: 600;
+  color: var(--muted);
+}
+.workout-status-completed {
+  color: var(--success);
+}
+.workout-status-partial {
+  color: var(--fact-race);
+}
+.workout-source {
+  color: var(--muted);
+}
+.workout-status svg,
+.workout-source svg {
+  flex-shrink: 0;
+}
+.inspector-completion-summary {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+}
+.inspector-completion-summary .text-button {
+  min-height: 44px;
+  width: fit-content;
+}
+.inspector-completion-summary .form-footnote {
+  margin: 0;
+}

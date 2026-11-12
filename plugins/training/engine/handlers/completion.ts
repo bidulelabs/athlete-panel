@@ -117,6 +117,10 @@ export function handleCompletion(
         durationSeconds: activity.durationSeconds,
         distanceMeters: activity.distanceMeters,
         activityId: activity.id,
+        linkMethod:
+          workout.completion?.source === 'garmin'
+            ? (workout.completion.linkMethod ?? 'manual')
+            : (context.options.linkMethod ?? 'manual'),
         rpe: workout.completion?.rpe ?? null,
         reason: workout.completion?.reason ?? '',
         ...(workout.completion?.notes !== undefined ? { notes: workout.completion.notes } : {}),

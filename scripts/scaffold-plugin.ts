@@ -21,7 +21,7 @@ export async function scaffoldPlugin(root: string, id: string, name: string): Pr
     description: `${name.trim()} personal workspace plugin`,
     version: '0.1.0',
     hostApi: '^1.0.0',
-    dependencies: { 'activity-records': '^1.0.0' },
+    dependencies: { 'activity-records': '^2.0.0' },
     client: 'client.tsx',
     routes: [{ path: `/${id}`, title: name.trim() }],
   });
@@ -31,7 +31,7 @@ export async function scaffoldPlugin(root: string, id: string, name: string): Pr
     flag: 'wx',
   });
   const title = JSON.stringify(name.trim()).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e');
-  const source = `"use client";\n\nimport { PageHeader, Section, type PluginPageProps } from '@athlete-panel/ui';\n\nexport default function PersonalPlugin({ data }: PluginPageProps) {\n  const cycling = data.activities.filter(activity => activity.sport === 'cycling');\n  const known = cycling.filter(activity => activity.durationSeconds !== null);\n  const seconds = known.reduce((total, activity) => total + activity.durationSeconds!, 0);\n  return <><PageHeader title={${title}} description="A personal view of the currently loaded training window." /><Section title="Recorded cycling"><p>{Math.round(seconds / 60)} recorded minutes across {cycling.length} activities.</p>{known.length < cycling.length && <p>{cycling.length - known.length} activities have unknown duration.</p>}{cycling.length === 0 && <p>No cycling activities are available in this window.</p>}</Section></>;\n}\n`;
+  const source = `"use client";\n\nimport { PageHeader, Section, useWorkspace, type PluginPageProps } from '@athlete-panel/ui';\n\nexport default function PersonalPlugin({ data }: PluginPageProps) {\n  const { from, to } = useWorkspace();\n  const activities = data.activities.filter(activity => activity.localDate >= from && activity.localDate <= to);\n  const known = activities.filter(activity => activity.durationSeconds !== null);\n  const seconds = known.reduce((total, activity) => total + activity.durationSeconds!, 0);\n  return <><PageHeader title={${title}} description="A personal view of the currently loaded training window." /><Section title="Recorded activities"><p>{known.length ? Math.round(seconds / 60) + ' recorded minutes' : activities.length ? 'Duration unknown' : '0 recorded minutes'} across {activities.length} activities.</p>{known.length < activities.length && <p>{activities.length - known.length} activities have unknown duration.</p>}{activities.length === 0 && <p>No activities are available in this window.</p>}</Section></>;\n}\n`;
   await writeFile(resolve(target, 'client.tsx'), source, { flag: 'wx' });
   // Parse the output once before reporting a successfully created source plugin.
   manifestSchema.parse(JSON.parse(await readFile(resolve(target, 'manifest.json'), 'utf8')));

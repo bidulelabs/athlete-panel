@@ -129,6 +129,10 @@ test('notes, events and dated constraints open full details under either week st
   await close(page);
   await page.getByRole('button', { name: 'Open event Coastal 10 km', exact: true }).click();
   await expect(metric(page, 'Event type')).toContainText('Race');
+  await expect(dialog(page).getByRole('link', { name: 'View course analysis' })).toHaveAttribute(
+    'href',
+    `/races?race=${fixture.events[0].id}`,
+  );
   await expect(dialog(page).locator('.ui-markdown')).toHaveText(fixture.events[0].notes);
   await close(page);
   const knee = page.getByRole('button', { name: 'Open injury Left knee', exact: true });

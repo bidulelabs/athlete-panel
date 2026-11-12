@@ -58,6 +58,8 @@ The integration owner coordinates SDK changes, shared DTO exports, migration ord
 
 ## Development flow and release details
 
+Host API 1.4 additionally supports optional named `uploads` handlers with a declared byte limit. The generic owner-only multipart adapter authenticates and checks origin/enabled registration before reading, bounds the streamed body before parsing, and dispatches one file plus plugin-validated metadata. It does not add agent upload access or change ordinary JSON operation limits. [Race analysis](race-analysis.md) is the first consumer; the coordinated SDK/contract/migration decision is [ADR 022](../decisions/022-race-course-analysis.md).
+
 The owner describes a feature to their coding agent in a local checkout. The agent reads the skill, scaffolds or edits a plugin, uses public contracts and synthetic data, verifies a responsive preview and reports concrete files/checks. Activation is a separate instance composition/build/restart action under the owner's deployment authorization. A running feature is then independent of the harness.
 
 Training proposals use the separate scoped CLI/API workflow: an agent can read permitted context and submit pending changes, while the owner reviews/applies the exact validated proposal in the app. Source-code access does not grant production database access or broaden the training grant.

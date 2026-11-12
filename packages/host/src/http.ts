@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AppError, RateLimitError } from './errors';
-export async function readJson(request: Request, limit = 256 * 1024): Promise<unknown> {
+export async function readBytes(request: Request, limit: number): Promise<Buffer> {
   if (Number(request.headers.get('content-length')) > limit)
     throw new AppError(
       'too_large',
@@ -25,8 +25,12 @@ export async function readJson(request: Request, limit = 256 * 1024): Promise<un
       }
       chunks.push(value);
     }
+  return Buffer.concat(chunks);
+}
+export async function readJson(request: Request, limit = 256 * 1024): Promise<unknown> {
+  const bytes = await readBytes(request, limit);
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return JSON.parse(bytes.toString('utf8'));
   } catch {
     throw new AppError('invalid_json', 'A valid JSON body is required.');
   }

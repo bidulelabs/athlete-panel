@@ -321,6 +321,25 @@ test('preview is chronological and bounded, empty states stay explicit, and redu
   expect(mutations()).toBe(0);
 });
 
+test('measured zero hours stay in the week header instead of No plan', async ({ page }) => {
+  const { data } = await preview(page);
+  for (const workout of data.workouts) {
+    workout.durationSeconds = 0;
+    if (workout.completion && workout.completion.status !== 'skipped')
+      workout.completion.durationSeconds = 0;
+  }
+  for (const activity of data.activities) activity.durationSeconds = 0;
+  await refresh(page);
+  const week = page.locator('.calendar-week').first();
+  await expect(week.getByRole('button', { name: /^Duration:/ })).toHaveText(
+    'Duration: Planned 0 h · Recorded 0 h',
+  );
+  await week.getByRole('button', { name: /^Expand summary/ }).click();
+  const duration = week.locator('.week-band-metric').filter({ hasText: /^Duration/ });
+  await expect(duration).toContainText('Recorded 0 h');
+  await expect(duration).toContainText('Planned 0 h');
+});
+
 test('metric explanations support hover, focus and touch without toggling or writing', async ({
   page,
 }, info) => {

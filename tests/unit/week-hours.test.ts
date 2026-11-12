@@ -24,6 +24,11 @@ describe('week hours label', () => {
     expect(weekHoursLabel(unmeasured, hours(7), null)).toBe('Planned — · Recorded 7 h');
   });
 
+  it('shows measured zero hours instead of No plan', () => {
+    expect(weekHoursLabel(hours(0), hours(0), null)).toBe('Planned 0 h · Recorded 0 h');
+    expect(weekHoursLabel(hours(0), none, target)).toBe('Target 8–10 h · Planned 0 h');
+  });
+
   it('lists target and planned hours without recorded hours', () => {
     expect(targetAndPlannedParts(hours(9), target)).toEqual(['Target 8–10 h', 'Planned 9 h']);
     expect(targetAndPlannedParts(none, null)).toEqual([]);

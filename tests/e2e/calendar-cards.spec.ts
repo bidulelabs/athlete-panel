@@ -188,7 +188,7 @@ test('activity details preserve recorded dates, units and links without navigati
   await expect(
     page.getByRole('button', { name: 'Open activity Morning ride', exact: true }),
   ).toHaveCount(0);
-  await page.getByRole('button', { name: 'Open Steady endurance ride', exact: true }).click();
+  await page.getByRole('button', { name: 'Steady endurance ride' }).click();
   await page.getByRole('button', { name: 'View imported activity', exact: true }).click();
   await expect(dialog(page).getByRole('heading', { name: 'Morning ride' })).toBeVisible();
   await expect(metric(page, 'Elevation gain')).toContainText('820 ft');

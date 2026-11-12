@@ -415,7 +415,7 @@ test('week summaries fit the full width/theme matrix, long imperial values and y
         animations: 'disabled',
       });
       await week.locator('.week-summary-toggle').click();
-      await page.getByRole('button', { name: 'Open Pending ride', exact: true }).click();
+      await page.getByRole('button', { name: 'Pending ride' }).click();
       await expect(page.getByRole('complementary', { name: 'Workout details' })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,

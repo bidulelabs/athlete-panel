@@ -90,15 +90,15 @@ function Day({
     !injuries.length &&
     !sleep.length;
   return (
-    <div className={`calendar-day ${date === today ? 'is-today' : ''}`} data-date={date}>
+    <div
+      className={`calendar-day ${date === today ? 'is-today' : ''}`}
+      data-date={date}
+      role="group"
+      aria-label={dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })}
+    >
       <div className="calendar-day-head">
         <span className="week-mobile-label">{dateLabel(date, { weekday: 'short' })}</span>
-        <span
-          className="day-number"
-          aria-label={dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })}
-        >
-          {Number(date.slice(-2))}
-        </span>
+        <span className="day-number">{Number(date.slice(-2))}</span>
         <Button
           variant="ghost"
           size="icon"
@@ -186,7 +186,7 @@ function Day({
           <Button
             variant="unstyled"
             className="day-placeholder"
-            aria-label={`Add workout on ${date}`}
+            aria-label={`Add workout on ${dateLabel(date)}`}
             onClick={() => onAdd(date)}
           >
             <Plus size={14} />
@@ -279,7 +279,7 @@ export default function CalendarPage({ data }: PluginPageProps) {
         <div className="first-workout-banner">
           <CalendarDays size={24} />
           <div>
-            <h3>A clear week starts here.</h3>
+            <h2>A clear week starts here.</h2>
             <p>Add a workout or create a plan. Your calendar will take shape as you go.</p>
           </div>
           <Button

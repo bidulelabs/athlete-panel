@@ -1,0 +1,266 @@
+.printable-week {
+  max-width: 1100px;
+}
+.printable-week-toolbar,
+.printable-week-navigation {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.printable-week-toolbar {
+  justify-content: space-between;
+}
+.printable-week-navigation .field {
+  margin: 0;
+  width: 190px;
+  flex: 0 1 190px;
+}
+.printable-week-toolbar button,
+.printable-week-toolbar input {
+  min-height: 44px;
+}
+.printable-week-notes-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.printable-week-notes-control button {
+  min-height: 16px;
+}
+.printable-week-hint {
+  color: var(--muted);
+  margin: 12px 0 24px;
+  font-size: 12px;
+}
+.printable-week-sheet {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 28px;
+  overflow-wrap: anywhere;
+}
+.printable-week-heading {
+  padding-bottom: 24px;
+}
+.printable-week-heading h2 {
+  font-size: 25px;
+  margin: 8px 0;
+}
+.printable-week-heading > p:last-child,
+.printable-week-meta,
+.printable-week-free,
+.printable-week-footer {
+  color: var(--muted);
+  font-size: 12px;
+}
+.printable-week-meta {
+  letter-spacing: 0.03em;
+}
+.printable-week-day {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 20px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.printable-week-day > h2 {
+  font-size: 14px;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+.printable-week-day time {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.printable-week-session + .printable-week-session {
+  border-top: 1px dashed var(--line);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+.printable-week-session h3 {
+  font-size: 16px;
+  margin: 3px 0 5px;
+}
+.printable-week-totals {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.printable-week-prescription {
+  margin-top: 14px;
+  font-size: 13px;
+}
+.printable-week-prescription h4 {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+.printable-week-prescription ol {
+  list-style: decimal;
+  padding-left: 20px;
+}
+.printable-week-step,
+.printable-week-repeat {
+  margin-top: 5px;
+}
+.printable-week-repeat > ol {
+  margin: 5px 0 10px;
+}
+.printable-week-note {
+  white-space: pre-wrap;
+  color: var(--muted);
+}
+.printable-week-notes {
+  margin-top: 12px;
+}
+.printable-week-empty {
+  margin-bottom: 20px;
+}
+.printable-week-footer {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+@media (max-width: 600px) {
+  .printable-week .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .printable-week-sheet {
+    padding: 16px;
+  }
+  .printable-week-day {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .printable-week-day > h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .printable-week-navigation {
+    gap: 8px;
+  }
+  .printable-week-navigation .field {
+    flex: 1;
+    min-width: 140px;
+  }
+}
+@media print {
+  body:has(.printable-week) {
+    background: white;
+    color: black;
+    color-scheme: light;
+    --text: #000;
+    --muted: #444;
+    --line: #bbb;
+    --surface: #fff;
+    --surface-raised: #fff;
+    --accent-ink: #000;
+  }
+  body:has(.printable-week) .sidebar,
+  body:has(.printable-week) .mobile-bar,
+  .printable-week-controls {
+    display: none !important;
+  }
+  body:has(.printable-week) .workspace-shell,
+  body:has(.printable-week) .workspace-main,
+  body:has(.printable-week) .page-content {
+    display: block;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    width: auto;
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  body:has(.printable-week) .page-error button {
+    display: none;
+  }
+  .printable-week {
+    max-width: none;
+  }
+  .printable-week-sheet {
+    border: 0;
+    padding: 0;
+    background: white;
+    color: black;
+    font-size: 10pt;
+  }
+  .printable-week-heading {
+    break-inside: avoid;
+    break-after: avoid;
+    padding-bottom: 14px;
+  }
+  .printable-week-heading h2 {
+    font-size: 19pt;
+  }
+  .printable-week-day {
+    display: block;
+    padding: 12px 0;
+  }
+  .printable-week-day:has(.printable-week-free) {
+    break-inside: avoid;
+  }
+  .printable-week-day > h2 {
+    display: block;
+    margin-bottom: 8px;
+    break-after: avoid;
+  }
+  .printable-week-day time {
+    display: inline;
+    margin-left: 10px;
+  }
+  .printable-week-day > div {
+    break-before: avoid;
+  }
+  .printable-week-session header,
+  .printable-week-prescription h4,
+  .printable-week-repeat > strong {
+    break-after: avoid;
+  }
+  .printable-week-session header {
+    break-inside: avoid;
+  }
+  .printable-week-step {
+    break-inside: avoid;
+  }
+  .printable-week-prescription ol {
+    list-style-position: inside;
+    padding-left: 0;
+  }
+  .printable-week-repeat > ol {
+    padding-left: 16px;
+  }
+  .printable-week-session,
+  .printable-week-repeat {
+    break-inside: auto;
+  }
+  .printable-week-note,
+  .printable-week-sheet p {
+    orphans: 3;
+    widows: 3;
+  }
+  .printable-week-sheet .ui-markdown {
+    max-width: none;
+  }
+  .printable-week-sheet pre,
+  .printable-week-sheet code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .printable-week-sheet [tabindex='0'] {
+    overflow: visible;
+  }
+  .printable-week-sheet table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  .printable-week-sheet a {
+    color: black;
+  }
+}

@@ -133,9 +133,15 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     expect(outOfScope.ok()).toBe(false);
     expect((await outOfScope.json()).error.code).toBe('out_of_scope');
     await page.getByRole('button', { name: 'Back to Agent workspace' }).click();
-    const row = page.locator('.proposal-row').filter({ hasText: label });
+    const row = page.locator('.agent-connection-row').filter({ hasText: label });
+    await row.getByRole('button', { name: 'Access details' }).click();
     await expect(row).toContainText('Create races and goals: permitted within the proposal dates');
     await row.getByRole('button', { name: 'Disconnect', exact: true }).click();
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', { name: 'Disconnect agent', exact: true })
+      .click();
+    await page.locator('.agent-archive > summary').click();
     await expect(row).toContainText('Disconnected');
     const disconnected = await cli(baseURL!, config, [
       'context',

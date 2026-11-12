@@ -222,8 +222,16 @@ export const completionSchema = completionValuesSchema
   .safeExtend({
     source: z.enum(['manual', 'garmin']),
     activityId: idSchema.nullable(),
+    /** Set by the training service, never accepted in owner completion input. */
+    linkMethod: z.enum(['manual', 'automatic']).optional(),
   })
   .superRefine((completion, ctx) => {
+    if (completion.linkMethod && completion.source !== 'garmin')
+      ctx.addIssue({
+        code: 'custom',
+        path: ['linkMethod'],
+        message: 'Only Garmin links have a linking method.',
+      });
     if ((completion.source === 'garmin') !== (completion.activityId !== null))
       ctx.addIssue({
         code: 'custom',

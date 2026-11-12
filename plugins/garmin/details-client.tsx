@@ -9,6 +9,7 @@ export function importLabel(kind: string) {
       'garmin-history': 'History import',
       'garmin-catchup': 'Unscanned periods',
       'garmin-reconcile': 'Retired history rescan',
+      'garmin-match-activities': 'Automatic activity matching',
     }[kind] ?? kind
   );
 }

@@ -98,7 +98,7 @@ test('review, apply and undo a plan with a phase and its first workout in one pr
     await expect(periodRow).toContainText('8 h');
     await dialog.getByRole('checkbox').check();
     const appliedResponse = page.waitForResponse((r) => r.url().endsWith('/agent-bridge/apply'));
-    await dialog.getByRole('button', { name: 'Apply reviewed changes' }).click();
+    await dialog.getByRole('button', { name: /^Apply all \d+ changes?$/ }).click();
     const applied = await appliedResponse;
     expect(applied.ok(), await applied.text()).toBe(true);
     auditId = (await applied.json()).id;
@@ -110,14 +110,15 @@ test('review, apply and undo a plan with a phase and its first workout in one pr
     await expect(phase).toContainText('Target 8–9 → 10–11 h a week');
     await expect(plan.getByRole('region', { name: 'Week 1' })).toContainText(`Easy run ${name}`);
     await page.goto('/agent');
-    await page.getByRole('tab', { name: 'Change history' }).click();
+    await page.getByRole('button', { name: 'Change history', exact: true }).click();
     const row = page
-      .locator('.proposal-row')
+      .getByRole('dialog', { name: 'Change history' })
+      .locator('.agent-history-row')
       .filter({ has: page.getByText(summary, { exact: true }) });
     await row.getByRole('button', { name: 'Undo', exact: true }).click();
     await page
       .getByRole('alertdialog')
-      .getByRole('button', { name: 'Confirm', exact: true })
+      .getByRole('button', { name: 'Undo change', exact: true })
       .click();
     await expect(row).toContainText('Undone');
     undone = true;

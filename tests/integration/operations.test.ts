@@ -1,9 +1,20 @@
 import { isolatedDatabaseUrl } from '../support/test-database';
 import { spawn } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  copyFile,
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -15,6 +26,7 @@ import { nextBackupTime } from '../../scripts/operations';
 import { restoreBackup, verifyBackup } from '../../scripts/restore';
 import { releaseMetadata } from '../../scripts/release-metadata';
 import { BACKUP_MAGIC } from '../../scripts/lib/backup-format';
+import { sourceFiles } from '../../scripts/lib/source-files';
 
 // Never fall back to the production DATABASE_URL, even when a test variable is absent.
 const suppliedUrl = isolatedDatabaseUrl();
@@ -35,12 +47,22 @@ const target = postgres(targetUrl, { max: 1, onnotice: () => {} });
 const originalDatabaseUrl = process.env.DATABASE_URL,
   originalEncryptionKey = process.env.ENCRYPTION_KEY;
 const encryptionKey = randomBytes(32).toString('base64');
-let temp: string, keyFile: string, file: string, restoredSource: string;
+let temp: string, keyFile: string, file: string, restoredSource: string, sourceRoot: string;
 
 describe('matched encrypted backup and isolated database restore', () => {
   beforeAll(async () => {
     temp = await mkdtemp(join(tmpdir(), 'athlete-panel-operations-test-'));
     await chmod(temp, 0o700);
+    // Keep backup coverage independent of whichever optional example ships with the app.
+    sourceRoot = join(temp, 'source');
+    for (const entry of await sourceFiles(resolve('.'))) {
+      const target = join(temp, entry.path);
+      await mkdir(dirname(target), { recursive: true });
+      await copyFile(entry.file, target);
+    }
+    await cp('tests/fixtures/owner-plugin', join(sourceRoot, 'personal-plugins/owner-example'), {
+      recursive: true,
+    });
     keyFile = join(temp, 'backup-key');
     await writeFile(keyFile, randomBytes(32).toString('base64'), { mode: 0o600 });
     await admin.unsafe(`create database "${sourceName}"`);
@@ -59,7 +81,7 @@ describe('matched encrypted backup and isolated database restore', () => {
       keyFile,
       encryptionKey,
       destination: join(temp, 'backups'),
-      root: resolve('.'),
+      root: sourceRoot,
     });
     file = backup.file;
     restoredSource = join(temp, 'restored-source');
@@ -112,8 +134,11 @@ describe('matched encrypted backup and isolated database restore', () => {
       await readFile('instance/composition.json', 'utf8'),
     );
     expect(
-      await readFile(join(restoredSource, 'personal-plugins/cycling-sleep/manifest.json'), 'utf8'),
-    ).toBe(await readFile('personal-plugins/cycling-sleep/manifest.json', 'utf8'));
+      await readFile(join(restoredSource, 'personal-plugins/owner-example/manifest.json'), 'utf8'),
+    ).toBe(await readFile('tests/fixtures/owner-plugin/manifest.json', 'utf8'));
+    expect(
+      await readFile(join(restoredSource, 'personal-plugins/owner-example/client.tsx'), 'utf8'),
+    ).toBe(await readFile('tests/fixtures/owner-plugin/client.tsx', 'utf8'));
     expect(await stat(join(restoredSource, '.env')).catch(() => null)).toBeNull();
     expect(await stat(join(restoredSource, '.secrets')).catch(() => null)).toBeNull();
     expect((await target`select value from host.settings where key='maintenance'`)[0].value).toBe(
@@ -335,7 +360,7 @@ describe('matched encrypted backup and isolated database restore', () => {
     const compositionPath = join(restoredSource, 'instance/composition.json');
     const original = await readFile(compositionPath, 'utf8');
     const composition = JSON.parse(original);
-    composition.plugins.at(-1).enabled = false;
+    composition.plugins.at(-1).enabled = !composition.plugins.at(-1).enabled;
     await writeFile(compositionPath, JSON.stringify(composition));
     const options = {
       databaseUrl: sourceUrl,

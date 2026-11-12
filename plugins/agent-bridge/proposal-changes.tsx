@@ -32,6 +32,9 @@ import {
   groupChangesByWeek,
   groupChangesByMonth,
 } from './proposal-weeks';
+
+const MONTH_GROUP_CHANGE_LIMIT = 200;
+
 export function ProposalType({ type, record }: { type: string; record?: Entity | null }) {
   const Icon =
     type === 'race'
@@ -75,18 +78,34 @@ function GroupSummary({ changes }: { changes: ProposalDetails['changes'] }) {
 export function ProposedEdits({
   changes,
   planTitles,
+  collapsed,
+  filtered,
 }: {
   changes: ProposalDetails['changes'];
   planTitles: Record<string, string>;
+  collapsed: boolean;
+  filtered: boolean;
 }) {
   const months = groupChangesByMonth(changes);
-  if (months.filter((month) => month.month).length <= 2 && changes.length <= 200)
-    return <ProposedEditsByWeek changes={changes} planTitles={planTitles} />;
+  const exceedsInlineLimit = changes.length > MONTH_GROUP_CHANGE_LIMIT;
+  const collapseWeeks = collapsed || exceedsInlineLimit;
+  if (months.filter((month) => month.month).length <= 2 && !exceedsInlineLimit)
+    return <ProposedEditsByWeek changes={changes} planTitles={planTitles} collapsed={collapsed} />;
   return months.map((month) =>
     month.month ? (
-      <ProposalMonth key={month.month} month={month} planTitles={planTitles} />
+      <ProposalMonth
+        key={month.month}
+        month={month}
+        planTitles={planTitles}
+        collapsed={!filtered || exceedsInlineLimit}
+      />
     ) : (
-      <ProposedEditsByWeek key="undated" changes={month.changes} planTitles={planTitles} />
+      <ProposedEditsByWeek
+        key="undated"
+        changes={month.changes}
+        planTitles={planTitles}
+        collapsed={collapseWeeks}
+      />
     ),
   );
 }
@@ -94,20 +113,30 @@ export function ProposedEdits({
 function ProposalMonth({
   month,
   planTitles,
+  collapsed,
 }: {
   month: { month: string | null; changes: ProposalDetails['changes'] };
   planTitles: Record<string, string>;
+  collapsed: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!collapsed);
   return (
-    <details className="proposal-month" onToggle={(event) => setExpanded(event.currentTarget.open)}>
+    <details
+      className="proposal-month"
+      open={expanded}
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+    >
       <summary>
         <strong>{dateLabel(`${month.month}-01`, { month: 'long', year: 'numeric' })}</strong>
         <GroupSummary changes={month.changes} />
         <ChevronRight size={16} aria-hidden="true" />
       </summary>
       {expanded && (
-        <ProposedEditsByWeek changes={month.changes} planTitles={planTitles} collapsed />
+        <ProposedEditsByWeek
+          changes={month.changes}
+          planTitles={planTitles}
+          collapsed={collapsed}
+        />
       )}
     </details>
   );
@@ -116,26 +145,46 @@ function ProposalMonth({
 function ProposedEditsByWeek({
   changes,
   planTitles,
-  collapsed = false,
+  collapsed,
 }: {
-  collapsed?: boolean;
+  collapsed: boolean;
   changes: ProposalDetails['changes'];
   planTitles: Record<string, string>;
 }) {
   const { weekStartsOn } = useWorkspace();
-  return groupChangesByWeek(changes, weekStartsOn).map((week) => {
-    const title = week.weekStart
-      ? `Week of ${dateLabel(week.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })}`
-      : 'Plans';
-    return (
-      <section className="proposal-week" aria-label={title} key={week.weekStart ?? 'undated'}>
-        <details open={!collapsed}>
-          <summary className="proposal-week-heading">
-            <h4>{title}</h4>
-            <GroupSummary changes={week.changes} />
-            <ChevronRight className="proposal-week-chevron" size={16} aria-hidden="true" />
-          </summary>
-          {week.changes.map((change) => (
+  return groupChangesByWeek(changes, weekStartsOn).map((week) => (
+    <ProposalWeek
+      key={week.weekStart ?? 'undated'}
+      week={week}
+      planTitles={planTitles}
+      collapsed={collapsed}
+    />
+  ));
+}
+
+function ProposalWeek({
+  week,
+  planTitles,
+  collapsed,
+}: {
+  week: { weekStart: string | null; changes: ProposalDetails['changes'] };
+  planTitles: Record<string, string>;
+  collapsed: boolean;
+}) {
+  const [expanded, setExpanded] = useState(!collapsed);
+  const title = week.weekStart
+    ? `Week of ${dateLabel(week.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })}`
+    : 'Plans';
+  return (
+    <section className="proposal-week" aria-label={title}>
+      <details open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
+        <summary className="proposal-week-heading">
+          <h4>{title}</h4>
+          <GroupSummary changes={week.changes} />
+          <ChevronRight className="proposal-week-chevron" size={16} aria-hidden="true" />
+        </summary>
+        {expanded &&
+          week.changes.map((change) => (
             <ReviewChange
               change={change}
               planTitles={planTitles}
@@ -143,10 +192,9 @@ function ProposedEditsByWeek({
               key={`${change.entity}:${change.id}`}
             />
           ))}
-        </details>
-      </section>
-    );
-  });
+      </details>
+    </section>
+  );
 }
 
 export function ReviewChange({

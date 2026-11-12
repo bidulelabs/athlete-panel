@@ -14,7 +14,6 @@ import {
   type WorkoutStep,
 } from '@athlete-panel/contracts';
 import {
-  Badge,
   Button,
   dateLabel,
   distance,
@@ -40,20 +39,11 @@ import {
   useWorkspace,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import {
-  ArrowDown,
-  ArrowUp,
-  CheckCircle2,
-  Copy,
-  Edit3,
-  Link2,
-  Plus,
-  Repeat2,
-  Trash2,
-  X,
-} from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { ArrowDown, ArrowUp, Copy, Edit3, Link2, Plus, Repeat2, Trash2, X } from 'lucide-react';
+import { useId, useState, type FormEvent } from 'react';
 import { effectiveDate } from './dates';
+import { matchingDate } from './activity-matching';
+import { WorkoutStatus, WorkoutSource } from './completion-state';
 import { InspectorPanel } from './inspector-panel';
 import { WorkoutPrescription } from './prescription';
 import { ExerciseEditor, ExercisePrescription } from './exercises';
@@ -812,6 +802,7 @@ export function WorkoutInspector({
   const action = useAction();
   const date = effectiveDate(workout, data.plans);
   const completion = workout.completion;
+  const unlinkDescriptionId = useId();
   async function reorder(direction: -1 | 1) {
     if (!date) return;
     const siblings = data.workouts
@@ -859,7 +850,7 @@ export function WorkoutInspector({
         <div className="inspector-subtitle">
           {isRest(workout)
             ? 'Rest day'
-            : `${duration(workout.durationSeconds)} · ${sportSelectionLabel(workout)}`}
+            : `Planned ${duration(workout.durationSeconds)} · ${sportSelectionLabel(workout)}`}
           {workout.distanceMeters != null
             ? ` · ${distance(workout.distanceMeters, data.profile?.units)}`
             : ''}
@@ -885,28 +876,17 @@ export function WorkoutInspector({
             </Button>
           </div>
         )}
-        <ExercisePrescription
-          exercises={workout.exercises ?? []}
-          imperial={data.profile?.units === 'imperial'}
-        />
-        {workout.steps.length > 0 && (
-          <WorkoutPrescription steps={workout.steps} units={data.profile?.units ?? 'metric'} />
-        )}
-        {workout.notes && (
-          <div className="inspector-section">
-            <h3>Workout description</h3>
-            <MarkdownContent source={workout.notes} />
-          </div>
-        )}
         {!isRest(workout) && (
           <div className="inspector-section">
             <h3>Completion</h3>
             {completion ? (
               <>
-                <div className="completion-state">
-                  <CheckCircle2 size={16} />
-                  {completion.status}
-                  {completion.source === 'garmin' && <Badge className="badge">Garmin</Badge>}
+                <div className="inspector-completion-summary">
+                  <WorkoutStatus workout={workout} />
+                  <WorkoutSource workout={workout} />
+                  {completion.linkMethod === 'automatic' && (
+                    <p className="form-footnote">Linked automatically by day and sport.</p>
+                  )}
                 </div>
                 <dl className="inspector-details">
                   <div>
@@ -970,7 +950,24 @@ export function WorkoutInspector({
                 )}
               </>
             ) : (
-              <p>This session has not been logged yet.</p>
+              <>
+                <WorkoutStatus workout={workout} />
+                <p>This session has not been logged yet.</p>
+              </>
+            )}
+            {completion?.source === 'garmin' && (
+              <p className="form-footnote" id={unlinkDescriptionId}>
+                Unlink returns this workout to Planned and clears its logged results, effort, reason
+                and notes. The Garmin activity is kept.
+                {completion.linkMethod === 'automatic' && (
+                  <>
+                    {' '}
+                    To restore a previous manual log, open Training plans → Recent changes and
+                    choose Undo on the automatic link before unlinking. Later edits can prevent
+                    Undo.
+                  </>
+                )}
+              </p>
             )}
             {completion && (
               <Button
@@ -978,6 +975,7 @@ export function WorkoutInspector({
                 className="text-button"
                 style={{ marginTop: 8 }}
                 disabled={action.busy}
+                aria-describedby={completion.source === 'garmin' ? unlinkDescriptionId : undefined}
                 onClick={() =>
                   action.run(() =>
                     mutate(request, [
@@ -996,6 +994,19 @@ export function WorkoutInspector({
                 {completion.source === 'garmin' ? 'Unlink Garmin activity' : 'Clear completion'}
               </Button>
             )}
+          </div>
+        )}
+        <ExercisePrescription
+          exercises={workout.exercises ?? []}
+          imperial={data.profile?.units === 'imperial'}
+        />
+        {workout.steps.length > 0 && (
+          <WorkoutPrescription steps={workout.steps} units={data.profile?.units ?? 'metric'} />
+        )}
+        {workout.notes && (
+          <div className="inspector-section">
+            <h3>Workout description</h3>
+            <MarkdownContent source={workout.notes} />
           </div>
         )}
         <div className="inspector-actions">
@@ -1113,7 +1124,14 @@ export function LinkActivityDialog({
   const { data, request } = useWorkspace();
   const action = useAction();
   const linked = new Set(data.workouts.map((w) => w.completion?.activityId).filter(Boolean));
-  const available = data.activities.filter((a) => !linked.has(a.id) && canLinkSport(workout, a));
+  const available = data.activities
+    .filter((a) => !linked.has(a.id) && canLinkSport(workout, a))
+    .sort(
+      (a, b) =>
+        Number(b.localDate === matchingDate(workout, data.plans)) -
+          Number(a.localDate === matchingDate(workout, data.plans)) ||
+        a.localDate.localeCompare(b.localDate),
+    );
   const [selected, setSelected] = useState('');
   return (
     <Modal
@@ -1172,7 +1190,9 @@ export function LinkActivityDialog({
           <Button variant="outline" type="button" className="button" onClick={onClose}>
             Cancel
           </Button>
-          <SubmitButton busy={action.busy || !selected}>Link activity</SubmitButton>
+          <Button type="submit" disabled={action.busy || !selected}>
+            {action.busy ? 'Linking…' : 'Link activity'}
+          </Button>
         </div>
       </form>
     </Modal>

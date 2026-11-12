@@ -1,0 +1,10 @@
+{
+  "id": "owner-example",
+  "name": "Owner example",
+  "description": "Synthetic personal source for backup and upgrade verification",
+  "version": "1.0.0",
+  "hostApi": "^1.0.0",
+  "dependencies": {},
+  "routes": [{ "path": "/owner-example", "title": "Owner example" }],
+  "client": "client.tsx"
+}

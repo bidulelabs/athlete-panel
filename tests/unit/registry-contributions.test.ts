@@ -35,6 +35,17 @@ it('omits disabled optional contributions from generated imports without changin
     return readFileSync(join(root, 'instance/registry.client.ts'), 'utf8');
   };
   const enabled = generate();
+  expect(
+    composition.plugins.some((entry: { path: string }) => entry.path.includes('cycling-sleep')),
+  ).toBe(false);
+  const printable = composition.plugins.find(
+    (entry: { path: string }) => entry.path === 'personal-plugins/printable-training-week',
+  );
+  expect(printable.enabled).toBe(false);
+  expect(enabled).not.toContain('printable-training-week/client');
+  printable.enabled = true;
+  expect(generate()).toContain('../personal-plugins/printable-training-week/client');
+  printable.enabled = false;
   expect(enabled).toContain('../plugins/garmin/client');
   expect(enabled).toContain('"kind":"onboarding"');
   composition.plugins.find((entry: { path: string }) => entry.path === 'plugins/garmin').enabled =

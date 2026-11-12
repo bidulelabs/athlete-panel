@@ -38,7 +38,7 @@
       },
       {
         "name": "overlay-inspector",
-        "value": "1050px"
+        "value": "1535px"
       },
       {
         "name": "compact-sidebar",
@@ -80,9 +80,9 @@
     {
       "name": "Workout card",
       "kind": "card",
-      "description": "Sport, title and prescription remain grouped.",
-      "html": "<button class=\"ds-workout\"><span class=\"ds-sport\">Running</span><strong>Easy run</strong><span>40m</span></button>",
-      "css": ".ds-workout { display:grid; gap:4px; width:100%; padding:10px 8px; text-align:left; border:1px solid var(--line); border-radius:5px; background:var(--surface); color:var(--text); font:12px Inter,sans-serif; cursor:pointer; } .ds-sport { color:var(--accent-ink); } .ds-workout > span:last-child { color:var(--muted); font-size:12px; } .ds-workout:hover { border-color:var(--accent-line); background:var(--surface-raised); } .ds-workout:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }"
+      "description": "Sea glass calendar palette: teal completion, apricot partial and slate-blue planned fills. Compact sport/title/status hierarchy, emphasized recorded values, supporting prescription and a separated source footer. Selection keeps an orange outline and preserves the status tint.",
+      "html": "<button class=\"ds-workout\"><span class=\"ds-sport\">Running</span><strong>Easy run</strong><span class=\"ds-status\">✓ Completed</span><span class=\"ds-recorded\"><span>Recorded</span>40m · 7.5 km</span><span class=\"ds-planned\">Planned 45m · 8.0 km</span><span class=\"ds-source\">Garmin linked</span></button>",
+      "css": ".ds-workout { --ds-state:light-dark(#286c5a,#8bd4bd); --ds-fill:light-dark(#eaf6f2,#19312c); --ds-muted:light-dark(#59636e,#a0a8b0); display:grid; gap:7px; width:100%; padding:10px 8px; text-align:left; border:1px solid color-mix(in srgb,var(--ds-state) 18%,var(--line)); border-radius:5px; background:var(--ds-fill); color:var(--text); box-shadow:inset 2px 0 var(--ds-state); font:12px/1.5 Inter,sans-serif; cursor:pointer; } .ds-workout strong { font-size:13px; font-weight:600; } .ds-sport,.ds-planned,.ds-source { color:var(--ds-muted); } .ds-status { color:var(--ds-state); font-weight:600; } .ds-recorded { font-weight:600; font-variant-numeric:tabular-nums; } .ds-recorded > span { display:block; color:var(--ds-muted); font-size:11px; font-weight:400; } .ds-source { border-top:1px solid color-mix(in srgb,var(--ds-state) 15%,var(--line)); padding-top:6px; } .ds-workout:hover { border-color:var(--ds-state); } .ds-workout:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }"
     },
     {
       "name": "Active navigation",

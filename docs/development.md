@@ -139,7 +139,7 @@ Run these from the repository root. Setup/local load their own `.env`; advanced 
 | `pnpm registry:generate` | Validates pinned manifests/dependencies and rewrites derived client/server/metadata registries. |
 | `pnpm registry:generate --check` | Rejects drift without writing registry files. |
 | `pnpm plugins stage` | Writes validated desired enable/disable settings from the database into the source composition. It does not activate them. |
-| `pnpm plugin:scaffold cycling-recovery "Cycling recovery"` | Creates a new personal source plugin; refuses overwrite and does not edit composition. |
+| `pnpm plugin:scaffold activity-report "Activity report"` | Creates a new personal source plugin; refuses overwrite and does not edit composition. |
 | `pnpm skills:sync` | Generates Claude adapters from canonical `.agents/skills` instructions. |
 | `pnpm skills:sync --check` | Checks adapter drift and refuses conflicting user-authored copies. |
 | `pnpm contracts:generate` | Regenerates `docs/reference/contracts.json` from runtime schemas. Add `--check` for read-only drift validation. |
@@ -790,6 +790,27 @@ If only the owner password is lost, use `pnpm run owner recover --password-stdin
 Use [the plugin-development skill](../.agents/skills/athlete-panel-plugin-development/SKILL.md), public SDK/contracts/UI and the personal plugin directory. Source plugins are trusted application code, not a security sandbox. Review code and permissions before including it in a build; retain personal source, manifests and migration files across upgrades. The scaffold only creates files; activation follows the maintenance/build/migration procedure above.
 
 Keep canonical skills under `.agents/skills`; regenerate and check Claude adapters after edits. Use the [feature template](templates/Feature-Template.md) for a new capability or changed persisted behavior/permission/contract, update [architecture](architecture.md) for boundary changes, and use an [ADR](templates/ADR-Template.md) for consequential decisions. Preserve the supplied framework/templates and legacy checkout. Follow [framework validation](Framework-Guide.md#validation), including semantic review beyond automated link checks. No command or passing test in this guide asserts that a real private server has already been deployed.
+
+### Printable training week example
+
+[Printable training week](features/printable-training-week.md) replaces Cycling & sleep as the source-plugin example. Its entry in `instance/composition.json` is pinned to `1.0.0` with `enabled: false`. The default app has no printable route or navigation entry. To activate it, review the source, change that entry to `enabled: true` in a candidate checkout, then follow [local updates](#updating-a-local-checkout) or [coordinated upgrades](#coordinated-upgrades-and-plugin-activation), including composition recording, build and restart. The Plugins page can request a pending change; it does not hot-load the page.
+
+For an isolated synthetic browser preview, create a temporary composition without changing the default file:
+
+```sh
+mkdir -p .runtime
+node --input-type=module - <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+const composition = JSON.parse(readFileSync('instance/composition.json', 'utf8'));
+composition.plugins.find(entry => entry.path === 'personal-plugins/printable-training-week').enabled = true;
+writeFileSync('.runtime/printable-week-composition.json', JSON.stringify(composition));
+JS
+ATHLETE_PANEL_INSTANCE_PATH=.runtime/printable-week-composition.json pnpm build
+```
+
+Use the [isolated browser workflow](#verification) with this generated registry, its own `_test` database and synthetic seed. Run `PRINTABLE_TRAINING_WEEK_E2E=true pnpm test:e2e tests/e2e/printable-week.spec.ts` against that preview. The test records desktop/phone screenshots in both themes and desktop A4 PDFs. Inspect the PDFs for pagination and long content. After stopping the preview, run `pnpm generate` and `pnpm build` without the override to restore the default disabled artifacts. CI checks the default and explicitly enabled compositions separately.
+
+The replacement owns no tables or migrations. Removing Cycling & sleep is still a composition change: review the expected removal and use the existing managed `--accept-custom-changes` acknowledgement or the local/manual plugin-removal procedure. Retain unrelated personal plugins. There is no athlete data to migrate for either example; rollback of this change needs the prior source/composition and matched build/restart, subject to any other changes in the release. Backup and hosted-upgrade tests use `tests/fixtures/owner-plugin`, independent of this teaching example.
 
 ## Runtime database access and existing installations
 

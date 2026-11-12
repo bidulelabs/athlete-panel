@@ -14,6 +14,8 @@ The local setup/launcher in `scripts/setup.ts` and `scripts/local.ts` owns crede
 
 Local operation uses the [persistent PostgreSQL container](../compose.local.yml), bound only to `127.0.0.1:55440`, while web and worker processes run on the host. Docker's named volume retains database contents across container restarts. The disposable test database uses a separate Compose project and port 55439. [Production Compose](../compose.yml) additionally packages web, worker, HTTPS ingress and scheduled backups.
 
+The packaged worker enables Docker's init process as PID 1 to forward signals and reap orphaned descendants of health-check subprocesses. Node continues to run the worker, and both Docker probe health and the persisted application heartbeat remain distinct checks. Adopted profiles retain their saved Compose model; applying this default to those installations requires explicit configuration reconciliation and worker recreation through the [upgrade procedure](development.md#worker-process-reaping).
+
 | Area             | Responsibility                                                                             | Entry point                                                                   |
 | ---------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | Web              | Generic routing, owner session adapters, rendered plugin pages                             | [Application](../apps/web/app)                                                |

@@ -4,6 +4,8 @@ Use the documentation link for the version you installed. Each release page incl
 
 ## Unreleased
 
+- The default Docker worker now reaps orphaned child processes, preventing zombie accumulation from exhausting its process limit and breaking health checks. Managed installs receive the setting through the normal coordinated upgrade; adopted installs must first reconcile `init: true` into their saved worker configuration. See [worker process-reaping upgrade steps](development.md#worker-process-reaping). Existing health checks and process limits are preserved; no database migration is required for this fix.
+
 ## v0.4.0 (2026-11-12)
 
 - Removed the redundant Cycling & sleep page. The new Printable training week example prints planned sessions, intervals and strength exercises, with optional notes and browser PDF export. It ships disabled by default, and the Plugins page’s **Create with agent** dialog now suggests this example. Follow the [example activation guide](https://github.com/bidulelabs/athlete-panel/blob/v0.4.0/docs/development.md#printable-training-week-example) to enable it. Upgrades removing Cycling & sleep require the normal reviewed plugin-removal acknowledgement; no SQL migration or athlete-data deletion is involved.

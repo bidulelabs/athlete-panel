@@ -10,7 +10,14 @@ import {
 } from '@athlete-panel/contracts';
 import { applyCommands } from '../../plugins/training/engine';
 import { boundedContext } from '../../plugins/agent-bridge/proposal-validation';
-import { planPhases, planSections } from '../../plugins/training/plan-phases';
+import { mondayOf } from '../../plugins/training/dates';
+import {
+  movePhase,
+  phaseWeekRows,
+  planPhases,
+  planPhasesOnMove,
+  planSections,
+} from '../../plugins/training/plan-phases';
 
 const id = (number: number) => `00000000-0000-4000-8000-${number.toString().padStart(12, '0')}`;
 const weeklyHours = (first: number, last: number) => ({
@@ -227,5 +234,81 @@ describe('phases in a plan', () => {
     expect(
       planSections(phases, plan(1, '2026-10-19'), [1]).map((section) => section.weeks),
     ).toEqual([[1], [], [], []]);
+  });
+});
+
+describe('weeks of a phase in a plan', () => {
+  const build = phase(2, '2026-11-02', '2026-11-29');
+  const rows = (start: string, written: number[], plans: ReturnType<typeof plan>[] = []) => {
+    const shown = plan(1, start);
+    return phaseWeekRows(build, shown, [shown, ...plans], written, mondayOf);
+  };
+
+  it('puts the target of each calendar week on the plan week starting the same day', () => {
+    expect(rows('2026-11-02', [1, 3])).toEqual([
+      { firstDay: '2026-11-02', planWeek: 1, targetWeekStart: '2026-11-02' },
+      { firstDay: '2026-11-09', planWeek: 2, targetWeekStart: '2026-11-09' },
+      { firstDay: '2026-11-16', planWeek: 3, targetWeekStart: '2026-11-16' },
+      { firstDay: '2026-11-23', planWeek: 4, targetWeekStart: '2026-11-23' },
+    ]);
+  });
+
+  it('keeps calendar weeks apart from the weeks of a plan starting midweek', () => {
+    expect(rows('2026-11-04', [1, 2])).toEqual([
+      { firstDay: '2026-11-02', planWeek: null, targetWeekStart: '2026-11-02' },
+      { firstDay: '2026-11-04', planWeek: 1, targetWeekStart: null },
+      { firstDay: '2026-11-09', planWeek: null, targetWeekStart: '2026-11-09' },
+      { firstDay: '2026-11-11', planWeek: 2, targetWeekStart: null },
+      { firstDay: '2026-11-16', planWeek: null, targetWeekStart: '2026-11-16' },
+      { firstDay: '2026-11-23', planWeek: null, targetWeekStart: '2026-11-23' },
+    ]);
+  });
+
+  it('stops the calendar weeks where the next plan starts', () => {
+    expect(rows('2026-11-02', [1], [plan(2, '2026-11-16')]).map((row) => row.firstDay)).toEqual([
+      '2026-11-02',
+      '2026-11-09',
+    ]);
+  });
+});
+
+describe('phases when a plan moves', () => {
+  it('moves only the phases no other plan shows, and names the shared ones', () => {
+    const autumn = plan(1, '2026-11-02');
+    const winter = plan(2, '2026-11-30');
+    const own = phase(1, '2026-11-02', '2026-11-22');
+    const shared = phase(2, '2026-11-23', '2026-12-20');
+    expect(planPhasesOnMove(autumn, [autumn, winter], [own, shared])).toEqual({
+      onlyThisPlan: [own],
+      shared: [{ phase: shared, plans: [winter] }],
+    });
+    expect(planPhasesOnMove(autumn, [autumn], [own, shared])).toEqual({
+      onlyThisPlan: [own, shared],
+      shared: [],
+    });
+  });
+
+  it('moves the dates and edited weeks, and drops an edited week the move leaves outside the phase', () => {
+    const hours = { weeklyDurationSeconds: { min: 3600, max: 7200 } };
+    const edited = periodSchema.parse({
+      ...phase(1, '2026-11-02', '2026-11-29'),
+      editedWeeks: { '2026-11-02': hours, '2026-11-16': hours },
+    });
+    expect(movePhase(edited, 7)).toEqual({
+      values: {
+        startDate: '2026-11-09',
+        endDate: '2026-12-06',
+        editedWeeks: { '2026-11-09': hours, '2026-11-23': hours },
+      },
+      droppedEditedWeeks: [],
+    });
+    expect(movePhase(edited, 2)).toEqual({
+      values: {
+        startDate: '2026-11-04',
+        endDate: '2026-12-01',
+        editedWeeks: { '2026-11-16': hours },
+      },
+      droppedEditedWeeks: ['2026-11-02'],
+    });
   });
 });

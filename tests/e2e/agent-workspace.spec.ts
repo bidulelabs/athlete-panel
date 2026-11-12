@@ -107,6 +107,14 @@ test('empty page keeps the next action visible, with two accessible tabs and sec
   await expect(page.getByText(/Garmin keys and server secrets are excluded/)).toBeVisible();
 });
 
+test('connect dialog names both planning styles', async ({ page }) => {
+  await workspace(page, { grants: [] });
+  await page.getByRole('button', { name: 'Connect an agent', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Connect your agent' })).toContainText(
+    'For a season, ask it to “Detail the whole plan” or to “Outline the season and detail the next two weeks”.',
+  );
+});
+
 test('connection details retain exact scopes while inactive grants stay collapsed', async ({
   page,
 }, info) => {

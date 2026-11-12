@@ -85,6 +85,8 @@ New browser planning approvals show **Allow proposals to change plan phases**, c
 
 Agents may propose `period.create`, `period.update` and `period.delete`. Every phase before and after the change must lie wholly within the proposal dates, and an update or delete must name a phase the planning context shares. Phases, the plan and its workouts can go in one proposal, such as sixteen weeks of phases with volume targets and the workouts of the next two weeks. Review lists the phase's name, role, last day, focus and readable targets (hours, kilometres or miles, metres or feet). Edited weeks go through the same permission: review names each one by its date with its hours target from `weekTargets`, and the field rows read **Edited weeks · Week of …**. Proposal date bounds run from the first to the last day of the phase. The existing audit, idempotency, atomic application and whole-batch undo apply.
 
+Requirement source: the 2026-11-12 follow-up on issue #97 (make both planning styles easy to request, one combined review). A season can be planned in two styles: **Detail the whole plan** writes every workout of the horizon; **Outline the season and detail the next two weeks** writes phases with weekly targets for the whole horizon and workouts for the next two weeks only. The owner asks for either in their own words; step 3 of **Connect an agent** names both. The coaching skill asks once which style when a season request leaves it open, and both styles are submitted as one proposal reviewed as a whole. No new setting or field: the style lives in the request.
+
 | Situation | Expected result | Verification |
 | --- | --- | --- |
 | New planning approval / owner unchecks / analysis only | Default checked; opted-out grant false and a phase proposal refused; historical-only grant has no phase authority | [Connection browser tests](../../tests/e2e/agent-connect.spec.ts), [contract tests](../../tests/unit/contracts.test.ts) |
@@ -93,6 +95,8 @@ Agents may propose `period.create`, `period.update` and `period.delete`. Every p
 | Plan, workout and phase in one proposal | Reviewed with the focus, applied (phase header above week 1 of the plan) and undone | [Browser flow](../../tests/e2e/agent-periods.spec.ts) |
 | Update or delete of a phase inside the grant / outside it | Applied / refused | Period integration |
 | Phase in review | Role, last day and targets in hours and profile units; dates from first to last day | [Grouping tests](../../tests/unit/proposal-weeks.test.ts) |
+| Owner opens **Connect an agent** | Step 3 names both planning styles | [Workspace browser scenarios](../../tests/e2e/agent-workspace.spec.ts) |
+| Coaching skill | Names both planning styles and asks which one when a season request leaves it open | [Planning styles test](../../tests/unit/planning-styles.test.ts) |
 
 ### Activity and health imports during planning
 

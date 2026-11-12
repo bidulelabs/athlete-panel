@@ -146,8 +146,14 @@
   font-size: 14px;
   font-weight: 600;
 }
-.plans-week-heading > span:last-child:not(:nth-child(2)) {
+.plans-week-totals {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
 }
 .plans-day {
   display: grid;
@@ -286,7 +292,7 @@
   .plans-week-heading {
     gap: 4px 12px;
   }
-  .plans-week-heading > span:last-child:not(:nth-child(2)) {
+  .plans-week-totals {
     width: 100%;
     margin-left: 0;
   }
@@ -362,25 +368,33 @@
 .plans-phase .plans-meta {
   margin-top: 6px;
 }
-.phase-weeks {
-  margin-top: 8px;
-  font-size: 13px;
-}
-.phase-weeks summary {
-  cursor: pointer;
-  color: var(--muted);
-}
-.phase-weeks li {
+.week-target {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 12px;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--line);
+  gap: 4px 8px;
 }
-.phase-week-name {
-  min-width: 9em;
+.calendar-week-target {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.calendar-week-target h4 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.calendar-week-target > span {
   color: var(--muted);
+}
+.calendar-week-target > .week-target {
+  margin-left: auto;
 }
 .phase-dropped-weeks {
   color: var(--accent-ink);

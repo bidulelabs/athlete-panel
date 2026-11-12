@@ -206,6 +206,9 @@ jobs:
           path: .runtime/release-candidate
       - name: Authenticate shared image identity and checksum
         run: python3 scripts/release-ci.py verify --commit "$GITHUB_SHA"
+      - name: Verify worker health-check process reaping
+        if: matrix.rehearsal == 'release'
+        run: python3 scripts/rehearse-worker-health.py --image athlete-panel:release-check --report .runtime/release-evidence/worker-health.json
       - name: ${{ matrix.title }}
         env:
           REHEARSAL: ${{ matrix.rehearsal }}

@@ -388,6 +388,43 @@ class Adoption(unittest.TestCase):
                 self.assertTrue(service['environment']['DATABASE_URL'].endswith('/recovered_test'))
             self.assertEqual(config['volumes']['data'], {'external': True, 'name': 'retained-data'})
 
+    def test_worker_init_requires_reconciliation_and_survives_upgrade_and_recovery(self):
+        with tempfile.TemporaryDirectory() as root:
+            fixture = Fixture(root)
+            worker = fixture.services['jobs']
+            worker.update(init=False, pids_limit=12334, healthcheck={
+                'test': ['CMD', 'pnpm', 'exec', 'tsx', 'scripts/operations.ts', 'worker-health'],
+                'interval': '30s', 'timeout': '10s', 'retries': 3, 'start_period': '45s'})
+            profile, _ = adoption.inspect(fixture.inputs, fixture.execute, True)
+            profile['imageArchive'] = {'path': '/retained/image.tar', 'sha256': 'd' * 64}
+            instance = hosted.Hosted(Path(root) / 'state', test={'port': 4567})
+            instance.record = {'version': 2, 'project': fixture.inputs['project'],
+                               'profile': profile, 'active': profile['release']}
+            original = copy.deepcopy(profile)
+            candidate = {**profile['release'], 'image': 'sha256:' + 'e' * 64}
+            adoption.deployment(instance, candidate)
+            self.assertFalse(hosted.read_json(instance.state / 'deployment.json')['services']['jobs']['init'])
+
+            # Edit a recorded override, preview, then confirm. No container change is
+            # needed for reconciliation; only the subsequent deployment recreates it.
+            worker['init'] = True
+            Path(fixture.inputs['files'][1]).write_text(json.dumps({'services': {'jobs': {'init': True}}}))
+            real_inspect = adoption.inspect
+            with patch.object(adoption, 'inspect', side_effect=lambda inputs, **kwargs: real_inspect(inputs, execute=fixture.execute, **kwargs)):
+                preview = adoption.reconcile(instance)
+                self.assertTrue(preview['changes']['configurationChanged'])
+                self.assertFalse(instance.record['profile']['config']['services']['jobs']['init'])
+                adoption.reconcile(instance, preview['confirmation'])
+            self.assertEqual(instance.record['profile']['release'], original['release'])
+            self.assertEqual(instance.record['profile']['imageArchive'], original['imageArchive'])
+            for release in [candidate, {**original['release'], 'database': 'recovered_test'}]:
+                adoption.deployment(instance, release)
+                deployed = hosted.read_json(instance.state / 'deployment.json')['services']['jobs']
+                self.assertTrue(deployed['init'])
+                self.assertEqual(deployed['pids_limit'], 12334)
+                self.assertEqual(deployed['healthcheck'], original['config']['services']['jobs']['healthcheck'])
+            self.assertFalse(any(any(word in command for word in ['up', 'run', 'stop', 'restart']) for command in fixture.commands))
+
     def test_postgres_tag_and_digest_require_running_major_and_matching_image(self):
         for reference in ['postgres:17', 'postgres:17-bookworm', 'postgres:17.6',
                           'postgres@' + DB_IMAGE, 'postgres:17@' + DB_IMAGE, 'docker.io/library/postgres@' + DB_IMAGE]:

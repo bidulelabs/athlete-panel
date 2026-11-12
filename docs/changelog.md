@@ -4,6 +4,8 @@ Use the documentation link for the version you installed. Each release page incl
 
 ## Unreleased
 
+- The default Docker worker now reaps orphaned child processes, preventing zombie accumulation from exhausting its process limit and breaking health checks. Managed installs receive the setting through the normal coordinated upgrade; adopted installs must first reconcile `init: true` into their saved worker configuration. See [worker process-reaping upgrade steps](development.md#worker-process-reaping). Existing health checks and process limits are preserved; no database migration is required for this fix.
+
 - Calendar accessibility: screen readers announce each day with its full date and the empty-day button with the short date. The first-workout message is a second-level heading under the page title. Shared buttons, toggles, switches, badges and tabs animate only color, border, focus ring and press movement. Rebuild/restart the application and reload browser tabs; no SQL migration or new permissions are required.
 
 ## v0.4.0 (2026-11-12)

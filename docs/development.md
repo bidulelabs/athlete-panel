@@ -316,6 +316,14 @@ pnpm build
 
 The operations suite creates and drops uniquely named databases under the test server, exercising encrypted backup/restore rather than mocking `pg_dump`. Do not grant this test role access to production storage. Set `PG_BIN_DIR` if another PostgreSQL major version is first on `PATH`. Build and unit success do not establish Docker deployment, HTTPS, off-host durability, Garmin account permissions, or visual correctness.
 
+After building the production image, exercise worker process reaping with:
+
+```sh
+python3 scripts/rehearse-worker-health.py --image athlete-panel:release-check --report .runtime/worker-health-results.json
+```
+
+This runs the unchanged packaged health-check command through Docker's health-check scheduler, with 20 successful, 20 failed and 20 timed-out probes. An idle Node parent and synthetic PostgreSQL views provide deterministic heartbeat states without provider jobs or owner data. Only the fixture's probe interval/timeout/startup grace/retries are shortened; its PID limit is 256. Tests inspect zombies and cgroup task counts and compare six successful probes without init to diagnose the subprocess chain. Each run owns an internal network and temporary database with no published ports, and removes its containers/storage afterward. The release container rehearsal runs this check in CI. It is a bounded regression test, not a production soak test.
+
 For browser checks, use a separate local `_test` database, run migrations and the explicit demo seed there, build/start the app, set `PLAYWRIGHT_BASE_URL` and `E2E_PASSWORD`, install Chromium with `pnpm exec playwright install chromium`, then run the browser command. The suite requires an explicit `PLAYWRIGHT_BASE_URL` and refuses to mutate a server unless its readiness endpoint confirms isolated synthetic storage. Start that server with `ATHLETE_PANEL_E2E=true` and a loopback `_test` database; the flag changes no authentication or permission checks. It refuses remote hosts and never starts a server with inherited production configuration. Set `E2E_DATABASE_URL` to the same explicitly isolated loopback `_test` database used by that browser server. The onboarding browser suite resets only synthetic setup/profile/connection fixtures there and refuses missing or non-test targets. Review desktop and mobile layouts, keyboard use, light/dark themes and failure states as well as assertions. [CI](../.github/workflows/verify.yml) records the repeatable automated sequence.
 
 Garmin routine tests use injectable transport and synthetic fixtures. An owner-account smoke check is a separate authorized step: configure the Personal API key and timezone in the app; health-history bounds are selected internally; check recent data, historical coverage/progress, retry after interruption, daily metric availability and a provider correction without duplicating records. Never paste API keys or real provider payloads into test fixtures or logs.
@@ -570,6 +578,8 @@ Local maintenance automatically reads `.env` as data and passes only the appropr
 
 ## Coordinated upgrades and plugin activation
 
+For workers installed before the process-reaping fix, also follow [Worker process reaping](#worker-process-reaping). Adopted installations retain their saved Compose settings across image upgrades.
+
 For an ordinary managed installation, extract the next trusted **deployment bundle** into a separate directory and run its controller using the same account and persistent state location:
 
 ```sh
@@ -600,6 +610,45 @@ CI publication failures report the failed operation, exit code when available an
 SQL migrations run in one exclusive transaction. A failed SQL migration rolls back its data/schema/journal changes. Runtime-role provisioning runs afterward: its failure means **the migrations have committed**. The CLI distinguishes these failures. Correct the underlying candidate/administrative configuration before retrying; if the prepared image itself is defective, recover the recorded snapshot rather than editing deployed source. A worker paused for maintenance remains healthy but does not import or claim work. If a prepared candidate fails validation **before maintenance starts**, use `python3 scripts/hosted.py cancel`, fix the source and start a new upgrade. Cancel is refused as soon as maintenance may have started; use resume or recovery then.
 
 This controller supports PostgreSQL **17** and rejects a candidate declaring a different database major. Application schema migrations do not upgrade PostgreSQL's storage format. Database major-version upgrades require a separately rehearsed procedure; never change the image major and reuse the volume blindly. There is no unattended updater, automatic down migration or automatic destructive rollback.
+
+### Worker process reaping
+
+The packaged worker uses Docker Compose `init: true` so Docker's init process runs as PID 1, forwards signals to Node and reaps orphaned health-check descendants. The worker command, health check, timeouts and process limits are unchanged. A running application heartbeat alone does not prove Docker can still fork its probe. This fixes process accumulation; it does not require a SQL migration or athlete-data conversion.
+
+**Ordinary managed installations** (created by `hosted.py install`, without an adopted profile): use the complete coordinated upgrade above with a release containing this fix. The controller loads that candidate's Compose controls and recreates the worker with init. Finish any pending operation with its original controller first. Reconciliation is only for adopted profiles; do not edit private `installation.json` or generated `deployment.json`.
+
+**Adopted installations**, including ones subsequently upgraded by the managed controller: image upgrades preserve the saved Compose model, so the new default does not replace an absent/false init setting. Before starting the upgrade:
+
+1. Check `status` with the installation's existing state directory. Finish or safely cancel any pending operation using its original controller. Keep the existing configuration and recovery kit.
+2. In an **already recorded Compose input file**, add `init: true` under the mapped worker service. Use the last applicable override so it wins; for a service mapped as `worker=jobs`, edit `services.jobs`. Preserve the other settings, especially `pids_limit`, health checks, images, credentials, mounts and networks. Do not add an unrecorded override or edit the controller's generated deployment file.
+
+```yaml
+services:
+  worker:
+    init: true
+```
+
+3. Reconcile the edited inputs with the same controller account, Docker context and state directory. Replace the example state path with the existing one and use the exact fingerprint returned by the preview:
+
+```sh
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a reconcile --dry-run
+python3 scripts/hosted.py --state /var/lib/athlete-panel/training-a reconcile --confirm FINGERPRINT
+```
+
+Review that only the intended configuration/input change appears. Reconciliation records the setting; it does **not** recreate the running worker or remove its existing zombies. Then perform the complete coordinated upgrade with the same state directory. Its normal backups, rehearsal, maintenance, worker replacement and readiness checks remain required. The reconciled model also retains init when selecting an older image for recovery; an unreconciled profile does not acquire it just by changing images.
+
+**Manual Compose installations**: retain the setting in the installation's own worker configuration and use the existing project, ordered Compose/env files and Docker context. If changing only init on the already installed image, recreate just the worker with that exact Compose invocation followed by `up -d --no-deps --force-recreate worker` (substitute its actual service name). This briefly interrupts background work. `restart` alone does not apply new container settings. If also changing the application image, use the complete [manual upgrade procedure](#advanced-manual-upgrades-and-plugin-activation) instead of this configuration-only shortcut.
+
+After replacement, inspect the actual worker container, substituting the installation's project and mapped service name:
+
+```sh
+worker_id=$(docker ps -q --filter label=com.docker.compose.project=YOUR_PROJECT --filter label=com.docker.compose.service=worker --filter label=com.docker.compose.oneoff=False)
+docker inspect --format 'init={{.HostConfig.Init}} health={{.State.Health.Status}} pids_limit={{.HostConfig.PidsLimit}}' "$worker_id"
+docker top "$worker_id" -eo pid,ppid,stat,comm
+docker exec "$worker_id" cat /sys/fs/cgroup/pids.current /sys/fs/cgroup/pids.max
+```
+
+Use the installation's Docker context for these commands. Expect `init=true`, Docker health `healthy`, the original process limit and no persistent `Z` processes. The final command is for cgroup v2; on v1 use `/sys/fs/cgroup/pids/pids.current` and `/sys/fs/cgroup/pids/pids.max`. Also verify a fresh healthy application heartbeat. Repeat these observations after sustained operation; short local tests do not establish long-term stability. Do not raise/remove the process limit or disable health checks to hide accumulation.
 
 ### Custom images and source upgrades
 

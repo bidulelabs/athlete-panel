@@ -33,13 +33,13 @@ import {
 } from '@athlete-panel/ui';
 import {
   comparisonPercent,
-  targetRangeLabel,
   type MetricTotal,
   type TargetRange,
   type TrainingSummary,
   type RecordedSession,
 } from '../training/public/shared';
 import type { WeeklySleep, WeeklyHrv } from './weekly-sleep';
+import { hoursLabel, targetAndPlannedParts, weekHoursLabel } from './week-hours';
 import './weekly-summary.css';
 
 type Format = (value: number) => string;
@@ -48,8 +48,6 @@ const compact = (metric: MetricTotal, format: Format) =>
 const noPlan = (metric: MetricTotal) => metric.missingCount === 0 && metric.value === 0;
 const compactPlanned = (metric: MetricTotal, format: Format) =>
   metric.knownCount === 0 && noPlan(metric) ? 'No plan' : compact(metric, format);
-const targetReplacesNoPlan = (planned: MetricTotal, target: TargetRange | null) =>
-  target !== null && planned.knownCount === 0 && noPlan(planned);
 function HeaderMetric({
   label,
   info,
@@ -113,7 +111,6 @@ function HeaderComparison({
   actual,
   format,
   unit,
-  target = null,
 }: {
   label: string;
   icon: ReactNode;
@@ -121,19 +118,38 @@ function HeaderComparison({
   actual: MetricTotal;
   format: Format;
   unit: string;
-  target?: TargetRange | null;
 }) {
   const missing = planned.missingCount + actual.missingCount;
   return (
     <HeaderMetric
       label={label}
-      info={`Recorded / planned, ${unit}${target ? ', then the target of the phase' : ''}. ${actual.knownCount} recorded and ${planned.knownCount} planned measurements available.${missing ? ` ${missing} measurements missing.` : ''}`}
+      info={`Recorded / planned, ${unit}. ${actual.knownCount} recorded and ${planned.knownCount} planned measurements available.${missing ? ` ${missing} measurements missing.` : ''}`}
       icon={icon}
       partial={missing > 0}
     >
       <strong>{compact(actual, format)}</strong>
-      {!targetReplacesNoPlan(planned, target) && <span> / {compactPlanned(planned, format)}</span>}
-      {target && <span> · Target {targetRangeLabel(target, format)}</span>}
+      <span> / {compactPlanned(planned, format)}</span>
+    </HeaderMetric>
+  );
+}
+function HeaderHours({
+  planned,
+  recorded,
+  target,
+}: {
+  planned: MetricTotal;
+  recorded: MetricTotal;
+  target: TargetRange | null;
+}) {
+  const missing = planned.missingCount + recorded.missingCount;
+  return (
+    <HeaderMetric
+      label="Duration"
+      info={`${target ? 'Target of the phase, then planned' : 'Planned'} and recorded hours. ${recorded.knownCount} recorded and ${planned.knownCount} planned measurements available.${missing ? ` ${missing} measurements missing.` : ''}`}
+      icon={<Timer aria-hidden="true" />}
+      partial={missing > 0}
+    >
+      {weekHoursLabel(planned, recorded, target)}
     </HeaderMetric>
   );
 }
@@ -303,13 +319,9 @@ export function WeeklySummary({
           {current && <span className="week-current-label">This week</span>}
         </div>
         <div className="week-header-metrics">
-          <HeaderComparison
-            label="Duration"
-            unit="hours and minutes"
-            icon={<Timer aria-hidden="true" />}
+          <HeaderHours
             planned={summary.planned.durationSeconds}
-            actual={summary.actual.durationSeconds}
-            format={duration}
+            recorded={summary.actual.durationSeconds}
             target={durationTarget}
           />
           <HeaderComparison
@@ -382,14 +394,11 @@ export function WeeklySummary({
           <BandMetric
             label="Duration"
             icon={<Timer />}
-            value={compact(summary.actual.durationSeconds, duration)}
-            hint={[
-              durationTarget && `Target: ${targetRangeLabel(durationTarget, duration)}`,
-              !targetReplacesNoPlan(summary.planned.durationSeconds, durationTarget) &&
-                `Planned: ${compactPlanned(summary.planned.durationSeconds, duration)}`,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
+            value={`Recorded ${hoursLabel(summary.actual.durationSeconds)}`}
+            hint={
+              targetAndPlannedParts(summary.planned.durationSeconds, durationTarget).join(' · ') ||
+              'No plan'
+            }
           />
           <BandMetric
             label="Running distance"

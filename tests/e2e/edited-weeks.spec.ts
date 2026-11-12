@@ -95,7 +95,7 @@ test('lower week 3 of a four-week build, then reset it to calculated', async ({ 
   await page.getByLabel('Go to date').fill(addDays(start, 7));
   await expect(
     page.locator('.calendar-week').getByRole('button', { name: /^Duration:/ }),
-  ).toContainText(['Target 9h–11h', 'Target 6h–8h', 'Target 11h–13h']);
+  ).toContainText(['Target 9–11 h', 'Target 6–8 h', 'Target 11–13 h']);
   await expectChartsTargets(page, start, ['8h–10h', '9h–11h', '6h–8h', '11h–13h']);
 
   await page.goto('/plans');

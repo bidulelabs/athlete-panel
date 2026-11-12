@@ -56,8 +56,7 @@ test('each week expands independently with accurate volume, elevation, sleep and
     'false',
   );
   await expect(week.locator('.week-header-metric')).toHaveCount(5);
-  await expect(week.locator('.week-summary-header')).toContainText('5h');
-  await expect(week.locator('.week-summary-header')).toContainText('4h');
+  await expect(week.locator('.week-summary-header')).toContainText('Planned 5 h · Recorded 4 h');
   await toggle.focus();
   await page.keyboard.press('Enter');
   await expect(week.locator('.week-summary-body')).toBeVisible();
@@ -318,7 +317,7 @@ test('preview is chronological and bounded, empty states stay explicit, and redu
   await refresh(page);
   await expect(sessions).toContainText('No sessions recorded');
   await expect(week.getByRole('region', { name: 'Recorded HRV' })).toContainText('HRV unavailable');
-  await expect(week.locator('.week-header-metric').first()).toContainText('— / No plan');
+  await expect(week.locator('.week-header-metric').first()).toHaveText('Duration: No plan');
   expect(mutations()).toBe(0);
 });
 
@@ -432,7 +431,7 @@ test('week summaries fit the full width/theme matrix, long imperial values and y
   expect(mutations()).toBe(0);
 });
 
-test('the week target shows beside planned hours, and in place of No plan without workouts', async ({
+test('the week shows its target, planned and recorded hours, and keeps the target without workouts', async ({
   page,
 }) => {
   const { data } = await preview(page);
@@ -453,17 +452,18 @@ test('the week target shows beside planned hours, and in place of No plan withou
   await refresh(page);
   const [planned, empty, outside] = await page.locator('.calendar-week').all();
   const duration = (week: typeof empty) => week!.getByRole('button', { name: /^Duration:/ });
-  await expect(duration(planned)).toContainText(/ \/ \d+h.* · Target 8h–9h$/);
-  await expect(duration(planned)).toHaveAttribute('aria-description', /target of the phase/);
-  await expect(duration(empty)).toHaveText(/^Duration: — · Target 10h–11h$/);
-  await expect(duration(outside)).toContainText('— / No plan');
-  await expect(duration(outside)).not.toContainText('Target');
-  await planned!.getByRole('button', { name: /^Expand summary/ }).click();
-  await expect(planned!.locator('.week-metric-band')).toContainText(
-    /Target: 8h–9h · Planned: \d+h/,
+  await expect(duration(planned)).toHaveText(
+    /^Duration: Target 8–9 h · Planned [\d.]+ h( · Recorded [\d.]+ h)?$/,
   );
+  await expect(duration(planned)).toHaveAttribute('aria-description', /^Target of the phase/);
+  await expect(duration(empty)).toHaveText('Duration: Target 10–11 h');
+  await expect(duration(outside)).toHaveText('Duration: No plan');
+  await planned!.getByRole('button', { name: /^Expand summary/ }).click();
+  const plannedDuration = planned!.locator('.week-band-metric').filter({ hasText: /^Duration/ });
+  await expect(plannedDuration).toContainText(/Recorded (—|[\d.]+ h)/);
+  await expect(plannedDuration).toContainText(/Target 8–9 h · Planned [\d.]+ h/);
   await empty!.getByRole('button', { name: /^Expand summary/ }).click();
   const emptyDuration = empty!.locator('.week-band-metric').filter({ hasText: /^Duration/ });
-  await expect(emptyDuration).toContainText('Target: 10h–11h');
+  await expect(emptyDuration).toContainText('Target 10–11 h');
   await expect(emptyDuration).not.toContainText('Planned');
 });

@@ -49,7 +49,7 @@ Requirement source: [issue #97](https://github.com/bidulelabs/athlete-panel/issu
 | Agent planning read | Only phases touching the grant dates are shared | `tests/unit/plan-phases.test.ts` |
 | Workspace read for any date range | Every phase is returned, focus included | `tests/integration/plan-phases.test.ts` |
 | Week inside a phase, first week of a phase not aligned with the week start, one-week phase | Target interpolated by week; the week takes the phase holding its first day; first week target | `tests/unit/phase-targets.test.ts` |
-| Calendar week with planned workouts, without workouts, outside every phase | `7h / 9h · Target 8h–9h`; `— · Target 10h–11h` in the header and band; **No plan** | `tests/e2e/weekly-summary.spec.ts` |
+| Calendar week with planned workouts, without workouts, outside every phase | `Target 8–9 h · Planned 9 h · Recorded 7 h`; `Target 10–11 h` in the header and band; **No plan** | `tests/unit/week-hours.test.ts`, `tests/e2e/weekly-summary.spec.ts` |
 | Charts by month, by day, or with a sport selection | Month adds up its days; no target by day or with a sport selection | `tests/unit/phase-targets.test.ts`, `tests/e2e/charts-volume.spec.ts` |
 
 ## Observed implementation

@@ -70,7 +70,7 @@ test('a plan-only proposal shows its date before owner approval in both themes',
       }, theme);
       await expect(dialog.locator('.proposal-overview-dates')).toHaveText('3 Nov 2026');
       await expect(
-        dialog.getByRole('button', { name: 'Apply reviewed changes', exact: true }),
+        dialog.getByRole('button', { name: /^Apply all \d+ changes?$/, exact: true }),
       ).toBeDisabled();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
@@ -83,7 +83,7 @@ test('a plan-only proposal shows its date before owner approval in both themes',
     }
     await dialog.getByRole('checkbox').check();
     const appliedResponse = page.waitForResponse((r) => r.url().endsWith('/agent-bridge/apply'));
-    await dialog.getByRole('button', { name: 'Apply reviewed changes' }).click();
+    await dialog.getByRole('button', { name: /^Apply all \d+ changes?$/ }).click();
     const applied = await appliedResponse;
     expect(applied.ok(), await applied.text()).toBe(true);
     appliedChangeId = (await applied.json()).id;
@@ -167,7 +167,7 @@ test('pending proposals are listed and applied or rejected ones sit under Past p
     await pastSection.locator('summary').click();
     await expect(pastRowFor(`Applied ${summarySuffix}`)).toBeVisible();
     await pastRowFor(`Rejected ${summarySuffix}`)
-      .getByRole('button', { name: 'Review', exact: true })
+      .getByRole('button', { name: 'View details', exact: true })
       .click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.keyboard.press('Escape');
@@ -187,9 +187,7 @@ test('pending proposals are listed and applied or rejected ones sit under Past p
       });
     });
     await page.reload();
-    await expect(
-      page.getByRole('heading', { name: 'Your next adjustment starts with context' }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No proposals awaiting review' })).toBeVisible();
     await expect(rowFor(`Pending ${summarySuffix}`)).toHaveCount(0);
     await expect(pastSection.locator('summary')).toBeVisible();
     await pastSection.locator('summary').click();
@@ -327,10 +325,13 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
         .filter({ hasText: 'Workout description' }),
     ).toContainText('**Keep** an easy conversational effort.');
     await expect(dialog.locator('.review-technical pre').first()).not.toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Apply reviewed changes' })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: /^Apply all \d+ changes?$/ })).toBeDisabled();
     await expect(
       dialog.getByRole('heading', { name: 'Already changed on your calendar' }),
     ).toBeVisible();
+    await expect(
+      dialog.getByRole('region', { name: 'Changed context' }).locator('details').first(),
+    ).not.toHaveAttribute('open');
     await expect(dialog.getByRole('region', { name: 'Changed context' })).toContainText(run.title);
     await expect(dialog.getByRole('region', { name: 'Changed context' })).toContainText(
       'Synthetic review context',
@@ -352,16 +353,16 @@ test('owner reviews readable changes and applies the exact stored proposal', asy
     await dialog.getByRole('checkbox').check();
     expect((await addContext('Synthetic context changed again')).ok()).toBe(true);
     const conflict = page.waitForResponse((value) => value.url().endsWith('/agent-bridge/apply'));
-    await dialog.getByRole('button', { name: 'Apply reviewed changes' }).click();
+    await dialog.getByRole('button', { name: /^Apply all \d+ changes?$/ }).click();
     expect((await conflict).status()).toBe(409);
     await expect(dialog.getByRole('region', { name: 'Changed context' })).toContainText(
       'Synthetic context changed again',
     );
     await expect(dialog.getByRole('checkbox')).not.toBeChecked();
-    await expect(dialog.getByRole('button', { name: 'Apply reviewed changes' })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: /^Apply all \d+ changes?$/ })).toBeDisabled();
     await dialog.getByRole('checkbox').check();
     const applied = page.waitForRequest((value) => value.url().endsWith('/agent-bridge/apply'));
-    await dialog.getByRole('button', { name: 'Apply reviewed changes' }).click();
+    await dialog.getByRole('button', { name: /^Apply all \d+ changes?$/ }).click();
     expect((await applied).postDataJSON()).toMatchObject({ id: stored.id, digest: stored.digest });
     await expect(dialog).not.toBeVisible();
     const updated = await (

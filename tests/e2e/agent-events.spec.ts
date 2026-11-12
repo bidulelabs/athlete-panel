@@ -145,7 +145,7 @@ for (const theme of ['light', 'dark']) {
         .evaluate((el) => (el.scrollTop = el.scrollHeight));
       const [closeBox, applyBox] = await Promise.all([
         dialog.getByRole('button', { name: 'Close dialog', exact: true }).boundingBox(),
-        dialog.getByRole('button', { name: 'Apply reviewed changes' }).boundingBox(),
+        dialog.getByRole('button', { name: /^Apply all \d+ changes?$/ }).boundingBox(),
       ]);
       expect(closeBox!.y).toBeGreaterThanOrEqual(0);
       expect(applyBox!.y + applyBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
@@ -165,7 +165,7 @@ for (const theme of ['light', 'dark']) {
       await edits.getByLabel('Item type').selectOption('race');
       await expect(edits.locator('.proposal-diff')).toHaveCount(1);
       await expect(edits.getByRole('status')).toContainText('Apply includes all');
-      await expect(dialog.getByRole('button', { name: 'Apply reviewed changes' })).toBeDisabled();
+      await expect(dialog.getByRole('button', { name: /^Apply all \d+ changes?$/ })).toBeDisabled();
       await dialog.getByRole('checkbox').check();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
@@ -176,7 +176,7 @@ for (const theme of ['light', 'dark']) {
         animations: 'disabled',
       });
       const appliedResponse = page.waitForResponse((r) => r.url().endsWith('/agent-bridge/apply'));
-      await dialog.getByRole('button', { name: 'Apply reviewed changes' }).click();
+      await dialog.getByRole('button', { name: /^Apply all \d+ changes?$/ }).click();
       const applied = await appliedResponse;
       expect(applied.ok(), await applied.text()).toBe(true);
       auditId = (await applied.json()).id;

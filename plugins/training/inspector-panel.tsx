@@ -18,7 +18,7 @@ export function InspectorPanel({
   const [overlay, setOverlay] = useState(
     () =>
       alwaysOverlay ||
-      (typeof window !== 'undefined' && window.matchMedia('(max-width: 1050px)').matches),
+      (typeof window !== 'undefined' && window.matchMedia('(max-width: 1535px)').matches),
   );
   const trigger = useRef<HTMLElement | null>(
     typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
@@ -42,7 +42,7 @@ export function InspectorPanel({
     };
   }, []);
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 1050px)');
+    const media = window.matchMedia('(max-width: 1535px)');
     const sync = () => {
       if (!deferResize) setOverlay(alwaysOverlay || media.matches);
     };

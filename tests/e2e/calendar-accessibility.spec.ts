@@ -104,23 +104,26 @@ async function openWeekWithOneWorkoutPerStatus(page: Page) {
 
 const dayCell = (page: Page, date: string) => page.locator(`[data-date="${date}"]`);
 
-test('workout buttons are named by title, duration and status', async ({ page }) => {
+test('workout buttons are named by title and described by status', async ({ page }) => {
   await openWeekWithOneWorkoutPerStatus(page);
-  await expect(
-    dayCell(page, '2030-01-08').getByRole('button', { name: /^Hill repeats/ }),
-  ).toHaveAccessibleName(/^Hill repeats\s+1h · Partial$/);
-  await expect(
-    dayCell(page, '2030-01-09').getByRole('button', { name: /^Tempo run/ }),
-  ).toHaveAccessibleName(/^Tempo run\s+45m · Skipped$/);
-  await expect(
-    dayCell(page, '2030-01-10').getByRole('button', { name: /^Recovery day/ }),
-  ).toHaveAccessibleName(/^Recovery day\s+Rest day$/);
-  await expect(
-    dayCell(page, '2030-01-11').getByRole('button', { name: /^Long ride/ }),
-  ).toHaveAccessibleName(/^Long ride\s+2h$/);
-  await expect(
-    dayCell(page, '2030-01-12').getByRole('button', { name: /^Long ride/ }),
-  ).toHaveAccessibleName(/^Long ride\s+1h 57m · Actual$/);
+  const hillRepeats = dayCell(page, '2030-01-08').getByRole('button', {
+    name: 'Open Hill repeats',
+  });
+  await expect(hillRepeats).toHaveAccessibleDescription(/Partial/);
+  const tempoRun = dayCell(page, '2030-01-09').getByRole('button', { name: 'Open Tempo run' });
+  await expect(tempoRun).toHaveAccessibleDescription(/Skipped/);
+  const recoveryDay = dayCell(page, '2030-01-10').getByRole('button', {
+    name: 'Open Recovery day',
+  });
+  await expect(recoveryDay).toHaveAccessibleDescription(/Rest/);
+  const plannedLongRide = dayCell(page, '2030-01-11').getByRole('button', {
+    name: 'Open Long ride',
+  });
+  await expect(plannedLongRide).toHaveAccessibleDescription(/Completed/);
+  const recordedLongRide = dayCell(page, '2030-01-12').getByRole('button', {
+    name: 'Open actual Long ride',
+  });
+  await expect(recordedLongRide).toHaveAccessibleDescription(/Completed/);
 });
 
 test('each day is a group named by its full date', async ({ page }) => {

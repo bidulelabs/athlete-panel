@@ -588,7 +588,9 @@ function PluginsPage() {
   const { envelope, request } = useWorkspace();
   const [search, setSearch] = useState('');
   const [handoff, setHandoff] = useState(false);
-  const [idea, setIdea] = useState('Compare my cycling volume with sleep.');
+  const [idea, setIdea] = useState(
+    'Print my training week with planned sessions, intervals, strength exercises and optional notes.',
+  );
   const [copied, setCopied] = useState(false);
   const action = useAction();
   const plugins = envelope.plugins.filter((p) =>

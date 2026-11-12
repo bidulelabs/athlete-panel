@@ -7,7 +7,6 @@ const priority = [
   '/plans',
   '/activities',
   '/health',
-  '/cycling-sleep',
   '/garmin',
   '/agent',
   '/settings',

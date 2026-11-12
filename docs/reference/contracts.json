@@ -794,6 +794,13 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "linkMethod": {
+                            "type": "string",
+                            "enum": [
+                              "manual",
+                              "automatic"
+                            ]
                           }
                         },
                         "required": [
@@ -7511,6 +7518,13 @@
                                             "type": "null"
                                           }
                                         ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -8087,6 +8101,13 @@
                                           {
                                             "type": "null"
                                           }
+                                        ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
                                         ]
                                       }
                                     },
@@ -11428,6 +11449,13 @@
                                             "type": "null"
                                           }
                                         ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -12004,6 +12032,13 @@
                                           {
                                             "type": "null"
                                           }
+                                        ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
                                         ]
                                       }
                                     },
@@ -15362,6 +15397,13 @@
                                             "type": "null"
                                           }
                                         ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -15938,6 +15980,13 @@
                                           {
                                             "type": "null"
                                           }
+                                        ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
                                         ]
                                       }
                                     },
@@ -19710,6 +19759,13 @@
                                             "type": "null"
                                           }
                                         ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -20286,6 +20342,13 @@
                                           {
                                             "type": "null"
                                           }
+                                        ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
                                         ]
                                       }
                                     },
@@ -24047,6 +24110,13 @@
                                             "type": "null"
                                           }
                                         ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -24623,6 +24693,13 @@
                                           {
                                             "type": "null"
                                           }
+                                        ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
                                         ]
                                       }
                                     },
@@ -27993,6 +28070,13 @@
                                             "type": "null"
                                           }
                                         ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -28569,6 +28653,13 @@
                                           {
                                             "type": "null"
                                           }
+                                        ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
                                         ]
                                       }
                                     },
@@ -31950,6 +32041,13 @@
                                             "type": "null"
                                           }
                                         ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -32526,6 +32624,13 @@
                                           {
                                             "type": "null"
                                           }
+                                        ]
+                                      },
+                                      "linkMethod": {
+                                        "type": "string",
+                                        "enum": [
+                                          "manual",
+                                          "automatic"
                                         ]
                                       }
                                     },
@@ -42210,6 +42315,13 @@
                         {
                           "type": "null"
                         }
+                      ]
+                    },
+                    "linkMethod": {
+                      "type": "string",
+                      "enum": [
+                        "manual",
+                        "automatic"
                       ]
                     }
                   },

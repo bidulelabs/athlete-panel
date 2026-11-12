@@ -37,7 +37,7 @@ Planning now follows Garmin sport groups and subgroups, with separate hiking and
 - **Import Garmin history:** activity summaries and selected health data, automatic recent sync, resumable historical imports and visible coverage/errors. Garmin groups and subgroups remain distinct; unfamiliar identities are explicitly unresolved.
 - **Make the calendar yours:** light/dark themes, phone layouts, configurable week starts, timezone and metric/imperial preferences, and keyboard-accessible controls.
 - **Work with external agents:** approve bounded access, review proposed training changes, apply them atomically and undo a batch when later edits do not conflict.
-- **Extend your instance:** trusted source plugins, typed contracts, a scaffolder and a working cycling/sleep dashboard example.
+- **Extend your instance:** trusted source plugins, typed contracts, a scaffolder and an opt-in printable training week example (disabled by default).
 - **Operate independently:** local background jobs, console account recovery, encrypted backup/restore tools and coordinated upgrade procedures.
 
 ## Preview
@@ -213,9 +213,9 @@ The CLI saves its credential in `~/.config/athlete-panel/agent.json` with owner-
 
 Ask a coding agent to read the [plugin-development skill](.agents/skills/athlete-panel-plugin-development/SKILL.md), then describe the feature you want. For example:
 
-> Add a dashboard comparing weekly cycling duration with average recorded sleep. Use public contracts, show missing-night coverage, and preview it with synthetic data.
+> Add a printable training week with planned sessions, intervals and strength exercises. Use public contracts, make notes optional, and preview it with synthetic data.
 
-The [cycling/sleep example](personal-plugins/cycling-sleep) demonstrates this architecture. New code requires review, composition validation, a build and restart. Installed features continue working after the agent exits.
+The [printable training week example](personal-plugins/printable-training-week) demonstrates this architecture. It ships disabled by default; follow the [activation and preview guide](docs/development.md#printable-training-week-example) to enable it. New code requires review, composition validation, a build and restart. Installed features continue working after the agent exits.
 
 ### Supported interfaces
 
@@ -290,7 +290,7 @@ The [operator checklist](docs/release-readiness.md#operator-acceptance-on-the-in
 - Record real harness discovery and browser-launch behavior on supported environments.
 - Measure representative history performance and restore times.
 
-Workout libraries, automatic activity matching, advanced training-load/recovery calculations, FIT/GPS analysis, offline editing, native notifications and MCP remain deferred. They are not release commitments. The current application is an online, English-language web workspace for one athlete.
+Workout libraries, advanced training-load/recovery calculations, FIT/GPS analysis, offline editing, native notifications and MCP remain deferred. They are not release commitments. The current application is an online, English-language web workspace for one athlete.
 
 ## Documentation
 
@@ -310,6 +310,7 @@ Workout libraries, automatic activity matching, advanced training-load/recovery 
 | [Health history](docs/features/health-history.md) | Recent health review, date presets and independent Calendar navigation |
 | [Charts](docs/features/charts.md) | Chart templates, weekly planned and recorded hours, races and exact values |
 | [Reviewed agent training](docs/features/agent-training.md)      | History reads, planning permissions, owner review, apply and undo                                              |
+| [Printable training week](docs/features/printable-training-week.md) | Optional read-only weekly print preview and browser PDF export, disabled by default |
 | [Plugins and skills](docs/features/plugins.md)                  | Source extensions, templates, compatibility and agent workflows                                      |
 | [Runtime contract reference](docs/reference/contracts.json)     | Generated command and data schemas                                                                   |
 | [Execution record](docs/plans/mvp-execution.md)                 | Implementation progress, actual verification and deployment gates                                    |

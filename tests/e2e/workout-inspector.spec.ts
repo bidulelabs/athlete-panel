@@ -6,6 +6,8 @@ const password = process.env.E2E_PASSWORD;
 if (!password) throw new Error('Set E2E_PASSWORD for the isolated synthetic instance.');
 
 async function preview(page: Page) {
+  if (test.info().project.name === 'desktop')
+    await page.setViewportSize({ width: 1600, height: 1000 });
   const data = weeklyFixture();
   data.workouts[3] = workoutSchema.parse({
     ...data.workouts[3],
@@ -178,7 +180,7 @@ test('overlay contains keyboard focus, closes one layer at a time, and preserves
   await editor
     .getByLabel('Workout description')
     .fill('An unsaved draft must survive a viewport change.');
-  await page.setViewportSize({ width: info.project.name === 'mobile' ? 1440 : 390, height: 844 });
+  await page.setViewportSize({ width: info.project.name === 'mobile' ? 1600 : 390, height: 844 });
   await expect(editor.getByLabel('Workout description')).toHaveValue(
     'An unsaved draft must survive a viewport change.',
   );
@@ -274,7 +276,7 @@ test('calendar stays compact on desktop with usable phone cards', async ({ page 
         true,
       );
       await expect(inspector).toHaveCount(1);
-      await expect(trigger).toHaveClass(/selected/);
+      await expect(page.locator('.calendar-session.selected')).toContainText('Threshold intervals');
       await expect(
         inspector.getByRole('button', { name: 'Log workout', exact: true }),
       ).toBeVisible();

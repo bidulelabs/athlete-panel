@@ -167,7 +167,7 @@ describe('plugin-development tooling', () => {
     );
     expect(
       validateComposition(
-        [plugin('activity-records'), manifest],
+        [plugin('activity-records', { version: '2.1.0' }), manifest],
         ['activity-records', manifest.id],
       ).map((value) => value.id),
     ).toEqual(['activity-records', 'ride-report']);

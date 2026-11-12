@@ -74,10 +74,10 @@ for (const theme of ['light', 'dark']) {
     await completion.getByLabel('Perceived effort · RPE 1–10').fill('4');
     await completion.getByRole('button', { name: 'Save completion' }).click();
     await expect(completion).not.toBeVisible();
-    await expect(inspector.locator('.completion-state')).toContainText('completed');
+    await expect(inspector.getByText('Completed', { exact: true })).toBeVisible();
     await page.reload();
     await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
-    await expect(inspector.locator('.completion-state')).toContainText('completed');
+    await expect(inspector.getByText('Completed', { exact: true })).toBeVisible();
     await expect(inspector.getByText('42m', { exact: true })).toBeVisible();
     await expect(inspector.getByText('7.5 km', { exact: true })).toBeVisible();
     await expect(inspector.getByText('4 / 10', { exact: true })).toBeVisible();

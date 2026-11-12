@@ -197,14 +197,12 @@ test('one annual proposal stays pending until owner acknowledgement and applies 
       .getByRole('button', { name: 'Review', exact: true })
       .click();
     const dialog = page.getByRole('dialog'),
-      apply = dialog.getByRole('button', { name: 'Apply reviewed changes', exact: true });
+      apply = dialog.getByRole('button', { name: /^Apply all \d+ changes?$/, exact: true });
     await expect(apply).toBeDisabled();
-    await expect(dialog.locator('.proposal-apply-scope')).toBeVisible();
-    await expect(dialog.locator('.proposal-apply-scope')).toContainText(
-      'Apply saves all 1500 changes together',
-    );
+    await expect(apply).toHaveText('Apply all 1500 changes');
+    await expect(dialog.locator('.proposal-apply-scope')).toHaveCount(0);
     await expect(
-      dialog.getByText('I have reviewed these changes and want to apply them.'),
+      dialog.getByText('I have reviewed all 1500 changes and want to apply them.'),
     ).toBeVisible();
     const reviewMs = performance.now() - reviewStarted;
     await expect(dialog.getByRole('region', { name: 'Proposal overview' })).toContainText(
@@ -233,6 +231,53 @@ test('one annual proposal stays pending until owner acknowledgement and applies 
         true,
       );
     }
+    await dialog.getByRole('button', { name: 'Find changes' }).click();
+    await dialog.getByRole('combobox', { name: 'Item type', exact: true }).selectOption('workout');
+    await expect(dialog.locator('.proposal-filter-result')).toContainText('Showing 1500 of 1500');
+    await expect(dialog.locator('.proposal-diff')).toHaveCount(0);
+    await expect(dialog.locator('.proposal-month[open]')).toHaveCount(0);
+    await expect(month.locator('.proposal-deletions')).toContainText('deletion');
+    await month.locator(':scope > summary').click();
+    await expect(month.locator('.proposal-week > details[open]')).toHaveCount(0);
+    await month.locator('.proposal-week > details > summary').first().click();
+    await expect(month.locator('.proposal-diff').first()).toBeVisible();
+    await dialog.getByRole('combobox', { name: 'Action', exact: true }).selectOption('update');
+    await expect(dialog.locator('.proposal-filter-result')).toContainText('Showing 500 of 1500');
+    await expect(dialog.locator('.proposal-diff')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Clear filters' }).click();
+    await dialog.getByLabel('Search changes').fill('s');
+    await expect(dialog.locator('.proposal-filter-result')).toContainText('Showing 1500 of 1500');
+    await expect(dialog.locator('.proposal-diff')).toHaveCount(0);
+    for (const width of info.project.name === 'desktop' ? [1440] : [390, 320]) {
+      await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 });
+      for (const theme of ['light', 'dark']) {
+        await page.evaluate((value) => {
+          document.documentElement.dataset.theme = value;
+          document.documentElement.classList.toggle('dark', value === 'dark');
+        }, theme);
+        await dialog.locator('.proposal-filter-result').scrollIntoViewIfNeeded();
+        await expect(apply).toBeInViewport();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        );
+        await page.screenshot({
+          path: `.runtime/browser/annual-broad-filter-${info.project.name}-${width}-${theme}.png`,
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
+    }
+    await dialog.getByLabel('Search changes').fill('Synthetic new 1');
+    await expect(dialog.locator('.proposal-diff')).toHaveCount(111);
+    await expect(dialog.locator('.proposal-month:not([open])')).toHaveCount(0);
+    await expect(dialog.locator('.proposal-week > details:not([open])')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Clear filters' }).click();
+    await expect(dialog.locator('.proposal-week')).toHaveCount(0);
+    await dialog.getByLabel('Search changes').fill('Synthetic new 1');
+    await expect(dialog.locator('.proposal-diff')).toHaveCount(111);
+    await expect(dialog.locator('.proposal-apply-scope')).toContainText(
+      'Apply includes all 1500 changes',
+    );
     await dialog.getByRole('checkbox').check();
     const applyStarted = performance.now();
     await apply.click();

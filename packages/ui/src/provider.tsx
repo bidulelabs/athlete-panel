@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { TooltipProvider } from './components/tooltip';
 import {
   AlertDialog,
@@ -13,6 +21,16 @@ import {
 
 type Confirm = (message: string, action?: string) => Promise<boolean>;
 const ConfirmContext = createContext<Confirm | null>(null);
+const ConfirmationLayerContext = createContext<{
+  isPending: () => boolean;
+  cancel: () => void;
+} | null>(null);
+
+export function useConfirmationLayer() {
+  const layer = useContext(ConfirmationLayerContext);
+  if (!layer) throw new Error('Confirmation requires UiProvider.');
+  return layer;
+}
 export function useConfirm(): Confirm {
   const confirm = useContext(ConfirmContext);
   if (!confirm) throw new Error('Confirmation requires UiProvider.');
@@ -21,6 +39,7 @@ export function useConfirm(): Confirm {
 export function UiProvider({ children }: { children: ReactNode }) {
   const [prompt, setPrompt] = useState<{ message: string; action: string } | null>(null);
   const pending = useRef<((value: boolean) => void) | null>(null);
+  const isPending = useCallback(() => pending.current !== null, []);
   const trigger = useRef<HTMLElement | null>(null);
   const confirm = useCallback<Confirm>((message, action = 'Confirm') => {
     pending.current?.(false);
@@ -30,15 +49,21 @@ export function UiProvider({ children }: { children: ReactNode }) {
       pending.current = resolve;
     });
   }, []);
-  const settle = (value: boolean) => {
+  const settle = useCallback((value: boolean) => {
     pending.current?.(value);
     pending.current = null;
     setPrompt(null);
-  };
+  }, []);
+  const confirmationLayer = useMemo(
+    () => ({ isPending, cancel: () => settle(false) }),
+    [isPending, settle],
+  );
   return (
     <TooltipProvider delayDuration={300}>
       <ConfirmContext.Provider value={confirm}>
-        {children}
+        <ConfirmationLayerContext.Provider value={confirmationLayer}>
+          {children}
+        </ConfirmationLayerContext.Provider>
         <AlertDialog
           open={prompt !== null}
           onOpenChange={(open) => {

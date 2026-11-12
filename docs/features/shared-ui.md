@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-Give the private application consistent, accessible controls while retaining its compact training notebook identity. This covers login, navigation, onboarding, all bundled plugin pages and editors, and the cycling/sleep extension. Orange accents, graphite/light themes, native date entry, compact desktop calendar and phone session lists remain.
+Give the private application consistent, accessible controls while retaining its compact training notebook identity. This covers login, navigation, onboarding, all bundled plugin pages and editors, and explicitly enabled personal extensions. Orange accents, graphite/light themes, native date entry, compact desktop calendar and phone session lists remain.
 
 Backend APIs, training rules, stored preferences, public training DTOs and database migrations are outside this change.
 
@@ -17,13 +17,21 @@ Controls retain labels, validation, native form submission and pending/error sta
 
 The 2026-10-29 training-plan refinement adds a plan-dialog → workout-Sheet → editor stack. The compatibility Modal handles Escape for the focused dialog and prevents the document-level listener from closing a parent during a layer transition. If focus falls to the document body after a backdrop click, Radix still dismisses the top layer with Escape, including dialogs that disable backdrop dismissal. Owner confirmations retain their own Escape handling. Focus containment, outside dismissal and focus restoration remain in the shared Radix components. [Plan browser tests](../../tests/e2e/plans.spec.ts) exercise this stack and failed drafts; [onboarding browser tests](../../tests/e2e/onboarding.spec.ts) cover the backdrop/focus fallback in both themes.
 
-The workout inspector stays alongside the calendar above 1050px and becomes a Sheet at or below that width. Editor components live above the responsive panel mounting boundary. Mode changes wait while an editor is open, preserving draft, stale-save recovery and pending saves. Phone navigation uses a Sheet with a visible close action and returns focus to its opener.
+The workout inspector stays alongside the calendar at 1536px and above and becomes a Sheet below that width. Editor components live above the responsive panel mounting boundary. Mode changes wait while an editor is open, preserving draft, stale-save recovery and pending saves. Phone navigation uses a Sheet with a visible close action and returns focus to its opener.
 
 The workspace shell opens directly into each page's content, without a repeated "Private training workspace" label, its divider or an always-visible Refresh button. Desktop navigation and the phone's brand, navigation and theme bar remain available. Saved data still reloads after successful mutations and through existing page polling/date navigation. Workspace load failures retain **Try again**, the last loaded data when available, and any unsaved drafts; retrying reloads stored workspace data without starting a Garmin import. Provider imports are explicit Garmin-page actions.
 
 Stale-save responses and uncertain saves (network failure or an unreadable response) offer **Reload saved data** inside the owning form's error message, including modal editors. The action only reads the workspace, preserves the open draft and its original revision, and never repeats the mutation. It is disabled while loading and reports success or a retryable read failure in the same form. Reloading does not dismiss the original save error or imply that an uncertain save succeeded; the owner reviews the stored result before saving again.
 
 The weekly summary's two independent disclosures and factual metrics are specified in [training workspace](training-workspace.md#richer-weekly-summaries).
+
+### Shared history panel
+
+The owner requested shared history extraction into PR #107 on 2026-11-11. `HistorySheet` owns the common panel used by Agent Bridge's Change history and Training's Recent changes: trigger/open state, fixed title and close button, the caller-supplied description, an optional fixed notice, the scrolling body, responsive layout and dismissal/focus behavior. Callers supply their title, final description, trigger, open callback and record content. The panel renders that description unchanged and knows neither the history query limit nor whether older records exist. Both consumers describe recent changes without inferring truncation from the returned count. Undo failures use the fixed notice area below the header, remaining visible while late entries are reviewed. An optional class scopes plugin width and typography.
+
+The confirmation provider exposes its pending state internally to the panel, so Escape and outside interactions cannot close the underlying Sheet during an owner confirmation. The panel does not inspect the document for alert dialogs. If a confirmation backdrop click leaves focus on the body, the Sheet delegates Escape cancellation to the confirmation provider and stays open. Cancel/Escape restores focus within the still-open history; normal dismissal returns focus to its trigger. Opening invokes the plugin callback to clear prior errors without resetting a pending operation.
+
+Training retains on-demand exact-record loading, local timestamps and its undo operation. Agent Bridge retains summary rows and its own undo operation. The shared panel performs no requests, interprets no training records, and changes no persisted or runtime contract. [Shared history browser tests](../../tests/e2e/history-sheet.spec.ts) cover both consumers, caller descriptions at different list sizes, undo failures while scrolled to a late entry, nested outside/Escape behavior, focus and desktop/phone layouts in both themes; existing plugin suites cover details, errors and undo.
 
 ### Shared Markdown rendering
 

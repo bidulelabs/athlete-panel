@@ -10,6 +10,7 @@ export function auditTitle(summary: string, subject?: string) {
     complete: 'Logged',
     clearCompletion: 'Cleared completion for',
     link: 'Linked an activity to',
+    autoLink: 'Automatically linked Garmin activity to',
     unlink: 'Unlinked an activity from',
   };
   const verb = verbs[summary.split('.')[1] ?? ''];

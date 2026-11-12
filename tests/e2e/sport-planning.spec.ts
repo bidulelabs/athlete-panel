@@ -103,7 +103,7 @@ for (const theme of ['dark', 'light'] as const) {
       document.documentElement.dataset.theme = value;
     }, theme);
     await page.getByLabel('Go to date').fill('2030-01-07');
-    await page.getByRole('button', { name: 'Open Alpine ascent', exact: true }).click();
+    await page.getByRole('button', { name: 'Alpine ascent' }).click();
     const inspector = page.getByRole('complementary', { name: 'Workout details' });
     await expect(inspector).toContainText('Other · Mountaineering');
     await expect(inspector.getByRole('region', { name: 'Strength prescription' })).toContainText(
@@ -152,7 +152,7 @@ for (const theme of ['dark', 'light'] as const) {
       5,
     );
     await inspector.getByRole('button', { name: 'Close workout details' }).click();
-    await page.getByRole('button', { name: 'Open Recovery day', exact: true }).click();
+    await page.getByRole('button', { name: 'Recovery day' }).click();
     await expect(inspector).toContainText('Rest day');
     await expect(inspector.getByRole('button', { name: 'Log workout', exact: true })).toHaveCount(
       0,

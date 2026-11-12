@@ -61,7 +61,7 @@ test('read-only prescription retains repeat structure, all targets, notes and di
   page,
 }, info) => {
   const { data, writes } = await preview(page);
-  const trigger = page.getByRole('button', { name: 'Open Threshold intervals', exact: true });
+  const trigger = page.getByRole('button', { name: 'Threshold intervals' });
   await trigger.click();
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   const prescription = inspector.getByRole('region', { name: 'Workout prescription' });
@@ -115,7 +115,7 @@ test('overlay contains keyboard focus, closes one layer at a time, and preserves
   page,
 }, info) => {
   const { writes } = await preview(page);
-  const trigger = page.getByRole('button', { name: 'Open Threshold intervals', exact: true });
+  const trigger = page.getByRole('button', { name: 'Threshold intervals' });
   await trigger.click();
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   const close = inspector.getByRole('button', { name: 'Close workout details' });
@@ -231,7 +231,7 @@ test('long details reflow at narrow and landscape widths while close and logging
       { message: 'The day-add button must have a visible 44px touch target in both dimensions.' },
     )
     .toBeGreaterThanOrEqual(44);
-  await page.getByRole('button', { name: `Open ${data.workouts[3]!.title}`, exact: true }).tap();
+  await page.getByRole('button', { name: data.workouts[3]!.title }).tap();
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   for (const width of [320, 768, 1024]) {
     await page.setViewportSize({ width, height: width === 768 ? 390 : 640 });
@@ -261,7 +261,7 @@ test('calendar stays compact on desktop with usable phone cards', async ({ page 
   const { writes } = await preview(page);
   await expect(page.getByRole('group', { name: 'Calendar layout' })).toHaveCount(0);
   await expect(page.locator('.calendar-day')).toHaveCount(21);
-  const trigger = page.getByRole('button', { name: 'Open Threshold intervals', exact: true });
+  const trigger = page.getByRole('button', { name: 'Threshold intervals' });
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   if (info.project.name === 'desktop') {
     await trigger.click();
@@ -317,7 +317,7 @@ test('calendar stays compact on desktop with usable phone cards', async ({ page 
 
 test('logging a future workout starts on today and cannot pick a later date', async ({ page }) => {
   await preview(page);
-  await page.getByRole('button', { name: 'Open Threshold intervals', exact: true }).click();
+  await page.getByRole('button', { name: 'Threshold intervals' }).click();
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   await inspector.getByRole('button', { name: 'Log workout', exact: true }).click();
   const completion = page.getByRole('dialog', { name: 'Log completion', exact: true });
@@ -339,7 +339,7 @@ test('a save finishing after a week change reloads the new week', async ({ page 
     await heldSave;
     await route.fulfill({ json: { id: crypto.randomUUID(), changes: [] } });
   });
-  await page.getByRole('button', { name: 'Open Short easy run', exact: true }).click();
+  await page.getByRole('button', { name: 'Short easy run' }).click();
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   await inspector.getByRole('button', { name: 'Duplicate', exact: true }).click();
   await page
@@ -370,7 +370,7 @@ test('imperial edits keep stored distances the owner did not change', async ({ p
     sent.push(...route.request().postDataJSON().commands);
     await route.fulfill({ json: { id: crypto.randomUUID(), changes: [] } });
   });
-  await page.getByRole('button', { name: 'Open Short easy run', exact: true }).click();
+  await page.getByRole('button', { name: 'Short easy run' }).click();
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   await inspector.getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Workout title').fill('Short easy run, renamed');
@@ -402,7 +402,7 @@ test('edits keep stored durations the owner did not change', async ({ page }) =>
     sent.push(...route.request().postDataJSON().commands);
     await route.fulfill({ json: { id: crypto.randomUUID(), changes: [] } });
   });
-  await page.getByRole('button', { name: 'Open Short easy run', exact: true }).click();
+  await page.getByRole('button', { name: 'Short easy run' }).click();
   const inspector = page.getByRole('complementary', { name: 'Workout details' });
   await inspector.getByRole('button', { name: 'Edit', exact: true }).click();
   await page.getByLabel('Workout title').fill('Short easy run, renamed');
@@ -456,7 +456,7 @@ test('a warm-up ends on the lap button in the editor and the details', async ({ 
   ]);
   data.workouts[3]!.steps[0] = sent[0]!.values.steps[0] as (typeof data.workouts)[3]['steps'][0];
   await page.reload();
-  await page.getByRole('button', { name: 'Open Threshold intervals', exact: true }).click();
+  await page.getByRole('button', { name: 'Threshold intervals' }).click();
   await expect(
     page
       .getByRole('complementary', { name: 'Workout details' })

@@ -90,6 +90,9 @@ class HostedSafety(unittest.TestCase):
             (Path(root)/'Caddyfile').write_text('synthetic ingress')
             template={'services':{name:{'environment':{},'image':'fixture'} for name in ['web','worker','admin','backup','recovery','db','caddy']}}
             template['services']['db']['image']='postgres:17-bookworm';template['services']['db']['healthcheck']={}
+            template['services']['worker'].update(init=True, pids_limit=12334, healthcheck={
+                'test': ['CMD', 'pnpm', 'exec', 'tsx', 'scripts/operations.ts', 'worker-health'],
+                'interval': '30s', 'timeout': '10s', 'retries': 3, 'start_period': '45s'})
             release={'database':'athlete_panel_test','controls':root,'image':'sha256:'+'a'*64,'metadata':{'application':'athlete-panel','sourceDigest':'b'*64,'version':'0.1.0'}}
             with patch.object(instance,'run',return_value=hosted.subprocess.CompletedProcess([],0,json.dumps(template),'')):
                 instance.deployment(release)
@@ -100,6 +103,8 @@ class HostedSafety(unittest.TestCase):
             self.assertEqual(deployment['services']['db']['environment']['POSTGRES_USER'],'athlete_panel')
             self.assertIn('$$POSTGRES_USER',deployment['services']['db']['healthcheck']['test'][1])
             self.assertIn('ATHLETE_PANEL_RELEASE_IDENTITY',deployment['services']['backup']['environment'])
+            for setting in ['init', 'pids_limit', 'healthcheck']:
+                self.assertEqual(deployment['services']['worker'][setting], template['services']['worker'][setting])
 
     def test_upgrade_cli_uses_bundle_digest_without_a_source_checkout(self):
         with tempfile.TemporaryDirectory() as root:

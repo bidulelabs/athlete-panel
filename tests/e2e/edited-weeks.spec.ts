@@ -58,11 +58,11 @@ test('lower week 3 of a four-week build, then reset it to calculated', async ({ 
   await addFourWeekBuild(page, plan, name, start);
 
   const phase = plan.getByRole('group', { name: `${name} phase` });
-  await phase.getByText('Weekly targets').click();
-  const week = (number: number) => phase.getByRole('listitem').nth(number - 1);
-  await expect(week(3)).toContainText('10–12 h');
+  const week = (number: number) =>
+    phase.getByRole('region', { name: `Week ${number}`, exact: true });
+  await expect(week(3)).toContainText('Target 10–12 h');
   await week(3)
-    .getByRole('button', { name: new RegExp(`^Edit Week of .* in ${name}$`) })
+    .getByRole('button', { name: /^Edit target for the week of / })
     .click();
   const weekEditor = page.getByRole('dialog', { name: new RegExp(`^Week of .* in ${name}$`) });
   const hours = weekEditor.getByRole('group', { name: 'Weekly hours · h' });
@@ -100,9 +100,8 @@ test('lower week 3 of a four-week build, then reset it to calculated', async ({ 
 
   await page.goto('/plans');
   await page.getByRole('button', { name: `Open ${title}` }).click();
-  await phase.getByText('Weekly targets').click();
   await week(3)
-    .getByRole('button', { name: new RegExp(`^Reset Week of .* in ${name} to calculated$`) })
+    .getByRole('button', { name: /^Reset target for the week of .* to calculated$/ })
     .click();
   await expect(week(3)).toContainText('10–12 h');
   await expect(week(3)).not.toContainText('Edited');
@@ -113,7 +112,7 @@ test('lower week 3 of a four-week build, then reset it to calculated', async ({ 
   await expect(phaseEditor).toBeHidden();
   await expect(week(1)).toContainText('No target');
   await week(1)
-    .getByRole('button', { name: new RegExp(`^Edit Week of .* in ${name}$`) })
+    .getByRole('button', { name: /^Edit target for the week of / })
     .click();
   await hours.getByRole('checkbox', { name: 'Set this week by hand' }).click();
   await hours.getByLabel('At least').fill('4');

@@ -12,6 +12,7 @@ import {
 import { ErrorMessage, Field, Modal, PageHeader, useAction, useWorkspace } from '@athlete-panel/ui';
 
 import { ConnectionAccess } from './connection-access';
+import { planningStyles } from './planning-styles';
 
 export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -58,7 +59,7 @@ export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
           </li>
           <li>
             Ask your agent to read the training-planning skill linked in AGENTS.md and propose your
-            changes.
+            changes. For a season, ask it to “{planningStyles[0]}” or to “{planningStyles[1]}”.
           </li>
         </ol>
         <p className="form-footnote">

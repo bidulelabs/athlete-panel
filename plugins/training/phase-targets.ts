@@ -12,7 +12,7 @@ export type WeekTargets = Record<
   TargetRange | null
 >;
 
-const daysFrom = (from: string, to: string) =>
+export const daysFrom = (from: string, to: string) =>
   Math.round((Date.parse(to) - Date.parse(from)) / 86400000);
 
 export function editedWeeksInside(

@@ -25,6 +25,14 @@ Stale-save responses and uncertain saves (network failure or an unreadable respo
 
 The weekly summary's two independent disclosures and factual metrics are specified in [training workspace](training-workspace.md#richer-weekly-summaries).
 
+### Shared history panel
+
+The owner requested shared history extraction into PR #107 on 2026-11-11. `HistorySheet` owns the common panel used by Agent Bridge's Change history and Training's Recent changes: trigger/open state, fixed title and close button, the caller-supplied description, an optional fixed notice, the scrolling body, responsive layout and dismissal/focus behavior. Callers supply their title, final description, trigger, open callback and record content. The panel renders that description unchanged and knows neither the history query limit nor whether older records exist. Both consumers describe recent changes without inferring truncation from the returned count. Undo failures use the fixed notice area below the header, remaining visible while late entries are reviewed. An optional class scopes plugin width and typography.
+
+The confirmation provider exposes its pending state internally to the panel, so Escape and outside interactions cannot close the underlying Sheet during an owner confirmation. The panel does not inspect the document for alert dialogs. If a confirmation backdrop click leaves focus on the body, the Sheet delegates Escape cancellation to the confirmation provider and stays open. Cancel/Escape restores focus within the still-open history; normal dismissal returns focus to its trigger. Opening invokes the plugin callback to clear prior errors without resetting a pending operation.
+
+Training retains on-demand exact-record loading, local timestamps and its undo operation. Agent Bridge retains summary rows and its own undo operation. The shared panel performs no requests, interprets no training records, and changes no persisted or runtime contract. [Shared history browser tests](../../tests/e2e/history-sheet.spec.ts) cover both consumers, caller descriptions at different list sizes, undo failures while scrolled to a late entry, nested outside/Escape behavior, focus and desktop/phone layouts in both themes; existing plugin suites cover details, errors and undo.
+
 ### Shared Markdown rendering
 
 The owner-approved 2026-10-30 Markdown refinement adds `MarkdownContent({ source, className? })` and `markdownToPlainText(source)` to the public `@athlete-panel/ui` exports. The shared UI package owns the browser-safe renderer, parser-derived excerpts, URL policy and scoped theme typography; Training, Athlete and Calendar own field selection and composition. The component uses pinned `react-markdown`, `remark-gfm` and `remark-breaks` dependencies, with `unified`/`remark-parse` for excerpts. No rich-text editor or preview interaction is introduced. See [field scope and safety behavior](training-workspace.md#markdown-descriptions-and-notes).

@@ -13,18 +13,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
   ErrorMessage,
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-  SheetTrigger,
+  HistorySheet,
   requestId,
   useAction,
   useConfirm,
   useWorkspace,
 } from '@athlete-panel/ui';
-import { ChevronDown, History, RotateCcw, X } from 'lucide-react';
+import { ChevronDown, History, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { historyFields, historyRecords, recordName } from './history-summary';
 import './history.css';
@@ -170,9 +165,6 @@ export function TrainingHistory() {
   const { envelope, request } = useWorkspace();
   const confirm = useConfirm();
   const action = useAction();
-  const [open, setOpen] = useState(false);
-  const confirming = () =>
-    Boolean(document.querySelector('[role="alertdialog"][data-state="open"]'));
   async function undo(entry: AuditSummary) {
     if (
       await confirm(
@@ -185,65 +177,31 @@ export function TrainingHistory() {
       );
   }
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        if (confirming()) return;
-        if (next) action.setError(null);
-        setOpen(next);
-      }}
-    >
-      <SheetTrigger asChild>
+    <HistorySheet
+      title="Recent changes"
+      description="Review recent edits across your training."
+      className="training-history-sheet"
+      onOpen={() => action.setError(null)}
+      notice={action.error && <ErrorMessage error={action.error} />}
+      trigger={
         <Button variant="outline">
-          <History size={16} />
+          <History size={16} aria-hidden="true" />
           Recent changes
         </Button>
-      </SheetTrigger>
-      <SheetContent
-        className="training-history-sheet"
-        showCloseButton={false}
-        onEscapeKeyDown={(event) => {
-          if (confirming()) event.preventDefault();
-        }}
-        onInteractOutside={(event) => {
-          if (confirming()) event.preventDefault();
-        }}
-      >
-        <header className="training-history-header">
-          <div>
-            <SheetTitle>Recent changes</SheetTitle>
-            <SheetDescription>
-              {envelope.changes.length === 50
-                ? 'Latest 50 changes across your training.'
-                : 'Review edits across your training.'}
-            </SheetDescription>
-          </div>
-          <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close recent changes">
-              <X size={20} />
-            </Button>
-          </SheetClose>
-        </header>
-        {action.error && (
-          <div className="training-history-error">
-            <ErrorMessage error={action.error} />
-          </div>
-        )}
-        <div className="training-history-scroll">
-          {envelope.changes.length ? (
-            <ol className="training-history-list" aria-label="Training change history">
-              {envelope.changes.map((entry) => (
-                <HistoryEntry key={entry.id} entry={entry} busy={action.busy} onUndo={undo} />
-              ))}
-            </ol>
-          ) : (
-            <div className="training-history-empty">
-              <h3>No changes yet</h3>
-              <p>Your training edits will appear here.</p>
-            </div>
-          )}
+      }
+    >
+      {envelope.changes.length ? (
+        <ol className="training-history-list" aria-label="Training change history">
+          {envelope.changes.map((entry) => (
+            <HistoryEntry key={entry.id} entry={entry} busy={action.busy} onUndo={undo} />
+          ))}
+        </ol>
+      ) : (
+        <div className="training-history-empty">
+          <h3>No changes yet</h3>
+          <p>Your training edits will appear here.</p>
         </div>
-      </SheetContent>
-    </Sheet>
+      )}
+    </HistorySheet>
   );
 }

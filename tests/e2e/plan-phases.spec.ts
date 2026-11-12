@@ -111,7 +111,9 @@ test('add, edit and delete phases that contain their weeks inside a scheduled pl
   await workoutEditor.getByLabel('Workout title').fill(`${title} session`);
   await workoutEditor.getByRole('button', { name: 'Add workout', exact: true }).click();
   await expect(workoutEditor).toBeHidden();
-  await expect(header.getByRole('region', { name: 'Week 1' })).toContainText(`${title} session`);
+  await expect(header.getByRole('region', { name: 'Week 1', exact: true })).toContainText(
+    `${title} session`,
+  );
 
   await header.getByRole('button', { name: `Edit ${name}` }).click();
   const edit = page.getByRole('dialog', { name: 'Edit phase' });

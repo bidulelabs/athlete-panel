@@ -108,7 +108,9 @@ test('review, apply and undo a plan with a phase and its first workout in one pr
     const phase = plan.getByRole('group', { name: `${name} phase` });
     await expect(phase).toContainText('Aerobic volume');
     await expect(phase).toContainText('Target 8–9 → 10–11 h a week');
-    await expect(plan.getByRole('region', { name: 'Week 1' })).toContainText(`Easy run ${name}`);
+    await expect(plan.getByRole('region', { name: 'Week 1', exact: true })).toContainText(
+      `Easy run ${name}`,
+    );
     await page.goto('/agent');
     await page.getByRole('button', { name: 'Change history', exact: true }).click();
     const row = page

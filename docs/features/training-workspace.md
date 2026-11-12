@@ -30,13 +30,25 @@ The responsive calendar uses a bounded multiweek desktop grid, mobile day cards,
 
 Requirement source: the owner requested the Impeccable workflow on 2026-10-25 and selected desktop week planning with phone review/logging, retaining the compact orange-accented training notebook. [Product context](../../PRODUCT.md) and [design system](../../DESIGN.md) record the direction.
 
-The calendar always uses the compact seven-column desktop planner, as requested by the owner on 2026-10-26. There is no layout selector or session-row desktop alternative. The unified toolbar keeps the title, add action and date navigation together; the date range appears once. Phones use a day list with 44px add controls in the date rail and full remaining width for cards. Weekly context, missing-data explanations and existing editing/logging behavior remain available.
+The calendar always uses the compact seven-column desktop planner, as requested by the owner on 2026-10-26. There is no layout selector or session-row desktop alternative. The title and primary add action precede compact date navigation; the date range appears once. The persistent-navigation refinement below keeps date controls and desktop weekday labels visible while scrolling. Phones use a day list with 44px add controls in the date rail and full remaining width for cards. Weekly context, missing-data explanations and existing editing/logging behavior remain available.
 
 Workout details show the complete prescription without entering Edit: ordered phases, repeat counts, time or distance lengths or “Until lap button”, HR/power/pace/RPE targets and step notes. Distance and pace follow profile units; repeated intervals stay grouped and unknown workout totals are not inferred. Log workout/Edit completion appears near the title.
 
 Wide-screen details remain a complementary panel beside the calendar. At 1535px and below, details become a shared Radix modal Sheet with focus entry, containment, Escape/backdrop dismissal, background scroll lock and focus return. Closing a nested editor leaves the inspector open. Resizing preserves an unsaved editor; the inspector changes presentation after that editor closes. Phone calendar navigation, day creation and inspector controls have at least 44px hit areas. Both themes retain legible semantic colors, explicit button states and visible focus.
 
 Weekly values retain Recorded / planned ordering; the legend is visible in the expanded metric band. Metric tooltips explain the same order while collapsed. Missing-data indicators and coverage details remain distinct from Partial completion status. The shorter two-level summary below supersedes the previous header labels and Week in review heading. These refinements change presentation and navigation only; contracts, persistence, training rules and permissions remain unchanged.
+
+### Persistent calendar navigation and day creation
+
+Specification status: approved. The owner requested implementation of [issue 125](https://github.com/bidulelabs/athlete-panel/issues/125) on 2026-11-12, including sticky weekday labels and deferring the other suggested ideas.
+
+Previous week, Today, Next week and the existing range/date picker stay visible in a compact sticky band while the title scrolls away. On phones the band sits below the app navigation. Desktop weekday labels remain directly beneath it and align with the seven day columns when the inspector opens or the viewport changes. Weekly summaries scroll with their own weeks. Overlays remain above these sticky elements; focus and date navigation account for the full persistent height, including wrapped phone controls.
+
+Desktop days offer a full-width **+ Add** control immediately after their final card of any type. It is visible on empty days and revealed on hover or keyboard focus for populated days without shifting cards or changing week height. Touch devices never require hover; phones retain their always-visible date-rail control. The existing chooser opens Workout, Note, Event or Injury constraint with that day prefilled. Cancelling the chooser or an editor returns focus to the originating add control without moving the calendar. Closing existing detail dialogs and inspectors also retains calendar position and focus.
+
+Previous/next shifts the range by one week and reveals its first day. Today reveals the athlete-local current day, even when its week is already loaded; choosing a date reveals that day. Reposition only when the matching range has successfully loaded, preserving the existing last-loaded data and visible retry message on failure. Week boundaries follow the saved preference. Positioning is immediate and does not require animation. Cross-page scroll restoration, keyboard shortcuts and card visibility filters are deferred.
+
+Implementation belongs to the [calendar client](../../plugins/calendar/client.tsx), [navigation hook](../../plugins/calendar/navigation.ts) and [layout styles](../../plugins/calendar/layout.css), using the shared date controls. This introduces no persisted fields, permissions, manifest changes, migrations or provider requests. Activate with the normal build/restart and browser reload; the prior code supports the same database. [Browser scenarios](../../tests/e2e/calendar-navigation.spec.ts) cover both themes and form factors; actual verification belongs in the [task record](../plans/calendar-navigation.md).
 
 ### Calendar state clarity and automatic Garmin linking
 
@@ -156,6 +168,7 @@ The expanded summary stays inside the calendar and supports native keyboard acti
 | Redesigned header, status and previews | Compact responsive metrics; scheduled-status counts separate from actual chronology; bounded, deduplicated previews open existing details without writes; independent HRV coverage; reduced motion and collapsed focus exclusion | Weekly calculation/browser scenarios |
 | Keyboard/mobile/light/dark use | Core editing does not depend on drag | Browser suite and visual inspection record |
 | Compact desktop and narrow phone cards | Seven desktop columns across 21 dates, one inspector and no layout switch; phone cards and 44px controls remain usable | [Calendar layout scenario](../../tests/e2e/workout-inspector.spec.ts) |
+| Persistent calendar navigation and day creation | Sticky controls/weekday alignment, date reveal after successful loads, accessible add controls and focus/position return in both themes and form factors | [Navigation scenarios](../../tests/e2e/calendar-navigation.spec.ts) |
 
 ## Observed implementation
 

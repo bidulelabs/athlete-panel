@@ -64,7 +64,7 @@ export function ProposalLoader({
         <ProposalDialog proposal={details} onClose={onClose} onApplied={onApplied} />
       ) : (
         <div className="dialog-body">
-          <p role="status">Loading proposed edits…</p>
+          {!error && <p role="status">Loading proposed edits…</p>}
           <ErrorMessage error={error} />
           {error && <Button onClick={() => setRetry((v) => v + 1)}>Retry details</Button>}
         </div>
@@ -91,6 +91,7 @@ function ProposalDialog({
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewVersion, setReviewVersion] = useState(0);
   const [rejecting, setRejecting] = useState(false);
+  const [filtered, setFiltered] = useState(false);
   const pending = proposal.status === 'pending';
   const overview = summarizeProposal(proposal.changes);
   const canApply =
@@ -183,7 +184,7 @@ function ProposalDialog({
               The agent hadn’t seen these changes. They are already saved, separate from the
               proposed edits below.
             </p>
-            <details open={review.contextChanges.length <= 5}>
+            <details>
               <summary>
                 {review.contextChanges.length} change{review.contextChanges.length === 1 ? '' : 's'}{' '}
                 since the agent read your data
@@ -201,11 +202,15 @@ function ProposalDialog({
           </section>
         )}
         <section aria-label="Proposed edits">
-          <ProposalBrowser changes={proposal.changes} planTitles={planTitles} />
+          <ProposalBrowser
+            changes={proposal.changes}
+            planTitles={planTitles}
+            onFilterChange={setFiltered}
+          />
         </section>
       </div>
       <div className="proposal-review-footer">
-        {pending && (
+        {pending && (reviewError || !review || review.applicability !== 'ready') && (
           <div className="proposal-review-state" role="status">
             <strong>
               {reviewError
@@ -214,9 +219,7 @@ function ProposalDialog({
                   ? 'Checking proposal and current context…'
                   : !canApply
                     ? 'Blocked'
-                    : review.applicability === 'review-required'
-                      ? 'Needs review · calendar context changed'
-                      : 'Ready for your review'}
+                    : 'Needs review · calendar context changed'}
             </strong>
             {review?.conflicts.map((conflict, index) => (
               <p key={`${conflict.code}:${index}`}>{conflict.message}</p>
@@ -239,14 +242,13 @@ function ProposalDialog({
             />
             {review?.applicability === 'review-required'
               ? 'I have reviewed the changed context and still want to apply these exact edits.'
-              : 'I have reviewed these changes and want to apply them.'}
+              : `I have reviewed all ${proposal.changes.length} change${proposal.changes.length === 1 ? '' : 's'} and want to apply ${proposal.changes.length === 1 ? 'it' : 'them'}.`}
           </label>
         )}
         <ErrorMessage error={action.error} />
-        {pending && (
+        {pending && filtered && (
           <p className="proposal-apply-scope">
-            Apply saves all {proposal.changes.length} changes together, including any hidden by
-            filters.
+            Apply includes all {proposal.changes.length} changes, including those hidden by filters.
           </p>
         )}
         <div className="dialog-actions">
@@ -300,7 +302,9 @@ function ProposalDialog({
                 }
               >
                 <CheckCircle2 size={16} />
-                {action.busy && !rejecting ? 'Applying…' : 'Apply reviewed changes'}
+                {action.busy && !rejecting
+                  ? 'Applying…'
+                  : `Apply all ${proposal.changes.length} change${proposal.changes.length === 1 ? '' : 's'}`}
               </Button>
             </>
           ) : (

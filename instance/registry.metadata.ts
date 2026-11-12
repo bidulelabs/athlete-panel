@@ -134,16 +134,16 @@ export const registry = [
   {
     "path": "plugins/calendar",
     "enabled": true,
-    "version": "2.0.0",
+    "version": "2.1.0",
     "manifest": {
       "id": "calendar",
       "name": "Training calendar",
       "description": "Plan and review your week",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "hostApi": "^1.1.0",
       "dependencies": {
         "athlete": "^1.2.0",
-        "training": "^2.0.0",
+        "training": "^2.3.0",
         "activity-records": "^2.0.0"
       },
       "optionalDependencies": {},
@@ -168,15 +168,16 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "2.2.0",
+    "version": "2.3.0",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "2.2.0",
+      "version": "2.3.0",
       "hostApi": "^1.2.0",
       "dependencies": {
-        "activity-records": "^2.0.0"
+        "activity-records": "^2.0.0",
+        "training": "^2.3.0"
       },
       "optionalDependencies": {},
       "required": false,
@@ -205,14 +206,16 @@ export const registry = [
         "migrations/002-coverage-quality.sql",
         "migrations/003-scan-diagnostics.sql",
         "migrations/004-recovery-scheduling.sql",
-        "migrations/005-history-reads.sql"
+        "migrations/005-history-reads.sql",
+        "migrations/006-automatic-linking.sql"
       ],
       "services": [],
       "jobs": [
         "garmin-history",
         "garmin-recent",
         "garmin-catchup",
-        "garmin-reconcile"
+        "garmin-reconcile",
+        "garmin-match-activities"
       ],
       "capabilities": [
         "network:personal.connectapi.garmin.com",
@@ -326,17 +329,17 @@ export const registry = [
     }
   },
   {
-    "path": "personal-plugins/cycling-sleep",
-    "enabled": true,
-    "version": "1.1.0",
+    "path": "personal-plugins/printable-training-week",
+    "enabled": false,
+    "version": "1.0.0",
     "manifest": {
-      "id": "cycling-sleep",
-      "name": "Cycling & sleep",
-      "description": "Compare cycling volume with recorded nightly sleep",
-      "version": "1.1.0",
-      "hostApi": "^1.0.0",
+      "id": "printable-training-week",
+      "name": "Printable training week",
+      "description": "Print a week of planned sessions, intervals and strength exercises",
+      "version": "1.0.0",
+      "hostApi": "^1.1.0",
       "dependencies": {
-        "activity-records": "^2.0.0"
+        "training": "^2.2.0"
       },
       "optionalDependencies": {},
       "required": false,
@@ -344,9 +347,9 @@ export const registry = [
       "public": {},
       "routes": [
         {
-          "path": "/cycling-sleep",
-          "title": "Cycling & sleep",
-          "icon": "ChartNoAxesCombined"
+          "path": "/printable-training-week",
+          "title": "Printable week",
+          "icon": "CalendarDays"
         }
       ],
       "slots": [],
@@ -358,4 +361,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="561a156e9c683dda818c7d6befeea466eb9978cb7aafeca799bff91e32f25481";
+export const schemaSignature="f9b2fbb6f2f83944522a068a6acf6163b20ec5c14ecfa4ed7c3275da4aeecb62";

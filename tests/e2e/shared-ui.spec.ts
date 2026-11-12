@@ -35,7 +35,6 @@ test('shared controls and all app pages retain usable themes, navigation and key
       '/garmin',
       '/agent',
       '/plugins',
-      '/cycling-sleep',
     ]) {
       await page.goto(path);
       await expect(page.locator('.page-content')).toBeVisible();
@@ -62,7 +61,7 @@ test('shared controls and all app pages retain usable themes, navigation and key
   await page.keyboard.press('ArrowRight');
   await expect(tabs.getByRole('tab', { name: 'Notes' })).toHaveAttribute('aria-selected', 'true');
   await page.goto('/calendar');
-  const trigger = page.locator('.calendar-workout').first();
+  const trigger = page.locator('.calendar-session').first();
   await trigger.click();
   await page.getByRole('button', { name: 'Delete workout', exact: true }).click();
   const confirm = page.getByRole('alertdialog', { name: 'Confirm change' });

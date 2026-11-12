@@ -3,7 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { fail } from './errors';
 import { allEntities } from './state';
 import { createWorkoutOrdering } from './ordering';
-export type EngineOptions = { actor: 'owner' | 'agent'; idFactory?: () => string };
+export type EngineOptions = {
+  actor: 'owner' | 'agent';
+  idFactory?: () => string;
+  /** Trusted server context, not part of a command payload. */
+  linkMethod?: 'automatic';
+};
 export function createCommandContext(
   initial: WorkspaceState,
   state: WorkspaceState,

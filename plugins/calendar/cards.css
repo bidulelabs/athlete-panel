@@ -1,6 +1,142 @@
 /* Calendar facts use restrained tints; text and icons carry meaning without color. */
+.calendar-session,
 .calendar-fact-card {
-  --fact-color: var(--success);
+  --calendar-completed-fill: light-dark(#eaf6f2, #19312c);
+  --calendar-completed-ink: light-dark(#286c5a, #8bd4bd);
+  --calendar-partial-fill: light-dark(#fbf2e3, #342c20);
+  --calendar-partial-ink: light-dark(#855a22, #e5c18c);
+  --calendar-planned-fill: light-dark(#edf2fa, #222d3b);
+  --calendar-planned-ink: light-dark(#436187, #a7bfe2);
+  --calendar-note-fill: light-dark(#f1eef9, #2b2736);
+  --calendar-note-ink: light-dark(#705a94, #bdaddb);
+  --calendar-injury-fill: light-dark(#f9ecee, #36252c);
+  --calendar-injury-ink: light-dark(#985566, #dfa5b7);
+  --calendar-sleep-fill: light-dark(#edf0fc, #25293b);
+  --calendar-sleep-ink: light-dark(#626d9e, #adb7e4);
+  --calendar-card-muted: light-dark(#59636e, #a0a8b0);
+}
+.calendar-session {
+  --session-status-edge: transparent;
+  --session-status-color: var(--calendar-card-muted);
+  --session-fill: var(--surface);
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 6px;
+  padding: 10px 8px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--session-status-color) 18%, var(--line));
+  border-radius: 5px;
+  background: var(--session-fill);
+  color: var(--text);
+  box-shadow: inset 2px 0 var(--session-status-edge);
+  overflow-wrap: anywhere;
+  transition:
+    background 150ms,
+    border-color 150ms;
+}
+.calendar-session[data-status='completed'] {
+  --session-fill: var(--calendar-completed-fill);
+  --session-status-color: var(--calendar-completed-ink);
+  --session-status-edge: var(--calendar-completed-ink);
+}
+.calendar-session[data-status='partial'] {
+  --session-fill: var(--calendar-partial-fill);
+  --session-status-color: var(--calendar-partial-ink);
+  --session-status-edge: var(--calendar-partial-ink);
+}
+.calendar-session[data-status='planned'] {
+  --session-fill: var(--calendar-planned-fill);
+  --session-status-color: var(--calendar-planned-ink);
+}
+.calendar-session .workout-status {
+  color: var(--session-status-color);
+}
+.calendar-session:hover {
+  border-color: var(--session-status-color);
+}
+.calendar-session.selected {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: 0;
+}
+.calendar-session:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.calendar-session > strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.calendar-session-sport {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--calendar-card-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.calendar-session-sport svg {
+  flex-shrink: 0;
+}
+.calendar-session-details {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.calendar-session-recorded {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.calendar-session-measure-label {
+  display: block;
+  margin-bottom: 1px;
+  color: var(--calendar-card-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.calendar-session .workout-source {
+  align-items: flex-start;
+  margin-top: 3px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--session-status-color) 15%, var(--line));
+  color: var(--calendar-card-muted);
+}
+.calendar-session .workout-source svg {
+  width: 13px;
+  height: 13px;
+  margin-top: 2px;
+}
+.calendar-session-planned,
+.calendar-session-date {
+  color: var(--calendar-card-muted);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 760px) {
+  .calendar-session {
+    padding: 12px;
+    gap: 8px;
+  }
+  .calendar-session-recorded {
+    font-size: 14px;
+  }
+  .calendar-session-measure-label {
+    display: inline;
+    margin-right: 5px;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .calendar-session {
+    transition: none;
+  }
+}
+.calendar-fact-card {
+  --fact-color: var(--calendar-completed-ink);
+  --fact-fill: var(--calendar-completed-fill);
   display: flex;
   align-items: flex-start;
   gap: 7px;
@@ -9,41 +145,39 @@
   margin: 0 0 7px;
   padding: 10px 8px;
   text-align: left;
-  border: 1px solid color-mix(in srgb, var(--fact-color) 25%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--fact-color) 18%, var(--line));
   border-radius: 6px;
-  background: color-mix(in srgb, var(--fact-color) 7%, var(--bg));
+  background: var(--fact-fill);
   transition:
     border-color 0.15s,
     background 0.15s;
 }
 .calendar-fact-card:hover {
   border-color: var(--fact-color);
-  background: color-mix(in srgb, var(--fact-color) 12%, var(--bg));
 }
 .calendar-fact-card:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .calendar-fact-sleep {
-  --fact-color: #b4a0e5;
+  --fact-color: var(--calendar-sleep-ink);
+  --fact-fill: var(--calendar-sleep-fill);
 }
 .calendar-fact-note {
-  --fact-color: var(--fact-note);
+  --fact-color: var(--calendar-note-ink);
+  --fact-fill: var(--calendar-note-fill);
 }
 .calendar-fact-event {
-  --fact-color: var(--fact-race);
+  --fact-color: var(--calendar-partial-ink);
+  --fact-fill: var(--calendar-partial-fill);
 }
 .calendar-fact-goal {
-  --fact-color: var(--fact-goal);
+  --fact-color: var(--calendar-planned-ink);
+  --fact-fill: var(--calendar-planned-fill);
 }
 .calendar-fact-injury {
-  --fact-color: #e09b9b;
-}
-:root[data-theme='light'] .calendar-fact-sleep {
-  --fact-color: #7553ab;
-}
-:root[data-theme='light'] .calendar-fact-injury {
-  --fact-color: #b24e51;
+  --fact-color: var(--calendar-injury-ink);
+  --fact-fill: var(--calendar-injury-fill);
 }
 .calendar-fact-icon {
   color: var(--fact-color);
@@ -68,7 +202,7 @@
 }
 .calendar-fact-copy > span {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--calendar-card-muted);
   line-height: 1.5;
 }
 .calendar-fact-copy .calendar-fact-tag {

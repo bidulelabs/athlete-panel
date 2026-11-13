@@ -4,8 +4,10 @@ Use the documentation link for the version you installed. Each release page incl
 
 ## Unreleased
 
+## v0.5.0 (2026-11-13)
+
 - Training plans groups a plan's weeks into phases (base, build, peak, taper, recovery), each with an optional focus such as "VO2max" and optional weekly hours, distance and climbing targets that move in a straight line from the first week to the last; each week's target sits beside its planned total, can be set by hand and reset to calculated; a plan starting midweek shows calendar weeks apart from its own weeks. Phases stand on calendar dates, so one season can span several plans: moving a plan asks whether its own phases move with it, names any phase shared with another plan, which stays, and duplicating says phases are not copied. Charts draws a phase target as a band behind Training hours, Training by sport and Weekly climbing, with a Plan phases period that reaches future weeks. The Calendar week header names each hours figure (`Target 8–10 h · Planned 9 h · Recorded 7 h`), showing only those that exist, and keeps the target in place of No plan when a week has no workouts. Agents read the phases that touch their planning dates and, when a new connection allows phase changes (checked by default), propose phases within their proposal dates alongside the workouts they frame, for your review. Ask an agent to “Detail the whole plan” or to “Outline the season and detail the next two weeks”; either way you review one proposal. No SQL migration; upgrade web and worker together and reload open browser tabs.
-- The default Docker worker now reaps orphaned child processes, preventing zombie accumulation from exhausting its process limit and breaking health checks. Managed installs receive the setting through the normal coordinated upgrade; adopted installs must first reconcile `init: true` into their saved worker configuration. See [worker process-reaping upgrade steps](development.md#worker-process-reaping). Existing health checks and process limits are preserved; no database migration is required for this fix.
+- The default Docker worker now reaps orphaned child processes, preventing zombie accumulation from exhausting its process limit and breaking health checks. Managed installs receive the setting through the normal coordinated upgrade; adopted installs must first reconcile `init: true` into their saved worker configuration. See [worker process-reaping upgrade steps](https://github.com/bidulelabs/athlete-panel/blob/v0.5.0/docs/development.md#worker-process-reaping). Existing health checks and process limits are preserved; no database migration is required for this fix.
 
 - Calendar accessibility: screen readers announce each day with its full date and the empty-day button with the short date. The first-workout message is a second-level heading under the page title. Shared buttons, toggles, switches, badges and tabs animate only color, border, focus ring and press movement. Rebuild/restart the application and reload browser tabs; no SQL migration or new permissions are required.
 
@@ -13,7 +15,9 @@ Use the documentation link for the version you installed. Each release page incl
 
 ### Upgrade steps
 
-Earlier releases cannot read grants carrying the plan phase permission or phase proposals: rollback after those records exist requires the matching pre-upgrade backup. See [plan phase proposal upgrade guidance](development.md#plan-phase-proposal-upgrade).
+Earlier releases cannot read grants carrying the plan phase permission or phase proposals: rollback after those records exist requires the matching pre-upgrade backup. See [plan phase proposal upgrade guidance](https://github.com/bidulelabs/athlete-panel/blob/v0.5.0/docs/development.md#plan-phase-proposal-upgrade).
+
+[Release and downloads](https://github.com/bidulelabs/athlete-panel/releases/tag/v0.5.0) · [Documentation for v0.5.0](https://github.com/bidulelabs/athlete-panel/tree/v0.5.0/docs)
 
 ## v0.4.0 (2026-11-12)
 

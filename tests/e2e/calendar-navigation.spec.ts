@@ -214,22 +214,44 @@ test('date navigation waits for loaded ranges, retries failures and reveals Toda
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route('**/api/workspace?from=2030-02-11&**', async (route) => {
+  await page.route('**/api/workspace?from=2030-01-14&**', async (route) => {
     await gate;
     await route.fulfill({ status: 503, json: { error: 'Synthetic range outage' } });
   });
-  await page.getByLabel('Go to date').fill('2030-02-14');
-  await expect(page.locator('.calendar-day').first()).toHaveAttribute('data-date', '2030-01-07');
-  release();
+  // This day already exists in the loaded three-week grid. Without the loaded-range
+  // guard, navigation would scroll to that stale element before the request settles.
+  await expect(page.locator('[data-date="2030-01-16"]')).toHaveCount(1);
+  // Focus the native date input before measuring, so its own focus scrolling
+  // is separate from scrolling caused by the date navigation request.
+  await page.getByLabel('Go to date').focus();
+  const scrollBeforeRequest = await page.evaluate(() => scrollY);
+  const requested = page.waitForRequest((request) =>
+    request.url().includes('/api/workspace?from=2030-01-14&'),
+  );
+  await page.getByLabel('Go to date').fill('2030-01-16');
+  try {
+    await requested;
+    // Let effects and browser scrolling run while the response is still held.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    await expect(page.locator('.calendar-day').first()).toHaveAttribute('data-date', '2030-01-07');
+    expect(await page.evaluate(() => scrollY)).toBeCloseTo(scrollBeforeRequest, 0);
+  } finally {
+    release();
+  }
   await expect(page.locator('.page-error').getByRole('alert')).toContainText(
     'Synthetic range outage',
   );
   await expect(page.locator('.page-error')).toContainText('Showing the last loaded dates');
   await expect(page.getByLabel('Go to date')).toHaveValue('2030-01-07');
-  await page.unroute('**/api/workspace?from=2030-02-11&**');
+  await page.unroute('**/api/workspace?from=2030-01-14&**');
   await page.getByRole('button', { name: 'Try again', exact: true }).click();
-  await expect(page.getByLabel('Go to date')).toHaveValue('2030-02-11');
-  await expectUncovered(page, page.locator('[data-date="2030-02-14"]'));
+  await expect(page.getByLabel('Go to date')).toHaveValue('2030-01-14');
+  await expectUncovered(page, page.locator('[data-date="2030-01-16"]'));
   await page.getByRole('button', { name: 'Today', exact: true }).click();
   await expectUncovered(page, page.locator('[data-date="2030-01-09"]'));
   data.profile!.weekStartsOnPreference = 'sunday';

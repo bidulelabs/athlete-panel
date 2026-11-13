@@ -120,7 +120,7 @@ interface WorkspaceContextValue extends PluginPageProps {
   to: string;
   path: string;
   weekStartsOn: WeekStartsOn;
-  setFrom: (from: string) => void;
+  setFrom: (from: string) => boolean;
   navigate: (path: string) => void;
 }
 const earliestAnchorDate = '0001-01-07';
@@ -173,8 +173,11 @@ export function WorkspaceApp({
       dateSchema.safeParse(date).success &&
       date >= earliestAnchorDate &&
       date <= latestAnchorDate
-    )
+    ) {
       setAnchorDate(date);
+      return true;
+    }
+    return false;
   }, []);
   const [locale, setLocale] = useState<string>();
   const [envelope, setEnvelope] = useState<WorkspaceEnvelope | null>(null);
@@ -539,8 +542,17 @@ export function WorkspaceApp({
   );
 }
 
-export function DateNavigation({ weeks = 3 }: { weeks?: number }) {
+export function DateNavigation({
+  weeks = 3,
+  onNavigate,
+}: {
+  weeks?: number;
+  onNavigate?: (date: string) => void;
+}) {
   const { data, from, setFrom } = useWorkspace();
+  const navigate = (date: string) => {
+    if (setFrom(date)) onNavigate?.(date);
+  };
   return (
     <div className="date-navigation">
       <Button
@@ -548,14 +560,14 @@ export function DateNavigation({ weeks = 3 }: { weeks?: number }) {
         size="icon"
         className="icon-button"
         aria-label="Previous week"
-        onClick={() => setFrom(addDays(from, -7))}
+        onClick={() => navigate(addDays(from, -7))}
       >
         <ChevronLeft size={17} />
       </Button>
       <Button
         variant="ghost"
         className="button subtle"
-        onClick={() => setFrom(localDate(new Date(), data.profile?.timezone))}
+        onClick={() => navigate(localDate(new Date(), data.profile?.timezone))}
       >
         Today
       </Button>
@@ -564,7 +576,7 @@ export function DateNavigation({ weeks = 3 }: { weeks?: number }) {
         size="icon"
         className="icon-button"
         aria-label="Next week"
-        onClick={() => setFrom(addDays(from, 7))}
+        onClick={() => navigate(addDays(from, 7))}
       >
         <ChevronRight size={17} />
       </Button>
@@ -577,7 +589,7 @@ export function DateNavigation({ weeks = 3 }: { weeks?: number }) {
           type="date"
           value={from}
           aria-label="Go to date"
-          onChange={(event) => event.target.value && setFrom(event.target.value)}
+          onChange={(event) => event.target.value && navigate(event.target.value)}
         />
       </label>
     </div>

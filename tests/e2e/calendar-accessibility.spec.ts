@@ -137,7 +137,7 @@ test('each day is a group named by its full date', async ({ page }) => {
 test('the add button on an empty day names its date', async ({ page }) => {
   await openWeekWithOneWorkoutPerStatus(page);
   await expect(
-    dayCell(page, '2030-01-13').getByRole('button', { name: 'Add workout on 13 Jan' }),
+    dayCell(page, '2030-01-13').getByRole('button', { name: 'Add to 13 Jan', exact: true }),
   ).toHaveCount(1);
 });
 

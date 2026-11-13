@@ -34,6 +34,7 @@ import {
 } from './cards';
 import { injuriesOnDate, sleepNights, type SleepNight } from './projection';
 import './layout.css';
+import { useCalendarNavigation } from './navigation';
 
 type EditorState = {
   kind: 'note' | 'event' | 'injury';
@@ -49,7 +50,6 @@ function Day({
   selectedId,
   onWorkout,
   onCard,
-  onAdd,
   onQuickAdd,
 }: {
   date: string;
@@ -59,7 +59,6 @@ function Day({
   selectedId: string | null;
   onWorkout: (id: string) => void;
   onCard: (card: CardSelection) => void;
-  onAdd: (date: string) => void;
   onQuickAdd: (date: string) => void;
 }) {
   const workouts = data.workouts
@@ -91,7 +90,7 @@ function Day({
     !sleep.length;
   return (
     <div
-      className={`calendar-day ${date === today ? 'is-today' : ''}`}
+      className={`calendar-day ${date === today ? 'is-today' : ''} ${empty ? 'is-empty' : ''}`}
       data-date={date}
       role="group"
       aria-label={dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -102,7 +101,7 @@ function Day({
         <Button
           variant="ghost"
           size="icon"
-          className="icon-button"
+          className="icon-button calendar-day-rail-add"
           aria-label={`Add to ${dateLabel(date)}`}
           onClick={() => onQuickAdd(date)}
         >
@@ -182,17 +181,15 @@ function Day({
             onClick={() => onCard({ kind: 'injury', id: record.id })}
           />
         ))}
-        {empty && (
-          <Button
-            variant="unstyled"
-            className="day-placeholder"
-            aria-label={`Add workout on ${dateLabel(date)}`}
-            onClick={() => onAdd(date)}
-          >
-            <Plus size={14} />
-            <span className="week-mobile-label">Add session</span>
-          </Button>
-        )}
+        <Button
+          variant="unstyled"
+          className="calendar-day-add"
+          aria-label={`Add to ${dateLabel(date)}`}
+          onClick={() => onQuickAdd(date)}
+        >
+          <Plus size={14} />
+          <span>Add</span>
+        </Button>
       </div>
     </div>
   );
@@ -258,6 +255,7 @@ function CardDetails({
 
 export default function CalendarPage({ data }: PluginPageProps) {
   const { from } = useWorkspace();
+  const { calendarRef, navigationRef, navigate } = useCalendarNavigation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addingDate, setAddingDate] = useState<string | null>(null);
   const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
@@ -267,14 +265,29 @@ export default function CalendarPage({ data }: PluginPageProps) {
   const selected = data.workouts.find((workout) => workout.id === selectedId);
   const today = localDate(new Date(), data.profile?.timezone);
   return (
-    <section className="calendar-workspace" aria-label="Training calendar workspace">
+    <section
+      ref={calendarRef}
+      className="calendar-workspace"
+      aria-label="Training calendar workspace"
+    >
       <header className="calendar-toolbar">
         <h1>Training calendar</h1>
         <AddButton onClick={() => setAddingDate(today)}>Add workout</AddButton>
-        <div className="calendar-navigation">
-          <DateNavigation />
-        </div>
       </header>
+      <div ref={navigationRef} className="calendar-sticky">
+        <nav className="calendar-navigation" aria-label="Calendar date navigation">
+          <DateNavigation onNavigate={navigate} />
+        </nav>
+        <div className={`calendar-layout ${selected ? '' : 'no-inspector'}`}>
+          <div className="calendar-weekdays">
+            {Array.from({ length: 7 }, (_, index) =>
+              dateLabel(addDays(from, index), { weekday: 'short' }),
+            ).map((day) => (
+              <span key={day}>{day}</span>
+            ))}
+          </div>
+        </div>
+      </div>
       {data.workouts.length === 0 && (
         <div className="first-workout-banner">
           <CalendarDays size={24} />
@@ -294,13 +307,6 @@ export default function CalendarPage({ data }: PluginPageProps) {
       )}
       <div className={`calendar-layout ${selected ? '' : 'no-inspector'}`}>
         <div className="calendar-main">
-          <div className="calendar-weekdays">
-            {Array.from({ length: 7 }, (_, index) =>
-              dateLabel(addDays(from, index), { weekday: 'short' }),
-            ).map((day) => (
-              <span key={day}>{day}</span>
-            ))}
-          </div>
           {[0, 1, 2].map((week) => {
             const weekStart = addDays(from, week * 7);
             const total = weeklySummary(data, weekStart);
@@ -338,7 +344,6 @@ export default function CalendarPage({ data }: PluginPageProps) {
                         selectedId={selectedId}
                         onWorkout={setSelectedId}
                         onCard={setDetail}
-                        onAdd={setAddingDate}
                         onQuickAdd={setQuickAddDate}
                       />
                     );

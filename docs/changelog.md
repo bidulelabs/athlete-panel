@@ -9,6 +9,8 @@ Use the documentation link for the version you installed. Each release page incl
 
 - Calendar accessibility: screen readers announce each day with its full date and the empty-day button with the short date. The first-workout message is a second-level heading under the page title. Shared buttons, toggles, switches, badges and tabs animate only color, border, focus ring and press movement. Rebuild/restart the application and reload browser tabs; no SQL migration or new permissions are required.
 
+- Calendar date navigation stays visible while scrolling, with sticky desktop weekday labels aligned to the day columns. Desktop days offer **+ Add** below existing cards on hover or keyboard focus; phones retain their visible day add action. Today and date jumps reveal the requested day after its range loads. Rebuild/restart and reload browser tabs; no migration or configuration change is required.
+
 ### Upgrade steps
 
 Earlier releases cannot read grants carrying the plan phase permission or phase proposals: rollback after those records exist requires the matching pre-upgrade backup. See [plan phase proposal upgrade guidance](development.md#plan-phase-proposal-upgrade).

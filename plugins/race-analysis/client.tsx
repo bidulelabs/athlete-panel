@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Flag, Upload } from 'lucide-react';
 import {
   Button,
@@ -10,6 +10,7 @@ import {
   NativeSelect,
   PageHeader,
   Skeleton,
+  type ReloadableRequestError,
   dateLabel,
   distance,
   localDate,
@@ -20,12 +21,12 @@ import type { RaceAnalysis } from '@athlete-panel/contracts';
 import { CourseRoute, ElevationProfile } from './course-figures';
 import { UploadDialog } from './upload-dialog';
 import { ReferenceEfforts } from './reference-efforts';
-import { useRaceAnalysis } from './use-analysis';
+import { raceRequestError, useRaceAnalysis } from './use-analysis';
 import { estimateCourse } from './estimate';
 import { finishTime, elevationLabel, terrainNames } from './presentation';
 import './race-analysis.css';
 
-type TerrainDraft = { terrain: number; sectionTerrain: Record<string, number> };
+type TerrainDraft = { terrain: number; sectionTerrain: Record<string, number>; revision: number };
 function AnalysisView({
   value,
   request,
@@ -45,12 +46,15 @@ function AnalysisView({
     [upload, setUpload] = useState<'course' | 'reference' | null>(null);
   const [draft, setDraft] = useState<TerrainDraft | null>(null),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState<Error | null>(null),
+    [error, setError] = useState<ReloadableRequestError | null>(null),
     [notice, setNotice] = useState('');
   const terrain = draft?.terrain ?? value.terrain,
     sectionTerrain = draft?.sectionTerrain ?? value.sectionTerrain;
   const track = value.course?.analysis ?? null;
-  const preview = draft ? estimateCourse(track, terrain, sectionTerrain, value.references) : value;
+  const preview = useMemo(
+    () => (draft ? estimateCourse(track, terrain, sectionTerrain, value.references) : value),
+    [draft, track, terrain, sectionTerrain, value],
+  );
   const estimate = preview.estimate;
   const displayPace = (estimate?.paceSecondsPerKm ?? 0) * (units === 'imperial' ? 1.609344 : 1);
   const chosen = Math.min(selected, (track?.points.length ?? 1) - 1);
@@ -69,7 +73,7 @@ function AnalysisView({
     try {
       await request('race-analysis', 'settings', {
         raceId: value.race.id,
-        expectedRevision: value.revision,
+        expectedRevision: draft?.revision ?? value.revision,
         idempotencyKey: crypto.randomUUID(),
         terrain,
         sectionTerrain,
@@ -78,7 +82,7 @@ function AnalysisView({
       await reload();
       setNotice('Terrain saved. Estimate updated.');
     } catch (cause) {
-      setError(cause instanceof Error ? cause : new Error('Terrain could not be saved.'));
+      setError(raceRequestError(cause, reload));
     } finally {
       setBusy(false);
     }
@@ -203,10 +207,11 @@ function AnalysisView({
             <div>
               <h2 id="race-terrain-title">How technical is the terrain?</h2>
               <p className="race-hint">
+                Each terrain level adds an illustrative 3.5% of base time, independently of slope.{' '}
                 {estimate?.harderTerrainSeconds !== null &&
                 estimate?.harderTerrainSeconds !== undefined
                   ? `One level harder adds about ${Math.round(estimate.harderTerrainSeconds / 60)} minutes in this model.`
-                  : 'Choose the footing and technical difficulty, independently of slope.'}
+                  : 'Choose the footing and technical difficulty.'}
               </p>
             </div>
             <div className="race-terrain-options" role="group" aria-label="Overall terrain">
@@ -215,7 +220,13 @@ function AnalysisView({
                   key={name}
                   variant={terrain === i + 1 ? 'default' : 'outline'}
                   aria-pressed={terrain === i + 1}
-                  onClick={() => setDraft({ terrain: i + 1, sectionTerrain })}
+                  onClick={() =>
+                    setDraft({
+                      terrain: i + 1,
+                      sectionTerrain,
+                      revision: draft?.revision ?? value.revision,
+                    })
+                  }
                   disabled={busy}
                 >
                   <strong>{i + 1}</strong>
@@ -246,8 +257,8 @@ function AnalysisView({
                         );
                         setSelected(Math.max(0, index));
                       }}
-                      aria-label={`Select section ${section.index + 1}`}
                     >
+                      <span className="sr-only">Select section </span>
                       <strong>{section.index + 1}</strong>
                       <span>
                         {distance(section.fromMeters, units)}–{distance(section.toMeters, units)}
@@ -265,7 +276,11 @@ function AnalysisView({
                           const next = { ...sectionTerrain };
                           if (event.target.value === '') delete next[String(section.index)];
                           else next[String(section.index)] = Number(event.target.value);
-                          setDraft({ terrain, sectionTerrain: next });
+                          setDraft({
+                            terrain,
+                            sectionTerrain: next,
+                            revision: draft?.revision ?? value.revision,
+                          });
                         }}
                       >
                         <option value="">Overall · {terrainNames[terrain - 1]}</option>
@@ -286,7 +301,11 @@ function AnalysisView({
           </details>
           {draft && (
             <div className="race-save-bar">
-              <span>Terrain changes are a preview until saved.</span>
+              <span>
+                {draft.revision !== value.revision
+                  ? `Saved version ${value.revision} has changed. Your draft is retained; choose Use saved terrain to start again from the latest values.`
+                  : 'Terrain changes are a preview until saved.'}
+              </span>
               <Button
                 variant="outline"
                 onClick={() => {
@@ -302,18 +321,7 @@ function AnalysisView({
               </Button>
             </div>
           )}
-          <ErrorMessage error={error?.message} />
-          {error && (
-            <Button
-              variant="outline"
-              onClick={async () => {
-                await reload();
-                setNotice('Saved data reloaded. Your terrain draft is retained for review.');
-              }}
-            >
-              Reload saved data
-            </Button>
-          )}
+          <ErrorMessage error={error} />
         </>
       )}
       <details

@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { AppError, RateLimitError } from './errors';
-export async function readBytes(request: Request, limit: number): Promise<Buffer> {
+export async function readBytes(
+  request: Request,
+  limit: number,
+  tooLargeMessage = `Request exceeds the ${limit / 1024} KiB limit. Reduce its size and retry; nothing was applied.`,
+): Promise<Buffer> {
   if (Number(request.headers.get('content-length')) > limit)
-    throw new AppError(
-      'too_large',
-      `Request exceeds the ${limit / 1024} KiB limit. Reduce its size and retry; nothing was applied.`,
-      413,
-    );
+    throw new AppError('too_large', tooLargeMessage, 413);
   const reader = request.body?.getReader();
   let size = 0;
   const chunks: Uint8Array[] = [];
@@ -17,11 +17,7 @@ export async function readBytes(request: Request, limit: number): Promise<Buffer
       size += value.byteLength;
       if (size > limit) {
         await reader.cancel();
-        throw new AppError(
-          'too_large',
-          `Request exceeds the ${limit / 1024} KiB limit. Reduce its size and retry; nothing was applied.`,
-          413,
-        );
+        throw new AppError('too_large', tooLargeMessage, 413);
       }
       chunks.push(value);
     }

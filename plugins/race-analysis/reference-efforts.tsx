@@ -9,9 +9,12 @@ import {
   NativeSelect,
   distance,
   useConfirm,
+  type ReloadableRequestError,
 } from '@athlete-panel/ui';
 import type { PluginRequest, RaceAnalysis, ReferenceEffort } from '@athlete-panel/contracts';
 import { finishTime, elevationLabel, terrainNames } from './presentation';
+import { raceRequestError } from './use-analysis';
+import { referenceTimeProblem, usableReference } from './estimate';
 
 function EditReference({
   value,
@@ -30,9 +33,11 @@ function EditReference({
     [minutes, setMinutes] = useState(
       reference.durationSeconds === null ? '' : String(reference.durationSeconds / 60),
     ),
-    [terrain, setTerrain] = useState(reference.terrain);
+    [terrain, setTerrain] = useState(reference.terrain),
+    [revision, setRevision] = useState(value.revision);
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState<Error | null>(null);
+    [error, setError] = useState<ReloadableRequestError | null>(null);
+  const saved = value.references.find((ref) => ref.id === reference.id);
   return (
     <Modal
       open
@@ -51,7 +56,7 @@ function EditReference({
           try {
             await request('race-analysis', 'reference-update', {
               raceId: value.race.id,
-              expectedRevision: value.revision,
+              expectedRevision: revision,
               idempotencyKey: crypto.randomUUID(),
               id: reference.id,
               title,
@@ -61,7 +66,7 @@ function EditReference({
             await reload();
             onClose();
           } catch (cause) {
-            setError(cause instanceof Error ? cause : new Error('Unable to save this effort.'));
+            setError(raceRequestError(cause, reload));
           } finally {
             setBusy(false);
           }
@@ -103,11 +108,33 @@ function EditReference({
             ))}
           </NativeSelect>
         </Field>
-        <ErrorMessage error={error?.message} />
-        {error && (
-          <Button variant="outline" type="button" onClick={() => void reload()}>
-            Reload saved data
-          </Button>
+        <ErrorMessage error={error} />
+        {revision !== value.revision && (
+          <div role="status">
+            <p>
+              Saved data changed. Your draft is retained.{' '}
+              {saved
+                ? 'Use the latest saved effort to start again.'
+                : 'This effort was removed. Close this draft.'}
+            </p>
+            {saved && (
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  setTitle(saved.title);
+                  setMinutes(
+                    saved.durationSeconds === null ? '' : String(saved.durationSeconds / 60),
+                  );
+                  setTerrain(saved.terrain);
+                  setRevision(value.revision);
+                  setError(null);
+                }}
+              >
+                Use saved effort
+              </Button>
+            )}
+          </div>
         )}
         <div className="dialog-actions">
           <Button variant="outline" type="button" onClick={onClose} disabled={busy}>
@@ -135,7 +162,7 @@ export function ReferenceEfforts({
   onAdd: () => void;
 }) {
   const [editing, setEditing] = useState<ReferenceEffort | null>(null),
-    [error, setError] = useState<Error | null>(null),
+    [error, setError] = useState<ReloadableRequestError | null>(null),
     [busy, setBusy] = useState(false);
   const confirm = useConfirm();
   return (
@@ -207,9 +234,7 @@ export function ReferenceEfforts({
                     });
                     await reload();
                   } catch (cause) {
-                    setError(
-                      cause instanceof Error ? cause : new Error('Unable to remove this effort.'),
-                    );
+                    setError(raceRequestError(cause, reload));
                   } finally {
                     setBusy(false);
                   }
@@ -218,16 +243,19 @@ export function ReferenceEfforts({
                 Remove
               </Button>
             </div>
-            {(reference.durationSeconds === null ||
-              reference.ascentMeters === null ||
-              reference.hasGaps) && (
+            {!usableReference(reference) && (
               <p className="race-reference-note">
                 Not used in the estimate:{' '}
                 {reference.durationSeconds === null
                   ? 'elapsed time is missing'
                   : reference.ascentMeters === null
                     ? 'elevation is incomplete'
-                    : 'the track contains gaps'}
+                    : reference.hasGaps
+                      ? 'the track contains gaps'
+                      : (referenceTimeProblem(
+                          reference.distanceMeters,
+                          reference.durationSeconds,
+                        ) ?? 'the track is too short')}
                 .
               </p>
             )}
@@ -242,12 +270,7 @@ export function ReferenceEfforts({
           </li>
         ))}
       </ul>
-      <ErrorMessage error={error?.message} />
-      {error && (
-        <Button variant="outline" onClick={() => void reload()}>
-          Reload saved data
-        </Button>
-      )}
+      <ErrorMessage error={error} />
       {editing && (
         <EditReference
           value={value}

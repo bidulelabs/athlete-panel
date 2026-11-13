@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ReloadableRequestError } from '@athlete-panel/ui';
 import {
   raceAnalysisSchema,
   raceMutationResultSchema,
@@ -8,6 +9,15 @@ import {
   type RaceAnalysis,
   type RaceUploadInput,
 } from '@athlete-panel/contracts';
+
+export function raceRequestError(cause: unknown, reload: () => Promise<unknown>) {
+  return new ReloadableRequestError(
+    cause instanceof Error ? cause.message : 'The request failed.',
+    async () => {
+      if (!(await reload())) throw new Error('Unable to reload course analysis.');
+    },
+  );
+}
 
 export function useRaceAnalysis(raceId: string) {
   const [value, setValue] = useState<RaceAnalysis | null>(null),

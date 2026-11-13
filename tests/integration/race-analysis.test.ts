@@ -58,14 +58,107 @@ it('stores the original file and one active course without editing the Training 
 });
 it('retains the previous course and reference evidence when a replacement fails', async () => {
   await upload(file(), { ...input(), purpose: 'course' });
+  await upload(file({ seconds: 23000 }), {
+    ...input(1),
+    purpose: 'reference',
+    title: 'Synthetic reference',
+    terrain: 3,
+    durationSeconds: null,
+  });
   const before = await load();
   await expect(
     upload(
       { name: 'broken.gpx', bytes: Buffer.from('<gpx>bad') },
-      { ...input(1), purpose: 'course' },
+      { ...input(2), purpose: 'course' },
     ),
   ).rejects.toThrow();
   expect(await load()).toEqual(before);
+  await expect(upload(file({ km: 43 }), { ...input(1), purpose: 'course' })).rejects.toThrow(
+    /changed/,
+  );
+  expect(await load()).toEqual(before);
+});
+it('rolls back a replacement that fails after inserting its new asset', async () => {
+  await upload(file(), { ...input(), purpose: 'course' });
+  await upload(file({ seconds: 23000 }), {
+    ...input(1),
+    purpose: 'reference',
+    title: 'Synthetic reference',
+    terrain: 3,
+    durationSeconds: null,
+  });
+  const before = await load();
+  const sql = connection();
+  const assets = await sql`select id from race_analysis.assets order by id`;
+  const receipts = await sql`select * from host.idempotency order by key`;
+  await sql`create function race_analysis.reject_test_update() returns trigger language plpgsql as $$ begin raise exception 'synthetic write failure'; end $$`;
+  await sql`create trigger reject_test_update before update on race_analysis.courses for each row execute function race_analysis.reject_test_update()`;
+  try {
+    await expect(upload(file({ km: 43 }), { ...input(2), purpose: 'course' })).rejects.toThrow(
+      /synthetic write failure/,
+    );
+    expect(await load()).toEqual(before);
+    expect(await sql`select id from race_analysis.assets order by id`).toEqual(assets);
+    expect(await sql`select * from host.idempotency order by key`).toEqual(receipts);
+  } finally {
+    await sql`drop trigger reject_test_update on race_analysis.courses`;
+    await sql`drop function race_analysis.reject_test_update()`;
+  }
+});
+it('preserves the complete analysis and assets when the reference limit rejects an upload', async () => {
+  await upload(file(), { ...input(), purpose: 'course' });
+  await upload(file({ seconds: 23000 }), {
+    ...input(1),
+    purpose: 'reference',
+    title: 'Synthetic reference',
+    terrain: 3,
+    durationSeconds: null,
+  });
+  const sql = connection();
+  await sql`insert into race_analysis.reference_efforts(id,race_id,asset_id,title,duration_seconds,duration_source,terrain)
+    select gen_random_uuid(),r.race_id,r.asset_id,'Synthetic limit fixture ' || n,r.duration_seconds,r.duration_source,r.terrain
+    from race_analysis.reference_efforts r cross join generate_series(1,19) as n`;
+  const before = await load();
+  const assets = await sql`select id from race_analysis.assets order by id`;
+  await expect(
+    upload(file({ seconds: 24000 }), {
+      ...input(2),
+      purpose: 'reference',
+      title: 'One too many',
+      terrain: 3,
+      durationSeconds: null,
+    }),
+  ).rejects.toThrow(expect.objectContaining({ code: 'reference_limit' }));
+  expect(await load()).toEqual(before);
+  expect(await sql`select id from race_analysis.assets order by id`).toEqual(assets);
+});
+it('rejects implausibly fast imported or entered times without changing saved evidence', async () => {
+  await upload(file(), { ...input(), purpose: 'course' });
+  const before = await load();
+  const reference = {
+    purpose: 'reference' as const,
+    title: 'Synthetic reference',
+    terrain: 3,
+    durationSeconds: null,
+  };
+  for (const durationSeconds of [null, 312]) {
+    await expect(
+      upload(file({ km: 36, seconds: 312 }), { ...input(1), ...reference, durationSeconds }),
+    ).rejects.toThrow(/time in minutes/);
+    expect(await load()).toEqual(before);
+  }
+  await upload(file({ km: 36, seconds: 18720 }), { ...input(1), ...reference });
+  const saved = await load();
+  await expect(
+    updateReference({
+      ...input(2),
+      id: saved.references[0]!.id,
+      title: 'Typo',
+      terrain: 3,
+      durationSeconds: 312,
+    }),
+  ).rejects.toThrow(/time in minutes/);
+  expect(await load()).toEqual(saved);
 });
 it('retries an upload idempotently and refuses stale or conflicting writes', async () => {
   const request = { ...input(), purpose: 'course' as const };

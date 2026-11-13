@@ -24,6 +24,26 @@ type FigureProps = {
 };
 export function CourseRoute({ track, selected, onSelect }: FigureProps) {
   const coordinates = useMemo(() => routeCoordinates(track.points), [track.points]);
+  const segments = useMemo(
+    () =>
+      coordinates.slice(1).map((p, offset) => {
+        const previous = coordinates[offset]!,
+          point = track.points[offset + 1]!;
+        return point.segment === track.points[offset]!.segment ? (
+          <line
+            key={offset}
+            x1={previous.x}
+            y1={previous.y}
+            x2={p.x}
+            y2={p.y}
+            stroke={slopeColor(point.slopePercent)}
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+        ) : null;
+      }),
+    [coordinates, track.points],
+  );
   const chosen = coordinates[selected] ?? coordinates[0]!;
   const first = coordinates[0]!,
     last = coordinates.at(-1)!;
@@ -56,22 +76,7 @@ export function CourseRoute({ track, selected, onSelect }: FigureProps) {
         onPointerDown={selectPoint}
       >
         <title>Course route without a base map</title>
-        {coordinates.slice(1).map((p, offset) => {
-          const previous = coordinates[offset]!,
-            point = track.points[offset + 1]!;
-          return point.segment === track.points[offset]!.segment ? (
-            <line
-              key={offset}
-              x1={previous.x}
-              y1={previous.y}
-              x2={p.x}
-              y2={p.y}
-              stroke={slopeColor(point.slopePercent)}
-              strokeWidth="4"
-              strokeLinecap="round"
-            />
-          ) : null;
-        })}
+        {segments}
         <circle
           cx={first.x}
           cy={first.y}
@@ -120,8 +125,32 @@ export function ElevationProfile({ track, selected, onSelect, units }: FigurePro
     [track.points],
   );
   const point = track.points[selected] ?? track.points[0]!;
-  const heights = track.points.flatMap((p) =>
-    p.elevationMeters === null ? [] : [p.elevationMeters],
+  const heights = useMemo(
+    () => track.points.flatMap((p) => (p.elevationMeters === null ? [] : [p.elevationMeters])),
+    [track.points],
+  );
+  const gradientStops = useMemo(
+    () =>
+      track.points.flatMap((p, i) => {
+        const start = i ? (track.points[i - 1]!.distanceMeters + p.distanceMeters) / 2 : 0;
+        const end =
+          i < track.points.length - 1
+            ? (track.points[i + 1]!.distanceMeters + p.distanceMeters) / 2
+            : track.distanceMeters;
+        return [
+          <stop
+            key={`${i}a`}
+            offset={`${(start / track.distanceMeters) * 100}%`}
+            stopColor={slopeColor(p.slopePercent)}
+          />,
+          <stop
+            key={`${i}b`}
+            offset={`${(end / track.distanceMeters) * 100}%`}
+            stopColor={slopeColor(p.slopePercent)}
+          />,
+        ];
+      }),
+    [track.points, track.distanceMeters],
   );
   const minimum = heights.length ? Math.floor(Math.min(...heights) / 100) * 100 : 0;
   const maximum = heights.length
@@ -139,7 +168,7 @@ export function ElevationProfile({ track, selected, onSelect, units }: FigurePro
     <section className="race-profile" aria-labelledby="race-profile-heading">
       <div className="race-section-heading">
         <h2 id="race-profile-heading">Elevation profile</h2>
-        <output data-testid="profile-selection">
+        <output data-testid="profile-selection" aria-live="off">
           {distance(point.distanceMeters, units)} · {elevationLabel(point.elevationMeters, units)} ·{' '}
           {point.slopePercent === null
             ? 'Slope unknown'
@@ -164,27 +193,7 @@ export function ElevationProfile({ track, selected, onSelect, units }: FigurePro
           >
             <defs>
               <linearGradient id={`race-gradient-${id}`} x1="0" y1="0" x2="1" y2="0">
-                {track.points.flatMap((p, i) => {
-                  const start = i
-                    ? (track.points[i - 1]!.distanceMeters + p.distanceMeters) / 2
-                    : 0;
-                  const end =
-                    i < track.points.length - 1
-                      ? (track.points[i + 1]!.distanceMeters + p.distanceMeters) / 2
-                      : track.distanceMeters;
-                  return [
-                    <stop
-                      key={`${i}a`}
-                      offset={`${(start / track.distanceMeters) * 100}%`}
-                      stopColor={slopeColor(p.slopePercent)}
-                    />,
-                    <stop
-                      key={`${i}b`}
-                      offset={`${(end / track.distanceMeters) * 100}%`}
-                      stopColor={slopeColor(p.slopePercent)}
-                    />,
-                  ];
-                })}
+                {gradientStops}
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="var(--line)" strokeDasharray="2 5" />

@@ -14,7 +14,18 @@ it('reads exactly one bounded binary file and metadata without depending on Cont
     metadata: { raceId: 'synthetic' },
   });
   await expect(readUpload(request('x'.repeat(33)), 32)).rejects.toThrow(/non-empty/);
-  await expect(readUpload(request('x'.repeat(17000)), 32)).rejects.toThrow(/limit/);
+  await expect(readUpload(request('x'.repeat(17000)), 32)).rejects.toThrow(
+    /MiB.*nothing was applied/,
+  );
+});
+it('reports the file limit without the multipart overhead allowance', async () => {
+  const limit = 10 * 1024 * 1024;
+  const advertised = request('x');
+  advertised.headers.set('content-length', String(limit + 16385));
+  await expect(readUpload(advertised, limit)).rejects.toThrow(/up to 10 MiB/);
+  await expect(readUpload(request('x'.repeat(limit + 16385)), limit)).rejects.toThrow(
+    /up to 10 MiB/,
+  );
 });
 it('rejects undeclared/inherited upload handlers and malformed multipart input', async () => {
   const plugins = {

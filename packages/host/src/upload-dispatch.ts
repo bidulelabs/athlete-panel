@@ -28,7 +28,11 @@ export async function readUpload(
     'invalid_upload',
     'Choose a file to upload.',
   );
-  const bytes = await readBytes(request, limit + 16 * 1024);
+  const bytes = await readBytes(
+    request,
+    limit + 16 * 1024,
+    `Choose a file up to ${limit / 1024 / 1024} MiB with smaller metadata. The upload is too large; nothing was applied.`,
+  );
   let form: FormData;
   try {
     form = await new Response(new Uint8Array(bytes), {

@@ -31,7 +31,7 @@ export function finishTime(seconds: number | null | undefined) {
 export const elevationLabel = (meters: number | null, units: string) =>
   meters === null
     ? 'Unknown'
-    : `${Math.round(meters * (units === 'imperial' ? 3.28084 : 1)).toLocaleString('en')} ${units === 'imperial' ? 'ft' : 'm'}`;
+    : `${Math.round(meters * (units === 'imperial' ? 3.28084 : 1)).toLocaleString('en-GB')} ${units === 'imperial' ? 'ft' : 'm'}`;
 export function routeCoordinates(points: RacePoint[]) {
   const meanLatitude = points.reduce((n, p) => n + p.latitude, 0) / points.length;
   let longitude = points[0]?.longitude ?? 0;

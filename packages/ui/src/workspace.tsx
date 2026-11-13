@@ -152,7 +152,7 @@ function NavigationIcon({ name }: { name: string }) {
                   value.includes('progress') ||
                   value.includes('cycling')
                 ? ChartNoAxesColumnIncreasing
-                : value.includes('race') || value.includes('flag')
+                : value === 'flag'
                   ? Flag
                   : Activity;
   return <Icon size={19} strokeWidth={1.6} />;

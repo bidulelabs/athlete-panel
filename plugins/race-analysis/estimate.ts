@@ -4,10 +4,19 @@ type Evidence = Pick<
   ReferenceEffort,
   'distanceMeters' | 'ascentMeters' | 'durationSeconds' | 'terrain' | 'hasGaps'
 >;
+export type ReferenceFacts = Omit<ReferenceEffort, 'predictedSeconds' | 'comparison'>;
 type Model = { pace: number; climb: number; fatigue: number; limitedClimbing: boolean };
 const terrainFactor = (level: number) => 1 + (level - 1) * 0.035;
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
 const totalTime = (base: number, fatigue: number) => base + (fatigue * base * base) / 7200;
+export function referenceTimeProblem(
+  distanceMeters: number,
+  seconds: number | null,
+): string | null {
+  return seconds !== null && seconds / (distanceMeters / 1000) < 120
+    ? 'Elapsed time implies faster than 2:00/km. Check the time in minutes and use a comparable running or hiking effort.'
+    : null;
+}
 function baseTime(seconds: number, fatigue: number) {
   return fatigue === 0
     ? seconds
@@ -17,6 +26,7 @@ export function usableReference(ref: Evidence): boolean {
   return (
     ref.durationSeconds !== null &&
     ref.ascentMeters !== null &&
+    !referenceTimeProblem(ref.distanceMeters, ref.durationSeconds) &&
     !ref.hasGaps &&
     ref.distanceMeters >= 100
   );
@@ -44,8 +54,8 @@ function fit(refs: Evidence[]): Model {
       const x = ref.distanceMeters / 1000,
         z = ref.ascentMeters! / 100;
       const y = baseTime(ref.durationSeconds!, fatigue) / terrainFactor(ref.terrain);
-      // Relative-time weights keep a long race from overwhelming shorter evidence.
-      const weight = 1 / (ref.durationSeconds! / 3600) ** 2;
+      // Cap short-effort influence while keeping long races from overwhelming shorter evidence.
+      const weight = 1 / Math.max(1, ref.durationSeconds! / 3600) ** 2;
       xx += weight * x * x;
       xz += weight * x * z;
       zz += weight * z * z;
@@ -61,7 +71,9 @@ function fit(refs: Evidence[]): Model {
     const model = { pace, climb, fatigue, limitedClimbing };
     const loss =
       refs.reduce(
-        (sum, r) => sum + ((predict(r, model) - r.durationSeconds!) / r.durationSeconds!) ** 2,
+        (sum, r) =>
+          sum +
+          ((predict(r, model) - r.durationSeconds!) / Math.max(3600, r.durationSeconds!)) ** 2,
         0,
       ) +
       fatigue * 0.01;
@@ -92,7 +104,7 @@ export function estimateCourse(
   track: TrackAnalysis | null,
   terrain: number,
   sectionTerrain: Record<string, number>,
-  references: ReferenceEffort[],
+  references: ReferenceFacts[],
 ): { estimate: CourseEstimate | null; estimateReasons: string[]; references: ReferenceEffort[] } {
   const evidence = references.filter(usableReference);
   const compared = references.map((ref) => {
@@ -137,13 +149,32 @@ export function estimateCourse(
   const errors = compared
     .filter((r) => r.predictedSeconds !== null)
     .map((r) => Math.abs(r.predictedSeconds! - r.durationSeconds!) / r.durationSeconds!);
-  const extrapolated =
-    track.distanceMeters > Math.max(...evidence.map((r) => r.distanceMeters)) * 1.25 ||
-    track.distanceMeters < Math.min(...evidence.map((r) => r.distanceMeters)) * 0.75;
+  const outside = (value: number, samples: number[]) =>
+    value > Math.max(...samples) * 1.25 || value < Math.min(...samples) * 0.75;
+  const extrapolation = [
+    outside(
+      track.distanceMeters,
+      evidence.map((r) => r.distanceMeters),
+    )
+      ? 'distance'
+      : null,
+    outside(
+      track.ascentMeters! / track.distanceMeters,
+      evidence.map((r) => r.ascentMeters! / r.distanceMeters),
+    )
+      ? 'climbing per kilometre'
+      : null,
+    outside(
+      seconds,
+      evidence.map((r) => r.durationSeconds!),
+    )
+      ? 'elapsed time'
+      : null,
+  ].filter((reason): reason is string => reason !== null);
   const margin = clamp(
     Math.max(0.15, ...errors) +
       (evidence.length < 4 ? 0.1 : 0) +
-      (extrapolated ? 0.1 : 0) +
+      (extrapolation.length ? 0.1 : 0) +
       (model.limitedClimbing ? 0.05 : 0),
     0.15,
     0.5,
@@ -166,9 +197,9 @@ export function estimateCourse(
     explanations.push(
       'These efforts have similar climbing per kilometre, so they cannot isolate climbing cost. A provisional 60 seconds per 100 m is used and the range is wider. Add more varied efforts.',
     );
-  if (extrapolated)
+  if (extrapolation.length)
     explanations.push(
-      'This course is outside the distance range of your references, so the uncertainty range is wider.',
+      `This course is outside the reference range for ${extrapolation.join(', ')}, so the uncertainty range is wider.`,
     );
   if (evidence.length < 4)
     explanations.push(
@@ -183,7 +214,11 @@ export function estimateCourse(
       climbSecondsPer100m: model.climb,
       fatiguePerHour: model.fatigue,
       referenceCount: evidence.length,
-      harderTerrainSeconds: terrain < 5 ? Math.max(0, harder - seconds) : null,
+      harderTerrainSeconds: track.sections.some(
+        (section) => (sectionTerrain[String(section.index)] ?? terrain) < 5,
+      )
+        ? Math.max(0, harder - seconds)
+        : null,
       sectionSeconds,
       explanations,
     },

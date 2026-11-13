@@ -16,7 +16,7 @@ import type { UploadedFile } from '../../packages/plugin-sdk/src';
 import { findRaceEvent } from '../training/public/server';
 import { parseTrack } from './parse';
 import { analyzeTrack } from './geometry';
-import { estimateCourse } from './estimate';
+import { estimateCourse, referenceTimeProblem } from './estimate';
 import { readCourse, readAsset, readReferences } from './repository';
 
 async function requireRace(raceId: string, tx: Transaction) {
@@ -66,6 +66,13 @@ export async function upload(file: UploadedFile, body: unknown) {
   const input = raceUploadInputSchema.parse(body);
   const parsed = parseTrack(file, input.purpose),
     track = analyzeTrack(parsed);
+  if (input.purpose === 'reference') {
+    const problem = referenceTimeProblem(
+      track.distanceMeters,
+      input.durationSeconds ?? track.elapsedSeconds,
+    );
+    assert(!problem, 'invalid_reference_time', problem ?? 'Check the elapsed time.');
+  }
   const fingerprint = createHash('sha256').update(file.bytes).digest('hex');
   return transaction((tx) =>
     idempotent(
@@ -74,13 +81,14 @@ export async function upload(file: UploadedFile, body: unknown) {
       { operation: 'race-analysis.upload', ...input, filename: file.name, fingerprint },
       async () => {
         const current = await currentForWrite(input.raceId, input.expectedRevision, tx);
-        const references = await readReferences(input.raceId, tx);
-        assert(
-          input.purpose !== 'reference' || references.length < 20,
-          'reference_limit',
-          'Keep at most 20 reference efforts per race. Remove an unused reference first.',
-        );
         if (input.purpose === 'reference') {
+          const [count] =
+            await tx`select count(*)::int as count from race_analysis.reference_efforts where race_id=${input.raceId}`;
+          assert(
+            Number(count?.count ?? 0) < 20,
+            'reference_limit',
+            'Keep at most 20 reference efforts per race. Remove an unused reference first.',
+          );
           const duplicate =
             await tx`select a.id from race_analysis.assets a join race_analysis.reference_efforts r on r.asset_id=a.id where r.race_id=${input.raceId} and a.sha256=${fingerprint}`;
           assert(
@@ -154,6 +162,12 @@ export async function updateReference(body: unknown) {
       { operation: 'race-analysis.reference-update', ...input },
       async () => {
         const current = await currentForWrite(input.raceId, input.expectedRevision, tx);
+        const reference = (await readReferences(input.raceId, tx)).find(
+          (ref) => ref.id === input.id,
+        );
+        assert(reference, 'reference_missing', 'This reference is no longer available.', 404);
+        const problem = referenceTimeProblem(reference.distanceMeters, input.durationSeconds);
+        assert(!problem, 'invalid_reference_time', problem ?? 'Check the elapsed time.');
         const rows =
           await tx`update race_analysis.reference_efforts set title=${input.title},duration_seconds=${input.durationSeconds},duration_source=${input.durationSeconds === null ? 'missing' : 'owner'},terrain=${input.terrain} where id=${input.id} and race_id=${input.raceId} returning id`;
         assert(rows.length, 'reference_missing', 'This reference is no longer available.', 404);

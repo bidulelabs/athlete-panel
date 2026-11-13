@@ -7,6 +7,13 @@ import {
 } from '@athlete-panel/contracts';
 import { z } from 'zod';
 import type { Transaction } from '../../packages/host/src/db';
+import type { ReferenceFacts } from './estimate';
+
+const referenceMeasurements = trackAnalysisSchema.pick({
+  distanceMeters: true,
+  ascentMeters: true,
+  hasGaps: true,
+});
 
 export async function readCourse(raceId: string, tx: Transaction) {
   const rows =
@@ -35,12 +42,13 @@ export async function readAsset(id: string, tx: Transaction): Promise<RaceAsset 
       })
     : null;
 }
-export async function readReferences(raceId: string, tx: Transaction): Promise<ReferenceEffort[]> {
+export async function readReferences(raceId: string, tx: Transaction): Promise<ReferenceFacts[]> {
   const rows =
-    await tx`select r.id,r.asset_id,r.title,r.duration_seconds,r.duration_source,r.terrain,a.filename,a.analysis
+    await tx`select r.id,r.asset_id,r.title,r.duration_seconds,r.duration_source,r.terrain,a.filename,
+    jsonb_build_object('distanceMeters',a.analysis->'distanceMeters','ascentMeters',a.analysis->'ascentMeters','hasGaps',a.analysis->'hasGaps') as measurements
     from race_analysis.reference_efforts r join race_analysis.assets a on a.id=r.asset_id where r.race_id=${raceId} order by r.title,r.id`;
   return rows.map((row) => {
-    const analysis = trackAnalysisSchema.parse(row.analysis);
+    const analysis = referenceMeasurements.parse(row.measurements);
     return {
       id: row.id as string,
       assetId: row.asset_id as string,
@@ -52,8 +60,6 @@ export async function readReferences(raceId: string, tx: Transaction): Promise<R
       durationSource: row.duration_source as ReferenceEffort['durationSource'],
       terrain: Number(row.terrain),
       hasGaps: analysis.hasGaps,
-      predictedSeconds: null,
-      comparison: 'unavailable' as const,
     };
   });
 }

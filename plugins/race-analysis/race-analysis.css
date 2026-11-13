@@ -575,13 +575,6 @@
   .race-reference-list dl {
     justify-content: space-between;
   }
-  .race-analysis [data-slot='button'],
-  .race-dialog [data-slot='button'],
-  .race-dialog input,
-  .race-analysis select,
-  .race-selector select {
-    min-height: 44px;
-  }
   .race-dialog {
     max-height: 90svh;
   }

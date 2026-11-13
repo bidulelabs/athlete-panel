@@ -8,6 +8,8 @@ Use the documentation link for the version you installed. Each release page incl
 
 - Optional Race analysis links calendar races to uploaded GPX courses, synchronized route/elevation views, smoothed climbing, terrain settings and finish-time planning ranges from GPX/FIT reference efforts. Missing measurements and insufficient evidence remain explicit. Files stay on your server; this adds no Garmin GPS import or agent access. Activate the matching composition with the new Race analysis migration and refreshed runtime schema grants through the [coordinated upgrade procedure](development.md#coordinated-upgrades-and-plugin-activation), rebuild/restart web and worker, and reload browser tabs. Keep a matched pre-upgrade backup for rollback; disabling the plugin retains its files and analysis.
 
+- Race analysis rejects malformed files without unbounded pattern matching and flags reference times outside its running/hiking model. Planning ranges also account for climbing and duration extrapolation. Reloading after a conflict keeps an edit's original version, so retrying cannot silently overwrite another tab. These refinements require the matching application rebuild and browser reload, with no additional SQL migration.
+
 - Calendar accessibility: screen readers announce each day with its full date and the empty-day button with the short date. The first-workout message is a second-level heading under the page title. Shared buttons, toggles, switches, badges and tabs animate only color, border, focus ring and press movement. Rebuild/restart the application and reload browser tabs; no SQL migration or new permissions are required.
 
 ## v0.4.0 (2026-11-12)

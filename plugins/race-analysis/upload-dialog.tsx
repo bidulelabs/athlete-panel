@@ -1,9 +1,17 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Button, ErrorMessage, Field, Input, Modal, NativeSelect } from '@athlete-panel/ui';
+import {
+  Button,
+  ErrorMessage,
+  Field,
+  Input,
+  Modal,
+  NativeSelect,
+  type ReloadableRequestError,
+} from '@athlete-panel/ui';
 import { raceFileLimit, type RaceAnalysis, type RaceUploadInput } from '@athlete-panel/contracts';
 import { terrainNames } from './presentation';
-import { uploadRaceFile } from './use-analysis';
+import { raceRequestError, uploadRaceFile } from './use-analysis';
 
 export function UploadDialog({
   value,
@@ -21,21 +29,20 @@ export function UploadDialog({
   const [file, setFile] = useState<File | null>(null),
     [title, setTitle] = useState(''),
     [duration, setDuration] = useState(''),
-    [terrain, setTerrain] = useState(3);
+    [terrain, setTerrain] = useState(3),
+    [revision, setRevision] = useState(value.revision);
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState<Error | null>(null),
-    [notice, setNotice] = useState('');
+    [error, setError] = useState<string | ReloadableRequestError | null>(null);
   const attempt = useRef<{ signature: string; key: string } | null>(null);
   async function submit() {
     setError(null);
-    setNotice('');
     if (!file || file.size === 0 || file.size > raceFileLimit) {
-      setError(new Error('Choose a non-empty file up to 10 MiB.'));
+      setError('Choose a non-empty file up to 10 MiB.');
       return;
     }
     const seconds = duration.trim() ? Number(duration) * 60 : null;
     if (seconds !== null && (!Number.isFinite(seconds) || seconds <= 0)) {
-      setError(new Error('Enter a positive elapsed time in minutes.'));
+      setError('Enter a positive elapsed time in minutes.');
       return;
     }
     const signature = JSON.stringify([
@@ -45,13 +52,13 @@ export function UploadDialog({
       title,
       seconds,
       terrain,
-      value.revision,
+      revision,
     ]);
     if (attempt.current?.signature !== signature)
       attempt.current = { signature, key: crypto.randomUUID() };
     const base = {
       raceId: value.race.id,
-      expectedRevision: value.revision,
+      expectedRevision: revision,
       idempotencyKey: attempt.current.key,
     };
     const input: RaceUploadInput =
@@ -64,7 +71,7 @@ export function UploadDialog({
       await onSaved();
       onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause : new Error('The file could not be uploaded.'));
+      setError(raceRequestError(cause, reload));
     } finally {
       setBusy(false);
     }
@@ -159,27 +166,27 @@ export function UploadDialog({
           </p>
         )}
         {busy && <p role="status">Uploading and analysing {file?.name}…</p>}
-        <ErrorMessage error={error?.message} />
-        {error && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              const fresh = await reload();
-              setNotice(
-                fresh
-                  ? 'Saved data reloaded. Your draft is still here; check the saved course before retrying.'
-                  : 'Reload failed. Your draft is still here.',
-              );
-              setBusy(false);
-            }}
-          >
-            Reload saved data
-          </Button>
+        <ErrorMessage error={error} />
+        {revision !== value.revision && (
+          <div role="status">
+            <p>
+              Saved version {value.revision} uses {value.course?.filename ?? 'no course'}. Your file
+              selection is retained. Review the saved course and references before retrying this
+              upload.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                setRevision(value.revision);
+                setError(null);
+              }}
+            >
+              Use saved version {value.revision} for this upload
+            </Button>
+          </div>
         )}
-        {notice && <p role="status">{notice}</p>}
         <div className="dialog-actions">
           <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
             Cancel

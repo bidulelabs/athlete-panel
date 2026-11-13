@@ -90,6 +90,7 @@ for (const theme of ['light', 'dark']) {
     await uploadCourse(page, syntheticGpx());
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByText('3 more usable past efforts', { exact: false })).toBeVisible();
+    await expect(page.getByText(/Each terrain level adds an illustrative 3.5%/)).toBeVisible();
     await addReferences(page, baseURL!, raceId);
     await page.reload();
     await expect(page.locator('.race-finish')).toContainText(/h/);
@@ -105,6 +106,7 @@ for (const theme of ['light', 'dark']) {
     await expect(slider).toHaveValue('1');
     expect(await marker.getAttribute('cx')).not.toBe(before);
     await expect(page.getByTestId('profile-selection')).not.toHaveText(/^0 km/);
+    await expect(page.getByTestId('profile-selection')).toHaveAttribute('aria-live', 'off');
     const route = page.getByRole('img', { name: /^Course route\. Use/ });
     const box = (await route.boundingBox())!;
     const position = { x: box.width / 2, y: box.height * 0.85 };
@@ -248,21 +250,134 @@ test('upload transport rejects anonymous and foreign-origin requests', async ({
   expect(foreign.status()).toBe(403);
 });
 
-test('a stale terrain draft survives reload and can be reviewed before saving', async ({
+for (const theme of ['light', 'dark']) {
+  test(`a stale terrain draft cannot overwrite saved changes after reload (${theme})`, async ({
+    page,
+    baseURL,
+  }) => {
+    await signIn(page, theme);
+    const raceId = await createRace(page, baseURL!);
+    await page.goto(`/races?race=${raceId}`);
+    await uploadCourse(page, syntheticGpx());
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page
+      .getByRole('group', { name: 'Overall terrain' })
+      .getByRole('button', { name: '4 Rocky' })
+      .click();
+    const current = await readAnalysis(page, baseURL!, raceId);
+    const changed = await page.request.post(endpoint + 'settings', {
+      headers: { Origin: baseURL! },
+      data: {
+        raceId,
+        expectedRevision: current.revision,
+        idempotencyKey: randomUUID(),
+        terrain: 2,
+        sectionTerrain: {},
+      },
+    });
+    expect(changed.ok()).toBe(true);
+    await page.getByRole('button', { name: 'Save terrain', exact: true }).click();
+    await expect(
+      page.getByText('The course or references changed.', { exact: false }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Reload saved data', exact: true }).click();
+    await expect(
+      page.getByText('Saved data reloaded. Review it before saving again.'),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('group', { name: 'Overall terrain' }).getByRole('button', { name: '4 Rocky' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect((await readAnalysis(page, baseURL!, raceId)).terrain).toBe(2);
+    await page.getByRole('button', { name: 'Save terrain', exact: true }).click();
+    await expect(
+      page.getByText('The course or references changed.', { exact: false }),
+    ).toBeVisible();
+    expect((await readAnalysis(page, baseURL!, raceId)).terrain).toBe(2);
+    await page.getByRole('button', { name: 'Use saved terrain', exact: true }).click();
+    await expect(
+      page.getByRole('group', { name: 'Overall terrain' }).getByRole('button', { name: '2 Stony' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await page
+      .getByRole('group', { name: 'Overall terrain' })
+      .getByRole('button', { name: '4 Rocky' })
+      .click();
+    await page.getByRole('button', { name: 'Save terrain', exact: true }).click();
+    await expect(page.getByText('Terrain saved. Estimate updated.')).toBeVisible();
+    expect((await readAnalysis(page, baseURL!, raceId)).terrain).toBe(4);
+  });
+
+  test(`a stale effort draft retains its base revision until the owner uses saved values (${theme})`, async ({
+    page,
+    baseURL,
+  }) => {
+    await signIn(page, theme);
+    const raceId = await createRace(page, baseURL!);
+    await addReferences(page, baseURL!, raceId);
+    await page.goto(`/races?race=${raceId}`);
+    await page.getByRole('button', { name: 'Edit Crêtes du Lac', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Elapsed time (minutes)', { exact: true }).fill('320');
+    const current = await readAnalysis(page, baseURL!, raceId);
+    const reference = current.references.find((ref) => ref.title === 'Crêtes du Lac')!;
+    const response = await page.request.post(endpoint + 'reference-update', {
+      headers: { Origin: baseURL! },
+      data: {
+        raceId,
+        expectedRevision: current.revision,
+        idempotencyKey: randomUUID(),
+        id: reference.id,
+        title: reference.title,
+        terrain: 4,
+        durationSeconds: 340 * 60,
+      },
+    });
+    expect(response.ok()).toBe(true);
+    await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
+    await expect(dialog.getByText(/The course or references changed/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Reload saved data', exact: true }).click();
+    await expect(
+      dialog.getByText('Saved data reloaded. Review it before saving again.'),
+    ).toBeVisible();
+    await expect(dialog.getByLabel('Elapsed time (minutes)', { exact: true })).toHaveValue('320');
+    await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
+    await expect(dialog.getByText(/The course or references changed/)).toBeVisible();
+    expect(
+      (await readAnalysis(page, baseURL!, raceId)).references.find((ref) => ref.id === reference.id)
+        ?.durationSeconds,
+    ).toBe(340 * 60);
+    await dialog.getByRole('button', { name: 'Use saved effort', exact: true }).click();
+    await expect(dialog.getByLabel('Elapsed time (minutes)', { exact: true })).toHaveValue('340');
+    await expect(dialog.getByRole('combobox', { name: 'Effort terrain', exact: true })).toHaveValue(
+      '4',
+    );
+    await dialog.getByLabel('Elapsed time (minutes)', { exact: true }).fill('330');
+    await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(
+      (await readAnalysis(page, baseURL!, raceId)).references.find((ref) => ref.id === reference.id)
+        ?.durationSeconds,
+    ).toBe(330 * 60);
+  });
+}
+
+test('reloading a stale course replacement requires explicit review before retrying', async ({
   page,
   baseURL,
 }) => {
-  await signIn(page, 'light');
+  await signIn(page, 'dark');
   const raceId = await createRace(page, baseURL!);
   await page.goto(`/races?race=${raceId}`);
   await uploadCourse(page, syntheticGpx());
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page
-    .getByRole('group', { name: 'Overall terrain' })
-    .getByRole('button', { name: '4 Rocky' })
-    .click();
+  await page.getByRole('button', { name: 'Replace GPX', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('GPX course file', { exact: true }).setInputFiles({
+    name: 'replacement.gpx',
+    mimeType: 'application/gpx+xml',
+    buffer: Buffer.from(syntheticGpx({ km: 44 })),
+  });
   const current = await readAnalysis(page, baseURL!, raceId);
-  const changed = await page.request.post(endpoint + 'settings', {
+  const response = await page.request.post(endpoint + 'settings', {
     headers: { Origin: baseURL! },
     data: {
       raceId,
@@ -272,18 +387,23 @@ test('a stale terrain draft survives reload and can be reviewed before saving', 
       sectionTerrain: {},
     },
   });
-  expect(changed.ok()).toBe(true);
-  await page.getByRole('button', { name: 'Save terrain', exact: true }).click();
-  await expect(page.getByText('The course or references changed.', { exact: false })).toBeVisible();
-  await page.getByRole('button', { name: 'Reload saved data', exact: true }).click();
+  expect(response.ok()).toBe(true);
+  await dialog.getByRole('button', { name: 'Use this course', exact: true }).click();
+  await expect(dialog.getByText(/The course or references changed/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Reload saved data', exact: true }).click();
   await expect(
-    page.getByText('Saved data reloaded. Your terrain draft is retained for review.'),
+    dialog.getByText('Saved data reloaded. Review it before saving again.'),
   ).toBeVisible();
-  await expect(
-    page.getByRole('group', { name: 'Overall terrain' }).getByRole('button', { name: '4 Rocky' }),
-  ).toHaveAttribute('aria-pressed', 'true');
-  expect((await readAnalysis(page, baseURL!, raceId)).terrain).toBe(2);
-  await page.getByRole('button', { name: 'Save terrain', exact: true }).click();
-  await expect(page.getByText('Terrain saved. Estimate updated.')).toBeVisible();
-  expect((await readAnalysis(page, baseURL!, raceId)).terrain).toBe(4);
+  await dialog.getByRole('button', { name: 'Use this course', exact: true }).click();
+  await expect(dialog.getByText(/The course or references changed/)).toBeVisible();
+  expect((await readAnalysis(page, baseURL!, raceId)).course?.id).toBe(current.course?.id);
+  await dialog
+    .getByRole('button', {
+      name: `Use saved version ${current.revision + 1} for this upload`,
+      exact: true,
+    })
+    .click();
+  await dialog.getByRole('button', { name: 'Use this course', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  expect((await readAnalysis(page, baseURL!, raceId)).course?.filename).toBe('replacement.gpx');
 });

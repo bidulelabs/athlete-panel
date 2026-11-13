@@ -24,7 +24,9 @@ const array = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
 function numeric(value: unknown): number | null {
   if (
     typeof value !== 'number' &&
-    (typeof value !== 'string' || !/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim()))
+    (typeof value !== 'string' ||
+      value.length > 40 ||
+      !/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim()))
   )
     return null;
   const number = Number(value);
@@ -32,7 +34,8 @@ function numeric(value: unknown): number | null {
 }
 function timestamp(value: unknown): number | null {
   if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.getTime() : null;
-  if (typeof value !== 'string' || !/T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) return null;
+  if (typeof value !== 'string' || value.length > 40 || !/T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(value))
+    return null;
   const time = Date.parse(value);
   return Number.isFinite(time) ? time : null;
 }
@@ -73,17 +76,50 @@ function checkXml(text: string) {
     'GPX files with document types or entity declarations are not supported.',
   );
   let depth = 0;
-  // Bound nesting before the XML parser creates an object tree. Comments/CDATA are not elements.
-  for (const match of text.matchAll(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<[^>]*>/g)) {
-    const tag = match[0];
-    if (/^<[!?]/.test(tag)) continue;
-    if (tag.startsWith('</')) depth--;
-    else if (!tag.endsWith('/>')) depth++;
+  // Advance once through the source, including malformed comments and quoted attributes.
+  // Bound nesting before building the object tree; never retry a delimiter at every '<'.
+  for (let offset = 0; offset < text.length;) {
+    const start = text.indexOf('<', offset);
+    if (start === -1) break;
+    const delimiter = text.startsWith('<!--', start)
+      ? '-->'
+      : text.startsWith('<![CDATA[', start)
+        ? ']]>'
+        : text.startsWith('<?', start)
+          ? '?>'
+          : null;
+    if (delimiter) {
+      const end = text.indexOf(delimiter, start + 2);
+      assert(
+        end !== -1,
+        'invalid_gpx',
+        'This file is not valid GPX XML. Export it again and retry.',
+      );
+      offset = end + delimiter.length;
+      continue;
+    }
+    let end = start + 1;
+    let quote: string | null = null;
+    for (; end < text.length; end++) {
+      const character = text[end];
+      if (quote) {
+        if (character === quote) quote = null;
+      } else if (character === '"' || character === "'") quote = character;
+      else if (character === '>') break;
+    }
+    assert(
+      end < text.length,
+      'invalid_gpx',
+      'This file is not valid GPX XML. Export it again and retry.',
+    );
+    if (text[start + 1] === '/') depth--;
+    else if (text[end - 1] !== '/') depth++;
     assert(
       depth <= 64,
       'xml_depth',
       'This GPX has too many nested elements. Export a simpler track.',
     );
+    offset = end + 1;
   }
   assert(
     XMLValidator.validate(text) === true,
@@ -171,6 +207,12 @@ function parseFit(bytes: Uint8Array): ParsedTrack {
       );
     },
   });
+  // Decoder.read catches listener exceptions; preserve our limit error before its generic error.
+  assert(
+    count <= 300000,
+    'too_many_records',
+    'This FIT file has too many records. Export one effort separately.',
+  );
   assert(
     result.errors.length === 0,
     'invalid_fit',

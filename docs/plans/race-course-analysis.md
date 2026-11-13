@@ -66,3 +66,43 @@ Verification on the rebased implementation supersedes the earlier counts above:
 - Publication checks on the implementation's staged candidate and the pinned Gitleaks scan of reachable history passed with no findings. Final publication checks are repeated after adding these screenshots and notes.
 
 This authorizes publishing the implementation branch and PR. It does not authorize merging or deploying to a private server. Hosted CI and deployment rehearsals are separate from the local checks recorded here.
+
+### PR review assessment and fixes (2026-11-13)
+
+Reviewed all 24 inline comments in [PR 128](https://github.com/bidulelabs/athlete-panel/pull/128). The processing-time, prediction and stale-draft findings warrant fixes before merge even though the final review summary called its remarks non-blocking. The changes keep issue 113 focused on course analysis.
+
+| Review topic | Disposition |
+| --- | --- |
+| XML depth regex and long numeric/time regex inputs | Replaced the depth matcher with a forward-only, quote-aware scan and bounded scalar tokens before pattern matching. A child-process regression has a hard timeout, so a recurrence cannot hang the test runner. |
+| Implausible duration and excessive short-effort weight | Reject new/imported times faster than the model's 2:00/km applicability bound; exclude existing such references with an explanation. Cap duration weights and loss denominators at one hour. |
+| Stale terrain/reference drafts after reload | Preserve the draft's base revision. A second save still fails until the owner explicitly starts from saved values. Course-upload retries also require explicit acknowledgement of the newly loaded version. |
+| Climbing/duration extrapolation | Widen the planning range for either dimension as well as distance, and name the extrapolated dimensions. |
+| Transactional preservation tests | Compare complete before/after analysis, including course identity and reference evidence, on stale/rejected uploads. Inject a database failure after asset insertion and verify that assets and idempotency receipts also roll back. |
+| Missing parser/model coverage | Added regression cases for limited climbing, sparse evidence, extrapolation, the 20-day limit, effective section terrain, short-effort influence, invalid elevation, point count, multisport FIT, absent FIT GPS and long scalar/XML inputs. |
+| Read operation through the shared requester | Keep the dedicated read for now: `WorkspaceApp`'s requester unconditionally reports a saved change and reloads the workspace after every successful operation. A shared read transport should first distinguish queries from mutations. Boundary output validation remains intentional. |
+| Shared error/reload control | Export and reuse the existing `ReloadableRequestError`/`ErrorMessage` recovery UI, with the reload callback bound to course analysis rather than only the workspace. Keep local busy state for these multi-step forms; wholesale `useAction` conversion is optional cleanup. |
+| Retained-file storage and reusable references | Record as separate follow-up design work in the feature specification. A reusable athlete library, per-race selection, asset deduplication and reviewed retention/purge would change ownership/deletion behavior and need a dedicated specification and additive migration. No ad hoc SQL deletion is introduced. |
+| Shared mutation wrapper/repository writes | Defer the structural refactor: existing transactions, domain locking and idempotency are explicit and now have stronger rollback coverage. Consolidation can be evaluated independently of these correctness fixes. |
+| Raw references and redundant comparison field | Repository reads now return only source facts; predictions are computed afterward. Keep the published `comparison` field in the response contract for compatibility rather than removing it for this cleanup. |
+| Loading reference geometry just to fit/count | Select only distance, climbing and gap measurements; count references in SQL on reference uploads. Course uploads no longer read reference details. |
+| Elevation formatter duplication | Align the locale with `en-GB`; defer moving all elevation formatters into the shared UI to a dedicated cross-feature cleanup. Do not import a private Charts helper. |
+| Duplicated phone control sizing and custom notices | Remove the redundant 44px override and use shared control sizing. Retain feature notice layout and status semantics; shared error alerts now handle failed actions. |
+| Navigation icon matching and route order | Match the declared `flag` icon exactly, avoiding accidental matches such as `trace`. Retain the existing curated route-order mechanism; changing navigation ordering is separate host design work. |
+| Pointer rendering and screen-reader announcements | Memoize route segments, gradient stops, height data and estimate previews. Disable live announcements on the pointer-driven output; keyboard slider value text remains available. |
+| Section button accessible name | Include the visible distance range and section number in the accessible name, with a screen-reader-only action prefix. |
+| Harder terrain when overall terrain is 5 | Check the effective terrain of each section; return a delta when any section can still become harder. |
+| Owner-only handler guard | Keep the explicit guard: the SDK context permits agent actors, and course files remain owner-only even if a later caller bypasses today's owner routes. This complements session/origin enforcement. |
+| FIT record-limit diagnostic | Preserve the record-count error after the decoder catches the listener exception; test against an actual synthetic encoded FIT. |
+| Multipart overhead in displayed size limit | Keep the internal allowance but display the actual file limit on both declared-length and streamed overflow paths. |
+| Terrain explanation without an estimate | Always show the illustrative per-level effect; add estimated minutes when available. |
+
+No review replies, thread resolutions, follow-up issues, merge or production deployment were requested or performed as part of this assessment.
+
+Actual verification of the review fixes:
+
+- `pnpm check`: passed, including **441 unit tests in 54 files**, both TypeScript checks, formatting/lint (warnings only), generated output/boundary consistency and documentation checks.
+- `pnpm test:integration`: **287 tests in 20 files passed** in the same isolated synthetic database. The first run found an unrelated flaky export assertion: random encrypted review-token text happened to contain `gps`. The assertion now checks exported records, preserving the intended exclusion check without inspecting ciphertext; the entire suite then passed.
+- `pnpm build`: web and worker production builds passed. No database migration changed.
+- `pnpm exec playwright test tests/e2e/race-analysis.spec.ts tests/e2e/calendar-cards.spec.ts --max-failures=2`: **30 tests passed** across desktop and Pixel 7, including both themes, 320px layout and stale-save retries after reload for terrain, reference edits and uploads. An initial new assertion used an exact label-text locator for a wrapped native select; using its accessible combobox role/name corrected the test, and the complete browser set passed.
+- Refreshed and visually reviewed the four committed synthetic desktop/phone screenshots in both themes. The owner's independent demo on port 3114 was not restarted or modified.
+- Final documentation links, changed-test formatting and `git diff --check` passed. Publication checks and the pinned history secret scan run before the follow-up commit is pushed; hosted CI remains a separate result.

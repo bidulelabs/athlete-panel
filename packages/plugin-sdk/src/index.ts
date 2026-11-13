@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import semver from 'semver';
 
-export const HOST_API_VERSION = '1.3.0';
+export const HOST_API_VERSION = '1.4.0';
 const localPath = z
   .string()
   .regex(/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+$/)
@@ -124,8 +124,14 @@ export function validateComposition(
 }
 
 export type OperationContext = { actor: 'owner' | 'agent'; grantId?: string };
+export type UploadedFile = { name: string; bytes: Uint8Array };
+export type UploadOperation = {
+  maxBytes: number;
+  handle: (file: UploadedFile, metadata: unknown, context: OperationContext) => Promise<unknown>;
+};
 export type ServerPlugin = {
   operations: Record<string, (body: unknown, context: OperationContext) => Promise<unknown>>;
+  uploads?: Record<string, UploadOperation>;
   jobs?: Record<string, (job: any) => Promise<void>>;
   schedule?: () => Promise<void>;
 };

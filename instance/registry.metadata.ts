@@ -53,12 +53,12 @@ export const registry = [
   {
     "path": "plugins/training",
     "enabled": true,
-    "version": "2.3.0",
+    "version": "2.4.0",
     "manifest": {
       "id": "training",
       "name": "Training",
       "description": "Plans, workouts and recorded completion",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "hostApi": "^1.3.0",
       "dependencies": {},
       "optionalDependencies": {},
@@ -134,12 +134,12 @@ export const registry = [
   {
     "path": "plugins/calendar",
     "enabled": true,
-    "version": "2.1.0",
+    "version": "2.2.0",
     "manifest": {
       "id": "calendar",
       "name": "Training calendar",
       "description": "Plan and review your week",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "hostApi": "^1.1.0",
       "dependencies": {
         "athlete": "^1.2.0",
@@ -257,6 +257,50 @@ export const registry = [
     }
   },
   {
+    "path": "plugins/race-analysis",
+    "enabled": true,
+    "version": "1.0.0",
+    "manifest": {
+      "id": "race-analysis",
+      "name": "Race analysis",
+      "description": "GPX courses, elevation and estimates from your past efforts",
+      "version": "1.0.0",
+      "hostApi": "^1.4.0",
+      "dependencies": {
+        "training": "^2.4.0"
+      },
+      "optionalDependencies": {},
+      "required": false,
+      "client": "client.tsx",
+      "server": "server.ts",
+      "public": {},
+      "routes": [
+        {
+          "path": "/races",
+          "title": "Races",
+          "icon": "Flag"
+        }
+      ],
+      "slots": [
+        {
+          "id": "race-course-link",
+          "kind": "inspector",
+          "title": "Course analysis"
+        }
+      ],
+      "schema": "race_analysis",
+      "migrations": [
+        "migrations/001-initial.sql"
+      ],
+      "services": [],
+      "jobs": [],
+      "capabilities": [
+        "owner-file-upload"
+      ],
+      "configuration": {}
+    }
+  },
+  {
     "path": "plugins/charts",
     "enabled": true,
     "version": "1.1.0",
@@ -361,4 +405,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="f9b2fbb6f2f83944522a068a6acf6163b20ec5c14ecfa4ed7c3275da4aeecb62";
+export const schemaSignature="726a9953e88775612084e5fe63ccd2249272446413fc60c3c217e2f401c700ff";

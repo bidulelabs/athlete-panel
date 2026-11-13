@@ -498,8 +498,9 @@ it('reports unsupported older measurement fields and excludes provider payloads'
   const { token } = await access();
   const detail = await readHistory(token, 'records', { category: 'activities', sport: 'running' });
   expect(detail.records![0]!.data.unsupportedFields).toContain('durationSeconds');
-  expect(JSON.stringify(detail)).not.toContain('NEVER_EXPORT');
-  expect(JSON.stringify(detail)).not.toContain('gps');
+  // Inspect exported records, not the random ciphertext in the review token.
+  expect(JSON.stringify(detail.records)).not.toContain('NEVER_EXPORT');
+  expect(JSON.stringify(detail.records)).not.toContain('gps');
   await connection()`update activity_records.records set data=data||'{"metric":"legacyUnknownMetric","value":123}'::jsonb where id=${data.health[0]!.id}`;
   const summary = await readHistory(token, 'summary', {
     category: 'health',

@@ -162,7 +162,7 @@ With automatic synchronization enabled, the worker schedules a recent import abo
 
 **Coverage depends on Garmin, the account and the device.** Completing traversal does not prove that every historical record or metric was available. Missing values, unsupported streams and failures are surfaced. Disconnecting removes credentials and stops sync while retaining imported history.
 
-Imports are read-only: there is no Garmin workout/plan export, FIT analysis or GPS-track storage. Using an official API does not imply Garmin endorsement of Athlete Panel. Field mappings, failure behavior and verification limits are documented in [Garmin import and health](docs/features/garmin-import.md).
+Garmin imports are read-only: there is no Garmin workout/plan export or automatic FIT/GPS-track import. The separate optional [Race analysis plugin](docs/features/race-analysis.md) accepts owner-uploaded GPX courses and GPX/FIT reference efforts. Using an official API does not imply Garmin endorsement of Athlete Panel. Field mappings, failure behavior and verification limits are documented in [Garmin import and health](docs/features/garmin-import.md).
 
 ## AI agent integration
 
@@ -288,7 +288,7 @@ The [operator checklist](docs/release-readiness.md#operator-acceptance-on-the-in
 - Record real harness discovery and browser-launch behavior on supported environments.
 - Measure representative history performance and restore times.
 
-Workout libraries, advanced training-load/recovery calculations, FIT/GPS analysis, offline editing, native notifications and MCP remain deferred. They are not release commitments. The current application is an online, English-language web workspace for one athlete.
+Workout libraries, advanced training-load/recovery calculations, automatic Garmin FIT/GPS import, offline editing, native notifications and MCP remain deferred. They are not release commitments. The current application is an online, English-language web workspace for one athlete.
 
 ## Documentation
 
@@ -306,6 +306,7 @@ Workout libraries, advanced training-load/recovery calculations, FIT/GPS analysi
 | [Activity summary coverage](docs/features/activity-summary.md) | Recorded duration/distance, missing measurements and filtered totals |
 | [Health history](docs/features/health-history.md) | Recent health review, date presets and independent Calendar navigation |
 | [Charts](docs/features/charts.md) | Chart templates, weekly planned and recorded hours, races and exact values |
+| [Race course analysis](docs/features/race-analysis.md) | GPX route/profile, terrain and personal finish estimates from uploaded efforts |
 | [Reviewed agent training](docs/features/agent-training.md)      | History reads, planning permissions, owner review, apply and undo                                              |
 | [Printable training week](docs/features/printable-training-week.md) | Optional read-only weekly print preview and browser PDF export, disabled by default |
 | [Plugins and skills](docs/features/plugins.md)                  | Source extensions, templates, compatibility and agent workflows                                      |

@@ -3,13 +3,15 @@ import Server0 from '../plugins/training/server';
 import Server1 from '../plugins/athlete/server';
 import Server2 from '../plugins/activity-records/server';
 import Server3 from '../plugins/garmin/server';
-import Server4 from '../plugins/charts/server';
-import Server5 from '../plugins/agent-bridge/server';
+import Server4 from '../plugins/race-analysis/server';
+import Server5 from '../plugins/charts/server';
+import Server6 from '../plugins/agent-bridge/server';
 export const servers = {
 "training":Server0,
 "athlete":Server1,
 "activity-records":Server2,
 "garmin":Server3,
-"charts":Server4,
-"agent-bridge":Server5
+"race-analysis":Server4,
+"charts":Server5,
+"agent-bridge":Server6
 };

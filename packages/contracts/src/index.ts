@@ -8,3 +8,4 @@ export * from './proposal-review';
 export * from './sports';
 export * from './history';
 export * from './charts';
+export * from './race-analysis';

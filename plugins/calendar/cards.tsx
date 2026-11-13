@@ -40,6 +40,7 @@ import {
   sportLabel,
   useAction,
   useWorkspace,
+  ExtensionSlot,
 } from '@athlete-panel/ui';
 import { effectiveDate } from '../training/public/shared';
 import { mutate, WorkoutStatus, WorkoutSource, LinkWorkoutDialog } from '../training/public/client';
@@ -435,6 +436,7 @@ export function ContextDetails({
         )}
       </dl>
       <MarkdownContent source={body || 'No additional details.'} />
+      <ExtensionSlot kind="inspector" selection={{ kind: item.kind, id: item.record.id }} />
       {item.kind === 'injury' && item.record.notes && (
         <section className="calendar-detail-notes">
           <h3>Additional notes</h3>

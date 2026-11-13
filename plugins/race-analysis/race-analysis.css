@@ -1,0 +1,586 @@
+.race-analysis {
+  --race-down-steep: #3667a5;
+  --race-down: #63a2cf;
+  --race-flat: #84938a;
+  --race-up: #b79b24;
+  --race-up-steep: #b6385c;
+  --race-unknown: var(--faint);
+  max-width: 1180px;
+  margin: 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+[data-theme='dark'] .race-analysis {
+  --race-down-steep: #5789c9;
+  --race-down: #78b5de;
+  --race-flat: #93a49a;
+  --race-up: #c3aa4f;
+  --race-up-steep: #cc5e7e;
+}
+.race-selector {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-top: 24px;
+}
+.race-selector .field {
+  width: min(430px, 100%);
+  margin: 0;
+}
+.race-analysis .page-header {
+  margin-bottom: 12px;
+}
+.race-file-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 24px;
+  overflow-wrap: anywhere;
+}
+.race-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(250px, 1fr);
+  gap: 24px;
+  margin: 24px 0;
+}
+.race-estimate,
+.race-route,
+.race-profile,
+.race-terrain,
+.race-disclosure {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.race-estimate {
+  padding: 28px;
+}
+.race-kicker {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.race-finish {
+  display: block;
+  font-size: clamp(38px, 4.5vw, 64px);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+  margin: 12px 0;
+}
+.race-range {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.race-estimate-empty {
+  font-size: 23px;
+  line-height: 1.3;
+  max-width: 28ch;
+  margin: 16px 0;
+}
+.race-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 24px 0 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+.race-metrics > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+}
+.race-metrics dt,
+.race-model dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.race-metrics dd {
+  font-size: 21px;
+  font-weight: 600;
+  margin: 0;
+}
+.race-metrics dd small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.race-measurement-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 20px;
+}
+.race-measurement-note summary {
+  cursor: pointer;
+  padding: 8px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.race-route {
+  padding: 14px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.race-route figcaption {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 0 4px 8px;
+}
+.race-route svg {
+  width: 100%;
+  max-width: 330px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  max-height: 330px;
+  display: block;
+  background: var(--surface-raised);
+  border-radius: 4px;
+  touch-action: pan-y;
+}
+.race-route text {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--surface-raised);
+  stroke-width: 3px;
+}
+.race-profile {
+  padding: 24px;
+  margin: 24px 0;
+}
+.race-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.race-section-heading h2,
+.race-terrain h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.race-section-heading h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.race-section-heading output {
+  color: var(--muted);
+  font-size: 12px;
+}
+.race-analysis .race-elevation-chart {
+  height: 280px;
+  aspect-ratio: auto;
+  width: 100%;
+  min-width: 0;
+  display: block;
+}
+.race-position {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.race-position input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  accent-color: var(--accent);
+}
+.race-position input:focus-visible,
+.race-analysis summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.race-slope-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 10px 0;
+  list-style: none;
+}
+.race-slope-legend li {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  font-size: 12px;
+}
+.race-slope-legend i {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.race-slope-legend small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.race-hint {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+.race-missing-profile {
+  padding: 44px 0;
+  color: var(--muted);
+}
+.race-terrain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.race-terrain-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  flex-shrink: 0;
+}
+.race-terrain-options [data-slot='button'] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 58px;
+  padding: 8px;
+}
+.race-terrain-options strong {
+  font-size: 18px;
+}
+.race-terrain-options span {
+  font-size: 11px;
+  font-weight: 400;
+}
+.race-disclosure {
+  margin: 20px 0;
+}
+.race-disclosure > summary {
+  cursor: pointer;
+  padding: 18px 24px;
+  min-height: 60px;
+}
+.race-disclosure > summary > span {
+  font-size: 16px;
+  font-weight: 600;
+  margin-right: 16px;
+}
+.race-disclosure > summary small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.race-disclosure-body {
+  padding: 0 24px 24px;
+  animation: race-reveal 160ms ease-out;
+}
+.race-section-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr 1.2fr 0.7fr;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.race-section-row > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.race-section-row .field {
+  margin: 0;
+}
+.race-section-row [data-slot='field-label'] > label > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.race-section-select {
+  justify-content: start;
+  white-space: normal;
+  height: auto;
+  min-height: 44px;
+  text-align: left;
+  padding-left: 0;
+}
+.race-section-select strong {
+  padding-right: 6px;
+  color: var(--muted);
+}
+.race-section-time {
+  font-size: 14px;
+  text-align: right;
+}
+.race-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.race-save-bar > span {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.race-model {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.race-model dd {
+  margin: 5px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.race-assumptions {
+  list-style: disc;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+  max-width: 80ch;
+}
+.race-assumptions li {
+  margin: 8px 0;
+}
+.race-evidence {
+  margin-top: 24px;
+}
+.race-reference-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+}
+.race-reference-list > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.race-reference-title strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.race-reference-title span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.race-reference-list dl {
+  display: flex;
+  gap: 24px;
+  margin: 0;
+}
+.race-reference-list dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+.race-reference-list dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+  font-size: 14px;
+}
+.race-reference-actions {
+  display: flex;
+  gap: 4px;
+}
+.race-reference-note {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.race-data-notice,
+.race-recovery {
+  border-left: 3px solid var(--accent);
+  padding: 4px 16px;
+  margin: 16px 0;
+  font-size: 13px;
+}
+.race-data-notice p {
+  margin: 6px 0;
+}
+.race-notice {
+  color: var(--muted);
+  font-size: 13px;
+}
+.race-form {
+  display: grid;
+  gap: 16px;
+}
+.race-form .field {
+  margin: 0;
+}
+.race-form input[type='file'] {
+  padding: 8px;
+  height: auto;
+  white-space: normal;
+  max-width: 100%;
+}
+.race-dialog {
+  max-width: 560px;
+}
+.race-loading {
+  height: 400px;
+  width: 100%;
+}
+@keyframes race-reveal {
+  from {
+    opacity: 0.4;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 1100px) {
+  .race-terrain {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .race-overview {
+    gap: 16px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(230px, 1fr);
+  }
+  .race-reference-list > li {
+    grid-template-columns: minmax(0, 1.3fr) minmax(170px, 1fr);
+  }
+  .race-reference-actions {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 760px) {
+  .race-selector {
+    align-items: center;
+    margin-bottom: 0;
+    padding-top: 18px;
+    gap: 8px;
+  }
+  .race-selector .field {
+    flex: 1;
+    min-width: 0;
+  }
+  .race-selector > [data-slot='button'] {
+    font-size: 11px;
+  }
+  .race-analysis .page-header {
+    align-items: start;
+    gap: 12px;
+  }
+  .race-analysis .page-header h1 {
+    font-size: 29px;
+  }
+  .race-analysis .header-actions {
+    align-self: stretch;
+  }
+  .race-overview {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin: 18px 0;
+  }
+  .race-estimate {
+    padding: 20px;
+  }
+  .race-finish {
+    font-size: 48px;
+  }
+  .race-metrics {
+    gap: 18px;
+  }
+  .race-metrics dd {
+    font-size: 18px;
+  }
+  .race-route {
+    padding: 12px;
+  }
+  .race-route svg {
+    max-height: none;
+    width: min(100%, 320px);
+    margin: 0 auto;
+  }
+  .race-profile,
+  .race-terrain {
+    padding: 18px 14px;
+  }
+  .race-section-heading {
+    align-items: start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .race-section-heading output {
+    width: 100%;
+  }
+  .race-analysis .race-elevation-chart {
+    height: 220px;
+  }
+  .race-slope-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .race-terrain-options {
+    gap: 4px;
+  }
+  .race-terrain-options [data-slot='button'] {
+    padding: 7px 2px;
+    min-width: 0;
+  }
+  .race-terrain-options span {
+    font-size: 10px;
+  }
+  .race-disclosure > summary {
+    padding: 18px 14px;
+  }
+  .race-disclosure > summary small {
+    display: block;
+    margin: 5px 0 0 16px;
+  }
+  .race-disclosure-body {
+    padding: 0 14px 18px;
+  }
+  .race-section-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+  }
+  .race-section-row > span {
+    text-align: right;
+  }
+  .race-reference-list > li {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .race-reference-list dl {
+    justify-content: space-between;
+  }
+  .race-dialog {
+    max-height: 90svh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .race-disclosure-body {
+    animation: none;
+  }
+}

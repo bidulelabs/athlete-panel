@@ -10,7 +10,7 @@ import { nightRows } from '../../plugins/charts/resting-heart-rate-hrv';
 import { dailyLoads, sessionLoad } from '../../plugins/charts/training-load';
 import { seasonStart } from '../../plugins/charts/season';
 import { chartsSummary } from '../../plugins/charts/summary';
-import { hasSessions, trainingHoursBuckets } from '../../plugins/charts/training-hours';
+import { hasSessionsOrTargets, trainingHoursBuckets } from '../../plugins/charts/training-hours';
 import { recordedSports, trainingBySportBuckets } from '../../plugins/charts/training-by-sport';
 import { climbingBuckets } from '../../plugins/charts/weekly-climbing';
 import {
@@ -102,8 +102,8 @@ describe('charts weekly summary', () => {
   });
 
   it('reports an empty selection as having no training', () => {
-    expect(hasSessions(chartsSummary(emptyWorkspace(), selection))).toBe(false);
-    expect(hasSessions(chartsSummary(chartsWorkspace(), selection))).toBe(true);
+    expect(hasSessionsOrTargets(chartsSummary(emptyWorkspace(), selection))).toBe(false);
+    expect(hasSessionsOrTargets(chartsSummary(chartsWorkspace(), selection))).toBe(true);
   });
 
   it('accepts one to 53 weeks', () => {

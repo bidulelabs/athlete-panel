@@ -19,6 +19,7 @@ export default function RunningClimbChart({
       weeks={weeks}
       yLabel={climbUnitLabel(units)}
       planned={false}
+      target={false}
       config={{}}
       tooltipRows={(week) => [['Running climb', week.runningClimbLabel]]}
     >

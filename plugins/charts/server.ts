@@ -5,6 +5,7 @@ import {
   emptyWorkspace,
   type Activity,
   type HealthRecord,
+  type Period,
   type Plan,
   type TrainingEvent,
   type Workout,
@@ -27,6 +28,7 @@ async function summary(body: unknown) {
       plans: (await repositories.plan.list('plan', tx)) as Plan[],
       workouts: (await repositories.workout.list('workout', tx)) as Workout[],
       events: (await repositories.event.list('event', tx)) as TrainingEvent[],
+      periods: (await repositories.period.list('period', tx)) as Period[],
       activities: (await repositories.activity.select(
         'activity',
         { range: input.template === 'estimated-training-load' ? loadRange : range },

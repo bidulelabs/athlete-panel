@@ -23,6 +23,7 @@ import {
   changeTitle,
   changeAction,
   describeTypes,
+  editedWeekFacts,
   typeLabels,
   proposalDateOptions,
 } from './proposal-presentation';
@@ -220,7 +221,16 @@ export function ReviewChange({
   const summaryFacts = [
     date && dateLabel(date, proposalDateOptions),
     dateChanged && `moved from ${dates.before ? dateLabel(dates.before) : 'unscheduled'}`,
-    record &&
+    change.entity === 'period' &&
+      record &&
+      'role' in record &&
+      `${record.role[0]!.toUpperCase()}${record.role.slice(1)} phase until ${dateLabel(record.endDate, proposalDateOptions)}`,
+    record && 'focus' in record && record.focus,
+    ...(change.entity === 'period' && record && 'editedWeeks' in record
+      ? editedWeekFacts(record)
+      : []),
+    change.entity !== 'period' &&
+      record &&
       'startDate' in record &&
       record.startDate &&
       `starts ${dateLabel(record.startDate, proposalDateOptions)}`,

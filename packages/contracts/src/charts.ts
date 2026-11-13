@@ -54,6 +54,12 @@ export const chartsSummaryInputSchema = z
 export const chartsWeekSchema = z.object({
   weekStart: dateSchema,
 });
+const chartsTargetSchema = z
+  .object({ min: z.number(), max: z.number() })
+  .nullable()
+  .describe(
+    'Phase target for the bucket, every sport included; null for days, a sport selection, weeks outside every phase or a phase without this target.',
+  );
 export const chartsBucketSchema = z.object({
   startDate: dateSchema,
   endDate: dateSchema,
@@ -68,6 +74,8 @@ export const chartsBucketSchema = z.object({
     elevationMeters: z.number(),
     distanceMeters: z.number(),
   }),
+  targetSeconds: chartsTargetSchema,
+  targetElevationMeters: chartsTargetSchema,
 });
 export const chartsVolumeSchema = z.object({
   grouping: z.enum(chartsGroupings),

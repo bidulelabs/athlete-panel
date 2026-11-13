@@ -77,6 +77,23 @@ The review footer names the complete batch with Apply all N changes and retains 
 
 Acceptance: [workspace browser scenarios](../../tests/e2e/agent-workspace.spec.ts) cover empty/mixed/inactive states, scope disclosure, confirmation/failure recovery, summary visibility, medium-size lazy groups, keyboard navigation, themes and narrow layouts. Existing connection, proposal-review, event, annual and shared-UI scenarios retain real connection/apply/undo coverage. At 390×844, the first proposal row or connection empty state and its next action must be visible without scrolling. Essential metadata stays at least 12px, phone controls at least 44px, and layouts must work at 320px and with enlarged text.
 
+### Plan phase proposals
+
+Specification status: draft. Requirement source: [issue #97](https://github.com/bidulelabs/athlete-panel/issues/97) and the owner's choice on 2026-11-09 to give phase changes their own permission, like race and goal creation, and the 2026-11-10 review summary (one proposal outlines the phases and details the next weeks). Phase behavior is in [Plan phases](plan-phases.md).
+
+New browser planning approvals show **Allow proposals to change plan phases**, checked by default, beside the race and goal permission. The owner can uncheck it before approval; it is absent for historical-only access. The summary, connected-agent details and CLI receipt describe it. Modern planning scopes carry optional `allowPhaseChanges`; only explicit true permits changes, omitted fields stay omitted, and a new owner-approved connection is required to gain it.
+
+Agents may propose `period.create`, `period.update` and `period.delete`. Every phase before and after the change must lie wholly within the proposal dates, and an update or delete must name a phase the planning context shares. Phases, the plan and its workouts can go in one proposal, such as sixteen weeks of phases with volume targets and the workouts of the next two weeks. Review lists the phase's name, role, last day, focus and readable targets (hours, kilometres or miles, metres or feet). Edited weeks go through the same permission: review names each one by its date with its hours target from `weekTargets`, and the field rows read **Edited weeks · Week of …**. Proposal date bounds run from the first to the last day of the phase. The existing audit, idempotency, atomic application and whole-batch undo apply.
+
+| Situation | Expected result | Verification |
+| --- | --- | --- |
+| New planning approval / owner unchecks / analysis only | Default checked; opted-out grant false and a phase proposal refused; historical-only grant has no phase authority | [Connection browser tests](../../tests/e2e/agent-connect.spec.ts), [contract tests](../../tests/unit/contracts.test.ts) |
+| Old or opted-out grant | `period.create` refused, nothing stored | [Period integration](../../tests/integration/agent-periods.test.ts) |
+| Phase inside the dates / starting before or ending after them | Reviewed, applied and undone / refused | Period integration |
+| Plan, workout and phase in one proposal | Reviewed with the focus, applied (phase header above week 1 of the plan) and undone | [Browser flow](../../tests/e2e/agent-periods.spec.ts) |
+| Update or delete of a phase inside the grant / outside it | Applied / refused | Period integration |
+| Phase in review | Role, last day and targets in hours and profile units; dates from first to last day | [Grouping tests](../../tests/unit/proposal-weeks.test.ts) |
+
 ### Activity and health imports during planning
 
 The owner approved [issue #68](https://github.com/bidulelabs/athlete-panel/issues/68) on 2026-11-04. Each planning read saves the bounded, note-redacted data behind the returned digest. Submission requires a digest this grant read. If only activities or health records in the planning period have changed, the server can accept a pending proposal. It validates the commands against current training and keeps the original read as the proposal’s baseline. Changes to the profile, plans, workouts, notes, events or injuries require a new read. This includes a Garmin correction that updates a linked workout.

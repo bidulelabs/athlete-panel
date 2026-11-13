@@ -1,7 +1,15 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { CartesianGrid, ComposedChart, Line, ReferenceLine, XAxis, YAxis } from 'recharts';
+import {
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ReferenceArea,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import type { TooltipContentProps } from 'recharts';
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@athlete-panel/ui/components/chart';
 import { dateLabel } from '@athlete-panel/ui';
@@ -14,23 +22,57 @@ function WeekTooltip<Week extends TrainingHoursBucket>({
   active,
   payload,
   rows,
-}: Partial<TooltipContentProps<number, string>> & { rows: TooltipRows<Week> }) {
+  target,
+}: Partial<TooltipContentProps<number, string>> & { rows: TooltipRows<Week>; target: boolean }) {
   const week = payload?.[0]?.payload as Week | undefined;
   if (!active || !week) return null;
   return (
     <div className="charts-tooltip">
       <strong>{bucketLabel(week)}</strong>
       <dl>
-        {[...rows(week), ...(week.races.length ? [['Race', week.races.join(', ')]] : [])].map(
-          ([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ),
-        )}
+        {[
+          ...rows(week),
+          ...(target && week.targetRange ? [['Target', week.targetLabel]] : []),
+          ...(week.races.length ? [['Race', week.races.join(', ')]] : []),
+        ].map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
       </dl>
     </div>
+  );
+}
+
+function TargetBand({ x, y, width, height }: Record<'x' | 'y' | 'width' | 'height', number>) {
+  const shownHeight = Math.max(height, 3);
+  return (
+    <rect
+      className="charts-target"
+      x={x}
+      y={y - (shownHeight - height) / 2}
+      width={width}
+      height={shownHeight}
+      fill="var(--chart-target)"
+    />
+  );
+}
+
+function targetBands(weeks: TrainingHoursBucket[]) {
+  return weeks.map(
+    ({ startDate, targetRange }) =>
+      targetRange && (
+        <ReferenceArea
+          key={`target-${startDate}`}
+          x1={startDate}
+          x2={startDate}
+          y1={targetRange[0]}
+          y2={targetRange[1]}
+          ifOverflow="extendDomain"
+          shape={TargetBand}
+        />
+      ),
   );
 }
 
@@ -38,6 +80,7 @@ export function GroupedChart<Week extends TrainingHoursBucket>({
   weeks,
   yLabel,
   planned,
+  target,
   config,
   tooltipRows,
   children,
@@ -45,6 +88,7 @@ export function GroupedChart<Week extends TrainingHoursBucket>({
   weeks: Week[];
   yLabel: string;
   planned: boolean;
+  target: boolean;
   config: ChartConfig;
   tooltipRows: TooltipRows<Week>;
   children: ReactNode;
@@ -76,7 +120,7 @@ export function GroupedChart<Week extends TrainingHoursBucket>({
         />
         <ChartTooltip
           cursor={{ fill: 'var(--hover)' }}
-          content={<WeekTooltip rows={tooltipRows} />}
+          content={<WeekTooltip rows={tooltipRows} target={target} />}
         />
         {weeks
           .filter((week) => week.races.length > 0)
@@ -93,6 +137,7 @@ export function GroupedChart<Week extends TrainingHoursBucket>({
               }}
             />
           ))}
+        {target && targetBands(weeks)}
         {children}
         {planned && (
           <Line

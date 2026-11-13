@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { periodSchema } from '@athlete-panel/contracts';
 import { weeklyFixture } from '../fixtures/weekly';
 
 const password = process.env.E2E_PASSWORD;
@@ -55,8 +56,7 @@ test('each week expands independently with accurate volume, elevation, sleep and
     'false',
   );
   await expect(week.locator('.week-header-metric')).toHaveCount(5);
-  await expect(week.locator('.week-summary-header')).toContainText('5h');
-  await expect(week.locator('.week-summary-header')).toContainText('4h');
+  await expect(week.locator('.week-summary-header')).toContainText('Planned 5 h · Recorded 4 h');
   await toggle.focus();
   await page.keyboard.press('Enter');
   await expect(week.locator('.week-summary-body')).toBeVisible();
@@ -317,8 +317,27 @@ test('preview is chronological and bounded, empty states stay explicit, and redu
   await refresh(page);
   await expect(sessions).toContainText('No sessions recorded');
   await expect(week.getByRole('region', { name: 'Recorded HRV' })).toContainText('HRV unavailable');
-  await expect(week.locator('.week-header-metric').first()).toContainText('— / No plan');
+  await expect(week.locator('.week-header-metric').first()).toHaveText('Duration: No plan');
   expect(mutations()).toBe(0);
+});
+
+test('measured zero hours stay in the week header instead of No plan', async ({ page }) => {
+  const { data } = await preview(page);
+  for (const workout of data.workouts) {
+    workout.durationSeconds = 0;
+    if (workout.completion && workout.completion.status !== 'skipped')
+      workout.completion.durationSeconds = 0;
+  }
+  for (const activity of data.activities) activity.durationSeconds = 0;
+  await refresh(page);
+  const week = page.locator('.calendar-week').first();
+  await expect(week.getByRole('button', { name: /^Duration:/ })).toHaveText(
+    'Duration: Planned 0 h · Recorded 0 h',
+  );
+  await week.getByRole('button', { name: /^Expand summary/ }).click();
+  const duration = week.locator('.week-band-metric').filter({ hasText: /^Duration/ });
+  await expect(duration).toContainText('Recorded 0 h');
+  await expect(duration).toContainText('Planned 0 h');
 });
 
 test('metric explanations support hover, focus and touch without toggling or writing', async ({
@@ -429,4 +448,41 @@ test('week summaries fit the full width/theme matrix, long imperial values and y
   await page.getByLabel('Go to date').fill('2030-12-30');
   await expect(week.locator('.week-summary-date')).toContainText('30 Dec 2030 – 5 Jan 2031');
   expect(mutations()).toBe(0);
+});
+
+test('the week shows its target, planned and recorded hours, and keeps the target without workouts', async ({
+  page,
+}) => {
+  const { data } = await preview(page);
+  data.periods = [
+    periodSchema.parse({
+      id: '30000000-0000-4000-8000-000000000001',
+      revision: 1,
+      name: 'January base',
+      role: 'base',
+      startDate: '2030-01-07',
+      endDate: '2030-01-20',
+      weeklyDurationSeconds: {
+        firstWeek: { min: 28800, max: 32400 },
+        lastWeek: { min: 36000, max: 39600 },
+      },
+    }),
+  ];
+  await refresh(page);
+  const [planned, empty, outside] = await page.locator('.calendar-week').all();
+  const duration = (week: typeof empty) => week!.getByRole('button', { name: /^Duration:/ });
+  await expect(duration(planned)).toHaveText(
+    /^Duration: Target 8–9 h · Planned [\d.]+ h( · Recorded [\d.]+ h)?$/,
+  );
+  await expect(duration(planned)).toHaveAttribute('aria-description', /^Target of the phase/);
+  await expect(duration(empty)).toHaveText('Duration: Target 10–11 h');
+  await expect(duration(outside)).toHaveText('Duration: No plan');
+  await planned!.getByRole('button', { name: /^Expand summary/ }).click();
+  const plannedDuration = planned!.locator('.week-band-metric').filter({ hasText: /^Duration/ });
+  await expect(plannedDuration).toContainText(/Recorded (—|[\d.]+ h)/);
+  await expect(plannedDuration).toContainText(/Target 8–9 h · Planned [\d.]+ h/);
+  await empty!.getByRole('button', { name: /^Expand summary/ }).click();
+  const emptyDuration = empty!.locator('.week-band-metric').filter({ hasText: /^Duration/ });
+  await expect(emptyDuration).toContainText('Target 10–11 h');
+  await expect(emptyDuration).not.toContainText('Planned');
 });

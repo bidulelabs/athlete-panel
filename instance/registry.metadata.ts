@@ -259,15 +259,15 @@ export const registry = [
   {
     "path": "plugins/charts",
     "enabled": true,
-    "version": "1.1.0",
+    "version": "1.2.0",
     "manifest": {
       "id": "charts",
       "name": "Charts",
       "description": "Training trends across weeks and months",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "hostApi": "^1.3.0",
       "dependencies": {
-        "training": "^2.1.0"
+        "training": "^2.3.0"
       },
       "optionalDependencies": {},
       "required": false,
@@ -292,15 +292,15 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "2.3.0",
+    "version": "2.4.0",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "hostApi": "^1.3.0",
       "dependencies": {
-        "training": "^2.2.0",
+        "training": "^2.3.0",
         "athlete": "^1.3.0",
         "activity-records": "^2.1.0"
       },

@@ -66,7 +66,7 @@ test('saved week starts align headings, navigation and totals without moving wor
     await page.getByLabel('Go to date').fill('2030-01-06');
     await expect(page.getByLabel('Go to date')).toHaveValue('2029-12-31');
     await expect(page.locator('.calendar-weekdays span').first()).toHaveText('Mon');
-    await expect(page.locator('.week-summary-header').first()).toContainText('1h 30m');
+    await expect(page.locator('.week-summary-header').first()).toContainText('Planned 1.5 h');
 
     await setPreference(page, 'sunday');
     await expect(page.locator('.availability-grid input').first()).toHaveAttribute(
@@ -85,7 +85,7 @@ test('saved week starts align headings, navigation and totals without moving wor
       'Sat',
     ]);
     await expect(page.locator('.calendar-day').first()).toHaveAttribute('data-date', '2030-01-06');
-    await expect(page.locator('.week-summary-header').first()).toContainText('3h');
+    await expect(page.locator('.week-summary-header').first()).toContainText('Planned 3 h');
     await page.getByRole('button', { name: 'Next week', exact: true }).click();
     await expect(page.getByLabel('Go to date')).toHaveValue('2030-01-13');
     await page.getByRole('button', { name: 'Previous week', exact: true }).click();

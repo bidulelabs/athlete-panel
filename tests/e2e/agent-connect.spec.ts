@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { test, expect } from '@playwright/test';
+import { test, expect, type APIRequestContext } from '@playwright/test';
 import postgres from 'postgres';
 
 const password = process.env.E2E_PASSWORD;
@@ -101,8 +101,12 @@ test('connect signs in, approves scope, saves privately, exports context and dis
     const exported = JSON.parse(await readFile(join(directory, 'context.json'), 'utf8'));
     expect(exported.scope.includeNotes).toBe(false);
     expect(exported.scope.allowEventCreation).toBe(true);
+    expect(exported.scope.allowPhaseChanges).toBe(true);
     expect(process.output()).toContain(
       'Create races and goals: permitted within the proposal dates',
+    );
+    expect(process.output()).toContain(
+      'Change plan phases: permitted for phases within the proposal dates',
     );
     const headers = { Authorization: `Bearer ${saved.token}` };
     const discovery = await page.request.post('/api/agent/history-discover', { headers, data: {} });
@@ -159,8 +163,39 @@ test('connect signs in, approves scope, saves privately, exports context and dis
   }
 });
 
+function proposePeriod(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  contextDigest: string,
+  date: string,
+) {
+  return request.post('/api/agent/propose', {
+    headers,
+    data: {
+      summary: 'Synthetic denied period',
+      idempotencyKey: randomUUID(),
+      contextDigest,
+      commands: [
+        {
+          action: 'period.create',
+          values: {
+            name: 'Denied base',
+            role: 'base',
+            startDate: date,
+            endDate: date,
+            weeklyDurationSeconds: {
+              firstWeek: { min: 3600, max: 7200 },
+              lastWeek: { min: 3600, max: 7200 },
+            },
+          },
+        },
+      ],
+    },
+  });
+}
+
 for (const analysisOnly of [false, true]) {
-  test(`event permission is denied after ${analysisOnly ? 'choosing analysis only' : 'opting out'}`, async ({
+  test(`event and phase permissions are denied after ${analysisOnly ? 'choosing analysis only' : 'opting out'}`, async ({
     page,
     request,
     baseURL,
@@ -176,14 +211,21 @@ for (const analysisOnly of [false, true]) {
       await page.getByLabel('Password', { exact: true }).fill(password!);
       await page.getByRole('button', { name: 'Sign in', exact: true }).click();
       const checkbox = page.getByLabel('Allow proposals to create races and goals');
+      const outlineCheckbox = page.getByLabel('Allow proposals to change plan phases');
       await expect(checkbox).toBeChecked();
+      await expect(outlineCheckbox).toBeChecked();
       if (analysisOnly) {
         await page.getByLabel('Can it suggest training changes?').selectOption('no');
         await expect(checkbox).toHaveCount(0);
+        await expect(outlineCheckbox).toHaveCount(0);
       } else {
         await checkbox.uncheck();
+        await outlineCheckbox.uncheck();
         await expect(page.getByRole('region', { name: 'Access summary' })).toContainText(
           'Create races and goals: not permitted',
+        );
+        await expect(page.getByRole('region', { name: 'Access summary' })).toContainText(
+          'Change plan phases: not permitted',
         );
       }
       await page.getByLabel('Approval code', { exact: true }).fill(pending.code);
@@ -194,7 +236,12 @@ for (const analysisOnly of [false, true]) {
       const approved = await (await response).json();
       grantId = approved.grant.id;
       expect(approved.grant.planning).toEqual(
-        analysisOnly ? null : expect.objectContaining({ allowEventCreation: false }),
+        analysisOnly
+          ? null
+          : expect.objectContaining({
+              allowEventCreation: false,
+              allowPhaseChanges: false,
+            }),
       );
       const headers = { Authorization: `Bearer ${pending.token}` };
       const contextResponse = await request.get('/api/agent/context', { headers });
@@ -220,6 +267,14 @@ for (const analysisOnly of [false, true]) {
       });
       expect(denied.status()).toBe(403);
       expect((await denied.json()).error.code).toBe('forbidden');
+      const deniedPeriod = await proposePeriod(
+        request,
+        headers,
+        context?.contextDigest ?? 'a'.repeat(64),
+        context?.scope.from ?? '2026-11-08',
+      );
+      expect(deniedPeriod.status()).toBe(403);
+      expect((await deniedPeriod.json()).error.code).toBe('forbidden');
     } finally {
       if (grantId)
         await page.request.post('/api/plugins/agent-bridge/revoke', {

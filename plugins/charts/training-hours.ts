@@ -4,7 +4,7 @@ import {
   type ChartsSummary,
   type ChartsGrouping,
 } from '@athlete-panel/contracts';
-import { type MetricTotal } from '../training/public/shared';
+import { targetRangeLabel, type MetricTotal } from '../training/public/shared';
 
 export type TrainingHoursBucket = {
   startDate: string;
@@ -16,6 +16,8 @@ export type TrainingHoursBucket = {
   plannedHours: number | null;
   recordedLabel: string;
   plannedLabel: string;
+  targetRange: [number, number] | null;
+  targetLabel: string;
   races: string[];
 };
 
@@ -32,7 +34,7 @@ export function trainingHoursBuckets(
   format: (seconds: number) => string,
 ): TrainingHoursBucket[] {
   return (summary.volume?.buckets ?? []).map(
-    ({ startDate, endDate, partial, recordedSeconds, plannedSeconds }) => {
+    ({ startDate, endDate, partial, recordedSeconds, plannedSeconds, targetSeconds }) => {
       const upcoming = startDate > today;
       const noPlan = sessionCount(plannedSeconds) === 0;
       const noSessions = sessionCount(recordedSeconds) === 0;
@@ -53,6 +55,8 @@ export function trainingHoursBuckets(
             ? 'No sessions recorded'
             : durationLabel(recordedSeconds, format),
         plannedLabel: noPlan ? 'No plan' : durationLabel(plannedSeconds, format),
+        targetRange: targetSeconds && [targetSeconds.min / 3600, targetSeconds.max / 3600],
+        targetLabel: targetRangeLabel(targetSeconds, format),
         races: summary.races
           .filter((race) => race.date >= startDate && race.date <= endDate)
           .map((race) => race.title),
@@ -61,11 +65,18 @@ export function trainingHoursBuckets(
   );
 }
 
-export function hasSessions(summary: ChartsSummary) {
+export function hasSessionsOrTargets(summary: ChartsSummary) {
   return (summary.volume?.buckets ?? []).some(
-    (week) => sessionCount(week.recordedSeconds) > 0 || sessionCount(week.plannedSeconds) > 0,
+    (week) =>
+      sessionCount(week.recordedSeconds) > 0 ||
+      sessionCount(week.plannedSeconds) > 0 ||
+      week.targetSeconds !== null ||
+      week.targetElevationMeters !== null,
   );
 }
+
+export const hasTargets = (weeks: TrainingHoursBucket[]) =>
+  weeks.some((week) => week.targetRange !== null);
 
 export function emptyTrainingTitle(summary: ChartsSummary) {
   const sports = summary.volume?.sports ?? chartsSports;

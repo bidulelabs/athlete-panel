@@ -20,6 +20,7 @@ export const repositories = {
   workout: trainingRepository,
   note: trainingRepository,
   event: trainingRepository,
+  period: trainingRepository,
   activity: recordsRepository,
   health: recordsRepository,
 };
@@ -28,6 +29,7 @@ export const collections = {
   workout: 'workouts',
   note: 'notes',
   event: 'events',
+  period: 'periods',
   injury: 'injuries',
   activity: 'activities',
   health: 'health',

@@ -17,6 +17,7 @@ export default function TrainingBySportChart({
       weeks={weeks}
       yLabel="Hours"
       planned
+      target
       config={{}}
       tooltipRows={(week) => [
         ...week.sessionSports.map((sport): [string, string] => [

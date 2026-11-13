@@ -3,6 +3,7 @@ import {
   type EntityChange,
   type WorkspaceState,
   type WorkoutStep,
+  type Period,
   type PlanningScope,
   type TrainingEvent,
 } from '../../packages/contracts/src';
@@ -68,6 +69,7 @@ export function boundedContext(state: WorkspaceState, scope: Scope) {
     events: state.events
       .filter((e) => within(e.date))
       .map((e) => (scope.includeNotes ? e : { ...e, notes: '' })),
+    periods: state.periods.filter((p) => p.startDate <= scope.to && p.endDate >= scope.from),
     injuries: state.injuries
       .filter((i) => i.startDate <= scope.to && (i.endDate === null || i.endDate >= scope.from))
       .map((i) => (scope.includeNotes ? i : { ...i, notes: '' })),
@@ -96,7 +98,9 @@ export function assertReadableSources(commands: Command[], state: WorkspaceState
             ? context.workouts
             : kind === 'note'
               ? context.notes
-              : [];
+              : kind === 'period'
+                ? context.periods
+                : [];
     assert(
       items.some((i) => i.id === command.id),
       'out_of_scope',
@@ -189,6 +193,22 @@ function assertEventCreation(change: EntityChange, after: WorkspaceState, scope:
   );
 }
 
+function assertPeriodChange(change: EntityChange, scope: Scope) {
+  assert(
+    scope.allowPhaseChanges === true,
+    'forbidden',
+    'This grant does not allow phase changes. Approve a new connection with phase changes enabled.',
+    403,
+  );
+  for (const period of [change.before, change.after] as (Period | null)[])
+    assert(
+      !period || (period.startDate >= scope.from && period.endDate <= scope.to),
+      'out_of_scope',
+      'Phases must stay within the proposal dates.',
+      403,
+    );
+}
+
 export function assertBounded(
   changes: EntityChange[],
   before: WorkspaceState,
@@ -198,6 +218,10 @@ export function assertBounded(
   for (const change of changes) {
     if (change.entity === 'event') {
       assertEventCreation(change, after, scope);
+      continue;
+    }
+    if (change.entity === 'period') {
+      assertPeriodChange(change, scope);
       continue;
     }
     assert(

@@ -240,6 +240,9 @@
   margin-bottom: 16px;
 }
 @media (max-width: 600px) {
+  .plans-phase {
+    padding: 8px;
+  }
   .plans-page .page-header {
     flex-direction: column;
     align-items: flex-start;
@@ -314,4 +317,86 @@
   .plans-session .plans-edit-workout[data-slot='button'] {
     margin-top: 4px;
   }
+}
+.phase-add {
+  margin-left: auto;
+}
+.plans-phase {
+  margin: 24px 0;
+  padding: 12px;
+  border: 1px solid var(--accent-line);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+.plans-phase > .plans-week {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.plans-phase-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.plans-phase-heading h4 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.plans-phase-heading > span:not(.phase-actions) {
+  color: var(--muted);
+  font-size: 12px;
+}
+.phase-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.plans-phase-focus {
+  margin-top: 6px;
+  font-size: 14px;
+}
+.plans-phase .plans-meta {
+  margin-top: 6px;
+}
+.phase-weeks {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.phase-weeks summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.phase-weeks li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+.phase-week-name {
+  min-width: 9em;
+  color: var(--muted);
+}
+.phase-dropped-weeks {
+  color: var(--accent-ink);
+  font-size: 13px;
+}
+.phase-target {
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+}
+.phase-target legend {
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.phase-dates > *,
+.phase-dates input {
+  min-width: 0;
 }

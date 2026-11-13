@@ -1,7 +1,15 @@
-import type { EntityChange } from '@athlete-panel/contracts';
-import { dateLabel } from '@athlete-panel/ui';
+import type { EntityChange, Period } from '@athlete-panel/contracts';
+import { dateLabel, duration } from '@athlete-panel/ui';
+import { targetRangeLabel, weekTargets } from '../training/public/shared';
 
 export const proposalDateOptions = { weekday: 'short', day: 'numeric', month: 'short' } as const;
+
+export const editedWeekFacts = (phase: Period) =>
+  Object.keys(phase.editedWeeks).map((monday) => {
+    const dayInsidePhase = monday <= phase.endDate ? monday : phase.endDate;
+    const hours = weekTargets([phase], dayInsidePhase)!.weeklyDurationSeconds;
+    return `week of ${dateLabel(monday, proposalDateOptions)} edited${hours ? ` to ${targetRangeLabel(hours, duration)}` : ''}`;
+  });
 const searchableDate = (date: string | null | undefined) =>
   date ? `${date} ${dateLabel(date, proposalDateOptions)}` : '';
 
@@ -24,6 +32,7 @@ export const typeLabels: Record<string, string> = {
   health: 'Health record',
   injury: 'Injury',
   profile: 'Profile',
+  period: 'Phase',
 };
 export const changeAction = (change: EntityChange) =>
   !change.before ? 'create' : !change.after ? 'delete' : 'update';
@@ -33,7 +42,9 @@ export function changeTitle(change: EntityChange) {
     ? record.title
     : record && 'bodyPart' in record
       ? record.bodyPart
-      : (typeLabels[changeType(change)] ?? change.entity);
+      : record && 'role' in record
+        ? record.name
+        : (typeLabels[changeType(change)] ?? change.entity);
 }
 
 export function typeCounts(changes: readonly EntityChange[]) {

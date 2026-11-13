@@ -15,6 +15,7 @@ export const collections = {
   workout: 'workouts',
   note: 'notes',
   event: 'events',
+  period: 'periods',
   injury: 'injuries',
   activity: 'activities',
   health: 'health',
@@ -48,6 +49,13 @@ export function assertReferences(state: WorkspaceState): void {
     // Also checks date arithmetic overflow for plan-relative dates.
     effectiveDate(item, state.plans);
   }
+  const periodsByStartDate = [...state.periods].sort((a, b) =>
+    a.startDate.localeCompare(b.startDate),
+  );
+  periodsByStartDate.forEach((period, index) => {
+    if (index > 0 && period.startDate <= periodsByStartDate[index - 1]!.endDate)
+      fail('PERIOD_OVERLAP', 'Phases cannot overlap.', { id: period.id });
+  });
   const linkedActivities = new Set<string>();
   for (const workout of state.workouts) {
     if (workout.completion?.source !== 'garmin') continue;

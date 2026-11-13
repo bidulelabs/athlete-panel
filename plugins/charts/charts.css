@@ -8,6 +8,7 @@
   --chart-swimming: #d55181;
   --chart-other: var(--muted);
   --chart-load: color-mix(in srgb, var(--chart-recorded) 45%, transparent);
+  --chart-target: color-mix(in srgb, var(--muted) 28%, transparent);
 }
 :root[data-theme='light'] {
   --chart-recorded: #46525d;
@@ -126,6 +127,9 @@
   height: 0;
   border-top: 2px dashed var(--muted);
   border-radius: 0;
+}
+.charts-key-target {
+  background: var(--chart-target);
 }
 .charts-key-race {
   width: 2px;

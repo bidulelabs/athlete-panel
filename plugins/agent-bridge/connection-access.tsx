@@ -79,6 +79,7 @@ export function ConnectionAccess({
   const [planningPreset, setPlanningPreset] = useState('short');
   const [planning, setPlanning] = useState(true);
   const [allowEventCreation, setAllowEventCreation] = useState(true);
+  const [allowPhaseChanges, setAllowPhaseChanges] = useState(true);
   const [historyRange, setHistoryRange] = useState<Range>({ from: addDays(today, -27), to: today });
   const [planningRange, setPlanningRange] = useState<Range>({
     from: today,
@@ -183,6 +184,14 @@ export function ConnectionAccess({
               />
               Allow proposals to create races and goals
             </label>
+            <label className="checkbox-row">
+              <Checkbox
+                name="allowPhaseChanges"
+                checked={allowPhaseChanges}
+                onCheckedChange={(value) => setAllowPhaseChanges(value === true)}
+              />
+              Allow proposals to change plan phases
+            </label>
           </>
         )}
       </div>
@@ -285,6 +294,8 @@ export function ConnectionAccess({
                   {range(planningRange)}
                   <br />
                   Create races and goals: {allowEventCreation ? 'permitted' : 'not permitted'}
+                  <br />
+                  Change plan phases: {allowPhaseChanges ? 'permitted' : 'not permitted'}
                   <br />
                   Can also read profile, goals, availability, zones, training, events, injuries,
                   activities and health in this period.

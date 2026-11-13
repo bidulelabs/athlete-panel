@@ -34,12 +34,12 @@
     {
       "path": "plugins/charts",
       "enabled": true,
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     {
       "path": "plugins/agent-bridge",
       "enabled": true,
-      "version": "2.3.0"
+      "version": "2.4.0"
     },
     {
       "path": "personal-plugins/printable-training-week",

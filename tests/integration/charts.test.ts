@@ -239,3 +239,32 @@ it('loads the chart while a save holds the write lock', async () => {
     }
   });
 });
+
+it('reads the phase target for future weeks', async () => {
+  const sql = connection();
+  const period = {
+    id: chartsId(90),
+    revision: 1,
+    name: 'Spring build',
+    role: 'build',
+    startDate: '2029-03-05',
+    endDate: '2029-03-18',
+    weeklyDurationSeconds: {
+      firstWeek: { min: 28800, max: 32400 },
+      lastWeek: { min: 36000, max: 39600 },
+    },
+    weeklyDistanceMeters: null,
+    weeklyElevationGainMeters: null,
+  };
+  await sql`insert into training.records(kind,id,revision,data) values('period',${period.id},1,${sql.json(period)})`;
+  const summary = await charts.operations.summary({
+    template: 'training-hours',
+    weekStart: '2029-02-26',
+    weeks: 3,
+  });
+  expect(summary.volume!.buckets.map((bucket) => bucket.targetSeconds)).toEqual([
+    null,
+    { min: 28800, max: 32400 },
+    { min: 36000, max: 39600 },
+  ]);
+});

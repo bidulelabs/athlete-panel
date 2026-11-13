@@ -5,7 +5,7 @@ import {
   type ChartsSummary,
   type Profile,
 } from '@athlete-panel/contracts';
-import { type MetricTotal } from '../training/public/shared';
+import { targetRangeLabel, type MetricTotal } from '../training/public/shared';
 import { perSport } from './training-by-sport';
 import { sessionCount, trainingHoursBuckets, type TrainingHoursBucket } from './training-hours';
 
@@ -54,7 +54,9 @@ export function climbingBuckets(
 ): ClimbingBucket[] {
   const sports = sportsWithElevation(summary);
   return trainingHoursBuckets(summary, today, String).map((week, index) => {
-    const { recordedElevationMetersBySport, runningClimb } = summary.volume!.buckets[index]!;
+    const { recordedElevationMetersBySport, runningClimb, targetElevationMeters } =
+      summary.volume!.buckets[index]!;
+    const toUnits = (meters: number) => meters * (units === 'imperial' ? feetPerMeter : 1);
     const upcoming = week.startDate > today;
     const noSessions = (sport: ChartsSport) =>
       sessionCount(recordedElevationMetersBySport[sport]) === 0;
@@ -76,6 +78,15 @@ export function climbingBuckets(
           : noSessions(sport)
             ? 'No sessions recorded'
             : elevationLabel(recordedElevationMetersBySport[sport], units),
+      ),
+      targetRange: targetElevationMeters && [
+        toUnits(targetElevationMeters.min),
+        toUnits(targetElevationMeters.max),
+      ],
+      targetLabel: targetRangeLabel(
+        targetElevationMeters,
+        (meters) =>
+          `${Math.round(toUnits(meters)).toLocaleString('en-GB')} ${elevationUnitLabel(units)}`,
       ),
       runningClimb: upcoming ? null : climb.value,
       runningClimbLabel: upcoming ? 'Upcoming' : climb.label,

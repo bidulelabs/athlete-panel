@@ -34,10 +34,12 @@ import {
 import {
   comparisonPercent,
   type MetricTotal,
+  type TargetRange,
   type TrainingSummary,
   type RecordedSession,
 } from '../training/public/shared';
 import type { WeeklySleep, WeeklyHrv } from './weekly-sleep';
+import { hoursLabel, targetAndPlannedParts, weekHoursLabel } from './week-hours';
 import './weekly-summary.css';
 
 type Format = (value: number) => string;
@@ -127,6 +129,27 @@ function HeaderComparison({
     >
       <strong>{compact(actual, format)}</strong>
       <span> / {compactPlanned(planned, format)}</span>
+    </HeaderMetric>
+  );
+}
+function HeaderHours({
+  planned,
+  recorded,
+  target,
+}: {
+  planned: MetricTotal;
+  recorded: MetricTotal;
+  target: TargetRange | null;
+}) {
+  const missing = planned.missingCount + recorded.missingCount;
+  return (
+    <HeaderMetric
+      label="Duration"
+      info={`${target ? 'Target of the phase, then planned' : 'Planned'} and recorded hours. ${recorded.knownCount} recorded and ${planned.knownCount} planned measurements available.${missing ? ` ${missing} measurements missing.` : ''}`}
+      icon={<Timer aria-hidden="true" />}
+      partial={missing > 0}
+    >
+      {weekHoursLabel(planned, recorded, target)}
     </HeaderMetric>
   );
 }
@@ -259,6 +282,7 @@ export function WeeklySummary({
   hrv,
   units,
   today,
+  durationTarget,
   onSession,
 }: {
   summary: TrainingSummary;
@@ -266,6 +290,7 @@ export function WeeklySummary({
   hrv: WeeklyHrv;
   units: 'metric' | 'imperial';
   today: string;
+  durationTarget: TargetRange | null;
   onSession: (session: RecordedSession) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -294,13 +319,10 @@ export function WeeklySummary({
           {current && <span className="week-current-label">This week</span>}
         </div>
         <div className="week-header-metrics">
-          <HeaderComparison
-            label="Duration"
-            unit="hours and minutes"
-            icon={<Timer aria-hidden="true" />}
+          <HeaderHours
             planned={summary.planned.durationSeconds}
-            actual={summary.actual.durationSeconds}
-            format={duration}
+            recorded={summary.actual.durationSeconds}
+            target={durationTarget}
           />
           <HeaderComparison
             label="Running distance"
@@ -372,8 +394,11 @@ export function WeeklySummary({
           <BandMetric
             label="Duration"
             icon={<Timer />}
-            value={compact(summary.actual.durationSeconds, duration)}
-            hint={`Planned: ${compactPlanned(summary.planned.durationSeconds, duration)}`}
+            value={`Recorded ${hoursLabel(summary.actual.durationSeconds)}`}
+            hint={
+              targetAndPlannedParts(summary.planned.durationSeconds, durationTarget).join(' · ') ||
+              'No plan'
+            }
           />
           <BandMetric
             label="Running distance"

@@ -1,6 +1,11 @@
 'use client';
 
-import { sportSelectionLabel, type Plan, type Workout } from '@athlete-panel/contracts';
+import {
+  sportSelectionLabel,
+  type Period,
+  type Plan,
+  type Workout,
+} from '@athlete-panel/contracts';
 import {
   AddButton,
   Button,
@@ -17,6 +22,7 @@ import {
   PageHeader,
   requestId,
   SportIcon,
+  startOfWeek,
   SubmitButton,
   Textarea,
   useAction,
@@ -25,7 +31,7 @@ import {
   type PluginPageProps,
 } from '@athlete-panel/ui';
 import { ChevronRight, Copy, Edit3, Layers, Moon, Plus, Trash2 } from 'lucide-react';
-import { Fragment, useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 
 import { mutate, WorkoutEditor, WorkoutInspector } from './editors';
 import { addDays } from './dates';
@@ -33,13 +39,68 @@ import { planWeeks, plannedDuration } from './plan-workouts';
 import { prescriptionPreview } from './prescription';
 import { TrainingHistory } from './history';
 import { AddPhaseButton, PhaseBlock } from './phases';
-import { planPhases, planSections } from './plan-phases';
-import { PhaseWeekTargets } from './phase-weeks';
+import { daysFrom } from './phase-targets';
+import {
+  movePhase,
+  phaseWeekRows,
+  planPhases,
+  planPhasesOnMove,
+  planSections,
+} from './plan-phases';
+import { CalendarWeekTarget, WeekTarget } from './phase-weeks';
 import './plans.css';
+function PhasesOnMove({ plan, startDate }: { plan: Plan; startDate: string }) {
+  const { data } = useWorkspace();
+  const { onlyThisPlan, shared } = planPhasesOnMove(plan, data.plans, data.periods);
+  if (!plan.startDate || startDate === plan.startDate || (!onlyThisPlan.length && !shared.length))
+    return null;
+  const names = (phases: Period[]) => phases.map((phase) => `“${phase.name}”`).join(', ');
+  const sharedNotice = shared.map(({ phase, plans }) => (
+    <p key={phase.id} role="status" className="phase-dropped-weeks">
+      “{phase.name}” is shared with {plans.map((other) => `“${other.title}”`).join(', ')} and stays
+      on its dates.
+    </p>
+  ));
+  if (!startDate)
+    return (
+      <p role="status" className="phase-dropped-weeks">
+        Phases and their weekly targets stay on their dates. An unscheduled plan shows no phase.
+      </p>
+    );
+  const dropped = onlyThisPlan.flatMap(
+    (phase) => movePhase(phase, daysFrom(plan.startDate!, startDate)).droppedEditedWeeks,
+  );
+  return (
+    <fieldset className="phase-target">
+      <legend>Phases and weekly targets</legend>
+      {onlyThisPlan.length > 0 && (
+        <>
+          <label className="checkbox-row">
+            <input type="radio" name="phases" value="keep" defaultChecked />
+            Keep {names(onlyThisPlan)} on {onlyThisPlan.length === 1 ? 'its' : 'their'} dates
+          </label>
+          <label className="checkbox-row">
+            <input type="radio" name="phases" value="move" />
+            Move {names(onlyThisPlan)} with the plan
+          </label>
+          {dropped.length > 0 && (
+            <p role="status" className="phase-dropped-weeks">
+              Moving drops the edited {dropped.length === 1 ? 'week' : 'weeks'} of{' '}
+              {dropped.map((monday) => dateLabel(monday)).join(', ')}, outside the moved phase.
+            </p>
+          )}
+        </>
+      )}
+      {sharedNotice}
+    </fieldset>
+  );
+}
+
 function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
-  const { request } = useWorkspace();
+  const { data, request } = useWorkspace();
   const action = useAction();
   const [key] = useState(requestId);
+  const [startDate, setStartDate] = useState(plan?.startDate ?? '');
   return (
     <Modal
       open
@@ -57,6 +118,15 @@ function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
             startDate: form.get('startDate') ? String(form.get('startDate')) : null,
             description: String(form.get('description')),
           };
+          const movedPhases =
+            plan?.startDate && values.startDate && form.get('phases') === 'move'
+              ? planPhasesOnMove(plan, data.plans, data.periods).onlyThisPlan.map((phase) => ({
+                  action: 'period.update' as const,
+                  id: phase.id,
+                  expectedRevision: phase.revision,
+                  values: movePhase(phase, daysFrom(plan.startDate!, values.startDate!)).values,
+                }))
+              : [];
           void action.run(
             () =>
               mutate(
@@ -70,6 +140,7 @@ function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
                         values,
                       }
                     : { action: 'plan.create', values },
+                  ...movedPhases,
                 ],
                 key,
               ),
@@ -88,8 +159,14 @@ function PlanEditor({ plan, onClose }: { plan?: Plan; onClose: () => void }) {
           />
         </Field>
         <Field label="Start date" hint="Leave blank to build an unscheduled plan.">
-          <Input name="startDate" type="date" defaultValue={plan?.startDate ?? ''} />
+          <Input
+            name="startDate"
+            type="date"
+            defaultValue={plan?.startDate ?? ''}
+            onChange={(event) => setStartDate(event.target.value)}
+          />
         </Field>
+        {plan && <PhasesOnMove plan={plan} startDate={startDate} />}
         <Field label="Description" hint="Markdown supported">
           <Textarea
             name="description"
@@ -184,12 +261,14 @@ function PlanWeek({
   plan,
   week,
   days,
+  target,
   onOpen,
   onEdit,
 }: {
   plan: Plan;
   week: number;
   days: ReturnType<typeof planWeeks>[number]['days'];
+  target?: ReactNode;
   onOpen: (workout: Workout) => void;
   onEdit: (workout: Workout) => void;
 }) {
@@ -202,7 +281,10 @@ function PlanWeek({
             ? `${dateLabel(addDays(plan.startDate, (week - 1) * 7))} – ${dateLabel(addDays(plan.startDate, week * 7 - 1), { day: 'numeric', month: 'short', year: 'numeric' })}`
             : `Days ${(week - 1) * 7 + 1}–${week * 7}`}
         </span>
-        <DurationSummary workouts={days.flatMap(([, entries]) => entries)} />
+        <div className="plans-week-totals">
+          <DurationSummary workouts={days.flatMap(([, entries]) => entries)} />
+          {target}
+        </div>
       </header>
       {days.map(([day, entries]) => (
         <div className="plans-day" key={day}>
@@ -268,7 +350,7 @@ function PlanDetails({
   onClose: () => void;
   onEdit: () => void;
 }) {
-  const { data, request } = useWorkspace();
+  const { data, request, weekStartsOn } = useWorkspace();
   const confirm = useConfirm();
   const action = useAction();
   const [adding, setAdding] = useState(false);
@@ -313,7 +395,7 @@ function PlanDetails({
               onClick={async () => {
                 if (
                   await confirm(
-                    `Duplicate “${plan.title}”? The copy will be unscheduled and will not include completion history.`,
+                    `Duplicate “${plan.title}”? The copy will be unscheduled and will not include completion history.${phases.length ? ' Phases and their weekly targets stay on their dates and are not copied; the copy shows the phases on its own dates once scheduled.' : ''}`,
                     'Duplicate plan',
                   )
                 )
@@ -382,23 +464,39 @@ function PlanDetails({
             </div>
           ) : null}
           {sections.map(({ phase, weeks: sectionWeeks }) => {
-            const weekSections = sectionWeeks.map((week) => (
+            const planWeekSection = (week: number, target?: ReactNode) => (
               <PlanWeek
                 key={week}
                 plan={plan}
                 week={week}
-                days={weeks.find((entry) => entry.week === week)!.days}
+                days={weeks.find((entry) => entry.week === week)?.days ?? []}
+                target={target}
                 onOpen={(workout) => setSelectedId(workout.id)}
                 onEdit={setWorkoutEdit}
               />
-            ));
-            return phase ? (
+            );
+            if (!phase)
+              return (
+                <Fragment key={`weeks-${sectionWeeks[0]}`}>
+                  {sectionWeeks.map((week) => planWeekSection(week))}
+                </Fragment>
+              );
+            const rows = phaseWeekRows(phase, plan, data.plans, sectionWeeks, (date) =>
+              startOfWeek(date, weekStartsOn),
+            );
+            return (
               <PhaseBlock key={phase.id} phase={phase}>
-                <PhaseWeekTargets phase={phase} />
-                {weekSections}
+                {rows.map(({ firstDay, planWeek, targetWeekStart }) => {
+                  const target = targetWeekStart && (
+                    <WeekTarget phase={phase} weekStart={targetWeekStart} />
+                  );
+                  return planWeek === null ? (
+                    <CalendarWeekTarget key={firstDay} phase={phase} weekStart={firstDay} />
+                  ) : (
+                    planWeekSection(planWeek, target)
+                  );
+                })}
               </PhaseBlock>
-            ) : (
-              <Fragment key={`weeks-${sectionWeeks[0]}`}>{weekSections}</Fragment>
             );
           })}
         </div>

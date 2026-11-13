@@ -11,7 +11,6 @@ import {
   Input,
   Modal,
   requestId,
-  startOfWeek,
   SubmitButton,
   useAction,
   useWorkspace,
@@ -19,11 +18,11 @@ import {
 import { Edit3, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 
+import { addDays } from './dates';
 import { mutate } from './editors';
 import {
   editedWeeksWith,
   findEditedWeek,
-  phaseWeekStarts,
   targetRangeLabel,
   weekTargets,
   type TargetRange,
@@ -160,79 +159,77 @@ function WeekTargetEditor({
   );
 }
 
-export function PhaseWeekTargets({ phase }: { phase: Period }) {
-  const { data, request, weekStartsOn } = useWorkspace();
+export function WeekTarget({ phase, weekStart }: { phase: Period; weekStart: string }) {
+  const { data, request } = useWorkspace();
   const action = useAction();
-  const [editing, setEditing] = useState<{ weekStart: string; title: string } | null>(null);
+  const [editing, setEditing] = useState(false);
   const fields = targetFields(data.profile?.units ?? 'metric');
-  const weeks = phaseWeekStarts(phase, (date) => startOfWeek(date, weekStartsOn));
-  if (!weeks.length) return null;
+  const targets = weekTargets([phase], weekStart)!;
+  const edited = findEditedWeek(phase, weekStart);
+  const title = `Week of ${dateLabel(weekStart)} in ${phase.name}`;
+  const targetLabel = fields
+    .map((field) => targets[field.name] && targetRangeLabelInUnit(targets[field.name]!, field))
+    .filter(Boolean)
+    .join(' · ');
   return (
-    <details className="phase-weeks">
-      <summary>Weekly targets</summary>
-      <ol>
-        {weeks.map((weekStart) => {
-          const title = `Week of ${dateLabel(weekStart)} in ${phase.name}`;
-          const targets = weekTargets([phase], weekStart)!;
-          const edited = findEditedWeek(phase, weekStart);
-          return (
-            <li key={weekStart} aria-label={title}>
-              <span className="phase-week-name">Week of {dateLabel(weekStart)}</span>
-              <span className="phase-week-targets">
-                {fields
-                  .map(
-                    (field) =>
-                      targets[field.name] && targetRangeLabelInUnit(targets[field.name]!, field),
-                  )
-                  .filter(Boolean)
-                  .join(' · ') || 'No target'}
-              </span>
-              {edited && <Badge variant="secondary">Edited</Badge>}
-              <span className="phase-actions">
-                <Button
-                  variant="ghost"
-                  aria-label={`Edit ${title}`}
-                  onClick={() => setEditing({ weekStart, title })}
-                >
-                  <Edit3 size={14} />
-                  <span>Edit</span>
-                </Button>
-                {edited && (
-                  <Button
-                    variant="ghost"
-                    disabled={action.busy}
-                    aria-label={`Reset ${title} to calculated`}
-                    onClick={() =>
-                      void action.run(() =>
-                        mutate(request, [
-                          {
-                            action: 'period.update',
-                            id: phase.id,
-                            expectedRevision: phase.revision,
-                            values: { editedWeeks: editedWeeksWith(phase, weekStart, null) },
-                          },
-                        ]),
-                      )
-                    }
-                  >
-                    <RotateCcw size={14} />
-                    <span>Reset to calculated</span>
-                  </Button>
-                )}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+    <div className="week-target">
+      <span>{targetLabel ? `Target ${targetLabel}` : 'No target'}</span>
+      {edited && <Badge variant="secondary">Edited</Badge>}
+      <Button
+        variant="ghost"
+        aria-label={`Edit target for the week of ${dateLabel(weekStart)}`}
+        onClick={() => setEditing(true)}
+      >
+        <Edit3 size={14} />
+        <span>Edit target</span>
+      </Button>
+      {edited && (
+        <Button
+          variant="ghost"
+          disabled={action.busy}
+          aria-label={`Reset target for the week of ${dateLabel(weekStart)} to calculated`}
+          onClick={() =>
+            void action.run(() =>
+              mutate(request, [
+                {
+                  action: 'period.update',
+                  id: phase.id,
+                  expectedRevision: phase.revision,
+                  values: { editedWeeks: editedWeeksWith(phase, weekStart, null) },
+                },
+              ]),
+            )
+          }
+        >
+          <RotateCcw size={14} />
+          <span>Reset to calculated</span>
+        </Button>
+      )}
       <ErrorMessage error={action.error} />
       {editing && (
         <WeekTargetEditor
           phase={phase}
-          weekStart={editing.weekStart}
-          title={editing.title}
-          onClose={() => setEditing(null)}
+          weekStart={weekStart}
+          title={title}
+          onClose={() => setEditing(false)}
         />
       )}
-    </details>
+    </div>
+  );
+}
+
+export function CalendarWeekTarget({ phase, weekStart }: { phase: Period; weekStart: string }) {
+  return (
+    <section
+      className="calendar-week-target"
+      aria-label={`Calendar week of ${dateLabel(weekStart)}`}
+    >
+      <h4>Calendar week</h4>
+      <span>
+        {dateLabel(weekStart)} –{' '}
+        {dateLabel(addDays(weekStart, 6), { day: 'numeric', month: 'short', year: 'numeric' })}
+      </span>
+      <WeekTarget phase={phase} weekStart={weekStart} />
+    </section>
   );
 }

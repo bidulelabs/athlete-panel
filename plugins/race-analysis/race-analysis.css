@@ -600,3 +600,26 @@
     animation: none;
   }
 }
+.race-agent {
+  margin: 24px 0;
+}
+.race-weeks-scroll {
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+.race-weeks {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.race-weeks th,
+.race-weeks td {
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.race-weeks thead th {
+  color: var(--muted);
+  font-weight: 400;
+}

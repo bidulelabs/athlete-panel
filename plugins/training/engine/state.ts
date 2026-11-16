@@ -16,6 +16,7 @@ export const collections = {
   note: 'notes',
   event: 'events',
   period: 'periods',
+  racePlan: 'racePlans',
   injury: 'injuries',
   activity: 'activities',
   health: 'health',
@@ -56,6 +57,14 @@ export function assertReferences(state: WorkspaceState): void {
     if (index > 0 && period.startDate <= periodsByStartDate[index - 1]!.endDate)
       fail('PERIOD_OVERLAP', 'Phases cannot overlap.', { id: period.id });
   });
+  const raceIdsWithPlan = new Set<string>();
+  for (const racePlan of state.racePlans) {
+    if (!state.events.some((event) => event.id === racePlan.eventId && event.kind === 'race'))
+      fail('NOT_FOUND', 'A race plan needs a race.', { id: racePlan.id });
+    if (raceIdsWithPlan.has(racePlan.eventId))
+      fail('RACE_PLAN_EXISTS', 'This race already has a plan.', { id: racePlan.id });
+    raceIdsWithPlan.add(racePlan.eventId);
+  }
   const linkedActivities = new Set<string>();
   for (const workout of state.workouts) {
     if (workout.completion?.source !== 'garmin') continue;

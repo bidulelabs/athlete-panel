@@ -17,7 +17,12 @@ import { canonical, digest } from '../../packages/host/src/crypto';
 import { assert, AppError } from '../../packages/host/src/errors';
 import { loadWorkspace } from '../../instance/services';
 import { applyCommands, DomainError } from '../training/public/server';
-import { boundedContext, assertReadableSources, assertBounded } from './proposal-validation';
+import {
+  boundedContext,
+  assertReadableSources,
+  assertBounded,
+  type BoundedContext,
+} from './proposal-validation';
 
 type ProposalRow = {
   id: string;
@@ -33,7 +38,7 @@ type ProposalRow = {
 };
 function contextChanges(
   before: WorkspaceState,
-  after: WorkspaceState,
+  after: BoundedContext,
 ): ProposalReview['contextChanges'] {
   const changes: ProposalReview['contextChanges'] = [];
   const compare = (entity: EntityChange['entity'], previous: Entity[], current: Entity[]) => {
@@ -53,11 +58,12 @@ function contextChanges(
     ['notes', 'note'],
     ['events', 'event'],
     ['periods', 'period'],
+    ['racePlans', 'racePlan'],
     ['injuries', 'injury'],
     ['activities', 'activity'],
     ['health', 'health'],
   ] as const)
-    compare(entity, before[key], after[key]);
+    compare(entity, before[key], after[key] ?? []);
   return changes;
 }
 

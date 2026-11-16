@@ -211,6 +211,10 @@ Old strict scope parsers reject grants containing `allowEventCreation`, includin
 
 Plan phase proposals add `allowPhaseChanges` to planning scopes and `period.*` commands to agent proposals, released with plan phases in Agent Bridge 2.4 and Training 2.3. Follow the [event proposal upgrade](#event-proposal-upgrade) steps: upgrade the application and CLI together, no SQL migration. Existing grants keep their scopes; reconnect to grant the permission. Older parsers reject these grants and proposals, so roll back only with the matching pre-upgrade backup.
 
+#### Race plan upgrade
+
+Race plans add the `racePlan` record to Training, `raceId` to planning scopes and `racePlan.create` and `racePlan.update` to owner commands and agent proposals, released in Agent Bridge 2.5 and Training 2.5. Follow the [event proposal upgrade](#event-proposal-upgrade) steps: upgrade the application and CLI together, no SQL migration. Existing grants keep their scopes and their planning context is unchanged. Older parsers reject a workspace holding a race plan, and these grants and proposals, so roll back only with the matching pre-upgrade backup.
+
 ### Historical review and annual planning commands
 
 Historical ranges include both endpoints and may extend through the fifth calendar anniversary; planning ranges through the first. February 29 anniversaries clamp to February 28 in non-leap years. Existing grants retain their old dates and do not gain history access. Future scheduled records are permitted. The browser captures the current resolved week boundary for the review.

@@ -2,11 +2,12 @@ import type { WorkspaceState } from '../../packages/contracts/src';
 import { canonical, digest } from '../../packages/host/src/crypto';
 import { transaction, type Transaction } from '../../packages/host/src/db';
 import { assert } from '../../packages/host/src/errors';
+import type { BoundedContext } from './proposal-validation';
 
 export async function rememberPlanningRead(
   tx: Transaction,
   grantId: string,
-  context: WorkspaceState,
+  context: BoundedContext,
 ) {
   const contextDigest = digest(canonical(context));
   await tx`insert into agent_bridge.planning_reads(grant_id,digest,snapshot)
@@ -26,7 +27,7 @@ export async function proposalBaseline(
   tx: Transaction,
   grantId: string,
   readDigest: string,
-  current: WorkspaceState,
+  current: BoundedContext,
 ) {
   const [read] = await tx<
     { snapshot: WorkspaceState }[]

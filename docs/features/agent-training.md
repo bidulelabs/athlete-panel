@@ -98,6 +98,22 @@ Requirement source: the 2026-11-12 follow-up on issue #97 (make both planning st
 | Owner opens **Connect an agent** | Step 3 names both planning styles | [Workspace browser scenarios](../../tests/e2e/agent-workspace.spec.ts) |
 | Coaching skill | Names both planning styles and asks which one when a season request leaves it open | [Planning styles test](../../tests/unit/planning-styles.test.ts) |
 
+### Race plan proposals
+
+Specification status: draft. Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/issues/121) and the decisions proposed on it on 2026-11-16. Race plan behavior is in [Race preparation](race-preparation.md).
+
+Modern planning scopes carry optional `raceId`, the one race the connection prepares. Omitted fields stay omitted: a grant without it keeps its exact planning context and digest. With it, the planning context gains `racePlans`, holding that race's plan when it exists, briefing included without notes access.
+
+Agents may propose `racePlan.create` and `racePlan.update` for that race only, and only while the race day lies within the proposal dates. They never send the target and cannot move a plan to another race. Each command names `courseId`, the course the strategy was written for, or null. A race plan, phases and workouts can go in one proposal; a proposal holding only a race plan has no date bounds.
+
+| Situation | Expected result | Verification |
+| --- | --- | --- |
+| Grant without a race / for another race / race day outside the proposal dates | Race plan proposal refused, nothing stored | [Race plan integration](../../tests/integration/agent-race-plans.test.ts) |
+| Planning context with and without a race | Only the granted race's plan / no `racePlans` key | Race plan integration |
+| Race plan, phase and workout in one proposal | Applied together and undone together | Race plan integration |
+| Owner edits the plan while a proposal waits | Review lists the change and asks for a replacement | Race plan integration |
+| Agent command carrying a target, another race or no course | Refused | [Race plan tests](../../tests/unit/race-plans.test.ts) |
+
 ### Activity and health imports during planning
 
 The owner approved [issue #68](https://github.com/bidulelabs/athlete-panel/issues/68) on 2026-11-04. Each planning read saves the bounded, note-redacted data behind the returned digest. Submission requires a digest this grant read. If only activities or health records in the planning period have changed, the server can accept a pending proposal. It validates the commands against current training and keeps the original read as the proposal’s baseline. Changes to the profile, plans, workouts, notes, events or injuries require a new read. This includes a Garmin correction that updates a linked workout.

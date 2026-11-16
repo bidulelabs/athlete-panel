@@ -305,6 +305,7 @@ Workout libraries, advanced training-load/recovery calculations, automatic Garmi
 | [Garmin sport planning](docs/features/garmin-sport-planning.md) | Sport hierarchy, rest, elevation, strength, notes and recorded metrics |
 | [Training workspace](docs/features/training-workspace.md)       | Planning, calendar, completion, linking, cards and weekly summaries                                  |
 | [Plan phases](docs/features/plan-phases.md) | Phases inside training plans, with a focus and optional weekly hours, distance and climbing targets |
+| [Race preparation](docs/features/race-preparation.md) | One plan per race: target, briefing and pacing by course section, proposed by an agent and reviewed by the owner |
 | [Garmin import and health](docs/features/garmin-import.md)      | Authentication, normalized records, history traversal, coverage and limits                           |
 | [Activity summary coverage](docs/features/activity-summary.md) | Recorded duration/distance, missing measurements and filtered totals |
 | [Health history](docs/features/health-history.md) | Recent health review, date presets and independent Calendar navigation |

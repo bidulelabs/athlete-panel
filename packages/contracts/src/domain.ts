@@ -384,6 +384,59 @@ export const eventValuesSchema = z
   .strict();
 export const eventSchema = eventValuesSchema.extend(base);
 export type TrainingEvent = z.infer<typeof eventSchema>;
+const racePlanLine = z.string().trim().min(1).max(300);
+const racePlanTarget = z
+  .string()
+  .trim()
+  .max(120)
+  .describe('What the athlete wants from this race. Only the owner sets it.');
+const racePlanAgentFields = {
+  briefing: notes.describe('Race briefing in plain text.'),
+  pacing: z
+    .array(
+      z
+        .object({
+          fromMeters: nonnegativeSchema.describe('Section start, in meters from the start line.'),
+          toMeters: nonnegativeSchema.describe('Section end, in meters from the start line.'),
+          effort: z
+            .string()
+            .trim()
+            .min(1)
+            .max(120)
+            .describe('Effort or run and walk guidance for this section.'),
+        })
+        .strict(),
+    )
+    .max(200)
+    .refine(
+      (sections) =>
+        sections.every(
+          (section, index) =>
+            section.toMeters > section.fromMeters &&
+            (index === 0 || section.fromMeters >= sections[index - 1]!.toMeters),
+        ),
+      'Pacing sections run from start to finish without overlap.',
+    )
+    .describe('Pacing by course section, in course order.'),
+  assumptions: z.array(racePlanLine).max(20).describe('What the strategy takes for granted.'),
+  openQuestions: z
+    .array(racePlanLine)
+    .max(20)
+    .describe('What the athlete still has to answer for the strategy to hold.'),
+};
+const racePlanCourseId = idSchema
+  .nullable()
+  .describe('Id of the course the strategy was written for. Null when the race has no course.');
+export const racePlanSchema = z
+  .object({
+    eventId: idSchema.describe('Id of the race this plan prepares.'),
+    target: racePlanTarget,
+    ...racePlanAgentFields,
+    writtenFor: z.object({ courseId: racePlanCourseId, target: racePlanTarget }).strict(),
+  })
+  .strict()
+  .extend(base);
+export type RacePlan = z.infer<typeof racePlanSchema>;
 const weeklyRange = z
   .object({
     min: nonnegativeSchema.describe('Lowest weekly value, in the unit named by the target field.'),
@@ -568,6 +621,7 @@ export const workspaceStateSchema = z
     notes: z.array(noteSchema),
     events: z.array(eventSchema),
     periods: z.array(periodSchema).default([]),
+    racePlans: z.array(racePlanSchema).default([]),
     injuries: z.array(injurySchema),
     activities: z.array(activitySchema),
     health: z.array(healthRecordSchema),
@@ -581,6 +635,7 @@ export const emptyWorkspace = (): WorkspaceState => ({
   notes: [],
   events: [],
   periods: [],
+  racePlans: [],
   injuries: [],
   activities: [],
   health: [],
@@ -707,6 +762,26 @@ const periodUpdateCommand = z
   .object({ action: z.literal('period.update'), ...existing, values: periodPatchSchema })
   .strict();
 const periodDeleteCommand = z.object({ action: z.literal('period.delete'), ...existing }).strict();
+const agentRacePlanCreateCommand = z
+  .object({
+    action: z.literal('racePlan.create'),
+    values: z
+      .object({
+        ...createId,
+        eventId: racePlanSchema.shape.eventId,
+        ...racePlanAgentFields,
+        courseId: racePlanCourseId,
+      })
+      .strict(),
+  })
+  .strict();
+const agentRacePlanUpdateCommand = z
+  .object({
+    action: z.literal('racePlan.update'),
+    ...existing,
+    values: z.object(racePlanAgentFields).strict().partial().extend({ courseId: racePlanCourseId }),
+  })
+  .strict();
 export const agentCommandSchema = z.discriminatedUnion('action', [
   planCreateCommand,
   planUpdateCommand,
@@ -724,6 +799,8 @@ export const agentCommandSchema = z.discriminatedUnion('action', [
   periodCreateCommand,
   periodUpdateCommand,
   periodDeleteCommand,
+  agentRacePlanCreateCommand,
+  agentRacePlanUpdateCommand,
 ]);
 export const AGENT_COMMAND_LIMIT = 1500;
 export const AGENT_PROPOSAL_BYTES = 4 * 1024 * 1024;
@@ -769,6 +846,34 @@ export const commandSchema = z.discriminatedUnion('action', [
   periodUpdateCommand,
   periodDeleteCommand,
   z
+    .object({
+      action: z.literal('racePlan.create'),
+      values: z
+        .object({
+          ...createId,
+          eventId: racePlanSchema.shape.eventId,
+          target: racePlanTarget.optional(),
+          briefing: racePlanAgentFields.briefing.default(''),
+          pacing: racePlanAgentFields.pacing.default([]),
+          assumptions: racePlanAgentFields.assumptions.default([]),
+          openQuestions: racePlanAgentFields.openQuestions.default([]),
+          courseId: racePlanCourseId.default(null),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('racePlan.update'),
+      ...existing,
+      values: nonemptyPatch(
+        z
+          .object({ target: racePlanTarget, ...racePlanAgentFields, courseId: racePlanCourseId })
+          .strict(),
+      ),
+    })
+    .strict(),
+  z
     .object({ action: z.literal('injury.create'), values: injuryValuesSchema.extend(createId) })
     .strict(),
   z.object({ action: z.literal('injury.update'), ...existing, values: injuryPatchSchema }).strict(),
@@ -778,9 +883,27 @@ export type Command = z.infer<typeof commandSchema>;
 export type CommandInput = z.input<typeof commandSchema>;
 export const commandsSchema = z.array(commandSchema).min(1).max(200);
 export type EntityKind =
-  'profile' | 'plan' | 'workout' | 'note' | 'event' | 'period' | 'injury' | 'activity' | 'health';
+  | 'profile'
+  | 'plan'
+  | 'workout'
+  | 'note'
+  | 'event'
+  | 'period'
+  | 'racePlan'
+  | 'injury'
+  | 'activity'
+  | 'health';
 export type Entity =
-  Profile | Plan | Workout | Note | TrainingEvent | Period | Injury | Activity | HealthRecord;
+  | Profile
+  | Plan
+  | Workout
+  | Note
+  | TrainingEvent
+  | Period
+  | RacePlan
+  | Injury
+  | Activity
+  | HealthRecord;
 export type EntityChange = {
   entity: EntityKind;
   id: string;
@@ -828,6 +951,7 @@ export const planningScopeSchema = z
     // Absence must remain absent in saved scopes; old grants never gain permission.
     allowEventCreation: z.boolean().optional(),
     allowPhaseChanges: z.boolean().optional(),
+    raceId: idSchema.optional(),
   })
   .strict()
   .superRefine((scope, ctx) => calendarRange(scope, 1, ctx));
@@ -937,6 +1061,7 @@ export function describeAgentAccess(scope: GrantScope): string[] {
           `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
           `Create races and goals: ${planning.allowEventCreation === true ? 'permitted within the proposal dates' : 'not permitted'}.`,
           `Change plan phases: ${planning.allowPhaseChanges === true ? 'permitted for phases within the proposal dates' : 'not permitted'}.`,
+          `Race preparation: ${planning.raceId ? 'race plan of the selected race shared, race plan proposals permitted' : 'not permitted'}.`,
         ]
       : ['Proposal submission is not permitted.']),
     'Applying training changes requires your review and explicit approval in Athlete Panel.',

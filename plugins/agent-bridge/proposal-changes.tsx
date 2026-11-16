@@ -175,7 +175,9 @@ function ProposalWeek({
   const [expanded, setExpanded] = useState(!collapsed);
   const title = week.weekStart
     ? `Week of ${dateLabel(week.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })}`
-    : 'Plans';
+    : week.changes.every((change) => change.entity === 'racePlan')
+      ? 'Race plan'
+      : 'Plans';
   return (
     <section className="proposal-week" aria-label={title}>
       <details open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
@@ -197,6 +199,9 @@ function ProposalWeek({
     </section>
   );
 }
+
+const pluralCountLabel = (count: number, noun: string) =>
+  count > 0 && `${count} ${noun}${count === 1 ? '' : 's'}`;
 
 export function ReviewChange({
   change,
@@ -226,6 +231,14 @@ export function ReviewChange({
       'role' in record &&
       `${record.role[0]!.toUpperCase()}${record.role.slice(1)} phase until ${dateLabel(record.endDate, proposalDateOptions)}`,
     record && 'focus' in record && record.focus,
+    ...(record && 'pacing' in record
+      ? [
+          data.events.find((event) => event.id === record.eventId)?.title,
+          pluralCountLabel(record.pacing.length, 'section'),
+          pluralCountLabel(record.assumptions.length, 'assumption'),
+          pluralCountLabel(record.openQuestions.length, 'open question'),
+        ]
+      : []),
     ...(change.entity === 'period' && record && 'editedWeeks' in record
       ? editedWeekFacts(record)
       : []),

@@ -21,6 +21,7 @@ import { idempotent, undoChange } from '../training/public/server';
 import { todayInTimeZone } from '../training/public/shared';
 import { recentHealthAndWeeklyAverages } from './health-weeks';
 import { proposalBaseline, rememberPlanningRead } from './planning-reads';
+import { readRaceCourseIfEnabled } from '../../instance/race-context';
 
 import {
   boundedContext,
@@ -86,6 +87,7 @@ export async function contextForToken(token: string) {
           scope,
           todayInTimeZone(context.profile?.timezone),
         ),
+        ...(scope.raceId ? { raceCourse: await readRaceCourseIfEnabled(scope.raceId, tx) } : {}),
       },
       contextDigest: await rememberPlanningRead(tx, grant.id, context),
       expiresAt: grant.expires_at,
@@ -141,6 +143,18 @@ export async function submitProposal(token: string, body: unknown) {
         const snapshot = await proposalBaseline(tx, grant.id, input.contextDigest, context);
         const commands = assignIds(input.commands);
         assertReadableSources(commands, before, scope);
+        const racePlanCommands = commands.filter(
+          (command) => command.action === 'racePlan.create' || command.action === 'racePlan.update',
+        );
+        if (racePlanCommands.length) {
+          const courseId = (await readRaceCourseIfEnabled(scope.raceId!, tx))?.courseId ?? null;
+          assert(
+            racePlanCommands.every((command) => command.values.courseId === courseId),
+            'stale_context',
+            'The race course changed. Read the training context again and review your race plan.',
+            409,
+          );
+        }
         const result = applyCommands(before, commands, { actor: 'agent' });
         if (!scope.includeNotes)
           for (const command of commands) {

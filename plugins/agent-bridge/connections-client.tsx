@@ -12,6 +12,7 @@ import {
 import { ErrorMessage, Field, Modal, PageHeader, useAction, useWorkspace } from '@athlete-panel/ui';
 
 import { ConnectionAccess } from './connection-access';
+import { racesUpToOneYearAhead } from './connection-periods';
 import { planningStyles } from './planning-styles';
 
 export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
@@ -78,7 +79,7 @@ export function ConnectAgentDialog({ onClose }: { onClose: () => void }) {
 }
 
 export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => void }) {
-  const { request, data, weekStartsOn } = useWorkspace();
+  const { request, data, weekStartsOn, envelope } = useWorkspace();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [connection, setConnection] = useState<AgentConnectionStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -109,6 +110,11 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
   }).formatToParts(new Date());
   const part = (type: string) => todayParts.find((value) => value.type === type)!.value;
   const today = `${part('year')}-${part('month')}-${part('day')}`;
+  const racesToPrepare = envelope.plugins.some(
+    (plugin) => plugin.id === 'race-analysis' && plugin.enabled,
+  )
+    ? racesUpToOneYearAhead(data.events, today)
+    : [];
   const expired = connection && Date.parse(connection.expiresAt) <= now;
   const pending = connection?.status === 'pending' && !expired;
   const approved = connection?.status === 'approved' && !expired;
@@ -184,6 +190,7 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
                         includeNotes: form.get('includeNotes') === 'on',
                         allowEventCreation: form.get('allowEventCreation') === 'on',
                         allowPhaseChanges: form.get('allowPhaseChanges') === 'on',
+                        ...(form.get('raceId') ? { raceId: String(form.get('raceId')) } : {}),
                       },
                   expiresInHours: Number(form.get('expiresInHours')),
                 });
@@ -205,7 +212,12 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
             <Field label="Agent name">
               <Input required name="label" maxLength={100} defaultValue={connection.label} />
             </Field>
-            <ConnectionAccess today={today} weekStartsOn={weekStartsOn} errors={fieldErrors} />
+            <ConnectionAccess
+              today={today}
+              weekStartsOn={weekStartsOn}
+              errors={fieldErrors}
+              racesToPrepare={racesToPrepare}
+            />
             <p className="form-footnote">
               This connection request expires at{' '}
               {new Date(connection.expiresAt).toLocaleTimeString()}. You can disconnect the agent at

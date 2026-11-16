@@ -413,7 +413,8 @@
 .proposal-type-workout {
   --proposal-type-color: var(--fact-workout);
 }
-.proposal-type-race {
+.proposal-type-race,
+.proposal-type-racePlan {
   --proposal-type-color: var(--fact-race);
 }
 .proposal-type-goal {

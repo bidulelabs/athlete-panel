@@ -273,7 +273,9 @@ export const registry = [
       "required": false,
       "client": "client.tsx",
       "server": "server.ts",
-      "public": {},
+      "public": {
+        "server": "public/server.ts"
+      },
       "routes": [
         {
           "path": "/races",

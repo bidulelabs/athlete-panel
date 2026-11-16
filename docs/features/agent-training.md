@@ -102,9 +102,9 @@ Requirement source: the 2026-11-12 follow-up on issue #97 (make both planning st
 
 Specification status: draft. Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/issues/121) and the decisions proposed on it on 2026-11-16. Race plan behavior is in [Race preparation](race-preparation.md).
 
-Modern planning scopes carry optional `raceId`, the one race the connection prepares. Omitted fields stay omitted: a grant without it keeps its exact planning context and digest. With it, the planning context gains `racePlans`, holding that race's plan when it exists, briefing included without notes access.
+When Race analysis is enabled, new browser planning approvals show **Race to prepare**: None, or one of the races from today to one year ahead. Choosing a race sets the proposal dates from today to the race day; they stay editable. The summary names the race. Modern planning scopes carry optional `raceId`, the one race the connection prepares. Omitted fields stay omitted: a grant without it keeps its exact planning context and digest. With it, the planning context gains `racePlans`, holding that race's plan when it exists, briefing included without notes access, and `raceCourse`: the course id, distance, climbing, terrain, 5 km sections, the finish estimate or the reasons it is missing, and the measurements of the past efforts. It never holds coordinates, file names or effort titles, and is null without a course or when Race analysis is disabled. `raceCourse` stays outside the context digest, like the health weeks: replacing the course does not make a read stale.
 
-Agents may propose `racePlan.create` and `racePlan.update` for that race only, and only while the race day lies within the proposal dates. They never send the target and cannot move a plan to another race. Each command names `courseId`, the course the strategy was written for, or null. A race plan, phases and workouts can go in one proposal; a proposal holding only a race plan has no date bounds.
+Agents may propose `racePlan.create` and `racePlan.update` for that race only, and only while the race day lies within the proposal dates. They never send the target and cannot move a plan to another race. Each command names `courseId`, the course the strategy was written for, or null; a proposal is refused at submission when it is not the course in use. A course replaced after submission does not block the proposal: the applied plan then needs review. Review labels the change **Race plan** with the race title and the number of sections, assumptions and open questions; its rows read **Pacing · Section N**, **Assumptions · Assumption N** and **Open questions · Open question N**. A race plan, phases and workouts can go in one proposal; a proposal holding only a race plan has no date bounds.
 
 | Situation | Expected result | Verification |
 | --- | --- | --- |
@@ -113,6 +113,9 @@ Agents may propose `racePlan.create` and `racePlan.update` for that race only, a
 | Race plan, phase and workout in one proposal | Applied together and undone together | Race plan integration |
 | Owner edits the plan while a proposal waits | Review lists the change and asks for a replacement | Race plan integration |
 | Agent command carrying a target, another race or no course | Refused | [Race plan tests](../../tests/unit/race-plans.test.ts) |
+| Course summary in the context | No coordinates, file names or effort titles; null without a course; absent without a race | Race plan integration |
+| Proposal written for a replaced course / course replaced after submission | Refused at submission / still applied, plan left to review | Race plan integration |
+| Owner picks a race to prepare, the agent proposes plan, phase and workout | Dates set to race day, race beyond a year not offered; reviewed with readable rows, applied, shown in Preparation, undone | [Browser flow](../../tests/e2e/agent-race-plans.spec.ts) |
 
 ### Activity and health imports during planning
 

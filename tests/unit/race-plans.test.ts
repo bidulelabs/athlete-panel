@@ -10,6 +10,7 @@ import {
   type WorkspaceState,
 } from '@athlete-panel/contracts';
 import { applyCommands } from '../../plugins/training/engine';
+import { proposalRows } from '../../plugins/agent-bridge/proposal-diff';
 
 const id = (number: number) => `00000000-0000-4000-8000-${number.toString().padStart(12, '0')}`;
 const raceId = id(1);
@@ -251,8 +252,27 @@ describe('race plan scope', () => {
     const access = (planning: Record<string, unknown>) =>
       describeAgentAccess(grantScopeSchema.parse({ version: 2, history: null, planning }));
     expect(access({ ...scope, raceId })).toContain(
-      'Race preparation: race plan of the selected race shared, race plan proposals permitted.',
+      'Race preparation: course summary and race plan of the selected race shared, race plan proposals permitted.',
     );
     expect(access(scope)).toContain('Race preparation: not permitted.');
+  });
+});
+
+describe('race plan review rows', () => {
+  it('names sections, assumptions and open questions, with distances in profile units', () => {
+    const owned = run(workspaceWithRaces(), [createRacePlan({ target: 'Finish' })]);
+    const [change] = run(owned.state, [updateRacePlan(agentWrites)], 'agent').changes;
+    const fields = proposalRows(change!, 'metric').map((row) => `${row.field}: ${row.after}`);
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        'Pacing · Section 1 · From: 0 km',
+        'Pacing · Section 2 · To: 12 km',
+        'Pacing · Section 1 · Effort: Easy, walk the steep ramps',
+        'Assumptions · Assumption 1: Dry trail',
+        'Open questions · Open question 1: Poles allowed?',
+        `Written for · Course: ${courseId}`,
+      ]),
+    );
+    expect(fields.join()).not.toContain('Step');
   });
 });

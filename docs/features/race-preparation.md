@@ -42,9 +42,9 @@ Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/iss
 
 ## Observed implementation
 
-Implementation status: implemented in the working tree for the stored record, its commands and agent proposals; the course summary shared with the assistant and the connection field that selects the race are not implemented.
+Implementation status: implemented in the working tree.
 
-Training stores race plans as records of kind `racePlan`, beside plans, workouts, notes, events and phases. The engine checks the race of each plan, keeps one plan per race and removes a plan with its race. The Preparation tab is `plugins/race-analysis/preparation.tsx`; which rows it shows, when a plan needs review and which command a save sends are in `plugins/race-analysis/race-plan-form.ts`. Agent Bridge adds the plan of the granted race to the planning context and checks each proposed race plan against the grant.
+Training stores race plans as records of kind `racePlan`, beside plans, workouts, notes, events and phases. The engine checks the race of each plan, keeps one plan per race and removes a plan with its race. The Preparation tab is `plugins/race-analysis/preparation.tsx`; which rows it shows, when a plan needs review and which command a save sends are in `plugins/race-analysis/race-plan-form.ts`. Race analysis exposes the course summary through `plugins/race-analysis/public/server.ts`; `instance/race-context.ts` hands it to Agent Bridge only when Race analysis is enabled. Agent Bridge adds the plan of the granted race to the planning context and checks each proposed race plan against the grant.
 
 ## Contracts and constraints
 

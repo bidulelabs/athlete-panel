@@ -2,8 +2,16 @@
 
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { addCalendarYears } from '@athlete-panel/contracts';
-import { addDays, Checkbox, ErrorMessage, Field, Input, NativeSelect } from '@athlete-panel/ui';
+import { addCalendarYears, type TrainingEvent } from '@athlete-panel/contracts';
+import {
+  addDays,
+  Checkbox,
+  dateLabel,
+  ErrorMessage,
+  Field,
+  Input,
+  NativeSelect,
+} from '@athlete-panel/ui';
 import { historyAnniversaryStart } from './connection-periods';
 
 const categories = {
@@ -70,16 +78,20 @@ export function ConnectionAccess({
   today,
   weekStartsOn,
   errors,
+  racesToPrepare,
 }: {
   today: string;
   weekStartsOn: 0 | 1;
   errors: Record<string, string>;
+  racesToPrepare: readonly TrainingEvent[];
 }) {
   const [historyPreset, setHistoryPreset] = useState('4weeks');
   const [planningPreset, setPlanningPreset] = useState('short');
   const [planning, setPlanning] = useState(true);
   const [allowEventCreation, setAllowEventCreation] = useState(true);
   const [allowPhaseChanges, setAllowPhaseChanges] = useState(true);
+  const [raceId, setRaceId] = useState('');
+  const raceToPrepare = racesToPrepare.find((race) => race.id === raceId);
   const [historyRange, setHistoryRange] = useState<Range>({ from: addDays(today, -27), to: today });
   const [planningRange, setPlanningRange] = useState<Range>({
     from: today,
@@ -192,6 +204,31 @@ export function ConnectionAccess({
               />
               Allow proposals to change plan phases
             </label>
+            {racesToPrepare.length > 0 && (
+              <Field
+                label="Race to prepare"
+                hint="Shares the plan and course summary of this race, and allows race plan proposals for it."
+              >
+                <NativeSelect
+                  name="raceId"
+                  value={raceId}
+                  onChange={(event) => {
+                    setRaceId(event.target.value);
+                    const race = racesToPrepare.find((item) => item.id === event.target.value);
+                    if (!race) return;
+                    setPlanningPreset('custom');
+                    setPlanningRange({ from: today, to: race.date });
+                  }}
+                >
+                  <option value="">None</option>
+                  {racesToPrepare.map((race) => (
+                    <option key={race.id} value={race.id}>
+                      {race.title} · {dateLabel(race.date)}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+            )}
           </>
         )}
       </div>
@@ -296,6 +333,8 @@ export function ConnectionAccess({
                   Create races and goals: {allowEventCreation ? 'permitted' : 'not permitted'}
                   <br />
                   Change plan phases: {allowPhaseChanges ? 'permitted' : 'not permitted'}
+                  <br />
+                  Race preparation: {raceToPrepare ? raceToPrepare.title : 'not permitted'}
                   <br />
                   Can also read profile, goals, availability, zones, training, events, injuries,
                   activities and health in this period.

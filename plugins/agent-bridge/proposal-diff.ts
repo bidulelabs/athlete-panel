@@ -36,6 +36,18 @@ const labels: Record<string, string> = {
   editedWeeks: 'Edited weeks',
   firstWeek: 'First week',
   lastWeek: 'Last week',
+  eventId: 'Race',
+  openQuestions: 'Open questions',
+  fromMeters: 'From',
+  toMeters: 'To',
+  writtenFor: 'Written for',
+  courseId: 'Course',
+};
+const listItemLabels: Record<string, string> = {
+  exercises: 'Exercise',
+  pacing: 'Section',
+  assumptions: 'Assumption',
+  openQuestions: 'Open question',
 };
 const readable = (key: string) =>
   labels[key] ??
@@ -139,7 +151,7 @@ export function proposalRows(
       field: path
         .map((part, index) =>
           /^\d+$/.test(part)
-            ? `${path[index - 1] === 'exercises' ? 'Exercise' : 'Step'} ${Number(part) + 1}`
+            ? `${listItemLabels[path[index - 1]!] ?? 'Step'} ${Number(part) + 1}`
             : path.length === 1 && part === 'notes' && change.entity === 'workout'
               ? 'Workout description'
               : path[index - 1] === 'editedWeeks'

@@ -1061,7 +1061,7 @@ export function describeAgentAccess(scope: GrantScope): string[] {
           `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
           `Create races and goals: ${planning.allowEventCreation === true ? 'permitted within the proposal dates' : 'not permitted'}.`,
           `Change plan phases: ${planning.allowPhaseChanges === true ? 'permitted for phases within the proposal dates' : 'not permitted'}.`,
-          `Race preparation: ${planning.raceId ? 'race plan of the selected race shared, race plan proposals permitted' : 'not permitted'}.`,
+          `Race preparation: ${planning.raceId ? 'course summary and race plan of the selected race shared, race plan proposals permitted' : 'not permitted'}.`,
         ]
       : ['Proposal submission is not permitted.']),
     'Applying training changes requires your review and explicit approval in Athlete Panel.',

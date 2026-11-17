@@ -9,7 +9,7 @@
     {
       "path": "plugins/training",
       "enabled": true,
-      "version": "2.3.0"
+      "version": "2.4.0"
     },
     {
       "path": "plugins/activity-records",
@@ -19,7 +19,7 @@
     {
       "path": "plugins/calendar",
       "enabled": true,
-      "version": "2.1.0"
+      "version": "2.2.0"
     },
     {
       "path": "plugins/garmin",
@@ -30,6 +30,11 @@
       "path": "plugins/health",
       "enabled": true,
       "version": "1.1.0"
+    },
+    {
+      "path": "plugins/race-analysis",
+      "enabled": true,
+      "version": "1.0.0"
     },
     {
       "path": "plugins/charts",

@@ -44,3 +44,4 @@ export { HistorySheet } from './history-sheet';
 export * from './components/tabs';
 export { MarkdownContent } from './markdown-content';
 export { markdownToPlainText } from './markdown';
+export { ReloadableRequestError } from './request-error';

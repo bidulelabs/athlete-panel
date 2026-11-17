@@ -13,6 +13,8 @@ import {
   agentConnectionStatusSchema,
   historyQuerySchema,
   historyResponseSchema,
+  raceUploadInputSchema,
+  raceMutationResultSchema,
 } from '../packages/contracts/src';
 import { onboardingSchema, onboardingActionSchema } from '../packages/contracts/src/onboarding';
 import { manifestSchema } from '../packages/plugin-sdk/src';
@@ -39,6 +41,13 @@ const output =
         ]),
       ),
       note: 'Generated from runtime schemas. Custom refinements additionally apply at runtime.',
+      uploads: {
+        'race-analysis/track': {
+          metadata: z.toJSONSchema(raceUploadInputSchema),
+          result: z.toJSONSchema(raceMutationResultSchema),
+          file: 'One multipart file, maximum 10 MiB; GPX course or GPX/FIT reference effort.',
+        },
+      },
       onboarding: {
         state: z.toJSONSchema(onboardingSchema),
         action: z.toJSONSchema(onboardingActionSchema, { unrepresentable: 'any' }),

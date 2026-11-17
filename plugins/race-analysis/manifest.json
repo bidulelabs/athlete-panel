@@ -1,0 +1,32 @@
+{
+  "id": "race-analysis",
+  "name": "Race analysis",
+  "description": "GPX courses, elevation and estimates from your past efforts",
+  "version": "1.0.0",
+  "hostApi": "^1.4.0",
+  "dependencies": {
+    "training": "^2.4.0"
+  },
+  "required": false,
+  "routes": [
+    {
+      "path": "/races",
+      "title": "Races",
+      "icon": "Flag"
+    }
+  ],
+  "slots": [
+    {
+      "id": "race-course-link",
+      "kind": "inspector",
+      "title": "Course analysis"
+    }
+  ],
+  "schema": "race_analysis",
+  "migrations": ["migrations/001-initial.sql"],
+  "services": [],
+  "jobs": [],
+  "capabilities": ["owner-file-upload"],
+  "client": "client.tsx",
+  "server": "server.ts"
+}

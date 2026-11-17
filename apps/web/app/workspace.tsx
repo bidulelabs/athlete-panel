@@ -5,6 +5,7 @@ const priority = [
   '/calendar',
   '/charts',
   '/plans',
+  '/races',
   '/activities',
   '/health',
   '/garmin',

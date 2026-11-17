@@ -51,6 +51,7 @@ import {
   Clipboard,
   Code2,
   HeartPulse,
+  Flag,
   Layers,
   LogOut,
   Menu,
@@ -151,7 +152,9 @@ function NavigationIcon({ name }: { name: string }) {
                   value.includes('progress') ||
                   value.includes('cycling')
                 ? ChartNoAxesColumnIncreasing
-                : Activity;
+                : value === 'flag'
+                  ? Flag
+                  : Activity;
   return <Icon size={19} strokeWidth={1.6} />;
 }
 

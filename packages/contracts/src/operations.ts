@@ -16,6 +16,14 @@ import {
 import { onboardingActionSchema, onboardingSchema } from './onboarding';
 import { chartsSummaryInputSchema, chartsSummarySchema } from './charts';
 import {
+  raceAnalysisSchema,
+  raceSelectionSchema,
+  raceSettingsInputSchema,
+  raceReferenceUpdateSchema,
+  raceReferenceRemoveSchema,
+  raceMutationResultSchema,
+} from './race-analysis';
+import {
   mutationResponseSchema,
   coveragePageSchema,
   grantSummarySchema,
@@ -99,6 +107,12 @@ export const operationContracts = {
     'deny-connection': operation(agentConnectionIdSchema, agentConnectionStatusSchema),
   },
   charts: { summary: operation(chartsSummaryInputSchema, chartsSummarySchema) },
+  'race-analysis': {
+    analysis: operation(raceSelectionSchema, raceAnalysisSchema),
+    settings: operation(raceSettingsInputSchema, raceMutationResultSchema),
+    'reference-update': operation(raceReferenceUpdateSchema, raceMutationResultSchema),
+    'reference-remove': operation(raceReferenceRemoveSchema, raceMutationResultSchema),
+  },
 } as const;
 type Contracts = typeof operationContracts;
 type Contract<P extends string, O extends string> = P extends keyof Contracts

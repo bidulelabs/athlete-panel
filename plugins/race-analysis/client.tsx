@@ -10,10 +10,10 @@ import {
   NativeSelect,
   PageHeader,
   Skeleton,
-  type ReloadableRequestError,
   dateLabel,
   distance,
   localDate,
+  useAction,
   type PluginPageProps,
   type ExtensionSelection,
 } from '@athlete-panel/ui';
@@ -45,9 +45,8 @@ function AnalysisView({
   const [selected, setSelected] = useState(0),
     [upload, setUpload] = useState<'course' | 'reference' | null>(null);
   const [draft, setDraft] = useState<TerrainDraft | null>(null),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState<ReloadableRequestError | null>(null),
     [notice, setNotice] = useState('');
+  const { busy, error, setError, run } = useAction();
   const terrain = draft?.terrain ?? value.terrain,
     sectionTerrain = draft?.sectionTerrain ?? value.sectionTerrain;
   const track = value.course?.analysis ?? null;
@@ -58,34 +57,35 @@ function AnalysisView({
   const estimate = preview.estimate;
   const displayPace = (estimate?.paceSecondsPerKm ?? 0) * (units === 'imperial' ? 1.609344 : 1);
   const chosen = Math.min(selected, (track?.points.length ?? 1) - 1);
-  const onSaved = async () => {
+  const keepDraftAfterReferenceChange = (fromRevision: number, toRevision: number) =>
+    setDraft((current) =>
+      current?.revision === fromRevision ? { ...current, revision: toRevision } : current,
+    );
+  const onSaved = async (fromRevision: number, toRevision: number) => {
     if (upload === 'course') {
       setDraft(null);
       setSelected(0);
     }
     const saved = await reload();
+    if (upload === 'reference') keepDraftAfterReferenceChange(fromRevision, toRevision);
     setNotice(saved ? 'Course analysis saved.' : 'Saved. Reload the analysis to see the result.');
   };
-  async function saveTerrain() {
-    setBusy(true);
-    setError(null);
+  function saveTerrain() {
     setNotice('');
-    try {
+    void run(async () => {
       await request('race-analysis', 'settings', {
         raceId: value.race.id,
         expectedRevision: draft?.revision ?? value.revision,
         idempotencyKey: crypto.randomUUID(),
         terrain,
         sectionTerrain,
+      }).catch((cause: unknown) => {
+        throw raceRequestError(cause, reload);
       });
       setDraft(null);
       await reload();
       setNotice('Terrain saved. Estimate updated.');
-    } catch (cause) {
-      setError(raceRequestError(cause, reload));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
   return (
     <div className="race-analysis" aria-busy={loading || busy}>
@@ -316,7 +316,7 @@ function AnalysisView({
               >
                 Use saved terrain
               </Button>
-              <Button onClick={() => void saveTerrain()} disabled={busy}>
+              <Button onClick={saveTerrain} disabled={busy}>
                 {busy ? 'Saving…' : 'Save terrain'}
               </Button>
             </div>
@@ -373,6 +373,7 @@ function AnalysisView({
             units={units}
             reload={reload}
             onAdd={() => setUpload('reference')}
+            onSaved={keepDraftAfterReferenceChange}
           />
         </div>
       </details>

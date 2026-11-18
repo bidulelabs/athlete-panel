@@ -7,7 +7,7 @@ import {
   Input,
   Modal,
   NativeSelect,
-  type ReloadableRequestError,
+  useAction,
 } from '@athlete-panel/ui';
 import { raceFileLimit, type RaceAnalysis, type RaceUploadInput } from '@athlete-panel/contracts';
 import { terrainNames } from './presentation';
@@ -23,7 +23,7 @@ export function UploadDialog({
   value: RaceAnalysis;
   purpose: 'course' | 'reference';
   onClose: () => void;
-  onSaved: () => Promise<void>;
+  onSaved: (fromRevision: number, toRevision: number) => Promise<void>;
   reload: () => Promise<unknown>;
 }) {
   const [file, setFile] = useState<File | null>(null),
@@ -31,8 +31,7 @@ export function UploadDialog({
     [duration, setDuration] = useState(''),
     [terrain, setTerrain] = useState(3),
     [revision, setRevision] = useState(value.revision);
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState<string | ReloadableRequestError | null>(null);
+  const { busy, error, setError, run } = useAction();
   const attempt = useRef<{ signature: string; key: string } | null>(null);
   async function submit() {
     setError(null);
@@ -65,16 +64,13 @@ export function UploadDialog({
       purpose === 'course'
         ? { ...base, purpose }
         : { ...base, purpose, title, durationSeconds: seconds, terrain };
-    setBusy(true);
-    try {
-      await uploadRaceFile(file, input);
-      await onSaved();
+    await run(async () => {
+      const result = await uploadRaceFile(file, input).catch((cause: unknown) => {
+        throw raceRequestError(cause, reload);
+      });
+      await onSaved(revision, result.revision);
       onClose();
-    } catch (cause) {
-      setError(raceRequestError(cause, reload));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
   return (
     <Modal

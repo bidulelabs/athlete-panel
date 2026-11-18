@@ -360,6 +360,44 @@ for (const theme of ['light', 'dark']) {
   });
 }
 
+test('adding, editing and removing an effort in the same tab keeps the terrain draft saveable', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await createRace(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await uploadCourse(page, syntheticGpx());
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await addReferences(page, baseURL!, raceId);
+  await page.reload();
+  await page
+    .getByRole('group', { name: 'Overall terrain' })
+    .getByRole('button', { name: '4 Rocky' })
+    .click();
+  await page.getByText('How we worked this out', { exact: true }).click();
+  await page.getByRole('button', { name: 'Add a past effort', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('GPX or FIT effort file', { exact: true }).setInputFiles({
+    name: 'col-du-matin.gpx',
+    mimeType: 'application/gpx+xml',
+    buffer: Buffer.from(syntheticGpx({ km: 30, ascent: 1500, seconds: 4 * 3600, salt: 'added' })),
+  });
+  await dialog.getByRole('button', { name: 'Add effort', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', { name: 'Edit Crêtes du Lac', exact: true }).click();
+  await dialog.getByLabel('Elapsed time (minutes)', { exact: true }).fill('320');
+  await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', { name: 'Remove Boucle des Sapins', exact: true }).click();
+  await page.getByRole('button', { name: 'Remove effort', exact: true }).click();
+  await expect(page.locator('.race-reference-list > li')).toHaveCount(4);
+  await expect(page.getByText('Terrain changes are a preview until saved.')).toBeVisible();
+  await page.getByRole('button', { name: 'Save terrain', exact: true }).click();
+  await expect(page.getByText('Terrain saved. Estimate updated.')).toBeVisible();
+  expect((await readAnalysis(page, baseURL!, raceId)).terrain).toBe(4);
+});
+
 test('reloading a stale course replacement requires explicit review before retrying', async ({
   page,
   baseURL,

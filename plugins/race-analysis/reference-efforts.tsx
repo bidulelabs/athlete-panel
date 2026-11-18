@@ -8,8 +8,8 @@ import {
   Modal,
   NativeSelect,
   distance,
+  useAction,
   useConfirm,
-  type ReloadableRequestError,
 } from '@athlete-panel/ui';
 import type { PluginRequest, RaceAnalysis, ReferenceEffort } from '@athlete-panel/contracts';
 import { finishTime, elevationLabel, terrainNames } from './presentation';
@@ -21,12 +21,14 @@ function EditReference({
   reference,
   request,
   reload,
+  onSaved,
   onClose,
 }: {
   value: RaceAnalysis;
   reference: ReferenceEffort;
   request: PluginRequest;
   reload: () => Promise<unknown>;
+  onSaved: (fromRevision: number, toRevision: number) => void;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(reference.title),
@@ -35,8 +37,7 @@ function EditReference({
     ),
     [terrain, setTerrain] = useState(reference.terrain),
     [revision, setRevision] = useState(value.revision);
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState<ReloadableRequestError | null>(null);
+  const { busy, error, setError, run } = useAction();
   const saved = value.references.find((ref) => ref.id === reference.id);
   return (
     <Modal
@@ -49,12 +50,10 @@ function EditReference({
     >
       <form
         className="dialog-body race-form"
-        onSubmit={async (event) => {
+        onSubmit={(event) => {
           event.preventDefault();
-          setBusy(true);
-          setError(null);
-          try {
-            await request('race-analysis', 'reference-update', {
+          void run(async () => {
+            const result = await request('race-analysis', 'reference-update', {
               raceId: value.race.id,
               expectedRevision: revision,
               idempotencyKey: crypto.randomUUID(),
@@ -62,14 +61,13 @@ function EditReference({
               title,
               terrain,
               durationSeconds: minutes.trim() ? Number(minutes) * 60 : null,
+            }).catch((cause: unknown) => {
+              throw raceRequestError(cause, reload);
             });
             await reload();
+            onSaved(revision, result.revision);
             onClose();
-          } catch (cause) {
-            setError(raceRequestError(cause, reload));
-          } finally {
-            setBusy(false);
-          }
+          });
         }}
       >
         <Field label="Effort name">
@@ -154,16 +152,17 @@ export function ReferenceEfforts({
   units,
   reload,
   onAdd,
+  onSaved,
 }: {
   value: RaceAnalysis;
   request: PluginRequest;
   units: string;
   reload: () => Promise<unknown>;
   onAdd: () => void;
+  onSaved: (fromRevision: number, toRevision: number) => void;
 }) {
-  const [editing, setEditing] = useState<ReferenceEffort | null>(null),
-    [error, setError] = useState<ReloadableRequestError | null>(null),
-    [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<ReferenceEffort | null>(null);
+  const { busy, error, run } = useAction();
   const confirm = useConfirm();
   return (
     <section className="race-evidence">
@@ -223,21 +222,18 @@ export function ReferenceEfforts({
                     ))
                   )
                     return;
-                  setBusy(true);
-                  setError(null);
-                  try {
-                    await request('race-analysis', 'reference-remove', {
+                  await run(async () => {
+                    const result = await request('race-analysis', 'reference-remove', {
                       raceId: value.race.id,
                       expectedRevision: value.revision,
                       id: reference.id,
                       idempotencyKey: crypto.randomUUID(),
+                    }).catch((cause: unknown) => {
+                      throw raceRequestError(cause, reload);
                     });
                     await reload();
-                  } catch (cause) {
-                    setError(raceRequestError(cause, reload));
-                  } finally {
-                    setBusy(false);
-                  }
+                    onSaved(value.revision, result.revision);
+                  });
                 }}
               >
                 Remove
@@ -277,6 +273,7 @@ export function ReferenceEfforts({
           reference={editing}
           request={request}
           reload={reload}
+          onSaved={onSaved}
           onClose={() => setEditing(null)}
         />
       )}

@@ -209,9 +209,7 @@ it('creates personal estimates, independent comparisons and editable missing-tim
   }
   const value = await load();
   expect(value.estimate?.referenceCount).toBe(4);
-  expect(
-    value.references.every((ref) => ref.predictedSeconds !== null && ref.comparison === 'held-out'),
-  ).toBe(true);
+  expect(value.references.every((ref) => ref.predictedSeconds !== null)).toBe(true);
   const ref = value.references[0]!;
   await updateReference({
     ...input(revision++),

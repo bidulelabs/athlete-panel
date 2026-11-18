@@ -58,7 +58,6 @@ export const referenceEffortSchema = z.object({
   terrain: terrainLevelSchema,
   hasGaps: z.boolean(),
   predictedSeconds: seconds.nullable(),
-  comparison: z.enum(['held-out', 'unavailable']),
 });
 export const courseEstimateSchema = z.object({
   seconds,

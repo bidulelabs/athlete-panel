@@ -6,16 +6,16 @@ import {
   type RecordMesg,
   type SessionMesg,
 } from '@garmin/fitsdk';
-import { raceFileLimit, raceAnalysisSchema, type ReferenceEffort } from '@athlete-panel/contracts';
+import { raceFileLimit, raceAnalysisSchema } from '@athlete-panel/contracts';
 import { parseTrack } from '../../plugins/race-analysis/parse';
 import { analyzeTrack, groundDistance } from '../../plugins/race-analysis/geometry';
-import { estimateCourse } from '../../plugins/race-analysis/estimate';
-import { routeCoordinates } from '../../plugins/race-analysis/presentation';
+import { estimateCourse, type ReferenceFacts } from '../../plugins/race-analysis/estimate';
+import { elevationLabel, routeCoordinates } from '../../plugins/race-analysis/presentation';
 import { courseReferences, courseRace, syntheticGpx } from '../fixtures/race-analysis';
 
 const file = (text: string, name = 'course.gpx') => ({ name, bytes: Buffer.from(text) });
 const analyze = (text: string) => analyzeTrack(parseTrack(file(text), 'course'));
-function references(): ReferenceEffort[] {
+function references(): ReferenceFacts[] {
   return courseReferences.map((ref, i) => ({
     id: `11300000-0000-4000-8000-${String(i + 10).padStart(12, '0')}`,
     assetId: `11300000-0000-4000-8000-${String(i + 20).padStart(12, '0')}`,
@@ -27,8 +27,6 @@ function references(): ReferenceEffort[] {
     durationSource: 'file',
     terrain: 3,
     hasGaps: false,
-    predictedSeconds: null,
-    comparison: 'unavailable',
   }));
 }
 describe('file validation and factual measurements', () => {
@@ -89,6 +87,11 @@ describe('file validation and factual measurements', () => {
     expect(track.points.length).toBeLessThanOrEqual(2000);
     expect(track.ascentMeters).toBeLessThan(2400);
     expect(track.distanceMeters).toBeCloseTo(analyze(base).distanceMeters, 5);
+  });
+  it('labels elevation in metres or feet with en-GB grouping and unknown when missing', () => {
+    expect(elevationLabel(1234.4, 'metric')).toBe('1,234 m');
+    expect(elevationLabel(1000, 'imperial')).toBe('3,281 ft');
+    expect(elevationLabel(null, 'metric')).toBe('Unknown');
   });
   it('handles an antimeridian crossing without drawing a world-spanning route', () => {
     expect(
@@ -176,7 +179,7 @@ describe('personal estimate and honest uncertainty', () => {
     const first = estimateCourse(track, 3, {}, original).references[0]!;
     original[0]!.durationSeconds! *= 2;
     const changed = estimateCourse(track, 3, {}, original).references[0]!;
-    expect(first.comparison).toBe('held-out');
+    expect(first.predictedSeconds).not.toBeNull();
     expect(changed.predictedSeconds).toBe(first.predictedSeconds);
     expect(
       estimateCourse(track, 3, {}, original.slice(0, 3)).references.every(

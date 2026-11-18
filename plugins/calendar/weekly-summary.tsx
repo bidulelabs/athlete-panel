@@ -18,6 +18,7 @@ import {
 import {
   dateLabel,
   distance,
+  elevation,
   duration,
   SportIcon,
   Button,
@@ -301,8 +302,7 @@ export function WeeklySummary({
   const shortDates = `${dateLabel(summary.startDate, { day: 'numeric', month: 'short', ...(summary.startDate.slice(0, 4) !== summary.endDate.slice(0, 4) ? { year: 'numeric' } : {}) })} – ${dateLabel(summary.endDate, { day: 'numeric', month: 'short', year: 'numeric' })}`;
   const current = summary.startDate <= today && summary.endDate >= today;
   const distanceFormat: Format = (value) => distance(value, units);
-  const elevationFormat: Format = (value) =>
-    `${Math.round(value * (units === 'imperial' ? 3.28084 : 1)).toLocaleString('en-GB')} ${units === 'imperial' ? 'ft' : 'm'}`;
+  const elevationFormat: Format = (value) => elevation(value, units);
   const preview = summary.recordedSessions.slice(0, 6);
   return (
     <Collapsible

@@ -5,6 +5,7 @@ import {
   type ChartsSummary,
   type Profile,
 } from '@athlete-panel/contracts';
+import { elevation } from '@athlete-panel/ui';
 import { targetRangeLabel, type MetricTotal } from '../training/public/shared';
 import { perSport } from './training-by-sport';
 import { sessionCount, trainingHoursBuckets, type TrainingHoursBucket } from './training-hours';
@@ -24,9 +25,9 @@ export const climbUnitLabel = (units: UnitSystem) => (units === 'imperial' ? 'ft
 
 function elevationLabel(measure: MetricTotal, units: UnitSystem) {
   if (measure.value === null) return 'Elevation missing';
-  const elevation = `${Math.round(measure.value * (units === 'imperial' ? feetPerMeter : 1)).toLocaleString('en-GB')} ${elevationUnitLabel(units)}`;
-  if (!measure.missingCount) return elevation;
-  return `${elevation} (${measure.missingCount} of ${sessionCount(measure)} sessions without elevation)`;
+  const elevationText = elevation(measure.value, units);
+  if (!measure.missingCount) return elevationText;
+  return `${elevationText} (${measure.missingCount} of ${sessionCount(measure)} sessions without elevation)`;
 }
 
 function measureRunningClimb(climb: ChartsBucket['runningClimb'], units: UnitSystem) {

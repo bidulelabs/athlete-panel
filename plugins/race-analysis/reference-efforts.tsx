@@ -8,12 +8,11 @@ import {
   Modal,
   NativeSelect,
   distance,
-  useAction,
   useConfirm,
 } from '@athlete-panel/ui';
 import type { PluginRequest, RaceAnalysis, ReferenceEffort } from '@athlete-panel/contracts';
 import { finishTime, elevationLabel, terrainNames } from './presentation';
-import { raceRequestError } from './use-analysis';
+import { useRaceAction } from './use-analysis';
 import { referenceTimeProblem, usableReference } from './estimate';
 
 function EditReference({
@@ -21,14 +20,14 @@ function EditReference({
   reference,
   request,
   reload,
-  onSaved,
+  onReferenceChanged,
   onClose,
 }: {
   value: RaceAnalysis;
   reference: ReferenceEffort;
   request: PluginRequest;
   reload: () => Promise<unknown>;
-  onSaved: (fromRevision: number, toRevision: number) => void;
+  onReferenceChanged: (fromRevision: number, toRevision: number) => void;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(reference.title),
@@ -37,7 +36,7 @@ function EditReference({
     ),
     [terrain, setTerrain] = useState(reference.terrain),
     [revision, setRevision] = useState(value.revision);
-  const { busy, error, setError, run } = useAction();
+  const { busy, error, setError, run } = useRaceAction(reload);
   const saved = value.references.find((ref) => ref.id === reference.id);
   return (
     <Modal
@@ -53,7 +52,7 @@ function EditReference({
         onSubmit={(event) => {
           event.preventDefault();
           void run(async () => {
-            const result = await request('race-analysis', 'reference-update', {
+            const { revision: savedRevision } = await request('race-analysis', 'reference-update', {
               raceId: value.race.id,
               expectedRevision: revision,
               idempotencyKey: crypto.randomUUID(),
@@ -61,11 +60,9 @@ function EditReference({
               title,
               terrain,
               durationSeconds: minutes.trim() ? Number(minutes) * 60 : null,
-            }).catch((cause: unknown) => {
-              throw raceRequestError(cause, reload);
             });
             await reload();
-            onSaved(revision, result.revision);
+            onReferenceChanged(revision, savedRevision);
             onClose();
           });
         }}
@@ -152,17 +149,17 @@ export function ReferenceEfforts({
   units,
   reload,
   onAdd,
-  onSaved,
+  onReferenceChanged,
 }: {
   value: RaceAnalysis;
   request: PluginRequest;
   units: string;
   reload: () => Promise<unknown>;
   onAdd: () => void;
-  onSaved: (fromRevision: number, toRevision: number) => void;
+  onReferenceChanged: (fromRevision: number, toRevision: number) => void;
 }) {
   const [editing, setEditing] = useState<ReferenceEffort | null>(null);
-  const { busy, error, run } = useAction();
+  const { busy, error, run } = useRaceAction(reload);
   const confirm = useConfirm();
   return (
     <section className="race-evidence">
@@ -223,16 +220,18 @@ export function ReferenceEfforts({
                   )
                     return;
                   await run(async () => {
-                    const result = await request('race-analysis', 'reference-remove', {
-                      raceId: value.race.id,
-                      expectedRevision: value.revision,
-                      id: reference.id,
-                      idempotencyKey: crypto.randomUUID(),
-                    }).catch((cause: unknown) => {
-                      throw raceRequestError(cause, reload);
-                    });
+                    const { revision: savedRevision } = await request(
+                      'race-analysis',
+                      'reference-remove',
+                      {
+                        raceId: value.race.id,
+                        expectedRevision: value.revision,
+                        id: reference.id,
+                        idempotencyKey: crypto.randomUUID(),
+                      },
+                    );
                     await reload();
-                    onSaved(value.revision, result.revision);
+                    onReferenceChanged(value.revision, savedRevision);
                   });
                 }}
               >
@@ -273,7 +272,7 @@ export function ReferenceEfforts({
           reference={editing}
           request={request}
           reload={reload}
-          onSaved={onSaved}
+          onReferenceChanged={onReferenceChanged}
           onClose={() => setEditing(null)}
         />
       )}

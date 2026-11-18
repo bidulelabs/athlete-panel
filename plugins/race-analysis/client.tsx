@@ -13,7 +13,6 @@ import {
   dateLabel,
   distance,
   localDate,
-  useAction,
   type PluginPageProps,
   type ExtensionSelection,
 } from '@athlete-panel/ui';
@@ -21,7 +20,7 @@ import type { RaceAnalysis } from '@athlete-panel/contracts';
 import { CourseRoute, ElevationProfile } from './course-figures';
 import { UploadDialog } from './upload-dialog';
 import { ReferenceEfforts } from './reference-efforts';
-import { raceRequestError, useRaceAnalysis } from './use-analysis';
+import { useRaceAction, useRaceAnalysis } from './use-analysis';
 import { estimateCourse } from './estimate';
 import { finishTime, elevationLabel, terrainNames } from './presentation';
 import './race-analysis.css';
@@ -46,7 +45,7 @@ function AnalysisView({
     [upload, setUpload] = useState<'course' | 'reference' | null>(null);
   const [draft, setDraft] = useState<TerrainDraft | null>(null),
     [notice, setNotice] = useState('');
-  const { busy, error, setError, run } = useAction();
+  const { busy, error, setError, run } = useRaceAction(reload);
   const terrain = draft?.terrain ?? value.terrain,
     sectionTerrain = draft?.sectionTerrain ?? value.sectionTerrain;
   const track = value.course?.analysis ?? null;
@@ -79,8 +78,6 @@ function AnalysisView({
         idempotencyKey: crypto.randomUUID(),
         terrain,
         sectionTerrain,
-      }).catch((cause: unknown) => {
-        throw raceRequestError(cause, reload);
       });
       setDraft(null);
       await reload();
@@ -373,7 +370,7 @@ function AnalysisView({
             units={units}
             reload={reload}
             onAdd={() => setUpload('reference')}
-            onSaved={keepDraftAfterReferenceChange}
+            onReferenceChanged={keepDraftAfterReferenceChange}
           />
         </div>
       </details>

@@ -385,10 +385,12 @@ test('adding, editing and removing an effort in the same tab keeps the terrain d
   });
   await dialog.getByRole('button', { name: 'Add effort', exact: true }).click();
   await expect(dialog).toHaveCount(0);
+  await expect(page.getByText('Terrain changes are a preview until saved.')).toBeVisible();
   await page.getByRole('button', { name: 'Edit Crêtes du Lac', exact: true }).click();
   await dialog.getByLabel('Elapsed time (minutes)', { exact: true }).fill('320');
   await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
   await expect(dialog).toHaveCount(0);
+  await expect(page.getByText('Terrain changes are a preview until saved.')).toBeVisible();
   await page.getByRole('button', { name: 'Remove Boucle des Sapins', exact: true }).click();
   await page.getByRole('button', { name: 'Remove effort', exact: true }).click();
   await expect(page.locator('.race-reference-list > li')).toHaveCount(4);
@@ -396,6 +398,48 @@ test('adding, editing and removing an effort in the same tab keeps the terrain d
   await page.getByRole('button', { name: 'Save terrain', exact: true }).click();
   await expect(page.getByText('Terrain saved. Estimate updated.')).toBeVisible();
   expect((await readAnalysis(page, baseURL!, raceId)).terrain).toBe(4);
+});
+
+test('a same-tab effort change does not refresh a terrain draft that another tab made stale', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await createRace(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await uploadCourse(page, syntheticGpx());
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await addReferences(page, baseURL!, raceId);
+  await page.reload();
+  await page
+    .getByRole('group', { name: 'Overall terrain' })
+    .getByRole('button', { name: '4 Rocky' })
+    .click();
+  const current = await readAnalysis(page, baseURL!, raceId);
+  const changed = await page.request.post(endpoint + 'settings', {
+    headers: { Origin: baseURL! },
+    data: {
+      raceId,
+      expectedRevision: current.revision,
+      idempotencyKey: randomUUID(),
+      terrain: 2,
+      sectionTerrain: {},
+    },
+  });
+  expect(changed.ok()).toBe(true);
+  await page.getByRole('button', { name: 'Save terrain', exact: true }).click();
+  await page.getByRole('button', { name: 'Reload saved data', exact: true }).click();
+  await expect(page.getByText('Saved data reloaded. Review it before saving again.')).toBeVisible();
+  await page.getByText('How we worked this out', { exact: true }).click();
+  await page.getByRole('button', { name: 'Edit Crêtes du Lac', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Elapsed time (minutes)', { exact: true }).fill('320');
+  await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText(/Your draft is retained; choose Use saved terrain/)).toBeVisible();
+  await page.getByRole('button', { name: 'Save terrain', exact: true }).click();
+  await expect(page.getByText('The course or references changed.', { exact: false })).toBeVisible();
+  expect((await readAnalysis(page, baseURL!, raceId)).terrain).toBe(2);
 });
 
 test('reloading a stale course replacement requires explicit review before retrying', async ({

@@ -88,7 +88,7 @@ describe('file validation and factual measurements', () => {
     expect(track.ascentMeters).toBeLessThan(2400);
     expect(track.distanceMeters).toBeCloseTo(analyze(base).distanceMeters, 5);
   });
-  it('labels elevation in metres or feet with en-GB grouping and unknown when missing', () => {
+  it('shows elevation in metres or feet with thousands separators, and Unknown when missing', () => {
     expect(elevationLabel(1234.4, 'metric')).toBe('1,234 m');
     expect(elevationLabel(1000, 'imperial')).toBe('3,281 ft');
     expect(elevationLabel(null, 'metric')).toBe('Unknown');

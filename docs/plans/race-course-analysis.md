@@ -113,6 +113,12 @@ Actual verification of the review fixes:
 | --- | --- |
 | Scalar cap regression test | The test inputs grow to 200,000 characters, so removing either 40-character cap exceeds the child-process timeout. |
 | Terrain draft after a same-tab reference change | A successful reference upload, edit or removal moves an unsaved terrain draft to the new revision when the draft was based on the revision that change replaced. Changes from another tab still make the draft stale. |
-| Shared error/reload control | Race actions use `useAction` and throw the course-analysis `ReloadableRequestError`, instead of four hand-written busy/error blocks. |
+| Shared error/reload control | `useRaceAction` wraps `useAction` so the four race actions share one busy/error state and fail with the course-analysis `ReloadableRequestError`, instead of four hand-written blocks. |
 | Redundant `comparison` field | Removed from the reference contract; `predictedSeconds !== null` carries the same fact. |
-| Elevation formatter duplication | `elevation` in `@athlete-panel/ui`, beside `distance`, replaces the identical race-analysis, weekly summary and Charts formatters. |
+| Elevation formatter duplication | `elevation` in `@athlete-panel/ui`, beside `distance`, replaces the identical race-analysis, weekly summary and Charts formatters (climbing label and target range). Formatters without thousands separators or with other precision are unchanged. |
+
+Verification of the follow-ups:
+
+- `pnpm check`: passed, including **502 unit tests in 60 files**. Removing either 40-character cap made the scalar cap test time out.
+- `vitest run tests/integration/race-analysis.test.ts`: **11 tests passed** in an isolated synthetic database.
+- `pnpm build`, then `pnpm exec playwright test tests/e2e/race-analysis.spec.ts tests/e2e/calendar-cards.spec.ts tests/e2e/charts.spec.ts`: **81 passed, 1 skipped** across desktop and Pixel 7. The race-analysis file alone passed again (24 tests) on the final build. Without the draft update the same-tab test failed; with an unconditional update the other-tab test failed.

@@ -84,11 +84,7 @@ export function climbingBuckets(
         toUnits(targetElevationMeters.min),
         toUnits(targetElevationMeters.max),
       ],
-      targetLabel: targetRangeLabel(
-        targetElevationMeters,
-        (meters) =>
-          `${Math.round(toUnits(meters)).toLocaleString('en-GB')} ${elevationUnitLabel(units)}`,
-      ),
+      targetLabel: targetRangeLabel(targetElevationMeters, (meters) => elevation(meters, units)),
       runningClimb: upcoming ? null : climb.value,
       runningClimbLabel: upcoming ? 'Upcoming' : climb.label,
     };

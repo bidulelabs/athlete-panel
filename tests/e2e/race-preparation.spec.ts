@@ -93,12 +93,23 @@ for (const theme of ['light', 'dark']) {
     await openPreparation(page);
     await expect(needsReview(page)).toBeVisible();
     await expect(page.getByLabel(/^Briefing/)).toHaveValue('Start easy, keep the climb steady.');
-    await page.getByRole('button', { name: 'Mark as reviewed', exact: true }).click();
+    await page.getByLabel(/^Briefing/).fill('Start easy, push on the last climb.');
+    await expect(page.getByRole('button', { name: 'Mark as reviewed', exact: true })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByText('Save your changes before marking the plan as reviewed.'),
+    ).toBeVisible();
+    await save(page);
     await expect(needsReview(page)).toHaveCount(0);
+    await expect(page.getByLabel(/^Briefing/)).toHaveValue('Start easy, push on the last climb.');
 
     await page.getByLabel('Target', { exact: true }).fill('Under 8 hours');
     await save(page);
     await expect(needsReview(page)).toBeVisible();
+    await page.getByRole('button', { name: 'Mark as reviewed', exact: true }).click();
+    await expect(needsReview(page)).toHaveCount(0);
+    await expect(page.getByLabel('Target', { exact: true })).toHaveValue('Under 8 hours');
   });
 }
 
@@ -122,6 +133,31 @@ test('refuses a save over a plan changed elsewhere, then reloads it', async ({ p
   await page.getByLabel(/^Briefing/).fill('My draft');
   await save(page);
   await expect(page.getByText('Preparation saved.')).toHaveCount(0);
+  const reload = page.getByRole('button', { name: 'Reload saved data', exact: true });
+  await reload.click();
+  await expect(page.getByLabel(/^Briefing/)).toHaveValue('My draft');
+  await save(page);
+  await expect(reload).toBeVisible();
+  await expect(page.getByText('Preparation saved.')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Use saved plan', exact: true }).click();
+  await expect(page.getByLabel('Target', { exact: true })).toHaveValue('Under 8 hours');
+  await expect(page.getByLabel(/^Briefing/)).toHaveValue('');
+});
+
+test('keeps the draft when another tab created the plan first', async ({ page, baseURL }) => {
+  await signIn(page, 'light');
+  const raceId = await createRace(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await openPreparation(page);
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.create',
+    values: { id: randomUUID(), eventId: raceId, target: 'Under 8 hours' },
+  });
+  await page.getByLabel(/^Briefing/).fill('My draft');
+  await save(page);
+  await expect(page.getByText(/This race already has a plan/)).toBeVisible();
   await page.getByRole('button', { name: 'Reload saved data', exact: true }).click();
+  await expect(page.getByLabel(/^Briefing/)).toHaveValue('My draft');
+  await page.getByRole('button', { name: 'Use saved plan', exact: true }).click();
   await expect(page.getByLabel('Target', { exact: true })).toHaveValue('Under 8 hours');
 });

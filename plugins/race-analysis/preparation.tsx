@@ -14,7 +14,7 @@ import {
   useAction,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import type { RaceAnalysis } from '@athlete-panel/contracts';
+import type { RaceAnalysis, RacePlan } from '@athlete-panel/contracts';
 import { mutate } from '../training/public/client';
 import { pacingRows, racePlanCommand, strategyNeedsReview } from './race-plan-form';
 
@@ -26,7 +26,9 @@ export function Preparation({
 }: Pick<PluginPageProps, 'data' | 'request'> & Pick<RaceAnalysis, 'race' | 'course'>) {
   const action = useAction();
   const [saved, setSaved] = useState(false);
-  const racePlan = data.racePlans.find((candidate) => candidate.eventId === race.id);
+  const [draft, setDraft] = useState<{ racePlan: RacePlan | undefined } | null>(null);
+  const savedPlan = data.racePlans.find((candidate) => candidate.eventId === race.id);
+  const racePlan = draft ? draft.racePlan : savedPlan;
   const courseId = course?.id ?? null;
   const rows = pacingRows(racePlan?.pacing ?? [], course?.analysis.sections ?? []);
   const units = data.profile?.units ?? 'metric';
@@ -42,36 +44,43 @@ export function Preparation({
           year: 'numeric',
         })}
       />
-      {racePlan && strategyNeedsReview(racePlan, courseId) && (
+      {savedPlan && strategyNeedsReview(savedPlan, courseId) && (
         <div className="race-recovery" role="status">
           <p>
             The course or your target changed after this strategy was written. Check that it still
             holds.
           </p>
-          <Button
-            variant="outline"
-            disabled={action.busy}
-            onClick={() =>
-              void action.run(() =>
-                mutate(request, [
-                  {
-                    action: 'racePlan.update',
-                    id: racePlan.id,
-                    expectedRevision: racePlan.revision,
-                    values: { courseId },
-                  },
-                ]),
-              )
-            }
-          >
-            Mark as reviewed
-          </Button>
+          {draft ? (
+            <p>Save your changes before marking the plan as reviewed.</p>
+          ) : (
+            <Button
+              variant="outline"
+              disabled={action.busy}
+              onClick={() =>
+                void action.run(() =>
+                  mutate(request, [
+                    {
+                      action: 'racePlan.update',
+                      id: savedPlan.id,
+                      expectedRevision: savedPlan.revision,
+                      values: { courseId },
+                    },
+                  ]),
+                )
+              }
+            >
+              Mark as reviewed
+            </Button>
+          )}
         </div>
       )}
       <form
         key={racePlan?.revision ?? 0}
         className="race-form"
-        onChange={() => setSaved(false)}
+        onChange={() => {
+          setSaved(false);
+          if (!draft) setDraft({ racePlan: savedPlan });
+        }}
         onSubmit={(event) => {
           event.preventDefault();
           const command = racePlanCommand(
@@ -81,10 +90,14 @@ export function Preparation({
             race.id,
             courseId,
           );
-          if (command)
+          if (!command) setDraft(null);
+          else
             void action.run(
               () => mutate(request, [command]),
-              () => setSaved(true),
+              () => {
+                setSaved(true);
+                setDraft(null);
+              },
             );
         }}
       >
@@ -137,6 +150,24 @@ export function Preparation({
         <ErrorMessage error={action.error} />
         <div className="race-save-bar">
           <span role="status">{saved ? 'Preparation saved.' : ''}</span>
+          {draft && draft.racePlan?.revision !== savedPlan?.revision && (
+            <>
+              <span>
+                The saved plan has changed. Your draft is retained; choose Use saved plan to start
+                again from the latest values.
+              </span>
+              <Button
+                variant="outline"
+                disabled={action.busy}
+                onClick={() => {
+                  setDraft(null);
+                  action.setError(null);
+                }}
+              >
+                Use saved plan
+              </Button>
+            </>
+          )}
           <SubmitButton busy={action.busy}>Save preparation</SubmitButton>
         </div>
       </form>

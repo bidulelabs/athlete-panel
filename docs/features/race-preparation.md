@@ -21,8 +21,8 @@ Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/iss
 - There is no command to delete a plan alone.
 - **Races** shows two tabs for the selected race, **Course** and **Preparation**. Preparation edits the target, the briefing, one effort per section, assumptions and open questions (one per line), and works without an assistant: a plan can be saved with the target alone.
 - Pacing rows are the planned sections plus the 5 km course sections no planned section covers. A row left blank is not saved. Without a course and without planned sections, the tab points to the Course tab.
-- A plan with something written needs review when the course in use is no longer the one it was written for, or when the target changed since. Preparation then says so and offers **Mark as reviewed**, which changes nothing else. Saving a change to the briefing, pacing, assumptions or open questions also records the course in use; saving the target alone does not.
-- A save over a plan changed elsewhere is refused and offers **Reload saved data**.
+- A plan with something written needs review when the course in use is no longer the one it was written for, or when the target changed since. Preparation then says so and offers **Mark as reviewed**, which changes nothing else. While the form has unsaved changes, it asks to save them first. Saving a change to the briefing, pacing, assumptions or open questions also records the course in use; saving the target alone does not.
+- A save over a plan changed or created elsewhere is refused and offers **Reload saved data**. The draft stays open on the version it started from, and saving it again is refused until **Use saved plan** replaces it with the saved plan.
 - Assistants read and propose a race plan only through a planning connection limited to that race. Details in [Agent training](agent-training.md#race-plan-proposals).
 
 ## Acceptance scenarios
@@ -38,7 +38,7 @@ Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/iss
 | Sections overlapping, out of order, empty, blank or more than 200 | Refused | Race plan tests |
 | Owner writes a plan by hand, with and without a course | Saved and shown again after reload, by keyboard, light and dark, at 320 px | [Preparation browser flow](../../tests/e2e/race-preparation.spec.ts) |
 | Course replaced / target changed after the strategy was written | Needs review shown, plan unchanged; **Mark as reviewed** clears it | Preparation browser flow, [form tests](../../tests/unit/race-plan-form.test.ts) |
-| Save over a plan changed elsewhere | Refused, **Reload saved data** shows the saved plan | Preparation browser flow |
+| Save over a plan changed or created elsewhere | Refused; the draft stays after **Reload saved data**; **Use saved plan** shows the saved plan | Preparation browser flow |
 
 ## Observed implementation
 

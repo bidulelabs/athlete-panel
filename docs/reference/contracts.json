@@ -36606,13 +36606,6 @@
                         "type": "null"
                       }
                     ]
-                  },
-                  "comparison": {
-                    "type": "string",
-                    "enum": [
-                      "held-out",
-                      "unavailable"
-                    ]
                   }
                 },
                 "required": [
@@ -36626,8 +36619,7 @@
                   "durationSource",
                   "terrain",
                   "hasGaps",
-                  "predictedSeconds",
-                  "comparison"
+                  "predictedSeconds"
                 ],
                 "additionalProperties": false
               }

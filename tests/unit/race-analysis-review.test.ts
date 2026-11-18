@@ -27,8 +27,8 @@ it('bounds malicious XML and long scalar work in a killable process', () => {
       assert.throws(() => parseTrack(file(text), 'course'), e => e.code === 'invalid_gpx');
     }
     const wrap = value => '<gpx><trk><trkseg><trkpt lat="45" lon="6">' + value + '</trkpt><trkpt lat="45.01" lon="6"/></trkseg></trk></gpx>';
-    assert.throws(() => parseTrack(file(wrap('<ele>' + '9'.repeat(40000) + 'x</ele>')), 'course'), e => e.code === 'invalid_elevation');
-    const time = parseTrack(file(wrap('<time>' + 'T'.repeat(40000) + '</time>')), 'course');
+    assert.throws(() => parseTrack(file(wrap('<ele>' + '9'.repeat(200000) + 'x</ele>')), 'course'), e => e.code === 'invalid_elevation');
+    const time = parseTrack(file(wrap('<time>' + 'T'.repeat(200000) + '</time>')), 'course');
     assert.equal(time.points[0].time, null);
     console.log('bounded');
   `,

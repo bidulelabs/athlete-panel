@@ -4,7 +4,7 @@ type Evidence = Pick<
   ReferenceEffort,
   'distanceMeters' | 'ascentMeters' | 'durationSeconds' | 'terrain' | 'hasGaps'
 >;
-export type ReferenceFacts = Omit<ReferenceEffort, 'predictedSeconds' | 'comparison'>;
+export type ReferenceFacts = Omit<ReferenceEffort, 'predictedSeconds'>;
 type Model = { pace: number; climb: number; fatigue: number; limitedClimbing: boolean };
 const terrainFactor = (level: number) => 1 + (level - 1) * 0.035;
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
@@ -113,10 +113,6 @@ export function estimateCourse(
     return {
       ...ref,
       predictedSeconds: predicted !== null && predicted <= 30 * 86400 ? predicted : null,
-      comparison:
-        predicted !== null && predicted <= 30 * 86400
-          ? ('held-out' as const)
-          : ('unavailable' as const),
     };
   });
   const reasons: string[] = [];

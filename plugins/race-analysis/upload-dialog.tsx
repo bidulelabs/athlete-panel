@@ -1,17 +1,9 @@
 'use client';
 import { useRef, useState } from 'react';
-import {
-  Button,
-  ErrorMessage,
-  Field,
-  Input,
-  Modal,
-  NativeSelect,
-  type ReloadableRequestError,
-} from '@athlete-panel/ui';
+import { Button, ErrorMessage, Field, Input, Modal, NativeSelect } from '@athlete-panel/ui';
 import { raceFileLimit, type RaceAnalysis, type RaceUploadInput } from '@athlete-panel/contracts';
 import { terrainNames } from './presentation';
-import { raceRequestError, uploadRaceFile } from './use-analysis';
+import { uploadRaceFile, useRaceAction } from './use-analysis';
 
 export function UploadDialog({
   value,
@@ -23,7 +15,7 @@ export function UploadDialog({
   value: RaceAnalysis;
   purpose: 'course' | 'reference';
   onClose: () => void;
-  onSaved: () => Promise<void>;
+  onSaved: (fromRevision: number, toRevision: number) => Promise<void>;
   reload: () => Promise<unknown>;
 }) {
   const [file, setFile] = useState<File | null>(null),
@@ -31,8 +23,7 @@ export function UploadDialog({
     [duration, setDuration] = useState(''),
     [terrain, setTerrain] = useState(3),
     [revision, setRevision] = useState(value.revision);
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState<string | ReloadableRequestError | null>(null);
+  const { busy, error, setError, run } = useRaceAction(reload);
   const attempt = useRef<{ signature: string; key: string } | null>(null);
   async function submit() {
     setError(null);
@@ -65,16 +56,11 @@ export function UploadDialog({
       purpose === 'course'
         ? { ...base, purpose }
         : { ...base, purpose, title, durationSeconds: seconds, terrain };
-    setBusy(true);
-    try {
-      await uploadRaceFile(file, input);
-      await onSaved();
+    await run(async () => {
+      const { revision: savedRevision } = await uploadRaceFile(file, input);
+      await onSaved(revision, savedRevision);
       onClose();
-    } catch (cause) {
-      setError(raceRequestError(cause, reload));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
   return (
     <Modal

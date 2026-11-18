@@ -1,4 +1,5 @@
 import type { RacePoint } from '@athlete-panel/contracts';
+import { elevation } from '@athlete-panel/ui';
 
 export const terrainNames = ['Smooth', 'Stony', 'Mountain', 'Rocky', 'Scrambling'];
 export const slopeBands = [
@@ -29,9 +30,7 @@ export function finishTime(seconds: number | null | undefined) {
   return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
 }
 export const elevationLabel = (meters: number | null, units: string) =>
-  meters === null
-    ? 'Unknown'
-    : `${Math.round(meters * (units === 'imperial' ? 3.28084 : 1)).toLocaleString('en-GB')} ${units === 'imperial' ? 'ft' : 'm'}`;
+  meters === null ? 'Unknown' : elevation(meters, units);
 export function routeCoordinates(points: RacePoint[]) {
   const meanLatitude = points.reduce((n, p) => n + p.latitude, 0) / points.length;
   let longitude = points[0]?.longitude ?? 0;

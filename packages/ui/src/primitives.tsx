@@ -316,6 +316,9 @@ export function distance(meters: number | null | undefined, units = 'metric') {
   if (meters == null || !Number.isFinite(meters)) return '—';
   return `${(meters / (units === 'imperial' ? 1609.344 : 1000)).toFixed(1)} ${units === 'imperial' ? 'mi' : 'km'}`;
 }
+export function elevation(meters: number, units = 'metric') {
+  return `${Math.round(meters * (units === 'imperial' ? 3.28084 : 1)).toLocaleString('en-GB')} ${units === 'imperial' ? 'ft' : 'm'}`;
+}
 export function sportLabel(sport: string | null | undefined) {
   return (sport ?? 'Other')
     .toLowerCase()

@@ -106,3 +106,19 @@ Actual verification of the review fixes:
 - `pnpm exec playwright test tests/e2e/race-analysis.spec.ts tests/e2e/calendar-cards.spec.ts --max-failures=2`: **30 tests passed** across desktop and Pixel 7, including both themes, 320px layout and stale-save retries after reload for terrain, reference edits and uploads. An initial new assertion used an exact label-text locator for a wrapped native select; using its accessible combobox role/name corrected the test, and the complete browser set passed.
 - Refreshed and visually reviewed the four committed synthetic desktop/phone screenshots in both themes. The owner's independent demo on port 3114 was not restarted or modified.
 - Final documentation links, changed-test formatting and `git diff --check` passed. Publication checks and the pinned history secret scan run before the follow-up commit is pushed; hosted CI remains a separate result.
+
+### Follow-ups after merge (2026-11-18)
+
+| Follow-up | Change |
+| --- | --- |
+| Scalar cap regression test | The test inputs grow to 200,000 characters, so removing either 40-character cap exceeds the child-process timeout. |
+| Terrain draft after a same-tab reference change | A successful reference upload, edit or removal moves an unsaved terrain draft to the new revision when the draft was based on the revision that change replaced. Changes from another tab still make the draft stale. |
+| Shared error/reload control | `useRaceAction` wraps `useAction` so the four race actions share one busy/error state and fail with the course-analysis `ReloadableRequestError`, instead of four hand-written blocks. |
+| Redundant `comparison` field | Removed from the reference contract; `predictedSeconds !== null` carries the same fact. |
+| Elevation formatter duplication | `elevation` in `@athlete-panel/ui`, beside `distance`, replaces the identical race-analysis, weekly summary and Charts formatters (climbing label and target range). Formatters without thousands separators or with other precision are unchanged. |
+
+Verification of the follow-ups:
+
+- `pnpm check`: passed, including **502 unit tests in 60 files**. Removing either 40-character cap made the scalar cap test time out.
+- `vitest run tests/integration/race-analysis.test.ts`: **11 tests passed** in an isolated synthetic database.
+- `pnpm build`, then `pnpm exec playwright test tests/e2e/race-analysis.spec.ts tests/e2e/calendar-cards.spec.ts tests/e2e/charts.spec.ts`: **81 passed, 1 skipped** across desktop and Pixel 7. The race-analysis file alone passed again (24 tests) on the final build. Without the draft update the same-tab test failed; with an unconditional update the other-tab test failed.

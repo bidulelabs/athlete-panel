@@ -9,11 +9,10 @@ import {
   NativeSelect,
   distance,
   useConfirm,
-  type ReloadableRequestError,
 } from '@athlete-panel/ui';
 import type { PluginRequest, RaceAnalysis, ReferenceEffort } from '@athlete-panel/contracts';
 import { finishTime, elevationLabel, terrainNames } from './presentation';
-import { raceRequestError } from './use-analysis';
+import { useRaceAction } from './use-analysis';
 import { referenceTimeProblem, usableReference } from './estimate';
 
 function EditReference({
@@ -21,12 +20,14 @@ function EditReference({
   reference,
   request,
   reload,
+  onReferenceChanged,
   onClose,
 }: {
   value: RaceAnalysis;
   reference: ReferenceEffort;
   request: PluginRequest;
   reload: () => Promise<unknown>;
+  onReferenceChanged: (fromRevision: number, toRevision: number) => void;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(reference.title),
@@ -35,8 +36,7 @@ function EditReference({
     ),
     [terrain, setTerrain] = useState(reference.terrain),
     [revision, setRevision] = useState(value.revision);
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState<ReloadableRequestError | null>(null);
+  const { busy, error, setError, run } = useRaceAction(reload);
   const saved = value.references.find((ref) => ref.id === reference.id);
   return (
     <Modal
@@ -49,12 +49,10 @@ function EditReference({
     >
       <form
         className="dialog-body race-form"
-        onSubmit={async (event) => {
+        onSubmit={(event) => {
           event.preventDefault();
-          setBusy(true);
-          setError(null);
-          try {
-            await request('race-analysis', 'reference-update', {
+          void run(async () => {
+            const { revision: savedRevision } = await request('race-analysis', 'reference-update', {
               raceId: value.race.id,
               expectedRevision: revision,
               idempotencyKey: crypto.randomUUID(),
@@ -64,12 +62,9 @@ function EditReference({
               durationSeconds: minutes.trim() ? Number(minutes) * 60 : null,
             });
             await reload();
+            onReferenceChanged(revision, savedRevision);
             onClose();
-          } catch (cause) {
-            setError(raceRequestError(cause, reload));
-          } finally {
-            setBusy(false);
-          }
+          });
         }}
       >
         <Field label="Effort name">
@@ -154,16 +149,17 @@ export function ReferenceEfforts({
   units,
   reload,
   onAdd,
+  onReferenceChanged,
 }: {
   value: RaceAnalysis;
   request: PluginRequest;
   units: string;
   reload: () => Promise<unknown>;
   onAdd: () => void;
+  onReferenceChanged: (fromRevision: number, toRevision: number) => void;
 }) {
-  const [editing, setEditing] = useState<ReferenceEffort | null>(null),
-    [error, setError] = useState<ReloadableRequestError | null>(null),
-    [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<ReferenceEffort | null>(null);
+  const { busy, error, run } = useRaceAction(reload);
   const confirm = useConfirm();
   return (
     <section className="race-evidence">
@@ -223,21 +219,20 @@ export function ReferenceEfforts({
                     ))
                   )
                     return;
-                  setBusy(true);
-                  setError(null);
-                  try {
-                    await request('race-analysis', 'reference-remove', {
-                      raceId: value.race.id,
-                      expectedRevision: value.revision,
-                      id: reference.id,
-                      idempotencyKey: crypto.randomUUID(),
-                    });
+                  await run(async () => {
+                    const { revision: savedRevision } = await request(
+                      'race-analysis',
+                      'reference-remove',
+                      {
+                        raceId: value.race.id,
+                        expectedRevision: value.revision,
+                        id: reference.id,
+                        idempotencyKey: crypto.randomUUID(),
+                      },
+                    );
                     await reload();
-                  } catch (cause) {
-                    setError(raceRequestError(cause, reload));
-                  } finally {
-                    setBusy(false);
-                  }
+                    onReferenceChanged(value.revision, savedRevision);
+                  });
                 }}
               >
                 Remove
@@ -277,6 +272,7 @@ export function ReferenceEfforts({
           reference={editing}
           request={request}
           reload={reload}
+          onReferenceChanged={onReferenceChanged}
           onClose={() => setEditing(null)}
         />
       )}

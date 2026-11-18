@@ -38,11 +38,8 @@ export function Preparation({
   const rows = pacingRows(racePlan?.pacing ?? [], course?.analysis.sections ?? []);
   const units = data.profile?.units ?? 'metric';
   const { envelope, weekStartsOn } = useWorkspace();
-  const weeks = weeksUntilRace(
-    data,
-    startOfWeek(todayInTimeZone(data.profile?.timezone), weekStartsOn),
-    race.date,
-  );
+  const today = todayInTimeZone(data.profile?.timezone);
+  const weeks = weeksUntilRace(data, today, startOfWeek(today, weekStartsOn), race.date);
   const agentBridgeEnabled = envelope.plugins.some(
     (plugin) => plugin.id === 'agent-bridge' && plugin.enabled,
   );

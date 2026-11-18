@@ -334,6 +334,19 @@ it('shares no course for a race without one, and no course key without a race', 
   expect(withoutRace.context).not.toHaveProperty('raceCourse');
 });
 
+it.each([
+  ['deleted', { action: 'event.delete', id: raceId, expectedRevision: 1 }],
+  [
+    'turned into a goal',
+    { action: 'event.update', id: raceId, expectedRevision: 1, values: { kind: 'goal' } },
+  ],
+] as const)('shares no course once the race is %s', async (_label, command) => {
+  const { token } = await grantWithRace();
+  expect((await contextForToken(token)).context.raceCourse).toMatchObject({ courseId });
+  await owner([command as CommandInput]);
+  expect((await contextForToken(token)).context.raceCourse).toBeNull();
+});
+
 it('refuses a race plan written for a course that is no longer in use', async () => {
   const { token } = await grantWithRace();
   const writtenForOldCourse = createRacePlan();

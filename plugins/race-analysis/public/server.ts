@@ -1,8 +1,10 @@
 import type { Transaction } from '../../../packages/host/src/db';
+import { findRaceEvent } from '../../training/public/server';
 import { estimateCourse } from '../estimate';
 import { readAsset, readCourse, readReferences } from '../repository';
 
 export async function readRaceCourseSummary(raceId: string, tx: Transaction) {
+  if (!(await findRaceEvent(raceId, tx))) return null;
   const saved = await readCourse(raceId, tx);
   const course = saved.assetId ? await readAsset(saved.assetId, tx) : null;
   if (!course) return null;

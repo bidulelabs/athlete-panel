@@ -154,7 +154,8 @@ jobs:
         run: >-
           docker run --rm -v "$PWD:/src:ro"
           aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
-          fs --include-dev-deps --scanners vuln --severity HIGH,CRITICAL --exit-code 1 /src
+          fs --include-dev-deps --scanners vuln --severity HIGH,CRITICAL --exit-code 1
+          --ignorefile /src/.trivyignore /src
   container-build:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -217,8 +218,10 @@ jobs:
         if: matrix.rehearsal == 'release'
         run: |
           docker run --rm -v "$PWD/.runtime/release-candidate:/scan:ro" \
+            -v "$PWD/.trivyignore:/.trivyignore:ro" \
             aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
-            image --input /scan/image.tar --scanners vuln --severity HIGH,CRITICAL --exit-code 1
+            image --input /scan/image.tar --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+            --ignorefile /.trivyignore
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

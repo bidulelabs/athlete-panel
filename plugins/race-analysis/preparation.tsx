@@ -104,6 +104,7 @@ export function Preparation({
         <Field label="Target" hint="What you want from this race. Only you set it.">
           <Input
             name="target"
+            readOnly={action.busy}
             maxLength={120}
             defaultValue={racePlan?.target ?? ''}
             placeholder="Finish comfortably"
@@ -112,6 +113,7 @@ export function Preparation({
         <Field label="Briefing">
           <Textarea
             name="briefing"
+            readOnly={action.busy}
             rows={6}
             maxLength={4000}
             defaultValue={racePlan?.briefing ?? ''}
@@ -129,13 +131,19 @@ export function Preparation({
               key={row.fromMeters}
               label={`${distance(row.fromMeters, units)}–${distance(row.toMeters, units)}`}
             >
-              <Input name="effort" maxLength={120} defaultValue={row.effort} />
+              <Input
+                name="effort"
+                readOnly={action.busy}
+                maxLength={120}
+                defaultValue={row.effort}
+              />
             </Field>
           ))}
         </fieldset>
         <Field label="Assumptions" hint="One per line.">
           <Textarea
             name="assumptions"
+            readOnly={action.busy}
             rows={3}
             defaultValue={racePlan?.assumptions.join('\n') ?? ''}
           />
@@ -143,6 +151,7 @@ export function Preparation({
         <Field label="Open questions" hint="One per line.">
           <Textarea
             name="openQuestions"
+            readOnly={action.busy}
             rows={3}
             defaultValue={racePlan?.openQuestions.join('\n') ?? ''}
           />
@@ -157,6 +166,7 @@ export function Preparation({
                 again from the latest values.
               </span>
               <Button
+                type="button"
                 variant="outline"
                 disabled={action.busy}
                 onClick={() => {

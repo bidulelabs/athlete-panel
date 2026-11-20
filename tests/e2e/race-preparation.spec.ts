@@ -158,6 +158,33 @@ test('keeps the draft when another tab created the plan first', async ({ page, b
   await expect(page.getByText(/This race already has a plan/)).toBeVisible();
   await page.getByRole('button', { name: 'Reload saved data', exact: true }).click();
   await expect(page.getByLabel(/^Briefing/)).toHaveValue('My draft');
+  await page.getByLabel('Target', { exact: true }).press('Enter');
+  await expect(page.getByText(/This race already has a plan/)).toBeVisible();
+  await expect(page.getByLabel(/^Briefing/)).toHaveValue('My draft');
+  await expect(page.getByLabel('Target', { exact: true })).toHaveValue('');
   await page.getByRole('button', { name: 'Use saved plan', exact: true }).click();
   await expect(page.getByLabel('Target', { exact: true })).toHaveValue('Under 8 hours');
+});
+
+test('keeps the fields read-only until a slow save has finished', async ({ page, baseURL }) => {
+  await signIn(page, 'light');
+  const raceId = await createRace(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await openPreparation(page);
+  let releaseSave!: () => void;
+  const saveHeld = new Promise<void>((resolve) => (releaseSave = resolve));
+  await page.route('**/api/plugins/training/mutate', async (route) => {
+    await saveHeld;
+    await route.continue();
+  });
+  const briefing = page.getByLabel(/^Briefing/);
+  await briefing.fill('Submitted text');
+  await save(page);
+  await expect(briefing).toHaveAttribute('readonly', '');
+  await briefing.focus();
+  await page.keyboard.type(' typed while saving');
+  releaseSave();
+  await expect(page.getByText('Preparation saved.')).toBeVisible();
+  await expect(briefing).toHaveValue('Submitted text');
+  await expect(briefing).not.toHaveAttribute('readonly');
 });

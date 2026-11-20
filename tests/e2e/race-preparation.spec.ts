@@ -64,6 +64,18 @@ for (const theme of ['light', 'dark']) {
       'true',
     );
     await expect(page.getByText(/Upload the course GPX in the Course tab/)).toBeVisible();
+    const weeks = page.getByRole('table').filter({ hasText: 'Week of' });
+    await expect(page.getByRole('heading', { name: 'Weeks until race day' })).toBeVisible();
+    await expect(weeks.getByRole('columnheader')).toHaveText([
+      'Week of',
+      'Phase',
+      'Target',
+      'Planned',
+    ]);
+    expect(await weeks.locator('tbody tr').count()).toBeGreaterThan(1);
+    await expect(
+      page.getByRole('link', { name: 'Open Agent workspace', exact: true }),
+    ).toHaveAttribute('href', '/agent');
     await page.getByLabel('Target', { exact: true }).fill('Finish comfortably');
     await save(page);
     await expect(page.getByText('Preparation saved.')).toBeVisible();

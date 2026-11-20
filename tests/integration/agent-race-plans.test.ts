@@ -18,13 +18,15 @@ import {
   undoChange,
 } from '../../plugins/agent-bridge/service';
 import { summarizeProposal } from '../../plugins/agent-bridge/proposal-weeks';
+import { settings, upload } from '../../plugins/race-analysis/service';
+import { syntheticGpx } from '../fixtures/race-analysis';
 
 const url = isolatedDatabaseUrl();
 const range = { from: '2026-11-01', to: '2027-06-30' };
 const raceId = randomUUID();
 const otherRaceId = randomUUID();
 const raceAfterRangeId = randomUUID();
-const courseId = randomUUID();
+let courseId: string;
 beforeAll(async () => {
   await closeDatabase();
   process.env.DATABASE_URL = url;
@@ -32,12 +34,13 @@ beforeAll(async () => {
   await migrate();
 });
 beforeEach(async () => {
-  await connection()`truncate host.proposals,agent_bridge.planning_reads,host.grants,host.changes,host.idempotency,host.jobs,athlete.records,training.records,activity_records.records,garmin.coverage`;
+  await connection()`truncate race_analysis.reference_efforts,race_analysis.courses,race_analysis.assets,host.proposals,agent_bridge.planning_reads,host.grants,host.changes,host.idempotency,host.jobs,athlete.records,training.records,activity_records.records,garmin.coverage`;
   await owner([
     race(raceId, 'Synthetic mountain race', '2027-06-20'),
     race(otherRaceId, 'Synthetic spring race', '2027-04-04'),
     race(raceAfterRangeId, 'Synthetic autumn race', '2027-10-16'),
   ]);
+  courseId = await uploadCourse();
 });
 afterAll(closeDatabase);
 
@@ -46,16 +49,32 @@ const race = (id: string, title: string, date: string): CommandInput => ({
   action: 'event.create',
   values: { id, title, kind: 'race', date },
 });
-const agentWrites = {
+const gpxFile = (options: Parameters<typeof syntheticGpx>[0] = {}) => ({
+  name: 'synthetic-course.gpx',
+  bytes: Buffer.from(syntheticGpx(options)),
+});
+async function uploadCourse(
+  expectedRevision = 0,
+  options: Parameters<typeof syntheticGpx>[0] = {},
+) {
+  const uploaded = await upload(gpxFile(options), {
+    raceId,
+    expectedRevision,
+    idempotencyKey: randomUUID(),
+    purpose: 'course',
+  });
+  return uploaded.assetId!;
+}
+const agentWrites = (writtenForCourseId: string | null = courseId) => ({
   briefing: 'Start easy, keep the long climb steady.',
   pacing: [{ fromMeters: 0, toMeters: 5000, effort: 'Easy' }],
   assumptions: ['Dry trail'],
   openQuestions: ['Poles allowed?'],
-  courseId,
-};
+  courseId: writtenForCourseId,
+});
 const createRacePlan = (eventId = raceId) => ({
   action: 'racePlan.create',
-  values: { eventId, ...agentWrites },
+  values: { eventId, ...agentWrites(eventId === raceId ? courseId : null) },
 });
 const grantWithRace = (planning: Record<string, unknown> = { raceId }) =>
   createGrant({
@@ -144,7 +163,7 @@ it('refuses updating the plan of a race outside the grant', async () => {
   const { token } = await grantWithRace();
   await expect(
     submit(token, [
-      { action: 'racePlan.update', id: otherPlan, expectedRevision: 1, values: agentWrites },
+      { action: 'racePlan.update', id: otherPlan, expectedRevision: 1, values: agentWrites() },
     ]),
   ).rejects.toMatchObject({ code: 'out_of_scope' });
 });
@@ -193,7 +212,7 @@ it('applies and undoes a race plan together with a phase and a workout', async (
     {
       eventId: raceId,
       target: '',
-      briefing: agentWrites.briefing,
+      briefing: agentWrites().briefing,
       writtenFor: { courseId, target: '' },
     },
   ]);
@@ -221,7 +240,7 @@ it('asks for a new review when the owner edits the plan while a proposal waits',
   const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
   const { token } = await grantWithRace();
   const submitted = await submit(token, [
-    { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: agentWrites },
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: agentWrites() },
   ]);
   expect(await reviewProposal(submitted)).toMatchObject({ applicability: 'ready' });
   await owner([
@@ -236,7 +255,7 @@ it('keeps the owner target when the proposal is applied, then refuses undo after
   const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
   const { token } = await grantWithRace();
   const submitted = await submit(token, [
-    { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: agentWrites },
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: agentWrites() },
   ]);
   const applied = await applyProposal({ ...submitted, idempotencyKey: randomUUID() });
   expect((await loadWorkspace()).racePlans).toMatchObject([
@@ -266,4 +285,102 @@ it('undoes a race deletion together with its plan and names the plan in history'
   expect((await loadWorkspace()).racePlans).toMatchObject([{ eventId: raceId }]);
   const titles = (await recentChanges()).map((entry) => entry.title);
   expect(titles).toContain('Created race plan');
+});
+
+it('shares the course summary of the granted race without coordinates or file names', async () => {
+  await upload(gpxFile({ seconds: 23000 }), {
+    raceId,
+    expectedRevision: 1,
+    idempotencyKey: randomUUID(),
+    purpose: 'reference',
+    title: 'PRIVATE_EFFORT_TITLE',
+    terrain: 3,
+    durationSeconds: null,
+  });
+  await settings({
+    raceId,
+    expectedRevision: 2,
+    idempotencyKey: randomUUID(),
+    terrain: 3,
+    sectionTerrain: { '0': 5 },
+  });
+  const { context } = await contextForToken((await grantWithRace()).token);
+  expect(context.raceCourse).toMatchObject({
+    courseId,
+    terrain: 3,
+    estimate: null,
+    references: [{ terrain: 3, hasGaps: false }],
+  });
+  expect(context.raceCourse!.sections[0]).toMatchObject({ fromMeters: 0, terrain: 5 });
+  expect(context.raceCourse!.sections[1]).toMatchObject({ terrain: 3 });
+  expect(context.raceCourse!.estimateReasons.length).toBeGreaterThan(0);
+  const shared = JSON.stringify(context.raceCourse);
+  for (const hidden of [
+    'latitude',
+    'longitude',
+    'points',
+    'filename',
+    'synthetic-course',
+    'PRIVATE_EFFORT_TITLE',
+    'assetId',
+  ])
+    expect(shared).not.toContain(hidden);
+});
+
+it('shares no course for a race without one, and no course key without a race', async () => {
+  const withoutCourse = await contextForToken((await grantWithRace({ raceId: otherRaceId })).token);
+  expect(withoutCourse.context.raceCourse).toBeNull();
+  const withoutRace = await contextForToken((await grantWithRace({})).token);
+  expect(withoutRace.context).not.toHaveProperty('raceCourse');
+});
+
+it.each([
+  ['deleted', { action: 'event.delete', id: raceId, expectedRevision: 1 }],
+  [
+    'turned into a goal',
+    { action: 'event.update', id: raceId, expectedRevision: 1, values: { kind: 'goal' } },
+  ],
+] as const)('shares no course once the race is %s', async (_label, command) => {
+  const { token } = await grantWithRace();
+  expect((await contextForToken(token)).context.raceCourse).toMatchObject({ courseId });
+  await owner([command as CommandInput]);
+  expect((await contextForToken(token)).context.raceCourse).toBeNull();
+});
+
+it('refuses a race plan written for a course that is no longer in use', async () => {
+  const { token } = await grantWithRace();
+  const writtenForOldCourse = createRacePlan();
+  courseId = await uploadCourse(1, { km: 30, salt: 'replacement' });
+  await expect(submit(token, [writtenForOldCourse])).rejects.toMatchObject({
+    code: 'stale_context',
+  });
+  await expect(
+    submit(token, [{ ...writtenForOldCourse, values: { ...agentWrites(null), eventId: raceId } }]),
+  ).rejects.toMatchObject({ code: 'stale_context' });
+  await submit(token, [createRacePlan()]);
+  expect(await connection()`select id from host.proposals`).toHaveLength(1);
+});
+
+it('accepts a proposal whose context was read before the course was replaced', async () => {
+  const { token } = await grantWithRace();
+  const read = await contextForToken(token);
+  courseId = await uploadCourse(1, { km: 30, salt: 'replacement' });
+  const submitted = await submitProposal(token, {
+    commands: [createRacePlan()],
+    summary: 'Prepare the race',
+    contextDigest: read.contextDigest,
+    idempotencyKey: randomUUID(),
+  });
+  expect(await reviewProposal({ id: submitted.id, digest: submitted.digest })).toMatchObject({
+    applicability: 'ready',
+  });
+});
+
+it('still applies a proposal after its course was replaced, leaving the plan to review', async () => {
+  const { token } = await grantWithRace();
+  const submitted = await submit(token, [createRacePlan()]);
+  const writtenFor = courseId;
+  await uploadCourse(1, { km: 30, salt: 'replacement' });
+  await applyProposal({ ...submitted, idempotencyKey: randomUUID() });
+  expect((await loadWorkspace()).racePlans[0]!.writtenFor.courseId).toBe(writtenFor);
 });

@@ -4,6 +4,7 @@ import {
   type WorkspaceState,
   type WorkoutStep,
   type Period,
+  type RacePlan,
   type PlanningScope,
   type TrainingEvent,
 } from '../../packages/contracts/src';
@@ -70,6 +71,9 @@ export function boundedContext(state: WorkspaceState, scope: Scope) {
       .filter((e) => within(e.date))
       .map((e) => (scope.includeNotes ? e : { ...e, notes: '' })),
     periods: state.periods.filter((p) => p.startDate <= scope.to && p.endDate >= scope.from),
+    ...(scope.raceId
+      ? { racePlans: state.racePlans.filter((racePlan) => racePlan.eventId === scope.raceId) }
+      : {}),
     injuries: state.injuries
       .filter((i) => i.startDate <= scope.to && (i.endDate === null || i.endDate >= scope.from))
       .map((i) => (scope.includeNotes ? i : { ...i, notes: '' })),
@@ -77,6 +81,7 @@ export function boundedContext(state: WorkspaceState, scope: Scope) {
     health: state.health.filter((h) => within(h.localDate)),
   };
 }
+export type BoundedContext = ReturnType<typeof boundedContext>;
 export function assertReadableSources(commands: Command[], state: WorkspaceState, scope: Scope) {
   const context = boundedContext(state, scope);
   for (const command of commands) {
@@ -89,6 +94,13 @@ export function assertReadableSources(commands: Command[], state: WorkspaceState
       );
       continue;
     }
+    if (command.action === 'racePlan.create')
+      assert(
+        command.values.eventId === scope.raceId,
+        'forbidden',
+        'This grant does not allow race plan changes for this race. Approve a new connection with this race selected.',
+        403,
+      );
     if (!('id' in command)) continue;
     const kind = command.action.split('.')[0],
       items =
@@ -100,7 +112,9 @@ export function assertReadableSources(commands: Command[], state: WorkspaceState
               ? context.notes
               : kind === 'period'
                 ? context.periods
-                : [];
+                : kind === 'racePlan'
+                  ? (context.racePlans ?? [])
+                  : [];
     assert(
       items.some((i) => i.id === command.id),
       'out_of_scope',
@@ -209,6 +223,17 @@ function assertPeriodChange(change: EntityChange, scope: Scope) {
     );
 }
 
+function assertRacePlanChange(change: EntityChange, after: WorkspaceState, scope: Scope) {
+  const racePlan = change.after as RacePlan;
+  const race = after.events.find((event) => event.id === racePlan.eventId)!;
+  assert(
+    race.date >= scope.from && race.date <= scope.to,
+    'out_of_scope',
+    'The race must be within the proposal dates.',
+    403,
+  );
+}
+
 export function assertBounded(
   changes: EntityChange[],
   before: WorkspaceState,
@@ -222,6 +247,10 @@ export function assertBounded(
     }
     if (change.entity === 'period') {
       assertPeriodChange(change, scope);
+      continue;
+    }
+    if (change.entity === 'racePlan') {
+      assertRacePlanChange(change, after, scope);
       continue;
     }
     assert(

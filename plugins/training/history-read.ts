@@ -23,7 +23,8 @@ export async function recentChanges() {
       )
       select (select count(*)::int from visible) as count,
         (select coalesce(c#>>'{after,title}',c#>>'{before,title}',
-          c#>>'{after,displayName}',c#>>'{before,displayName}',initcap(c->>'entity'))
+          c#>>'{after,displayName}',c#>>'{before,displayName}',
+          case c->>'entity' when 'racePlan' then 'race plan' else initcap(c->>'entity') end)
         from visible where c->>'entity'=split_part(summary,'.',1)
           and case split_part(summary,'.',2)
             when 'create' then c->'before'='null'::jsonb

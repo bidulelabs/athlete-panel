@@ -465,7 +465,9 @@ export function ContextDetails({
           <AlertDialogDescription>
             {item.kind === 'injury'
               ? 'Delete this constraint from every affected day?'
-              : `Delete this ${item.kind}?`}
+              : data.racePlans.some((racePlan) => racePlan.eventId === item.record.id)
+                ? 'Delete this event and its race plan?'
+                : `Delete this ${item.kind}?`}
           </AlertDialogDescription>
           <ErrorMessage error={action.error} />
           <div className="ui-confirm-actions">

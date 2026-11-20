@@ -123,8 +123,12 @@ function HistoryEntry({
             <section key={`${record.entity}-${record.id}`} className="training-history-record">
               <h4>{recordName(record)}</h4>
               <p className="training-history-record-kind">
-                {record.entity === 'health' ? 'Health record' : record.entity} ·{' '}
-                {!record.before ? 'Added' : !record.after ? 'Deleted' : 'Updated'}
+                {record.entity === 'health'
+                  ? 'Health record'
+                  : record.entity === 'racePlan'
+                    ? 'race plan'
+                    : record.entity}{' '}
+                · {!record.before ? 'Added' : !record.after ? 'Deleted' : 'Updated'}
               </p>
               <dl>
                 {historyFields(record, units, plans).map((field) => (

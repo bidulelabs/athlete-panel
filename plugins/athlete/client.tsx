@@ -385,7 +385,13 @@ export default function AthletePage(props: PluginPageProps) {
                           aria-label={`Delete ${kind}`}
                           disabled={action.busy}
                           onClick={async () => {
-                            if (await confirm(`Delete this ${kind}?`))
+                            if (
+                              await confirm(
+                                data.racePlans.some((racePlan) => racePlan.eventId === record.id)
+                                  ? 'Delete this event and its race plan?'
+                                  : `Delete this ${kind}?`,
+                              )
+                            )
                               void action.run(() =>
                                 mutate(request, [
                                   {

@@ -282,7 +282,7 @@ describe('agent command contract', () => {
         if (isNumber(property) && !property.description) undescribed.push(`${path}.${name}`);
     };
     visit(contract, 'agentCommands');
-    expect((contract.items as { oneOf: unknown[] }).oneOf).toHaveLength(16);
+    expect((contract.items as { oneOf: unknown[] }).oneOf).toHaveLength(18);
     expect(undescribed).toEqual([]);
   });
 });

@@ -20,6 +20,7 @@ export function handleEvent(
     case 'event.delete': {
       get(state.events, command.id, command.expectedRevision);
       state.events = state.events.filter((item) => item.id !== command.id);
+      state.racePlans = state.racePlans.filter((racePlan) => racePlan.eventId !== command.id);
       break;
     }
   }

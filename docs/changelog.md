@@ -5,7 +5,7 @@ Use the documentation link for the version you installed. Each release page incl
 ## Unreleased
 
 - Race analysis keeps an unsaved terrain draft saveable after you add, edit or remove a reference effort in the same tab; a change from another tab still requires reviewing saved data first. Reference efforts no longer return the redundant `comparison` field.
-- Training stores one race plan per race: the owner's target, a briefing, pacing by course section, assumptions and open questions. A planning connection limited to one race lets its agent read that plan and propose it through the usual owner review, in the same proposal as phases and workouts; the target stays the owner's. Deleting a race deletes its plan, and one undo restores both. No screen edits a race plan yet. See [Race preparation](features/race-preparation.md).
+- Training stores one race plan per race: the owner's target, a briefing, pacing by course section, assumptions and open questions. A planning connection limited to one race lets its agent read that plan and propose it through the usual owner review, in the same proposal as phases and workouts; the target stays the owner's. Deleting a race deletes its plan, and one undo restores both. **Races** gains a **Preparation** tab to write the plan by hand and to see when a new course or target calls for a review. See [Race preparation](features/race-preparation.md).
 
 ### Upgrade steps
 

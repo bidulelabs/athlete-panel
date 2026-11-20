@@ -10,6 +10,10 @@ import {
   NativeSelect,
   PageHeader,
   Skeleton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   dateLabel,
   distance,
   localDate,
@@ -20,6 +24,7 @@ import type { RaceAnalysis } from '@athlete-panel/contracts';
 import { CourseRoute, ElevationProfile } from './course-figures';
 import { UploadDialog } from './upload-dialog';
 import { ReferenceEfforts } from './reference-efforts';
+import { Preparation } from './preparation';
 import { useRaceAction, useRaceAnalysis } from './use-analysis';
 import { estimateCourse } from './estimate';
 import { finishTime, elevationLabel, terrainNames } from './presentation';
@@ -388,6 +393,7 @@ function AnalysisView({
 }
 function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }) {
   const { value, error, loading, reload } = useRaceAnalysis(raceId);
+  const [tab, setTab] = useState<'course' | 'preparation'>('course');
   if (!value)
     return (
       <div className="race-analysis">
@@ -408,14 +414,31 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
       </div>
     );
   return (
-    <AnalysisView
-      value={value}
-      request={props.request}
-      reload={reload}
-      loading={loading}
-      loadError={error}
-      units={props.data.profile?.units ?? 'metric'}
-    />
+    <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
+      <TabsList className="workspace-tabs race-tabs" aria-label="Race views">
+        <TabsTrigger value="course">Course</TabsTrigger>
+        <TabsTrigger value="preparation">Preparation</TabsTrigger>
+      </TabsList>
+      <TabsContent value={tab}>
+        {tab === 'course' ? (
+          <AnalysisView
+            value={value}
+            request={props.request}
+            reload={reload}
+            loading={loading}
+            loadError={error}
+            units={props.data.profile?.units ?? 'metric'}
+          />
+        ) : (
+          <Preparation
+            race={value.race}
+            course={value.course}
+            data={props.data}
+            request={props.request}
+          />
+        )}
+      </TabsContent>
+    </Tabs>
   );
 }
 export default function RacePage(props: PluginPageProps) {

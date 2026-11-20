@@ -298,7 +298,7 @@ export function WorkspaceApp({
           'code' in result.error
             ? result.error.code
             : null;
-        if (code === 'STALE_REVISION')
+        if (code === 'STALE_REVISION' || code === 'RACE_PLAN_EXISTS')
           throw reloadError(
             `${responseError(result, 'This item changed.')} Use Reload saved data to review the saved version. Your draft will stay open.`,
           );

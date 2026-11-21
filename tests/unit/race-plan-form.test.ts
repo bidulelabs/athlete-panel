@@ -27,6 +27,9 @@ const racePlan = (values: Partial<RacePlan> = {}): RacePlan => ({
   pacing: [{ fromMeters: 0, toMeters: 5000, effort: 'Easy' }],
   assumptions: ['Dry trail'],
   openQuestions: [],
+  startTime: null,
+  finishCutoff: null,
+  stations: [],
   writtenFor: { courseId, target: 'Finish comfortably' },
   ...values,
 });
@@ -152,6 +155,40 @@ describe('race plan command', () => {
       'courseId',
       'openQuestions',
       'pacing',
+    ]);
+  });
+
+  it('leaves the start time, finish cutoff and aid stations out of the update', () => {
+    const planned = racePlan({
+      startTime: '07:00',
+      finishCutoff: { dayOffset: 0, time: '15:00' },
+      stations: [
+        {
+          id: '00000000-0000-4000-8000-000000000030',
+          name: 'Synthetic col',
+          distanceMeters: 9000,
+          cutoff: null,
+          stopSeconds: 240,
+          water: true,
+          food: '',
+          dropBag: [],
+          action: '',
+          source: '',
+          verified: false,
+        },
+      ],
+    });
+    const command = racePlanCommand(
+      savedForm({ target: 'Under 8 hours', briefing: 'Go' }),
+      rows,
+      planned,
+      raceId,
+      courseId,
+    );
+    expect(Object.keys((command as { values: object }).values).sort()).toEqual([
+      'briefing',
+      'courseId',
+      'target',
     ]);
   });
 

@@ -42,12 +42,20 @@ const labels: Record<string, string> = {
   toMeters: 'To',
   writtenFor: 'Written for',
   courseId: 'Course',
+  startTime: 'Start time',
+  finishCutoff: 'Finish cutoff',
+  stations: 'Aid stations',
+  dayOffset: 'Days after race day',
+  stopSeconds: 'Stop',
+  dropBag: 'Drop bag',
 };
 const listItemLabels: Record<string, string> = {
   exercises: 'Exercise',
   pacing: 'Section',
   assumptions: 'Assumption',
   openQuestions: 'Open question',
+  stations: 'Aid station',
+  dropBag: 'Item',
 };
 const readable = (key: string) =>
   labels[key] ??

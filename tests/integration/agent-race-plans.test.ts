@@ -384,3 +384,74 @@ it('still applies a proposal after its course was replaced, leaving the plan to 
   await applyProposal({ ...submitted, idempotencyKey: randomUUID() });
   expect((await loadWorkspace()).racePlans[0]!.writtenFor.courseId).toBe(writtenFor);
 });
+
+const raceDay = {
+  startTime: '07:00',
+  finishCutoff: { dayOffset: 0, time: '15:00' },
+  stations: [
+    {
+      id: randomUUID(),
+      name: 'Synthetic col',
+      distanceMeters: 9000,
+      cutoff: { dayOffset: 0, time: '09:15' },
+      stopSeconds: 240,
+      water: true,
+      food: 'bananas',
+      dropBag: [{ productId: randomUUID(), servings: 2 }],
+      action: 'Refill both bottles',
+      source: 'race guide',
+      verified: true,
+    },
+  ],
+};
+
+it('keeps the owner aid stations when an agent proposal updates the strategy', async () => {
+  const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
+  await owner([
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: raceDay },
+  ]);
+  const { token } = await grantWithRace();
+  const submitted = await submit(token, [
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 2, values: agentWrites() },
+  ]);
+  await applyProposal({ ...submitted, idempotencyKey: randomUUID() });
+  expect((await loadWorkspace()).racePlans).toMatchObject([
+    { revision: 3, briefing: agentWrites().briefing, ...raceDay },
+  ]);
+});
+
+it('reads a plan stored before aid stations with no start time, finish cutoff or station', async () => {
+  await createOwnerRacePlan(raceId, 'Finish comfortably');
+  const { token } = await grantWithRace();
+  const written = await contextForToken(token);
+  await connection()`update training.records set data = data - 'startTime' - 'finishCutoff' - 'stations' where kind = 'racePlan'`;
+  expect((await loadWorkspace()).racePlans).toMatchObject([
+    { startTime: null, finishCutoff: null, stations: [] },
+  ]);
+  expect((await contextForToken(token)).contextDigest).toBe(written.contextDigest);
+});
+
+it('changes the context of a race grant, not of a grant without a race, when aid stations are saved', async () => {
+  const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
+  const withRace = (await grantWithRace()).token;
+  const withoutRace = (await grantWithRace({})).token;
+  const [raceRead, otherRead] = await Promise.all([
+    contextForToken(withRace),
+    contextForToken(withoutRace),
+  ]);
+  await owner([
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: raceDay },
+  ]);
+  expect((await contextForToken(withRace)).contextDigest).not.toBe(raceRead.contextDigest);
+  expect((await contextForToken(withoutRace)).contextDigest).toBe(otherRead.contextDigest);
+  await expect(
+    submitProposal(withRace, {
+      commands: [
+        { action: 'racePlan.update', id: racePlanId, expectedRevision: 2, values: agentWrites() },
+      ],
+      summary: 'Prepare the race',
+      contextDigest: raceRead.contextDigest,
+      idempotencyKey: randomUUID(),
+    }),
+  ).rejects.toMatchObject({ code: 'stale_context' });
+});

@@ -1366,6 +1366,163 @@
                     },
                     "description": "What the athlete still has to answer for the strategy to hold."
                   },
+                  "startTime": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "finishCutoff": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "dayOffset": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6,
+                            "description": "Days after the race date."
+                          },
+                          "time": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                            "description": "Wall-clock time in the profile timezone, HH:MM."
+                          }
+                        },
+                        "required": [
+                          "dayOffset",
+                          "time"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "stations": {
+                    "default": [],
+                    "maxItems": 60,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        },
+                        "distanceMeters": {
+                          "type": "number",
+                          "minimum": 0,
+                          "description": "Distance from the start line, in meters."
+                        },
+                        "cutoff": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "dayOffset": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 6,
+                                  "description": "Days after the race date."
+                                },
+                                "time": {
+                                  "type": "string",
+                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                }
+                              },
+                              "required": [
+                                "dayOffset",
+                                "time"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "stopSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 86400
+                        },
+                        "water": {
+                          "type": "boolean"
+                        },
+                        "food": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "dropBag": {
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "productId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "servings": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "productId",
+                              "servings"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "action": {
+                          "type": "string",
+                          "maxLength": 300
+                        },
+                        "source": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "verified": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "distanceMeters",
+                        "cutoff",
+                        "stopSeconds",
+                        "water",
+                        "food",
+                        "dropBag",
+                        "action",
+                        "source",
+                        "verified"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "description": "Aid stations in course order."
+                  },
                   "writtenFor": {
                     "type": "object",
                     "properties": {
@@ -1412,6 +1569,9 @@
                   "pacing",
                   "assumptions",
                   "openQuestions",
+                  "startTime",
+                  "finishCutoff",
+                  "stations",
                   "writtenFor",
                   "id",
                   "revision"
@@ -6405,6 +6565,160 @@
                             },
                             "description": "What the athlete still has to answer for the strategy to hold."
                           },
+                          "startTime": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                "description": "Wall-clock time in the profile timezone, HH:MM."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "finishCutoff": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "dayOffset": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 6,
+                                    "description": "Days after the race date."
+                                  },
+                                  "time": {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  }
+                                },
+                                "required": [
+                                  "dayOffset",
+                                  "time"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "stations": {
+                            "maxItems": 60,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 80
+                                },
+                                "distanceMeters": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "description": "Distance from the start line, in meters."
+                                },
+                                "cutoff": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "dayOffset": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 6,
+                                          "description": "Days after the race date."
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                          "description": "Wall-clock time in the profile timezone, HH:MM."
+                                        }
+                                      },
+                                      "required": [
+                                        "dayOffset",
+                                        "time"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "stopSeconds": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 86400
+                                },
+                                "water": {
+                                  "type": "boolean"
+                                },
+                                "food": {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                "dropBag": {
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "productId": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                      },
+                                      "servings": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "productId",
+                                      "servings"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "maxLength": 300
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "maxLength": 120
+                                },
+                                "verified": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "distanceMeters",
+                                "cutoff",
+                                "stopSeconds",
+                                "water",
+                                "food",
+                                "dropBag",
+                                "action",
+                                "source",
+                                "verified"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Aid stations in course order."
+                          },
                           "courseId": {
                             "default": null,
                             "anyOf": [
@@ -6520,6 +6834,160 @@
                               "maxLength": 300
                             },
                             "description": "What the athlete still has to answer for the strategy to hold."
+                          },
+                          "startTime": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                "description": "Wall-clock time in the profile timezone, HH:MM."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "finishCutoff": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "dayOffset": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 6,
+                                    "description": "Days after the race date."
+                                  },
+                                  "time": {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  }
+                                },
+                                "required": [
+                                  "dayOffset",
+                                  "time"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "stations": {
+                            "maxItems": 60,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 80
+                                },
+                                "distanceMeters": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "description": "Distance from the start line, in meters."
+                                },
+                                "cutoff": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "dayOffset": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 6,
+                                          "description": "Days after the race date."
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                          "description": "Wall-clock time in the profile timezone, HH:MM."
+                                        }
+                                      },
+                                      "required": [
+                                        "dayOffset",
+                                        "time"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "stopSeconds": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 86400
+                                },
+                                "water": {
+                                  "type": "boolean"
+                                },
+                                "food": {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                "dropBag": {
+                                  "maxItems": 20,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "productId": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                      },
+                                      "servings": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "productId",
+                                      "servings"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "maxLength": 300
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "maxLength": 120
+                                },
+                                "verified": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "distanceMeters",
+                                "cutoff",
+                                "stopSeconds",
+                                "water",
+                                "food",
+                                "dropBag",
+                                "action",
+                                "source",
+                                "verified"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Aid stations in course order."
                           },
                           "courseId": {
                             "anyOf": [
@@ -9680,6 +10148,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -9726,6 +10351,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -9810,6 +10438,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -9856,6 +10641,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -13912,6 +14700,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -13958,6 +14903,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -14042,6 +14990,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -14088,6 +15193,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -18161,6 +19269,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -18207,6 +19472,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -18291,6 +19559,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -18337,6 +19762,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -22824,6 +24252,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -22870,6 +24455,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -22954,6 +24542,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -23000,6 +24745,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -27486,6 +29234,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -27532,6 +29437,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -27616,6 +29524,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -27662,6 +29727,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -31747,6 +33815,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -31793,6 +34018,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -31877,6 +34105,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -31923,6 +34308,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -36019,6 +38407,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -36065,6 +38610,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -36149,6 +38697,163 @@
                                 },
                                 "description": "What the athlete still has to answer for the strategy to hold."
                               },
+                              "startTime": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "finishCutoff": {
+                                "default": null,
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "dayOffset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 6,
+                                        "description": "Days after the race date."
+                                      },
+                                      "time": {
+                                        "type": "string",
+                                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                        "description": "Wall-clock time in the profile timezone, HH:MM."
+                                      }
+                                    },
+                                    "required": [
+                                      "dayOffset",
+                                      "time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "stations": {
+                                "default": [],
+                                "maxItems": 60,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "distanceMeters": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Distance from the start line, in meters."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400
+                                    },
+                                    "water": {
+                                      "type": "boolean"
+                                    },
+                                    "food": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    },
+                                    "dropBag": {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "productId": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "servings": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
+                                        "required": [
+                                          "productId",
+                                          "servings"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "action": {
+                                      "type": "string",
+                                      "maxLength": 300
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "maxLength": 120
+                                    },
+                                    "verified": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "distanceMeters",
+                                    "cutoff",
+                                    "stopSeconds",
+                                    "water",
+                                    "food",
+                                    "dropBag",
+                                    "action",
+                                    "source",
+                                    "verified"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Aid stations in course order."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -36195,6 +38900,9 @@
                               "pacing",
                               "assumptions",
                               "openQuestions",
+                              "startTime",
+                              "finishCutoff",
+                              "stations",
                               "writtenFor",
                               "id",
                               "revision"
@@ -42505,6 +45213,160 @@
                   },
                   "description": "What the athlete still has to answer for the strategy to hold."
                 },
+                "startTime": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                      "description": "Wall-clock time in the profile timezone, HH:MM."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "finishCutoff": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "dayOffset": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6,
+                          "description": "Days after the race date."
+                        },
+                        "time": {
+                          "type": "string",
+                          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                          "description": "Wall-clock time in the profile timezone, HH:MM."
+                        }
+                      },
+                      "required": [
+                        "dayOffset",
+                        "time"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "stations": {
+                  "maxItems": 60,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "distanceMeters": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Distance from the start line, in meters."
+                      },
+                      "cutoff": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "dayOffset": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Days after the race date."
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                "description": "Wall-clock time in the profile timezone, HH:MM."
+                              }
+                            },
+                            "required": [
+                              "dayOffset",
+                              "time"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "stopSeconds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 86400
+                      },
+                      "water": {
+                        "type": "boolean"
+                      },
+                      "food": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "dropBag": {
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "productId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "servings": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "productId",
+                            "servings"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "action": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "source": {
+                        "type": "string",
+                        "maxLength": 120
+                      },
+                      "verified": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "distanceMeters",
+                      "cutoff",
+                      "stopSeconds",
+                      "water",
+                      "food",
+                      "dropBag",
+                      "action",
+                      "source",
+                      "verified"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Aid stations in course order."
+                },
                 "courseId": {
                   "default": null,
                   "anyOf": [
@@ -42620,6 +45482,160 @@
                     "maxLength": 300
                   },
                   "description": "What the athlete still has to answer for the strategy to hold."
+                },
+                "startTime": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                      "description": "Wall-clock time in the profile timezone, HH:MM."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "finishCutoff": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "dayOffset": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6,
+                          "description": "Days after the race date."
+                        },
+                        "time": {
+                          "type": "string",
+                          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                          "description": "Wall-clock time in the profile timezone, HH:MM."
+                        }
+                      },
+                      "required": [
+                        "dayOffset",
+                        "time"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "stations": {
+                  "maxItems": 60,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "distanceMeters": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Distance from the start line, in meters."
+                      },
+                      "cutoff": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "dayOffset": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Days after the race date."
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                "description": "Wall-clock time in the profile timezone, HH:MM."
+                              }
+                            },
+                            "required": [
+                              "dayOffset",
+                              "time"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "stopSeconds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 86400
+                      },
+                      "water": {
+                        "type": "boolean"
+                      },
+                      "food": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "dropBag": {
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "productId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "servings": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "productId",
+                            "servings"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "action": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "source": {
+                        "type": "string",
+                        "maxLength": 120
+                      },
+                      "verified": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "distanceMeters",
+                      "cutoff",
+                      "stopSeconds",
+                      "water",
+                      "food",
+                      "dropBag",
+                      "action",
+                      "source",
+                      "verified"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Aid stations in course order."
                 },
                 "courseId": {
                   "anyOf": [
@@ -46656,6 +49672,163 @@
               },
               "description": "What the athlete still has to answer for the strategy to hold."
             },
+            "startTime": {
+              "default": null,
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "finishCutoff": {
+              "default": null,
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "dayOffset": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 6,
+                      "description": "Days after the race date."
+                    },
+                    "time": {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                      "description": "Wall-clock time in the profile timezone, HH:MM."
+                    }
+                  },
+                  "required": [
+                    "dayOffset",
+                    "time"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "stations": {
+              "default": [],
+              "maxItems": 60,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "distanceMeters": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Distance from the start line, in meters."
+                  },
+                  "cutoff": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "dayOffset": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6,
+                            "description": "Days after the race date."
+                          },
+                          "time": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                            "description": "Wall-clock time in the profile timezone, HH:MM."
+                          }
+                        },
+                        "required": [
+                          "dayOffset",
+                          "time"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "stopSeconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 86400
+                  },
+                  "water": {
+                    "type": "boolean"
+                  },
+                  "food": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "dropBag": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "productId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "servings": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "productId",
+                        "servings"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "action": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "source": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "verified": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "distanceMeters",
+                  "cutoff",
+                  "stopSeconds",
+                  "water",
+                  "food",
+                  "dropBag",
+                  "action",
+                  "source",
+                  "verified"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Aid stations in course order."
+            },
             "writtenFor": {
               "type": "object",
               "properties": {
@@ -46702,6 +49875,9 @@
             "pacing",
             "assumptions",
             "openQuestions",
+            "startTime",
+            "finishCutoff",
+            "stations",
             "writtenFor",
             "id",
             "revision"

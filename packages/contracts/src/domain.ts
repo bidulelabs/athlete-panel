@@ -427,11 +427,63 @@ const racePlanAgentFields = {
 const racePlanCourseId = idSchema
   .nullable()
   .describe('Id of the course the strategy was written for. Null when the race has no course.');
+const raceClockTime = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a time in HH:MM format.')
+  .describe('Wall-clock time in the profile timezone, HH:MM.');
+const raceCutoff = z
+  .object({
+    dayOffset: z.number().int().min(0).max(6).describe('Days after the race date.'),
+    time: raceClockTime,
+  })
+  .strict()
+  .nullable();
+const racePlanDayFields = {
+  startTime: raceClockTime.nullable(),
+  finishCutoff: raceCutoff,
+  stations: z
+    .array(
+      z
+        .object({
+          id: idSchema,
+          name: z.string().trim().min(1).max(80),
+          distanceMeters: nonnegativeSchema.describe('Distance from the start line, in meters.'),
+          cutoff: raceCutoff,
+          stopSeconds: z.number().int().min(0).max(86400),
+          water: z.boolean(),
+          food: z.string().trim().max(200),
+          dropBag: z
+            .array(z.object({ productId: idSchema, servings: z.number().int().min(1) }).strict())
+            .max(20),
+          action: z.string().trim().max(300),
+          source: z.string().trim().max(120),
+          verified: z.boolean(),
+        })
+        .strict(),
+    )
+    .max(60)
+    .refine(
+      (stations) =>
+        stations.every(
+          (station, index) =>
+            index === 0 || station.distanceMeters > stations[index - 1]!.distanceMeters,
+        ),
+      'Aid stations run in course order, each farther than the one before.',
+    )
+    .refine(
+      (stations) => new Set(stations.map((station) => station.id)).size === stations.length,
+      'Each aid station needs its own id.',
+    )
+    .describe('Aid stations in course order.'),
+};
 export const racePlanSchema = z
   .object({
     eventId: idSchema.describe('Id of the race this plan prepares.'),
     target: racePlanTarget,
     ...racePlanAgentFields,
+    startTime: racePlanDayFields.startTime.default(null),
+    finishCutoff: racePlanDayFields.finishCutoff.default(null),
+    stations: racePlanDayFields.stations.default([]),
     writtenFor: z.object({ courseId: racePlanCourseId, target: racePlanTarget }).strict(),
   })
   .strict()
@@ -857,6 +909,9 @@ export const commandSchema = z.discriminatedUnion('action', [
           pacing: racePlanAgentFields.pacing.default([]),
           assumptions: racePlanAgentFields.assumptions.default([]),
           openQuestions: racePlanAgentFields.openQuestions.default([]),
+          startTime: racePlanDayFields.startTime.optional(),
+          finishCutoff: racePlanDayFields.finishCutoff.optional(),
+          stations: racePlanDayFields.stations.optional(),
           courseId: racePlanCourseId.default(null),
         })
         .strict(),
@@ -868,7 +923,12 @@ export const commandSchema = z.discriminatedUnion('action', [
       ...existing,
       values: nonemptyPatch(
         z
-          .object({ target: racePlanTarget, ...racePlanAgentFields, courseId: racePlanCourseId })
+          .object({
+            target: racePlanTarget,
+            ...racePlanAgentFields,
+            ...racePlanDayFields,
+            courseId: racePlanCourseId,
+          })
           .strict(),
       ),
     })

@@ -6,6 +6,7 @@ import {
   emptyWorkspace,
   grantScopeSchema,
   planningScopeSchema,
+  racePlanSchema,
   type CommandInput,
   type WorkspaceState,
 } from '@athlete-panel/contracts';
@@ -64,6 +65,9 @@ describe('race plan commands', () => {
         pacing: [],
         assumptions: [],
         openQuestions: [],
+        startTime: null,
+        finishCutoff: null,
+        stations: [],
         writtenFor: { courseId: null, target: 'Finish comfortably' },
       },
     ]);
@@ -223,6 +227,183 @@ describe('race plan field limits', () => {
       false,
     );
     expect(commandSchema.safeParse(createRacePlan({ target: 'a'.repeat(120) })).success).toBe(true);
+  });
+});
+
+const station = (number: number, distanceMeters: number, values: Record<string, unknown> = {}) => ({
+  id: id(30 + number),
+  name: `Synthetic station ${number}`,
+  distanceMeters,
+  cutoff: null,
+  stopSeconds: 300,
+  water: true,
+  food: '',
+  dropBag: [],
+  action: '',
+  source: '',
+  verified: false,
+  ...values,
+});
+const raceDay = {
+  startTime: '07:00',
+  finishCutoff: { dayOffset: 1, time: '01:30' },
+  stations: [
+    station(1, 0),
+    station(2, 9000, {
+      cutoff: { dayOffset: 0, time: '09:15' },
+      food: 'bananas',
+      dropBag: [{ productId: id(40), servings: 2 }],
+      action: 'Refill both bottles',
+      source: 'race guide',
+      verified: true,
+    }),
+  ],
+};
+
+describe('race day fields', () => {
+  it('stores the start time, finish cutoff and aid stations on create and on update', () => {
+    const created = run(workspaceWithRaces(), [createRacePlan(raceDay)]).state;
+    expect(created.racePlans[0]).toMatchObject(raceDay);
+    const updated = run(run(workspaceWithRaces(), [createRacePlan()]).state, [
+      updateRacePlan(raceDay),
+    ]).state;
+    expect(updated.racePlans[0]).toMatchObject({ revision: 2, ...raceDay });
+  });
+
+  it('keeps them when an owner update leaves them out, and clears them when it names them', () => {
+    const planned = run(workspaceWithRaces(), [createRacePlan(raceDay)]).state;
+    const retargeted = run(planned, [updateRacePlan({ target: 'Under 8 hours' })]).state;
+    expect(retargeted.racePlans[0]).toMatchObject({ target: 'Under 8 hours', ...raceDay });
+    const cleared = run(retargeted, [
+      updateRacePlan({ startTime: null, finishCutoff: null, stations: [] }, 2),
+    ]).state;
+    expect(cleared.racePlans[0]).toMatchObject({
+      startTime: null,
+      finishCutoff: null,
+      stations: [],
+    });
+  });
+
+  it('keeps them when the agent updates the strategy', () => {
+    const planned = run(workspaceWithRaces(), [createRacePlan(raceDay)]).state;
+    const [racePlan] = run(planned, [updateRacePlan(agentWrites)], 'agent').state.racePlans;
+    expect(racePlan).toMatchObject({ briefing: agentWrites.briefing, ...raceDay });
+  });
+
+  it.each([
+    ['create', createRacePlan({ ...agentWrites, id: undefined })],
+    ['update', updateRacePlan(agentWrites)],
+  ])(
+    'refuses race day fields from the agent on %s, accepts the strategy alone',
+    (_label, command) => {
+      const values = (command as { values: object }).values;
+      expect(agentCommandSchema.safeParse(command).success).toBe(true);
+      for (const field of Object.entries(raceDay))
+        expect(
+          agentCommandSchema.safeParse({ ...command, values: { ...values, [field[0]]: field[1] } })
+            .success,
+        ).toBe(false);
+    },
+  );
+
+  it('reads a plan stored before race day fields with none of them', () => {
+    const [stored] = run(workspaceWithRaces(), [createRacePlan()]).state.racePlans;
+    const {
+      startTime: _startTime,
+      finishCutoff: _finishCutoff,
+      stations: _stations,
+      ...old
+    } = stored!;
+    expect(racePlanSchema.parse(old)).toEqual(stored);
+  });
+
+  it('names aid stations and their fields in the review rows', () => {
+    const planned = run(workspaceWithRaces(), [createRacePlan()]).state;
+    const [change] = run(planned, [updateRacePlan(raceDay)]).changes;
+    const fields = proposalRows(change!, 'metric').map((row) => `${row.field}: ${row.after}`);
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        'Start time: 07:00',
+        'Finish cutoff · Days after race day: 1',
+        'Aid stations · Aid station 2 · Distance: 9 km',
+        'Aid stations · Aid station 2 · Stop: 5 min',
+        'Aid stations · Aid station 2 · Drop bag · Item 1 · Servings: 2',
+      ]),
+    );
+    expect(fields.join()).not.toContain('Step');
+  });
+});
+
+describe('race day field limits', () => {
+  const both = (values: Record<string, unknown>) => [
+    commandSchema.safeParse(createRacePlan(values)).success,
+    commandSchema.safeParse(updateRacePlan(values)).success,
+  ];
+  const stations = (count: number) =>
+    Array.from({ length: count }, (_unused, index) =>
+      station(index, index * 1000, {
+        id: `00000000-0000-4000-8001-${String(index).padStart(12, '0')}`,
+      }),
+    );
+
+  it.each([
+    [
+      'a start at midnight and a cutoff at 23:59',
+      { startTime: '00:00', finishCutoff: { dayOffset: 0, time: '23:59' } },
+    ],
+    ['a cutoff six days after race day', { finishCutoff: { dayOffset: 6, time: '12:00' } }],
+    ['a station at the start line', { stations: [station(1, 0)] }],
+    ['60 stations', { stations: stations(60) }],
+    [
+      'a drop bag of 20 items',
+      {
+        stations: [
+          station(1, 1000, {
+            dropBag: Array.from({ length: 20 }, () => ({ productId: id(40), servings: 1 })),
+          }),
+        ],
+      },
+    ],
+    ['a stop of 24 hours', { stations: [station(1, 1000, { stopSeconds: 86400 })] }],
+  ])('accepts %s', (_label, values) => {
+    expect(both(values)).toEqual([true, true]);
+  });
+
+  it.each([
+    ['24:00', { startTime: '24:00' }],
+    ['7:00', { startTime: '7:00' }],
+    ['07:60', { startTime: '07:60' }],
+    ['a cutoff seven days after race day', { finishCutoff: { dayOffset: 7, time: '12:00' } }],
+    ['a cutoff on a fractional day', { finishCutoff: { dayOffset: 0.5, time: '12:00' } }],
+    ['a null station', { stations: [null] }],
+    ['a station name blank after trim', { stations: [station(1, 1000, { name: '   ' })] }],
+    ['a station name of 81 characters', { stations: [station(1, 1000, { name: 'a'.repeat(81) })] }],
+    ['61 stations', { stations: stations(61) }],
+    ['two stations at the same distance', { stations: [station(1, 1000), station(2, 1000)] }],
+    ['stations out of course order', { stations: [station(1, 2000), station(2, 1000)] }],
+    ['two stations with one id', { stations: [station(1, 1000), station(1, 2000)] }],
+    ['a negative distance', { stations: [station(1, -1)] }],
+    ['a negative stop', { stations: [station(1, 1000, { stopSeconds: -1 })] }],
+    ['a fractional stop', { stations: [station(1, 1000, { stopSeconds: 1.5 })] }],
+    ['a stop over 24 hours', { stations: [station(1, 1000, { stopSeconds: 86401 })] }],
+    [
+      'a drop bag item with no serving',
+      { stations: [station(1, 1000, { dropBag: [{ productId: id(40), servings: 0 }] })] },
+    ],
+    [
+      'a drop bag of 21 items',
+      {
+        stations: [
+          station(1, 1000, {
+            dropBag: Array.from({ length: 21 }, () => ({ productId: id(40), servings: 1 })),
+          }),
+        ],
+      },
+    ],
+    ['food of 201 characters', { stations: [station(1, 1000, { food: 'a'.repeat(201) })] }],
+    ['an unknown station field', { stations: [station(1, 1000, { bag: true })] }],
+  ])('refuses %s on create and on update', (_label, values) => {
+    expect(both(values)).toEqual([false, false]);
   });
 });
 

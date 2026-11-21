@@ -15,8 +15,10 @@ import {
   useConfirm,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import type { RaceAnalysis, RacePlan } from '@athlete-panel/contracts';
+import { emptyRaceNutrition, type RaceAnalysis, type RacePlan } from '@athlete-panel/contracts';
 import { mutate } from '../training/public/client';
+import { carryPlan } from './carry';
+import { carriedText, WhatToCarry } from './carry-block';
 import { stationArrivals } from './race-day';
 import { StartAndCutoffDialog, StationDialog } from './race-day-dialogs';
 import { clockTime, elevationLabel, finishTime } from './presentation';
@@ -27,6 +29,7 @@ type Station = RacePlan['stations'][number];
 type RaceDayTiming = ReturnType<typeof stationArrivals>;
 type Arrival = Omit<RaceDayTiming['finish'], 'distanceMeters'>;
 type Leg = RaceDayTiming['legs'][number];
+type LegCarry = NonNullable<ReturnType<typeof carryPlan>>['legs'][number];
 
 function arrivalRangeLabel(arrival: Arrival) {
   if (arrival.timeOfDay)
@@ -137,7 +140,20 @@ function RaceDaySummary({
   );
 }
 
-function LegRow({ leg, from, to, units }: { leg: Leg; from: string; to: string; units: string }) {
+function LegRow({
+  leg,
+  legCarry,
+  from,
+  to,
+  units,
+}: {
+  leg: Leg;
+  legCarry: LegCarry | undefined;
+  from: string;
+  to: string;
+  units: string;
+}) {
+  const carried = legCarry && carriedText(legCarry);
   const measures = [
     distance(leg.toMeters - leg.fromMeters, units),
     leg.ascentMeters !== null && `${elevationLabel(leg.ascentMeters, units)} up`,
@@ -147,6 +163,12 @@ function LegRow({ leg, from, to, units }: { leg: Leg; from: string; to: string; 
       <td colSpan={6}>
         {from} → {to} · <strong>{measures.join(' · ')}</strong>
         {leg.movingSeconds !== null && ` · about ${duration(leg.movingSeconds)} moving`}
+        {carried && (
+          <span className={`race-leg-carry${legCarry.waterOverCapacity ? ' race-late' : ''}`}>
+            carry {carried}
+            {legCarry.waterOverCapacity && ', over capacity'}
+          </span>
+        )}
       </td>
     </tr>
   );
@@ -243,6 +265,13 @@ export function RaceDay({
     finishCutoff: racePlan?.finishCutoff ?? null,
     stations,
   });
+  const products = data.profile?.nutrition?.products ?? [];
+  const carry = carryPlan(
+    raceDay,
+    racePlan?.nutrition ?? emptyRaceNutrition,
+    products,
+    data.profile?.nutrition?.carryCapacityMillilitres ?? null,
+  );
   const saveRacePlan = (values: Parameters<typeof raceDayCommand>[0]) =>
     mutate(request, [raceDayCommand(values, racePlan, race.id, courseId)]);
   async function removeStation(station: Station) {
@@ -263,7 +292,15 @@ export function RaceDay({
     ? undefined
     : legEndingAt(raceDay.finish.distanceMeters);
   const legRow = (leg: Leg | undefined, to: string) =>
-    leg && <LegRow leg={leg} from={placeNameAt(leg.fromMeters)} to={to} units={units} />;
+    leg && (
+      <LegRow
+        leg={leg}
+        legCarry={carry?.legs.find((carried) => carried.fromMeters === leg.fromMeters)}
+        from={placeNameAt(leg.fromMeters)}
+        to={to}
+        units={units}
+      />
+    );
   return (
     <div className="race-analysis race-day" aria-busy={action.busy}>
       <PageHeader
@@ -294,6 +331,7 @@ export function RaceDay({
             <p key={reason}>{reason}</p>
           ))}
           <p>Cutoffs and stops still show.</p>
+          <p>Carry amounts need leg times, so they are hidden.</p>
           <Button variant="outline" onClick={onOpenCourse}>
             Add past efforts on Course
           </Button>
@@ -308,6 +346,7 @@ export function RaceDay({
       {raceDay.stopsExceedEstimate && (
         <div className="race-data-notice" role="status">
           <p>Planned stops are longer than the whole estimate. Moving time is shown as 0.</p>
+          <p>Carry amounts need leg times, so they are hidden.</p>
         </div>
       )}
       <section className="race-day-stations" aria-labelledby="race-stations-title">
@@ -369,6 +408,19 @@ export function RaceDay({
         )}
         <ErrorMessage error={action.error} />
       </section>
+      {carry && (
+        <WhatToCarry
+          carry={carry}
+          scheduled={(racePlan?.nutrition.schedule.length ?? 0) > 0}
+          products={products}
+          placeName={(meters) =>
+            meters === raceDay.finish.distanceMeters &&
+            !stations.some((station) => station.distanceMeters === meters)
+              ? 'Finish'
+              : placeNameAt(meters)
+          }
+        />
+      )}
       {editing === 'start' && (
         <StartAndCutoffDialog
           racePlan={racePlan}
@@ -381,6 +433,7 @@ export function RaceDay({
         <StationDialog
           existingStation={stations.find((station) => station.id === editing)}
           units={units}
+          products={products}
           onSave={async (station) =>
             saveRacePlan({ stations: stationsAfterSave(stations, station) })
           }

@@ -1,8 +1,7 @@
 'use client';
 
-import { useRef, useState, type ReactNode } from 'react';
 import { Plus } from 'lucide-react';
-import { Button, Field, Input, Modal, NativeSelect, Textarea, useAction } from '@athlete-panel/ui';
+import { Button, Field, Input, Modal, Textarea, useAction } from '@athlete-panel/ui';
 import {
   raceNutritionMaximums,
   type NutritionProduct,
@@ -10,6 +9,7 @@ import {
 } from '@athlete-panel/contracts';
 import { nutrients } from './nutrition';
 import { DialogActions } from './race-day-dialogs';
+import { ProductField, RemovableRow, useEditorRows, type EditorRow } from './editor-rows';
 import { nutritionScheduleFromForm, nutritionTargetsFromForm } from './race-plan-form';
 
 type Targets = RacePlan['nutrition']['targets'];
@@ -98,54 +98,6 @@ export function PhaseTextDialog({
   );
 }
 
-type EditorRow<T> = { key: string; item: T | undefined; justAdded: boolean };
-
-function useEditorRows<T>(items: readonly T[]) {
-  const [rows, setRows] = useState<EditorRow<T>[]>(() =>
-    items.map((item) => ({ key: crypto.randomUUID(), item, justAdded: false })),
-  );
-  const addButton = useRef<HTMLButtonElement>(null);
-  return {
-    rows,
-    addButton,
-    add: () => setRows([...rows, { key: crypto.randomUUID(), item: undefined, justAdded: true }]),
-    remove: (key: string) => {
-      setRows(rows.filter((row) => row.key !== key));
-      requestAnimationFrame(() => addButton.current?.focus());
-    },
-  };
-}
-
-function RemovableRow({
-  legend,
-  className,
-  readOnly,
-  onRemove,
-  children,
-}: {
-  legend: string;
-  className: string;
-  readOnly: boolean;
-  onRemove: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <fieldset className={`race-nutrition-row ${className}`}>
-      <legend>{legend}</legend>
-      {children}
-      <Button
-        type="button"
-        variant="ghost"
-        aria-label={`Remove ${legend.toLowerCase()}`}
-        disabled={readOnly}
-        onClick={onRemove}
-      >
-        Remove
-      </Button>
-    </fieldset>
-  );
-}
-
 function ScheduleRow({
   index,
   row,
@@ -160,8 +112,6 @@ function ScheduleRow({
   onRemove: () => void;
 }) {
   const { item } = row;
-  const removedProductId =
-    item && !products.some((product) => product.id === item.productId) ? item.productId : null;
   return (
     <RemovableRow
       legend={`Product ${index + 1}`}
@@ -169,21 +119,13 @@ function ScheduleRow({
       readOnly={readOnly}
       onRemove={onRemove}
     >
-      <Field label="Product">
-        <NativeSelect
-          name="productId"
-          defaultValue={item?.productId ?? products[0]?.id}
-          disabled={readOnly}
-          autoFocus={row.justAdded}
-        >
-          {removedProductId && <option value={removedProductId}>Removed from Settings</option>}
-          {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.name}
-            </option>
-          ))}
-        </NativeSelect>
-      </Field>
+      <ProductField
+        name="productId"
+        productId={item?.productId}
+        products={products}
+        readOnly={readOnly}
+        autoFocus={row.justAdded}
+      />
       <Field label="Servings">
         <Input
           type="number"

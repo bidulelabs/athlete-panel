@@ -1,5 +1,6 @@
 'use client';
 
+import { Plus } from 'lucide-react';
 import {
   Button,
   Checkbox,
@@ -12,11 +13,71 @@ import {
   Textarea,
   useAction,
 } from '@athlete-panel/ui';
-import type { RacePlan } from '@athlete-panel/contracts';
+import type { NutritionProduct, RacePlan } from '@athlete-panel/contracts';
+import { ProductField, RemovableRow, useEditorRows } from './editor-rows';
 import { distanceFieldText, startAndCutoffFromForm, stationFromForm } from './race-plan-form';
 
 type Station = RacePlan['stations'][number];
 type ActionState = ReturnType<typeof useAction>;
+
+function DropBagFields({
+  dropBag,
+  products,
+  readOnly,
+}: {
+  dropBag: Station['dropBag'];
+  products: readonly NutritionProduct[];
+  readOnly: boolean;
+}) {
+  const bagRows = useEditorRows(dropBag);
+  return (
+    <>
+      {bagRows.rows.map((row, index) => (
+        <RemovableRow
+          key={row.key}
+          legend={`Drop bag item ${index + 1}`}
+          className="race-drop-bag-row"
+          readOnly={readOnly}
+          onRemove={() => bagRows.remove(row.key)}
+        >
+          <ProductField
+            name="dropBagProductId"
+            productId={row.item?.productId}
+            products={products}
+            readOnly={readOnly}
+            autoFocus={row.justAdded}
+          />
+          <Field label="Servings">
+            <Input
+              type="number"
+              name="dropBagServings"
+              required
+              min={1}
+              max={100}
+              step={1}
+              defaultValue={row.item?.servings ?? 1}
+              readOnly={readOnly}
+            />
+          </Field>
+        </RemovableRow>
+      ))}
+      {products.length > 0 ? (
+        <Button
+          ref={bagRows.addButton}
+          type="button"
+          variant="outline"
+          disabled={readOnly || bagRows.rows.length >= 20}
+          onClick={bagRows.add}
+        >
+          <Plus size={15} />
+          Add drop bag item
+        </Button>
+      ) : (
+        <p className="race-hint">Add products in Settings, then Nutrition, to fill a drop bag.</p>
+      )}
+    </>
+  );
+}
 
 function CutoffFields({
   field,
@@ -123,11 +184,13 @@ export function StartAndCutoffDialog({
 export function StationDialog({
   existingStation,
   units,
+  products,
   onSave,
   onClose,
 }: {
   existingStation: Station | undefined;
   units: string;
+  products: readonly NutritionProduct[];
   onSave: (station: Station) => Promise<unknown>;
   onClose: () => void;
 }) {
@@ -212,6 +275,11 @@ export function StationDialog({
             />
           </Field>
         </fieldset>
+        <DropBagFields
+          dropBag={existingStation?.dropBag ?? []}
+          products={products}
+          readOnly={action.busy}
+        />
         <Field label="What you do">
           <Textarea
             name="action"

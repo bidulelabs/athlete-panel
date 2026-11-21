@@ -517,8 +517,40 @@
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
-.race-day-stations {
+.race-day-stations,
+.race-carry {
   margin: 24px 0;
+}
+.race-carry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.race-carry-grid h3 {
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+.race-carry-grid p,
+.race-carry-facts {
+  margin: 4px 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.race-carry-facts,
+.race-carry .race-disclosure-body {
+  color: var(--muted);
+  list-style: disc;
+}
+.race-carry-facts {
+  padding-left: 18px;
+}
+.race-carry .race-disclosure-body {
+  padding-left: 42px;
+}
+.race-carry-facts li + li,
+.race-carry .race-disclosure-body li + li {
+  margin-top: 6px;
 }
 .race-stations {
   width: 100%;
@@ -558,6 +590,10 @@
 .race-leg strong {
   color: var(--text);
   font-weight: 500;
+}
+.race-leg-carry {
+  display: block;
+  margin-top: 2px;
 }
 .race-station-actions {
   white-space: nowrap;
@@ -649,6 +685,9 @@
 }
 .race-nutrition-cue-row {
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+}
+.race-nutrition-row.race-drop-bag-row {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
 }
 .race-nutrition-row legend {
   font-weight: 600;
@@ -837,7 +876,8 @@
     grid-column: 1 / -1;
   }
   .race-nutrition-row,
-  .race-nutrition-cue-row {
+  .race-nutrition-cue-row,
+  .race-nutrition-row.race-drop-bag-row {
     grid-template-columns: minmax(0, 1fr);
   }
   .race-stations td[data-label='What you do']:empty {

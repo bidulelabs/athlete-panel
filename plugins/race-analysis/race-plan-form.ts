@@ -114,6 +114,14 @@ export const startAndCutoffFromForm = (form: FormData) => ({
   finishCutoff: cutoffFromForm(form, 'finishCutoff'),
 });
 
+export function dropBagFromForm(form: FormData): Station['dropBag'] {
+  const servings = form.getAll('dropBagServings');
+  return form.getAll('dropBagProductId').map((productId, index) => ({
+    productId: String(productId),
+    servings: Number(servings[index]),
+  }));
+}
+
 export function stationFromForm(
   form: FormData,
   existingStation: Station | undefined,
@@ -131,7 +139,7 @@ export function stationFromForm(
     stopSeconds: Math.round(Number(form.get('stopMinutes')) * 60),
     water: form.get('water') === 'on',
     food: String(form.get('food')).trim(),
-    dropBag: existingStation?.dropBag ?? [],
+    dropBag: dropBagFromForm(form),
     action: String(form.get('action')).trim(),
     source: String(form.get('source')).trim(),
     verified: form.get('verified') === 'on',

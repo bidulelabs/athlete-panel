@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { emptyRaceNutrition, type CourseSection, type RacePlan } from '@athlete-panel/contracts';
 import {
+  dropBagFromForm,
   pacingRows,
   nutritionScheduleFromForm,
   nutritionTargetsFromForm,
@@ -320,10 +321,15 @@ describe('station from form', () => {
     expect(station.id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('keeps the id and the drop bag of the station being edited', () => {
-    expect(stationFromForm(stationForm({ name: 'Les Pins' }), existingStation, 'metric')).toEqual(
-      existingStation,
-    );
+  it('keeps the id of the station being edited and reads its drop bag from the form', () => {
+    const form = stationForm({ name: 'Les Pins' });
+    form.append('dropBagProductId', existingStation.dropBag[0]!.productId);
+    form.append('dropBagServings', '2');
+    expect(stationFromForm(form, existingStation, 'metric')).toEqual(existingStation);
+  });
+
+  it('empties the drop bag when every item was removed', () => {
+    expect(stationFromForm(stationForm(), existingStation, 'metric').dropBag).toEqual([]);
   });
 
   it('reads the distance in miles and keeps an unchanged distance exact', () => {
@@ -353,6 +359,28 @@ describe('station from form', () => {
     expect(
       stationFromForm(stationForm({ water: '', verified: '' }), existingStation, 'metric'),
     ).toMatchObject({ water: false, verified: false });
+  });
+});
+
+describe('drop bag from form', () => {
+  it('reads each product with its servings, a product removed from Settings included', () => {
+    const removedProductId = '00000000-0000-4000-8000-000000000099';
+    const form = new FormData();
+    for (const [productId, servings] of [
+      [existingStation.dropBag[0]!.productId, '2'],
+      [removedProductId, '3'],
+    ]) {
+      form.append('dropBagProductId', productId!);
+      form.append('dropBagServings', servings!);
+    }
+    expect(dropBagFromForm(form)).toEqual([
+      { productId: existingStation.dropBag[0]!.productId, servings: 2 },
+      { productId: removedProductId, servings: 3 },
+    ]);
+  });
+
+  it('reads no drop bag from a form without items', () => {
+    expect(dropBagFromForm(new FormData())).toEqual([]);
   });
 });
 

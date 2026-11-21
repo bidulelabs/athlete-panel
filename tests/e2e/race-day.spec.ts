@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect, type Page } from '@playwright/test';
 import { syntheticGpx } from '../fixtures/race-analysis';
-import { addReferences, createRace, ownerCommand, signIn, uploadCourse } from './race-helpers';
+import {
+  addReferences,
+  createRace,
+  ownerCommand,
+  setNutrition,
+  signIn,
+  uploadCourse,
+} from './race-helpers';
 
 const openRaceDay = (page: Page) =>
   page.getByRole('tab', { name: 'Race day', exact: true }).click();
@@ -51,6 +58,10 @@ for (const theme of ['light', 'dark']) {
     await expect(page.getByRole('heading', { name: 'No aid stations yet' })).toBeVisible();
     await expect(page.getByText('Arrival times are unknown', { exact: true })).toBeVisible();
     await expect(page.getByText('Cutoffs and stops still show.', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Carry amounts need leg times, so they are hidden.', { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What to carry' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Add past efforts on Course', exact: true }).click();
     await expect(page.getByRole('tab', { name: 'Course', exact: true })).toHaveAttribute(
       'aria-selected',
@@ -220,6 +231,10 @@ test('shows a station beyond the course, a missed cutoff and stops longer than t
     }),
   ).toBeVisible();
   await expect(page.locator('.race-day-moving')).toHaveText(/^0h 00m moving, 24h stops$/);
+  await expect(
+    page.getByText('Carry amounts need leg times, so they are hidden.', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What to carry' })).toHaveCount(0);
   const lesPins = page.locator('.race-stations tr').filter({ hasText: 'Les Pins' });
   await expect(lesPins.locator('.race-late')).toHaveText(/ after the cutoff$/);
   await expect(page.locator('.race-day-cutoff .race-late')).toHaveText(
@@ -228,3 +243,100 @@ test('shows a station beyond the course, a missed cutoff and stops longer than t
   await expect(page.getByText(/^Les Pins → Finish · /)).toBeVisible();
   await expect(page.getByText(/^Far Away → /)).toHaveCount(0);
 });
+
+for (const theme of ['light', 'dark']) {
+  test(`shows what to carry from a drop bag and the carry capacity by keyboard (${theme})`, async ({
+    page,
+    baseURL,
+  }) => {
+    await signIn(page, theme);
+    const gelId = randomUUID();
+    await setNutrition(page, baseURL!, {
+      products: [
+        {
+          id: gelId,
+          name: 'Synthetic gel',
+          kind: 'gel',
+          carbohydrateGrams: 25,
+          fluidMillilitres: null,
+          sodiumMilligrams: null,
+          caffeineMilligrams: null,
+          source: 'label',
+          tolerance: 'comfortable',
+        },
+      ],
+      carryCapacityMillilitres: 250,
+    });
+    const raceId = await createRace(page, baseURL!);
+    await ownerCommand(page, baseURL!, {
+      action: 'racePlan.create',
+      values: {
+        eventId: raceId,
+        target: 'Finish comfortably',
+        nutrition: {
+          targets: {
+            carbohydrateGramsPerHour: null,
+            fluidMillilitresPerHour: 500,
+            sodiumMilligramsPerHour: null,
+          },
+          schedule: [{ productId: gelId, servings: 1, everyMinutes: 20 }],
+          cues: [],
+          daysBefore: '',
+          breakfast: '',
+          recovery: '',
+        },
+      },
+    });
+    await page.goto(`/races?race=${raceId}`);
+    await uploadCourse(page, syntheticGpx());
+    await addReferences(page, baseURL!, raceId);
+    await page.reload();
+    await openRaceDay(page);
+    await expect(page.getByRole('heading', { name: 'What to carry' })).toBeVisible();
+    await expect(
+      page.getByText('One leg is over your carrying capacity', { exact: true }),
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Add the first station', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Name', { exact: true }).fill('Grand Col');
+    await dialog.getByLabel(/^Distance from the start/).fill('10');
+    await dialog.getByLabel('Water at this station', { exact: true }).focus();
+    await page.keyboard.press('Space');
+    await dialog.getByRole('button', { name: 'Add drop bag item', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog.getByRole('combobox', { name: 'Product' })).toHaveValue(gelId);
+    await dialog.getByLabel('Servings', { exact: true }).fill('1');
+    await dialog.getByLabel('Name', { exact: true }).press('Enter');
+    await expect(dialog).toHaveCount(0);
+
+    await expect(page.getByRole('heading', { name: 'Grand Col drop bag' })).toBeVisible();
+    await expect(page.getByText('1 × Synthetic gel', { exact: true })).toBeVisible();
+    await expect(page.getByText(/^\d+ × Synthetic gel short until Finish$/)).toBeVisible();
+    await expect(page.getByText(/^\d+ legs are over your carrying capacity$/)).toBeVisible();
+    await expect(page.getByText(/You carry up to 0\.25 L\.$/).first()).toBeVisible();
+    await expect(
+      page.getByText(/^carry 0\.25 L water, \d+ × Synthetic gel, over capacity$/).first(),
+    ).toBeVisible();
+    await expect(page.getByText(/Leave with|still counted:/)).toHaveCount(0);
+    await page.getByText('How this is worked out', { exact: true }).click();
+    await expect(
+      page.getByText('Unconfirmed stations are still counted.', { exact: true }),
+    ).toBeVisible();
+
+    const viewport = page.viewportSize()!;
+    await page.setViewportSize({ width: 320, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.setViewportSize(viewport);
+
+    await page.getByRole('button', { name: 'Edit Grand Col', exact: true }).click();
+    await expect(dialog.getByLabel('Servings', { exact: true })).toHaveValue('1');
+    await dialog.getByRole('button', { name: 'Remove drop bag item 1', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Grand Col drop bag' })).toHaveCount(0);
+  });
+}

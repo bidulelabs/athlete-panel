@@ -81,13 +81,18 @@ export async function setNutrition(
   {
     products = [],
     preferences = '',
-  }: { products?: Record<string, unknown>[]; preferences?: string },
+    carryCapacityMillilitres = null,
+  }: {
+    products?: Record<string, unknown>[];
+    preferences?: string;
+    carryCapacityMillilitres?: number | null;
+  },
 ) {
   const workspace = await page.request.get('/api/workspace?from=2030-01-01&to=2030-01-07');
   const profile = (await workspace.json()).state.profile;
   await ownerCommand(page, baseURL, {
     action: 'profile.set',
     expectedRevision: profile?.revision ?? null,
-    values: { nutrition: { products, carryCapacityMillilitres: null, preferences } },
+    values: { nutrition: { products, carryCapacityMillilitres, preferences } },
   });
 }

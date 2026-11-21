@@ -58,7 +58,7 @@ function CutoffFields({
   );
 }
 
-function DialogActions({ action, onClose }: { action: ActionState; onClose: () => void }) {
+export function DialogActions({ action, onClose }: { action: ActionState; onClose: () => void }) {
   return (
     <>
       <ErrorMessage error={action.error} />

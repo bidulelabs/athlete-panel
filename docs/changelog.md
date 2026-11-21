@@ -12,9 +12,11 @@ Use the documentation link for the version you installed. Each release page incl
 
 - **Races** gains a **Race day** tab: the expected finish as a clock time, moving time, planned stops and finish cutoff; the start time and finish cutoff; aid stations in course order with arrival ranges, cutoff margins, the leg before each one and whether it is confirmed; and a window to add, edit or remove a station. See [Race preparation](features/race-preparation.md).
 
+- **Races** gains a **Nutrition** tab: targets per hour for carbohydrate, fluid and sodium (unset targets read "unknown"), free texts for the days before, breakfast and recovery, and your diet preferences from Settings. The race plan stores them, set by the owner only. Assistants limited to a race see them in that race's plan. See [Race preparation](features/race-preparation.md#nutrition-in-the-race-plan).
+
 ### Upgrade steps
 
-Earlier releases cannot read race plans holding aid stations: see [race day upgrade guidance](development.md#race-day-upgrade). Earlier releases cannot read stored race plans, grants limited to a race or race plan proposals: rollback after those records exist requires the matching pre-upgrade backup. See [race plan upgrade guidance](development.md#race-plan-upgrade).
+Earlier releases cannot read race plans holding aid stations or nutrition: see [race day upgrade guidance](development.md#race-day-upgrade) and [race nutrition upgrade guidance](development.md#race-nutrition-upgrade). Earlier releases cannot read stored race plans, grants limited to a race or race plan proposals: rollback after those records exist requires the matching pre-upgrade backup. See [race plan upgrade guidance](development.md#race-plan-upgrade).
 
 Earlier releases cannot read a profile holding nutrition: rollback after it is saved requires the matching pre-upgrade backup. See [nutrition profile upgrade guidance](development.md#nutrition-profile-upgrade).
 

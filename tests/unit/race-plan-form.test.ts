@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { CourseSection, RacePlan } from '@athlete-panel/contracts';
+import { emptyRaceNutrition, type CourseSection, type RacePlan } from '@athlete-panel/contracts';
 import {
   pacingRows,
+  nutritionTargetsFromForm,
   raceDayCommand,
   racePlanCommand,
   startAndCutoffFromForm,
@@ -34,6 +35,7 @@ const racePlan = (values: Partial<RacePlan> = {}): RacePlan => ({
   startTime: null,
   finishCutoff: null,
   stations: [],
+  nutrition: emptyRaceNutrition,
   writtenFor: { courseId, target: 'Finish comfortably' },
   ...values,
 });
@@ -119,6 +121,51 @@ describe('strategy needs review', () => {
     [
       'only stations are written and nothing changed',
       racePlan({ ...unwritten, stations: [existingStation] }),
+      courseId,
+      false,
+    ],
+    [
+      'only a breakfast is written and the course was replaced',
+      racePlan({ ...unwritten, nutrition: { ...emptyRaceNutrition, breakfast: 'Oats' } }),
+      replacedCourseId,
+      true,
+    ],
+    [
+      'only a carbohydrate target is set and the course was replaced',
+      racePlan({
+        ...unwritten,
+        nutrition: {
+          ...emptyRaceNutrition,
+          targets: { ...emptyRaceNutrition.targets, carbohydrateGramsPerHour: 60 },
+        },
+      }),
+      replacedCourseId,
+      true,
+    ],
+    [
+      'only a cue is written and the course was replaced',
+      racePlan({
+        ...unwritten,
+        nutrition: { ...emptyRaceNutrition, cues: [{ when: 'Climbs', text: 'Walk and eat' }] },
+      }),
+      replacedCourseId,
+      true,
+    ],
+    [
+      'it was written without a target and a target was set since',
+      racePlan({ target: 'Under 8 hours', writtenFor: { courseId, target: '' } }),
+      courseId,
+      false,
+    ],
+    [
+      'it was written for a target that was cleared since',
+      racePlan({ target: '' }),
+      courseId,
+      true,
+    ],
+    [
+      'only a breakfast is written and nothing changed',
+      racePlan({ ...unwritten, nutrition: { ...emptyRaceNutrition, breakfast: 'Oats' } }),
       courseId,
       false,
     ],
@@ -360,5 +407,29 @@ describe('start and cutoff from form', () => {
         startForm({ startTime: '', finishCutoffDay: '2', finishCutoffTime: '' }),
       ),
     ).toEqual({ startTime: null, finishCutoff: null });
+  });
+});
+
+describe('nutrition targets from the form', () => {
+  const targetsForm = (fields: Record<string, string>) => {
+    const form = new FormData();
+    for (const [name, text] of Object.entries(fields)) form.set(name, text);
+    return form;
+  };
+
+  it('reads an empty field as unknown and 0 as 0', () => {
+    expect(
+      nutritionTargetsFromForm(
+        targetsForm({
+          carbohydrateGramsPerHour: '62.5',
+          fluidMillilitresPerHour: '',
+          sodiumMilligramsPerHour: '0',
+        }),
+      ),
+    ).toEqual({
+      carbohydrateGramsPerHour: 62.5,
+      fluidMillilitresPerHour: null,
+      sodiumMilligramsPerHour: 0,
+    });
   });
 });

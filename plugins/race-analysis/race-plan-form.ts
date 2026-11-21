@@ -1,8 +1,11 @@
+import { numeric } from '@athlete-panel/ui';
 import type { CommandInput, CourseSection, RacePlan } from '@athlete-panel/contracts';
 
 type Pacing = RacePlan['pacing'];
 type Station = RacePlan['stations'][number];
-type RaceDayValues = Partial<Pick<RacePlan, 'startTime' | 'finishCutoff' | 'stations'>>;
+type RaceDayValues = Partial<
+  Pick<RacePlan, 'startTime' | 'finishCutoff' | 'stations' | 'nutrition'>
+>;
 
 export function pacingRows(pacing: Pacing, sections: readonly CourseSection[]): Pacing {
   const unplannedSections = sections.filter(
@@ -17,13 +20,21 @@ export function pacingRows(pacing: Pacing, sections: readonly CourseSection[]): 
   ].sort((a, b) => a.fromMeters - b.fromMeters);
 }
 
+const nutritionIsWritten = (nutrition: RacePlan['nutrition']) =>
+  Object.values(nutrition.targets).some((target) => target !== null) ||
+  nutrition.schedule.length > 0 ||
+  nutrition.cues.length > 0 ||
+  [nutrition.daysBefore, nutrition.breakfast, nutrition.recovery].some((text) => text !== '');
+
 export const strategyNeedsReview = (racePlan: RacePlan, courseId: string | null) =>
   (racePlan.briefing !== '' ||
     racePlan.pacing.length > 0 ||
     racePlan.assumptions.length > 0 ||
     racePlan.openQuestions.length > 0 ||
-    racePlan.stations.length > 0) &&
-  (racePlan.writtenFor.courseId !== courseId || racePlan.writtenFor.target !== racePlan.target);
+    racePlan.stations.length > 0 ||
+    nutritionIsWritten(racePlan.nutrition)) &&
+  (racePlan.writtenFor.courseId !== courseId ||
+    (racePlan.writtenFor.target !== '' && racePlan.writtenFor.target !== racePlan.target));
 
 const lines = (text: string) =>
   text
@@ -133,3 +144,9 @@ export function stationsAfterSave(stations: readonly Station[], station: Station
     throw new Error('Another aid station is already at this distance.');
   return [...others, station].sort((a, b) => a.distanceMeters - b.distanceMeters);
 }
+
+export const nutritionTargetsFromForm = (form: FormData): RacePlan['nutrition']['targets'] => ({
+  carbohydrateGramsPerHour: numeric(form.get('carbohydrateGramsPerHour')),
+  fluidMillilitresPerHour: numeric(form.get('fluidMillilitresPerHour')),
+  sodiumMilligramsPerHour: numeric(form.get('sodiumMilligramsPerHour')),
+});

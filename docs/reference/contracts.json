@@ -1654,6 +1654,146 @@
                     },
                     "description": "Aid stations in course order."
                   },
+                  "nutrition": {
+                    "default": {
+                      "targets": {
+                        "carbohydrateGramsPerHour": null,
+                        "fluidMillilitresPerHour": null,
+                        "sodiumMilligramsPerHour": null
+                      },
+                      "schedule": [],
+                      "cues": [],
+                      "daysBefore": "",
+                      "breakfast": "",
+                      "recovery": ""
+                    },
+                    "type": "object",
+                    "properties": {
+                      "targets": {
+                        "type": "object",
+                        "properties": {
+                          "carbohydrateGramsPerHour": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 500
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fluidMillilitresPerHour": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sodiumMilligramsPerHour": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 10000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "carbohydrateGramsPerHour",
+                          "fluidMillilitresPerHour",
+                          "sodiumMilligramsPerHour"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "schedule": {
+                        "maxItems": 30,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "productId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "servings": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 100
+                            },
+                            "everyMinutes": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 1440
+                            }
+                          },
+                          "required": [
+                            "productId",
+                            "servings",
+                            "everyMinutes"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "cues": {
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "when": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "text": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 300
+                            }
+                          },
+                          "required": [
+                            "when",
+                            "text"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "daysBefore": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "breakfast": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "recovery": {
+                        "type": "string",
+                        "maxLength": 4000
+                      }
+                    },
+                    "required": [
+                      "targets",
+                      "schedule",
+                      "cues",
+                      "daysBefore",
+                      "breakfast",
+                      "recovery"
+                    ],
+                    "additionalProperties": false,
+                    "description": "What to eat and drink before, during and after the race."
+                  },
                   "writtenFor": {
                     "type": "object",
                     "properties": {
@@ -1703,6 +1843,7 @@
                   "startTime",
                   "finishCutoff",
                   "stations",
+                  "nutrition",
                   "writtenFor",
                   "id",
                   "revision"
@@ -6981,6 +7122,134 @@
                             },
                             "description": "Aid stations in course order."
                           },
+                          "nutrition": {
+                            "type": "object",
+                            "properties": {
+                              "targets": {
+                                "type": "object",
+                                "properties": {
+                                  "carbohydrateGramsPerHour": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 500
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "fluidMillilitresPerHour": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 5000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "sodiumMilligramsPerHour": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 10000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "carbohydrateGramsPerHour",
+                                  "fluidMillilitresPerHour",
+                                  "sodiumMilligramsPerHour"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "schedule": {
+                                "maxItems": 30,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "productId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "servings": {
+                                      "type": "number",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 100
+                                    },
+                                    "everyMinutes": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 1440
+                                    }
+                                  },
+                                  "required": [
+                                    "productId",
+                                    "servings",
+                                    "everyMinutes"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "cues": {
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "when": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 300
+                                    }
+                                  },
+                                  "required": [
+                                    "when",
+                                    "text"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "daysBefore": {
+                                "type": "string",
+                                "maxLength": 4000
+                              },
+                              "breakfast": {
+                                "type": "string",
+                                "maxLength": 4000
+                              },
+                              "recovery": {
+                                "type": "string",
+                                "maxLength": 4000
+                              }
+                            },
+                            "required": [
+                              "targets",
+                              "schedule",
+                              "cues",
+                              "daysBefore",
+                              "breakfast",
+                              "recovery"
+                            ],
+                            "additionalProperties": false,
+                            "description": "What to eat and drink before, during and after the race."
+                          },
                           "courseId": {
                             "default": null,
                             "anyOf": [
@@ -7250,6 +7519,134 @@
                               "additionalProperties": false
                             },
                             "description": "Aid stations in course order."
+                          },
+                          "nutrition": {
+                            "type": "object",
+                            "properties": {
+                              "targets": {
+                                "type": "object",
+                                "properties": {
+                                  "carbohydrateGramsPerHour": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 500
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "fluidMillilitresPerHour": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 5000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "sodiumMilligramsPerHour": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 10000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "carbohydrateGramsPerHour",
+                                  "fluidMillilitresPerHour",
+                                  "sodiumMilligramsPerHour"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "schedule": {
+                                "maxItems": 30,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "productId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "servings": {
+                                      "type": "number",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 100
+                                    },
+                                    "everyMinutes": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 1440
+                                    }
+                                  },
+                                  "required": [
+                                    "productId",
+                                    "servings",
+                                    "everyMinutes"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "cues": {
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "when": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 80
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 300
+                                    }
+                                  },
+                                  "required": [
+                                    "when",
+                                    "text"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "daysBefore": {
+                                "type": "string",
+                                "maxLength": 4000
+                              },
+                              "breakfast": {
+                                "type": "string",
+                                "maxLength": 4000
+                              },
+                              "recovery": {
+                                "type": "string",
+                                "maxLength": 4000
+                              }
+                            },
+                            "required": [
+                              "targets",
+                              "schedule",
+                              "cues",
+                              "daysBefore",
+                              "breakfast",
+                              "recovery"
+                            ],
+                            "additionalProperties": false,
+                            "description": "What to eat and drink before, during and after the race."
                           },
                           "courseId": {
                             "anyOf": [
@@ -10829,6 +11226,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -10878,6 +11415,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -11119,6 +11657,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -11168,6 +11846,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -15643,6 +16322,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -15692,6 +16511,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -15933,6 +16753,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -15982,6 +16942,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -20474,6 +21435,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -20523,6 +21624,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -20764,6 +21866,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -20813,6 +22055,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -25719,6 +26962,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -25768,6 +27151,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -26009,6 +27393,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -26058,6 +27582,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -30963,6 +32488,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -31012,6 +32677,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -31253,6 +32919,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -31302,6 +33108,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -35806,6 +37613,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -35855,6 +37802,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -36096,6 +38044,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -36145,6 +38233,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -40660,6 +42749,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -40709,6 +42938,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -40950,6 +43180,146 @@
                                 },
                                 "description": "Aid stations in course order."
                               },
+                              "nutrition": {
+                                "default": {
+                                  "targets": {
+                                    "carbohydrateGramsPerHour": null,
+                                    "fluidMillilitresPerHour": null,
+                                    "sodiumMilligramsPerHour": null
+                                  },
+                                  "schedule": [],
+                                  "cues": [],
+                                  "daysBefore": "",
+                                  "breakfast": "",
+                                  "recovery": ""
+                                },
+                                "type": "object",
+                                "properties": {
+                                  "targets": {
+                                    "type": "object",
+                                    "properties": {
+                                      "carbohydrateGramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 500
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "fluidMillilitresPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 5000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "sodiumMilligramsPerHour": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                            "minimum": 0,
+                                            "maximum": 10000
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "carbohydrateGramsPerHour",
+                                      "fluidMillilitresPerHour",
+                                      "sodiumMilligramsPerHour"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "schedule": {
+                                    "maxItems": 30,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "productId": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "servings": {
+                                          "type": "number",
+                                          "exclusiveMinimum": 0,
+                                          "maximum": 100
+                                        },
+                                        "everyMinutes": {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 1440
+                                        }
+                                      },
+                                      "required": [
+                                        "productId",
+                                        "servings",
+                                        "everyMinutes"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "cues": {
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "when": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 80
+                                        },
+                                        "text": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 300
+                                        }
+                                      },
+                                      "required": [
+                                        "when",
+                                        "text"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "daysBefore": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "breakfast": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  },
+                                  "recovery": {
+                                    "type": "string",
+                                    "maxLength": 4000
+                                  }
+                                },
+                                "required": [
+                                  "targets",
+                                  "schedule",
+                                  "cues",
+                                  "daysBefore",
+                                  "breakfast",
+                                  "recovery"
+                                ],
+                                "additionalProperties": false,
+                                "description": "What to eat and drink before, during and after the race."
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -40999,6 +43369,7 @@
                               "startTime",
                               "finishCutoff",
                               "stations",
+                              "nutrition",
                               "writtenFor",
                               "id",
                               "revision"
@@ -47594,6 +49965,134 @@
                   },
                   "description": "Aid stations in course order."
                 },
+                "nutrition": {
+                  "type": "object",
+                  "properties": {
+                    "targets": {
+                      "type": "object",
+                      "properties": {
+                        "carbohydrateGramsPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 500
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "fluidMillilitresPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 5000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "sodiumMilligramsPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 10000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "carbohydrateGramsPerHour",
+                        "fluidMillilitresPerHour",
+                        "sodiumMilligramsPerHour"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "schedule": {
+                      "maxItems": 30,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "productId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "servings": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100
+                          },
+                          "everyMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          }
+                        },
+                        "required": [
+                          "productId",
+                          "servings",
+                          "everyMinutes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "cues": {
+                      "maxItems": 20,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "when": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          }
+                        },
+                        "required": [
+                          "when",
+                          "text"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "daysBefore": {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    "breakfast": {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    "recovery": {
+                      "type": "string",
+                      "maxLength": 4000
+                    }
+                  },
+                  "required": [
+                    "targets",
+                    "schedule",
+                    "cues",
+                    "daysBefore",
+                    "breakfast",
+                    "recovery"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What to eat and drink before, during and after the race."
+                },
                 "courseId": {
                   "default": null,
                   "anyOf": [
@@ -47863,6 +50362,134 @@
                     "additionalProperties": false
                   },
                   "description": "Aid stations in course order."
+                },
+                "nutrition": {
+                  "type": "object",
+                  "properties": {
+                    "targets": {
+                      "type": "object",
+                      "properties": {
+                        "carbohydrateGramsPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 500
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "fluidMillilitresPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 5000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "sodiumMilligramsPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 10000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "carbohydrateGramsPerHour",
+                        "fluidMillilitresPerHour",
+                        "sodiumMilligramsPerHour"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "schedule": {
+                      "maxItems": 30,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "productId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "servings": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100
+                          },
+                          "everyMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          }
+                        },
+                        "required": [
+                          "productId",
+                          "servings",
+                          "everyMinutes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "cues": {
+                      "maxItems": 20,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "when": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          }
+                        },
+                        "required": [
+                          "when",
+                          "text"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "daysBefore": {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    "breakfast": {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    "recovery": {
+                      "type": "string",
+                      "maxLength": 4000
+                    }
+                  },
+                  "required": [
+                    "targets",
+                    "schedule",
+                    "cues",
+                    "daysBefore",
+                    "breakfast",
+                    "recovery"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What to eat and drink before, during and after the race."
                 },
                 "courseId": {
                   "anyOf": [
@@ -52187,6 +54814,146 @@
               },
               "description": "Aid stations in course order."
             },
+            "nutrition": {
+              "default": {
+                "targets": {
+                  "carbohydrateGramsPerHour": null,
+                  "fluidMillilitresPerHour": null,
+                  "sodiumMilligramsPerHour": null
+                },
+                "schedule": [],
+                "cues": [],
+                "daysBefore": "",
+                "breakfast": "",
+                "recovery": ""
+              },
+              "type": "object",
+              "properties": {
+                "targets": {
+                  "type": "object",
+                  "properties": {
+                    "carbohydrateGramsPerHour": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 500
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "fluidMillilitresPerHour": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 5000
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sodiumMilligramsPerHour": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 10000
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "carbohydrateGramsPerHour",
+                    "fluidMillilitresPerHour",
+                    "sodiumMilligramsPerHour"
+                  ],
+                  "additionalProperties": false
+                },
+                "schedule": {
+                  "maxItems": 30,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "productId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "servings": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 100
+                      },
+                      "everyMinutes": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1440
+                      }
+                    },
+                    "required": [
+                      "productId",
+                      "servings",
+                      "everyMinutes"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "cues": {
+                  "maxItems": 20,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "when": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      }
+                    },
+                    "required": [
+                      "when",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "daysBefore": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "breakfast": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "recovery": {
+                  "type": "string",
+                  "maxLength": 4000
+                }
+              },
+              "required": [
+                "targets",
+                "schedule",
+                "cues",
+                "daysBefore",
+                "breakfast",
+                "recovery"
+              ],
+              "additionalProperties": false,
+              "description": "What to eat and drink before, during and after the race."
+            },
             "writtenFor": {
               "type": "object",
               "properties": {
@@ -52236,6 +55003,7 @@
             "startTime",
             "finishCutoff",
             "stations",
+            "nutrition",
             "writtenFor",
             "id",
             "revision"

@@ -3,6 +3,7 @@ import {
   agentCommandSchema,
   commandSchema,
   describeAgentAccess,
+  emptyRaceNutrition,
   emptyWorkspace,
   grantScopeSchema,
   planningScopeSchema,
@@ -68,6 +69,7 @@ describe('race plan commands', () => {
         startTime: null,
         finishCutoff: null,
         stations: [],
+        nutrition: emptyRaceNutrition,
         writtenFor: { courseId: null, target: 'Finish comfortably' },
       },
     ]);
@@ -258,10 +260,22 @@ const raceDay = {
       verified: true,
     }),
   ],
+  nutrition: {
+    targets: {
+      carbohydrateGramsPerHour: 60,
+      fluidMillilitresPerHour: 500,
+      sodiumMilligramsPerHour: null,
+    },
+    schedule: [{ productId: id(40), servings: 0.5, everyMinutes: 30 }],
+    cues: [{ when: 'Long climbs', text: 'Eat on the gentler approach' }],
+    daysBefore: 'More rice and pasta from Thursday.',
+    breakfast: 'Oats and a banana at 04:00.',
+    recovery: 'Recovery drink at the finish.',
+  },
 };
 
 describe('race day fields', () => {
-  it('stores the start time, finish cutoff and aid stations on create and on update', () => {
+  it('stores the start time, finish cutoff, aid stations and nutrition on create and on update', () => {
     const created = run(workspaceWithRaces(), [createRacePlan(raceDay)]).state;
     expect(created.racePlans[0]).toMatchObject(raceDay);
     const updated = run(run(workspaceWithRaces(), [createRacePlan()]).state, [
@@ -275,12 +289,16 @@ describe('race day fields', () => {
     const retargeted = run(planned, [updateRacePlan({ target: 'Under 8 hours' })]).state;
     expect(retargeted.racePlans[0]).toMatchObject({ target: 'Under 8 hours', ...raceDay });
     const cleared = run(retargeted, [
-      updateRacePlan({ startTime: null, finishCutoff: null, stations: [] }, 2),
+      updateRacePlan(
+        { startTime: null, finishCutoff: null, stations: [], nutrition: emptyRaceNutrition },
+        2,
+      ),
     ]).state;
     expect(cleared.racePlans[0]).toMatchObject({
       startTime: null,
       finishCutoff: null,
       stations: [],
+      nutrition: emptyRaceNutrition,
     });
   });
 
@@ -312,14 +330,24 @@ describe('race day fields', () => {
       startTime: _startTime,
       finishCutoff: _finishCutoff,
       stations: _stations,
+      nutrition: _nutrition,
       ...old
     } = stored!;
     expect(racePlanSchema.parse(old)).toEqual(stored);
   });
 
+  it('gives each plan stored before nutrition its own empty lists', () => {
+    const [stored] = run(workspaceWithRaces(), [createRacePlan()]).state.racePlans;
+    const { nutrition: _nutrition, ...old } = stored!;
+    const first = racePlanSchema.parse(old);
+    const second = racePlanSchema.parse(old);
+    expect(first.nutrition.schedule).not.toBe(second.nutrition.schedule);
+    expect(first.nutrition.targets).not.toBe(second.nutrition.targets);
+  });
+
   it('names aid stations and their fields in the review rows', () => {
     const planned = run(workspaceWithRaces(), [createRacePlan()]).state;
-    const [change] = run(planned, [updateRacePlan(raceDay)]).changes;
+    const [change] = run(planned, [updateRacePlan({ ...raceDay, nutrition: undefined })]).changes;
     const fields = proposalRows(change!, 'metric').map((row) => `${row.field}: ${row.after}`);
     expect(fields).toEqual(
       expect.arrayContaining([
@@ -481,6 +509,89 @@ describe('race day field limits', () => {
   ])('explains %s in plain words', (_label, stations, message) => {
     const parsed = commandSchema.safeParse(updateRacePlan({ stations }));
     expect(parsed.error?.issues.map((issue) => issue.message)).toContain(message);
+  });
+});
+
+describe('race nutrition field limits', () => {
+  const both = (changes: Record<string, unknown>) => {
+    const nutrition = { ...raceDay.nutrition, ...changes };
+    return [
+      commandSchema.safeParse(createRacePlan({ nutrition })).success,
+      commandSchema.safeParse(updateRacePlan({ nutrition })).success,
+    ];
+  };
+  const scheduleItem = (values: Record<string, unknown> = {}) => ({
+    productId: id(40),
+    servings: 1,
+    everyMinutes: 30,
+    ...values,
+  });
+  const cue = (values: Record<string, unknown> = {}) => ({
+    when: 'From 4h',
+    text: 'Salt',
+    ...values,
+  });
+
+  it.each([
+    ['30 schedule rows', { schedule: Array.from({ length: 30 }, () => scheduleItem()) }],
+    ['20 cues', { cues: Array.from({ length: 20 }, () => cue()) }],
+    [
+      'half a serving every minute',
+      { schedule: [scheduleItem({ servings: 0.5, everyMinutes: 1 })] },
+    ],
+    [
+      '100 servings once a day',
+      { schedule: [scheduleItem({ servings: 100, everyMinutes: 1440 })] },
+    ],
+    [
+      'the highest targets',
+      {
+        targets: {
+          carbohydrateGramsPerHour: 500,
+          fluidMillilitresPerHour: 5000,
+          sodiumMilligramsPerHour: 10000,
+        },
+      },
+    ],
+    ['texts of 4000 characters', { breakfast: 'a'.repeat(4000), recovery: 'a'.repeat(4000) }],
+  ])('accepts %s', (_label, changes) => {
+    expect(both(changes)).toEqual([true, true]);
+  });
+
+  it.each([
+    ['a null schedule row', { schedule: [null] }],
+    ['31 schedule rows', { schedule: Array.from({ length: 31 }, () => scheduleItem()) }],
+    ['no serving', { schedule: [scheduleItem({ servings: 0 })] }],
+    ['negative servings', { schedule: [scheduleItem({ servings: -1 })] }],
+    ['101 servings', { schedule: [scheduleItem({ servings: 101 })] }],
+    ['every 0 minutes', { schedule: [scheduleItem({ everyMinutes: 0 })] }],
+    ['every 1441 minutes', { schedule: [scheduleItem({ everyMinutes: 1441 })] }],
+    ['every 1.5 minutes', { schedule: [scheduleItem({ everyMinutes: 1.5 })] }],
+    ['a product id that is not a uuid', { schedule: [scheduleItem({ productId: 'gel' })] }],
+    ['21 cues', { cues: Array.from({ length: 21 }, () => cue()) }],
+    ['a cue blank after trim', { cues: [cue({ text: '   ' })] }],
+    ['a cue time of 81 characters', { cues: [cue({ when: 'a'.repeat(81) })] }],
+    ['a cue of 301 characters', { cues: [cue({ text: 'a'.repeat(301) })] }],
+    ['a breakfast of 4001 characters', { breakfast: 'a'.repeat(4001) }],
+    [
+      'a negative target',
+      { targets: { ...raceDay.nutrition.targets, carbohydrateGramsPerHour: -1 } },
+    ],
+    [
+      'a sodium target over 10000 mg',
+      { targets: { ...raceDay.nutrition.targets, sodiumMilligramsPerHour: 10001 } },
+    ],
+    ['targets with a field missing', { targets: { carbohydrateGramsPerHour: 60 } }],
+    ['an unknown nutrition field', { caffeine: 'none' }],
+  ])('refuses %s on create and on update', (_label, changes) => {
+    expect(both(changes)).toEqual([false, false]);
+  });
+
+  it('refuses a nutrition patch missing one of its fields', () => {
+    const { schedule: _schedule, ...withoutSchedule } = raceDay.nutrition;
+    expect(commandSchema.safeParse(updateRacePlan({ nutrition: withoutSchedule })).success).toBe(
+      false,
+    );
   });
 });
 

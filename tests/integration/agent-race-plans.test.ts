@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
-import { type CommandInput } from '@athlete-panel/contracts';
+import { emptyRaceNutrition, type CommandInput } from '@athlete-panel/contracts';
 import { isolatedDatabaseUrl } from '../support/test-database';
 import { closeDatabase, connection } from '../../packages/host/src/db';
 import { migrate } from '../../packages/host/src/migrations';
@@ -403,9 +403,21 @@ const raceDay = {
       verified: true,
     },
   ],
+  nutrition: {
+    targets: {
+      carbohydrateGramsPerHour: 60,
+      fluidMillilitresPerHour: 500,
+      sodiumMilligramsPerHour: null,
+    },
+    schedule: [{ productId: randomUUID(), servings: 1, everyMinutes: 30 }],
+    cues: [{ when: 'Long climbs', text: 'Eat on the gentler approach' }],
+    daysBefore: '',
+    breakfast: 'Oats at 04:00',
+    recovery: '',
+  },
 };
 
-it('keeps the owner aid stations when an agent proposal updates the strategy', async () => {
+it('keeps the owner race day fields when an agent proposal updates the strategy', async () => {
   const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
   await owner([
     { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: raceDay },
@@ -420,18 +432,18 @@ it('keeps the owner aid stations when an agent proposal updates the strategy', a
   ]);
 });
 
-it('reads a plan stored before aid stations with no start time, finish cutoff or station', async () => {
+it('reads a plan stored before race day fields with none of them', async () => {
   await createOwnerRacePlan(raceId, 'Finish comfortably');
   const { token } = await grantWithRace();
   const written = await contextForToken(token);
-  await connection()`update training.records set data = data - 'startTime' - 'finishCutoff' - 'stations' where kind = 'racePlan'`;
+  await connection()`update training.records set data = data - 'startTime' - 'finishCutoff' - 'stations' - 'nutrition' where kind = 'racePlan'`;
   expect((await loadWorkspace()).racePlans).toMatchObject([
-    { startTime: null, finishCutoff: null, stations: [] },
+    { startTime: null, finishCutoff: null, stations: [], nutrition: emptyRaceNutrition },
   ]);
   expect((await contextForToken(token)).contextDigest).toBe(written.contextDigest);
 });
 
-it('changes the context of a race grant, not of a grant without a race, when aid stations are saved', async () => {
+it('changes the context of a race grant, not of a grant without a race, when race day fields are saved', async () => {
   const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
   const withRace = (await grantWithRace()).token;
   const withoutRace = (await grantWithRace({})).token;

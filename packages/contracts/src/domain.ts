@@ -474,6 +474,18 @@ const raceCutoff = z
   })
   .strict()
   .nullable();
+export const raceNutritionMaximums = {
+  carbohydrateGramsPerHour: 500,
+  fluidMillilitresPerHour: 5000,
+  sodiumMilligramsPerHour: 10000,
+  servings: 100,
+  everyMinutes: 1440,
+  cueWhen: 80,
+  cueText: 300,
+  scheduleRows: 30,
+  cues: 20,
+} as const;
+const hourlyTarget = (max: number) => z.number().finite().min(0).max(max).nullable();
 const racePlanDayFields = {
   startTime: raceClockTime.nullable(),
   finishCutoff: raceCutoff,
@@ -523,6 +535,54 @@ const racePlanDayFields = {
       'Each aid station needs its own id.',
     )
     .describe('Aid stations in course order.'),
+  nutrition: z
+    .object({
+      targets: z
+        .object({
+          carbohydrateGramsPerHour: hourlyTarget(raceNutritionMaximums.carbohydrateGramsPerHour),
+          fluidMillilitresPerHour: hourlyTarget(raceNutritionMaximums.fluidMillilitresPerHour),
+          sodiumMilligramsPerHour: hourlyTarget(raceNutritionMaximums.sodiumMilligramsPerHour),
+        })
+        .strict(),
+      schedule: z
+        .array(
+          z
+            .object({
+              productId: idSchema,
+              servings: z.number().finite().positive().max(raceNutritionMaximums.servings),
+              everyMinutes: z.number().int().min(1).max(raceNutritionMaximums.everyMinutes),
+            })
+            .strict(),
+        )
+        .max(raceNutritionMaximums.scheduleRows),
+      cues: z
+        .array(
+          z
+            .object({
+              when: z.string().trim().min(1).max(raceNutritionMaximums.cueWhen),
+              text: z.string().trim().min(1).max(raceNutritionMaximums.cueText),
+            })
+            .strict(),
+        )
+        .max(raceNutritionMaximums.cues),
+      daysBefore: notes,
+      breakfast: notes,
+      recovery: notes,
+    })
+    .strict()
+    .describe('What to eat and drink before, during and after the race.'),
+};
+export const emptyRaceNutrition: z.infer<typeof racePlanDayFields.nutrition> = {
+  targets: {
+    carbohydrateGramsPerHour: null,
+    fluidMillilitresPerHour: null,
+    sodiumMilligramsPerHour: null,
+  },
+  schedule: [],
+  cues: [],
+  daysBefore: '',
+  breakfast: '',
+  recovery: '',
 };
 export const racePlanSchema = z
   .object({
@@ -532,6 +592,7 @@ export const racePlanSchema = z
     startTime: racePlanDayFields.startTime.default(null),
     finishCutoff: racePlanDayFields.finishCutoff.default(null),
     stations: racePlanDayFields.stations.default([]),
+    nutrition: racePlanDayFields.nutrition.default(() => structuredClone(emptyRaceNutrition)),
     writtenFor: z.object({ courseId: racePlanCourseId, target: racePlanTarget }).strict(),
   })
   .strict()
@@ -961,6 +1022,7 @@ export const commandSchema = z.discriminatedUnion('action', [
           startTime: racePlanDayFields.startTime.optional(),
           finishCutoff: racePlanDayFields.finishCutoff.optional(),
           stations: racePlanDayFields.stations.optional(),
+          nutrition: racePlanDayFields.nutrition.optional(),
           courseId: racePlanCourseId.default(null),
         })
         .strict(),

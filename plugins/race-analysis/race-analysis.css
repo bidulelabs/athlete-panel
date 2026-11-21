@@ -593,6 +593,48 @@
     transform: none;
   }
 }
+.race-nutrition-phases {
+  height: auto;
+  max-width: 100%;
+  margin: 8px 0 12px;
+  overflow-x: auto;
+}
+.race-nutrition-phases > button {
+  min-height: 36px;
+  padding: 7px 14px;
+}
+.race-nutrition-targets {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  align-items: end;
+  gap: 16px;
+  margin: 16px 0 0;
+}
+.race-nutrition-targets dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.race-nutrition-targets dd {
+  margin: 4px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.race-nutrition-targets > :first-child dd:first-of-type {
+  font-size: clamp(34px, 4.5vw, 52px);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.race-nutrition-targets dd + dd {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.race-nutrition-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 1100px) {
   .race-terrain {
     flex-direction: column;
@@ -720,6 +762,12 @@
   }
   .race-cutoff-fields {
     grid-template-columns: 1fr;
+  }
+  .race-nutrition-targets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .race-nutrition-targets > :first-child {
+    grid-column: 1 / -1;
   }
 }
 @media (max-width: 900px) {

@@ -1,0 +1,21 @@
+.nutrition-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nutrition-products-scroll {
+  overflow-x: auto;
+}
+.nutrition-products th.numeric,
+.nutrition-products td.numeric {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.nutrition-heading p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 23px;
+}

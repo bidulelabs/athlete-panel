@@ -6,6 +6,7 @@ import {
   historicalAvailability,
 } from '../../instance/history-services';
 import { grantForToken } from './service';
+import { withoutNutrition } from './proposal-validation';
 import {
   historyQuerySchema,
   historyResponseSchema,
@@ -93,7 +94,8 @@ export async function readHistory(
         );
       }
     } else if (operation === 'context') {
-      response.profile = await historicalProfile(tx);
+      const profile = await historicalProfile(tx);
+      response.profile = profile && withoutNutrition(profile);
       response.profileMeaning = 'Current profile; not historical settings.';
       response.warnings.push(
         'Retrieve dated events and injuries with history records. Profile settings are current, not historical.',

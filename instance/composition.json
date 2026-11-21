@@ -4,7 +4,7 @@
     {
       "path": "plugins/athlete",
       "enabled": true,
-      "version": "1.3.1"
+      "version": "1.4.0"
     },
     {
       "path": "plugins/training",
@@ -44,7 +44,7 @@
     {
       "path": "plugins/agent-bridge",
       "enabled": true,
-      "version": "2.5.0"
+      "version": "2.5.1"
     },
     {
       "path": "personal-plugins/printable-training-week",

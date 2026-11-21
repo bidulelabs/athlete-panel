@@ -82,6 +82,35 @@ const heartRateZones = z.object({ cycling: zoneBounds, running: zoneBounds }).st
 const ftpWatts = z.number().int().min(1).max(3000).nullable();
 const restingHeartRateBpm = z.number().int().min(25).max(120).nullable();
 const maxHeartRateBpm = z.number().int().min(100).max(240).nullable();
+const amountPerServing = (max: number) => z.number().finite().min(0).max(max).nullable();
+export const nutritionProductSchema = z
+  .object({
+    id: idSchema,
+    name: text,
+    kind: z.enum(['gel', 'drink', 'food', 'other']),
+    carbohydrateGrams: amountPerServing(500),
+    fluidMillilitres: amountPerServing(5000),
+    sodiumMilligrams: amountPerServing(10000),
+    caffeineMilligrams: amountPerServing(1000),
+    source: z.enum(['label', 'estimate']),
+    tolerance: z.enum(['comfortable', 'mild', 'poor', 'untested']),
+  })
+  .strict();
+export type NutritionProduct = z.infer<typeof nutritionProductSchema>;
+export const nutritionProfileSchema = z
+  .object({
+    products: z
+      .array(nutritionProductSchema)
+      .max(50)
+      .refine(
+        (products) => new Set(products.map((product) => product.id)).size === products.length,
+        'Each product needs its own id.',
+      ),
+    carryCapacityMillilitres: z.number().int().min(0).max(20000).nullable(),
+    preferences: z.string().max(2000),
+  })
+  .strict();
+export type NutritionProfile = z.infer<typeof nutritionProfileSchema>;
 export const profileValuesSchema = z
   .object({
     displayName: text.default('Athlete'),
@@ -104,6 +133,7 @@ export const profileValuesSchema = z
     ftpWatts: ftpWatts.default(null),
     restingHeartRateBpm: restingHeartRateBpm.optional(),
     maxHeartRateBpm: maxHeartRateBpm.optional(),
+    nutrition: nutritionProfileSchema.optional(),
   })
   .strict();
 export const profileSchema = profileValuesSchema.extend({
@@ -675,6 +705,7 @@ const profilePatchSchema = z
     ftpWatts,
     restingHeartRateBpm,
     maxHeartRateBpm,
+    nutrition: nutritionProfileSchema,
   })
   .strict()
   .partial();
@@ -1061,7 +1092,7 @@ export function describeAgentAccess(scope: GrantScope): string[] {
           `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
           `Create races and goals: ${planning.allowEventCreation === true ? 'permitted within the proposal dates' : 'not permitted'}.`,
           `Change plan phases: ${planning.allowPhaseChanges === true ? 'permitted for phases within the proposal dates' : 'not permitted'}.`,
-          `Race preparation: ${planning.raceId ? 'course summary and race plan of the selected race shared, race plan proposals permitted' : 'not permitted'}.`,
+          `Race preparation: ${planning.raceId ? 'course summary and race plan of the selected race and your nutrition products and preferences shared, race plan proposals permitted' : 'not permitted'}.`,
         ]
       : ['Proposal submission is not permitted.']),
     'Applying training changes requires your review and explicit approval in Athlete Panel.',

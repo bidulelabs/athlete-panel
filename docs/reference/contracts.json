@@ -178,6 +178,137 @@
                         }
                       ]
                     },
+                    "nutrition": {
+                      "type": "object",
+                      "properties": {
+                        "products": {
+                          "maxItems": 50,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 255
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "gel",
+                                  "drink",
+                                  "food",
+                                  "other"
+                                ]
+                              },
+                              "carbohydrateGrams": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 500
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "fluidMillilitres": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 5000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "sodiumMilligrams": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 10000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "caffeineMilligrams": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "source": {
+                                "type": "string",
+                                "enum": [
+                                  "label",
+                                  "estimate"
+                                ]
+                              },
+                              "tolerance": {
+                                "type": "string",
+                                "enum": [
+                                  "comfortable",
+                                  "mild",
+                                  "poor",
+                                  "untested"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "kind",
+                              "carbohydrateGrams",
+                              "fluidMillilitres",
+                              "sodiumMilligrams",
+                              "caffeineMilligrams",
+                              "source",
+                              "tolerance"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "carryCapacityMillilitres": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 20000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "preferences": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "products",
+                        "carryCapacityMillilitres",
+                        "preferences"
+                      ],
+                      "additionalProperties": false
+                    },
                     "id": {
                       "type": "string",
                       "const": "owner"
@@ -3795,6 +3926,137 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "nutrition": {
+                            "type": "object",
+                            "properties": {
+                              "products": {
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 255
+                                    },
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "gel",
+                                        "drink",
+                                        "food",
+                                        "other"
+                                      ]
+                                    },
+                                    "carbohydrateGrams": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 500
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "fluidMillilitres": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 5000
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "sodiumMilligrams": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 10000
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "caffeineMilligrams": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 1000
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "enum": [
+                                        "label",
+                                        "estimate"
+                                      ]
+                                    },
+                                    "tolerance": {
+                                      "type": "string",
+                                      "enum": [
+                                        "comfortable",
+                                        "mild",
+                                        "poor",
+                                        "untested"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "kind",
+                                    "carbohydrateGrams",
+                                    "fluidMillilitres",
+                                    "sodiumMilligrams",
+                                    "caffeineMilligrams",
+                                    "source",
+                                    "tolerance"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "carryCapacityMillilitres": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 20000
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "preferences": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "required": [
+                              "products",
+                              "carryCapacityMillilitres",
+                              "preferences"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "additionalProperties": false
@@ -6925,6 +7187,137 @@
                                   }
                                 ]
                               },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -7123,6 +7516,137 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
                               },
                               "id": {
                                 "type": "string",
@@ -11157,6 +11681,137 @@
                                   }
                                 ]
                               },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -11355,6 +12010,137 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
                               },
                               "id": {
                                 "type": "string",
@@ -15406,6 +16192,137 @@
                                   }
                                 ]
                               },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -15604,6 +16521,137 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
                               },
                               "id": {
                                 "type": "string",
@@ -20069,6 +21117,137 @@
                                   }
                                 ]
                               },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -20267,6 +21446,137 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
                               },
                               "id": {
                                 "type": "string",
@@ -24731,6 +26041,137 @@
                                   }
                                 ]
                               },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -24929,6 +26370,137 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
                               },
                               "id": {
                                 "type": "string",
@@ -28992,6 +30564,137 @@
                                   }
                                 ]
                               },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -29190,6 +30893,137 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
                               },
                               "id": {
                                 "type": "string",
@@ -33264,6 +35098,137 @@
                                   }
                                 ]
                               },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
+                              },
                               "id": {
                                 "type": "string",
                                 "const": "owner"
@@ -33462,6 +35427,137 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "nutrition": {
+                                "type": "object",
+                                "properties": {
+                                  "products": {
+                                    "maxItems": 50,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 255
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": [
+                                            "gel",
+                                            "drink",
+                                            "food",
+                                            "other"
+                                          ]
+                                        },
+                                        "carbohydrateGrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 500
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "fluidMillilitres": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 5000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "sodiumMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 10000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "caffeineMilligrams": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 1000
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
+                                        },
+                                        "source": {
+                                          "type": "string",
+                                          "enum": [
+                                            "label",
+                                            "estimate"
+                                          ]
+                                        },
+                                        "tolerance": {
+                                          "type": "string",
+                                          "enum": [
+                                            "comfortable",
+                                            "mild",
+                                            "poor",
+                                            "untested"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                        "kind",
+                                        "carbohydrateGrams",
+                                        "fluidMillilitres",
+                                        "sodiumMilligrams",
+                                        "caffeineMilligrams",
+                                        "source",
+                                        "tolerance"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "carryCapacityMillilitres": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 20000
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "preferences": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "products",
+                                  "carryCapacityMillilitres",
+                                  "preferences"
+                                ],
+                                "additionalProperties": false
                               },
                               "id": {
                                 "type": "string",
@@ -39895,6 +41991,137 @@
                       "type": "null"
                     }
                   ]
+                },
+                "nutrition": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "maxItems": 50,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "gel",
+                              "drink",
+                              "food",
+                              "other"
+                            ]
+                          },
+                          "carbohydrateGrams": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 500
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fluidMillilitres": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sodiumMilligrams": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 10000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "caffeineMilligrams": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "label",
+                              "estimate"
+                            ]
+                          },
+                          "tolerance": {
+                            "type": "string",
+                            "enum": [
+                              "comfortable",
+                              "mild",
+                              "poor",
+                              "untested"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "kind",
+                          "carbohydrateGrams",
+                          "fluidMillilitres",
+                          "sodiumMilligrams",
+                          "caffeineMilligrams",
+                          "source",
+                          "tolerance"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "carryCapacityMillilitres": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 20000
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "preferences": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "required": [
+                    "products",
+                    "carryCapacityMillilitres",
+                    "preferences"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "additionalProperties": false
@@ -45468,6 +47695,137 @@
                   }
                 ]
               },
+              "nutrition": {
+                "type": "object",
+                "properties": {
+                  "products": {
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "gel",
+                            "drink",
+                            "food",
+                            "other"
+                          ]
+                        },
+                        "carbohydrateGrams": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 500
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "fluidMillilitres": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 5000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "sodiumMilligrams": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 10000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "caffeineMilligrams": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "label",
+                            "estimate"
+                          ]
+                        },
+                        "tolerance": {
+                          "type": "string",
+                          "enum": [
+                            "comfortable",
+                            "mild",
+                            "poor",
+                            "untested"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "kind",
+                        "carbohydrateGrams",
+                        "fluidMillilitres",
+                        "sodiumMilligrams",
+                        "caffeineMilligrams",
+                        "source",
+                        "tolerance"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "carryCapacityMillilitres": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "preferences": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "products",
+                  "carryCapacityMillilitres",
+                  "preferences"
+                ],
+                "additionalProperties": false
+              },
               "id": {
                 "type": "string",
                 "const": "owner"
@@ -49160,6 +51518,137 @@
                       "type": "null"
                     }
                   ]
+                },
+                "nutrition": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "maxItems": 50,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "gel",
+                              "drink",
+                              "food",
+                              "other"
+                            ]
+                          },
+                          "carbohydrateGrams": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 500
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fluidMillilitres": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sodiumMilligrams": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 10000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "caffeineMilligrams": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "label",
+                              "estimate"
+                            ]
+                          },
+                          "tolerance": {
+                            "type": "string",
+                            "enum": [
+                              "comfortable",
+                              "mild",
+                              "poor",
+                              "untested"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "kind",
+                          "carbohydrateGrams",
+                          "fluidMillilitres",
+                          "sodiumMilligrams",
+                          "caffeineMilligrams",
+                          "source",
+                          "tolerance"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "carryCapacityMillilitres": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 20000
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "preferences": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "required": [
+                    "products",
+                    "carryCapacityMillilitres",
+                    "preferences"
+                  ],
+                  "additionalProperties": false
                 },
                 "id": {
                   "type": "string",

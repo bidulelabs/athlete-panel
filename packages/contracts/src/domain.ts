@@ -89,6 +89,7 @@ export const nutritionAmountMaximums = {
   caffeineMilligrams: 1000,
 } as const;
 const amountPerServing = (max: number) => z.number().finite().min(0).max(max).nullable();
+const toleranceLevels = ['comfortable', 'mild', 'poor'] as const;
 export const nutritionProductSchema = z
   .object({
     id: idSchema,
@@ -99,7 +100,7 @@ export const nutritionProductSchema = z
     sodiumMilligrams: amountPerServing(nutritionAmountMaximums.sodiumMilligrams),
     caffeineMilligrams: amountPerServing(nutritionAmountMaximums.caffeineMilligrams),
     source: z.enum(['label', 'estimate']),
-    tolerance: z.enum(['comfortable', 'mild', 'poor', 'untested']),
+    tolerance: z.enum([...toleranceLevels, 'untested']),
   })
   .strict();
 export type NutritionProduct = z.infer<typeof nutritionProductSchema>;
@@ -598,6 +599,34 @@ export const racePlanSchema = z
   .strict()
   .extend(base);
 export type RacePlan = z.infer<typeof racePlanSchema>;
+const rehearsalFields = {
+  items: z
+    .array(
+      z
+        .object({
+          productName: text,
+          carbohydrateGrams: amountPerServing(500),
+          fluidMillilitres: amountPerServing(5000),
+          plannedServings: z.number().finite().min(0).max(144000).nullable(),
+          takenServings: z.number().finite().min(0).max(100).multipleOf(0.5),
+        })
+        .strict(),
+    )
+    .max(50),
+  extraFluidMillilitres: z.number().int().min(0).max(20000),
+  stomach: z.enum(toleranceLevels),
+  conditions: z.string().trim().max(120),
+  lesson: notes,
+};
+export const rehearsalSchema = z
+  .object({
+    eventId: idSchema.describe('Id of the race this rehearsal prepares.'),
+    workoutId: idSchema.describe('Id of the completed session the rehearsal was run on.'),
+    ...rehearsalFields,
+  })
+  .strict()
+  .extend(base);
+export type Rehearsal = z.infer<typeof rehearsalSchema>;
 const weeklyRange = z
   .object({
     min: nonnegativeSchema.describe('Lowest weekly value, in the unit named by the target field.'),
@@ -783,6 +812,7 @@ export const workspaceStateSchema = z
     events: z.array(eventSchema),
     periods: z.array(periodSchema).default([]),
     racePlans: z.array(racePlanSchema).default([]),
+    rehearsals: z.array(rehearsalSchema).default([]),
     injuries: z.array(injurySchema),
     activities: z.array(activitySchema),
     health: z.array(healthRecordSchema),
@@ -797,6 +827,7 @@ export const emptyWorkspace = (): WorkspaceState => ({
   events: [],
   periods: [],
   racePlans: [],
+  rehearsals: [],
   injuries: [],
   activities: [],
   health: [],
@@ -1045,6 +1076,27 @@ export const commandSchema = z.discriminatedUnion('action', [
     })
     .strict(),
   z
+    .object({
+      action: z.literal('rehearsal.create'),
+      values: z
+        .object({
+          ...createId,
+          eventId: rehearsalSchema.shape.eventId,
+          workoutId: rehearsalSchema.shape.workoutId,
+          ...rehearsalFields,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('rehearsal.update'),
+      ...existing,
+      values: nonemptyPatch(z.object(rehearsalFields).strict()),
+    })
+    .strict(),
+  z.object({ action: z.literal('rehearsal.delete'), ...existing }).strict(),
+  z
     .object({ action: z.literal('injury.create'), values: injuryValuesSchema.extend(createId) })
     .strict(),
   z.object({ action: z.literal('injury.update'), ...existing, values: injuryPatchSchema }).strict(),
@@ -1061,6 +1113,7 @@ export type EntityKind =
   | 'event'
   | 'period'
   | 'racePlan'
+  | 'rehearsal'
   | 'injury'
   | 'activity'
   | 'health';
@@ -1072,6 +1125,7 @@ export type Entity =
   | TrainingEvent
   | Period
   | RacePlan
+  | Rehearsal
   | Injury
   | Activity
   | HealthRecord;

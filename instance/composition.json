@@ -4,12 +4,12 @@
     {
       "path": "plugins/athlete",
       "enabled": true,
-      "version": "1.5.0"
+      "version": "1.5.1"
     },
     {
       "path": "plugins/training",
       "enabled": true,
-      "version": "2.7.0"
+      "version": "2.8.0"
     },
     {
       "path": "plugins/activity-records",
@@ -19,7 +19,7 @@
     {
       "path": "plugins/calendar",
       "enabled": true,
-      "version": "2.2.1"
+      "version": "2.2.2"
     },
     {
       "path": "plugins/garmin",

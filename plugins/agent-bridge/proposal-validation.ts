@@ -257,6 +257,12 @@ export function assertBounded(
       continue;
     }
     assert(
+      change.entity !== 'rehearsal',
+      'forbidden',
+      'This change would delete fueling rehearsals. Only the owner can delete them.',
+      403,
+    );
+    assert(
       ['plan', 'workout', 'note'].includes(change.entity),
       'forbidden',
       'Agent changes are limited to pending plans, workouts and selected notes.',

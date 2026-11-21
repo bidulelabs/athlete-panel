@@ -14,6 +14,8 @@ Use the documentation link for the version you installed. Each release page incl
 
 - **Races** gains a **Nutrition** tab: targets per hour for carbohydrate, fluid and sodium (unset targets read "unknown"), free texts for the days before, breakfast and recovery, and your diet preferences from Settings. The race plan stores them, set by the owner only. Assistants limited to a race see them in that race's plan. See [Race preparation](features/race-preparation.md#nutrition-in-the-race-plan).
 
+- **Nutrition** in **Races** gains the food plan during the race: products from Settings with servings and how often, and cues in your own words, edited in one window. It shows what each intake brings with the product's tolerance, what the plan gives per hour beside each target, the carbohydrate over the moving time when the course has an estimate, and which products are left out for an unknown value or because they were removed from Settings.
+
 ### Upgrade steps
 
 Earlier releases cannot read race plans holding aid stations or nutrition: see [race day upgrade guidance](development.md#race-day-upgrade) and [race nutrition upgrade guidance](development.md#race-nutrition-upgrade). Earlier releases cannot read stored race plans, grants limited to a race or race plan proposals: rollback after those records exist requires the matching pre-upgrade backup. See [race plan upgrade guidance](development.md#race-plan-upgrade).

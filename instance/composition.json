@@ -4,7 +4,7 @@
     {
       "path": "plugins/athlete",
       "enabled": true,
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     {
       "path": "plugins/training",
@@ -34,7 +34,7 @@
     {
       "path": "plugins/race-analysis",
       "enabled": true,
-      "version": "1.4.0"
+      "version": "1.4.1"
     },
     {
       "path": "plugins/charts",

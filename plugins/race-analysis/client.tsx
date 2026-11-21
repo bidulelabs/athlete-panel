@@ -447,6 +447,7 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
           <Nutrition
             race={value.race}
             course={value.course}
+            estimate={value.estimate}
             data={props.data}
             request={props.request}
           />

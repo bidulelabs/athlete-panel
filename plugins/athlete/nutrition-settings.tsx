@@ -8,7 +8,6 @@ import {
 import {
   AddButton,
   Alert,
-  Badge,
   Button,
   EmptyState,
   ErrorMessage,
@@ -34,6 +33,7 @@ import { Check, Edit3, Trash2, UtensilsCrossed } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { mutate } from '../training/public/client';
 import './nutrition.css';
+import { ToleranceBadge, toleranceLabels } from './tolerance-badge';
 
 const emptyNutrition: NutritionProfile = {
   products: [],
@@ -42,18 +42,6 @@ const emptyNutrition: NutritionProfile = {
 };
 const kindLabels = { gel: 'Gel', drink: 'Drink', food: 'Food', other: 'Other' };
 const sourceLabels = { label: 'label', estimate: 'your estimate' };
-const toleranceLabels = {
-  comfortable: 'Comfortable',
-  mild: 'Mild discomfort',
-  poor: 'Poor',
-  untested: 'Not tested',
-};
-const toleranceBadges = {
-  comfortable: 'badge success',
-  mild: 'badge tolerance-mild',
-  poor: 'badge tolerance-poor',
-  untested: 'badge',
-};
 const amountFields = [
   ['carbohydrateGrams', 'Carbs', 'g'],
   ['fluidMillilitres', 'Fluid', 'ml'],
@@ -209,9 +197,7 @@ function ProductTable({
               </TableCell>
             ))}
             <TableCell>
-              <Badge className={toleranceBadges[product.tolerance]}>
-                {toleranceLabels[product.tolerance]}
-              </Badge>
+              <ToleranceBadge tolerance={product.tolerance} />
             </TableCell>
             <TableCell>
               <div className="table-actions">

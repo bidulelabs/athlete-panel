@@ -11,12 +11,6 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.badge.tolerance-mild {
-  color: var(--fact-race);
-}
-.badge.tolerance-poor {
-  color: var(--danger);
-}
 .caffeine-note {
   display: none;
 }

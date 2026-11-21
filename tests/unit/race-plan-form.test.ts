@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyRaceNutrition, type CourseSection, type RacePlan } from '@athlete-panel/contracts';
 import {
   pacingRows,
+  nutritionScheduleFromForm,
   nutritionTargetsFromForm,
   raceDayCommand,
   racePlanCommand,
@@ -431,5 +432,61 @@ describe('nutrition targets from the form', () => {
       fluidMillilitresPerHour: null,
       sodiumMilligramsPerHour: 0,
     });
+  });
+});
+
+describe('nutrition schedule from the form', () => {
+  const productId = '00000000-0000-4000-8000-000000000040';
+  const otherProductId = '00000000-0000-4000-8000-000000000041';
+  const scheduleForm = (rows: [string, string, string][], cues: [string, string][]) => {
+    const form = new FormData();
+    for (const [id, servings, everyMinutes] of rows) {
+      form.append('productId', id);
+      form.append('servings', servings);
+      form.append('everyMinutes', everyMinutes);
+    }
+    for (const [when, text] of cues) {
+      form.append('cueWhen', when);
+      form.append('cueText', text);
+    }
+    return form;
+  };
+
+  it('reads each product row in order, half servings included', () => {
+    expect(
+      nutritionScheduleFromForm(
+        scheduleForm(
+          [
+            [productId, '1', '30'],
+            [otherProductId, '0.5', '60'],
+          ],
+          [],
+        ),
+      ).schedule,
+    ).toEqual([
+      { productId, servings: 1, everyMinutes: 30 },
+      { productId: otherProductId, servings: 0.5, everyMinutes: 60 },
+    ]);
+  });
+
+  it('reads each cue in order, trimmed', () => {
+    expect(
+      nutritionScheduleFromForm(
+        scheduleForm(
+          [],
+          [
+            [' Long climbs ', ' Eat early '],
+            ['From 4h', 'Swap a gel for crackers'],
+          ],
+        ),
+      ).cues,
+    ).toEqual([
+      { when: 'Long climbs', text: 'Eat early' },
+      { when: 'From 4h', text: 'Swap a gel for crackers' },
+    ]);
+  });
+
+  it('reads no rows and no cues as an empty plan', () => {
+    expect(nutritionScheduleFromForm(new FormData())).toEqual({ schedule: [], cues: [] });
   });
 });

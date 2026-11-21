@@ -15,16 +15,23 @@ import {
   useAction,
   type PluginPageProps,
 } from '@athlete-panel/ui';
-import { emptyRaceNutrition, type RaceAnalysis, type RacePlan } from '@athlete-panel/contracts';
+import {
+  emptyRaceNutrition,
+  type NutritionProduct,
+  type RaceAnalysis,
+  type RacePlan,
+} from '@athlete-panel/contracts';
 import { mutate } from '../training/public/client';
-import { nutrients } from './nutrition';
-import { PhaseTextDialog, TargetsDialog } from './nutrition-dialogs';
+import { hourlyIntake, nutrients, plannedText } from './nutrition';
+import { PhaseTextDialog, SchedulePlanDialog, TargetsDialog } from './nutrition-dialogs';
+import { DuringRaceCard } from './nutrition-schedule';
 import { NeedsReviewNotice } from './needs-review-notice';
 import { raceDayCommand } from './race-plan-form';
 
 type RaceNutrition = RacePlan['nutrition'];
 type PhaseField = 'daysBefore' | 'breakfast' | 'recovery';
-type Editing = 'targets' | PhaseField;
+type Editing = 'targets' | 'plan' | PhaseField;
+type Intake = ReturnType<typeof hourlyIntake>;
 
 const phases = [
   {
@@ -70,10 +77,12 @@ function PhaseCard({
 
 function TargetsCard({
   targets,
+  planned,
   busy,
   onEdit,
 }: {
   targets: RaceNutrition['targets'];
+  planned: Intake['perHour'] | null;
   busy: boolean;
   onEdit: () => void;
 }) {
@@ -102,11 +111,14 @@ function TargetsCard({
         </EmptyState>
       ) : (
         <dl className="race-nutrition-targets">
-          {nutrients.map(({ target, label, unit }) => (
+          {nutrients.map(({ amount, target, label, unit }) => (
             <div key={target}>
               <dt>{label}</dt>
               <dd>{targets[target] === null ? 'unknown' : `${targets[target]} ${unit}`}</dd>
-              <dd>{target === 'carbohydrateGramsPerHour' ? 'per hour moving' : 'per hour'}</dd>
+              <dd>
+                {target === 'carbohydrateGramsPerHour' ? 'per hour moving' : 'per hour'}
+                {planned && `, ${plannedText(planned[amount], targets[target], unit)}`}
+              </dd>
             </div>
           ))}
         </dl>
@@ -135,11 +147,13 @@ function NutritionPreferences({ preferences }: { preferences: string }) {
 function NutritionDialog({
   editing,
   nutrition,
+  products,
   onSave,
   onClose,
 }: {
   editing: Editing | null;
   nutrition: RaceNutrition;
+  products: readonly NutritionProduct[];
   onSave: (changes: Partial<RaceNutrition>) => Promise<unknown>;
   onClose: () => void;
 }) {
@@ -150,6 +164,14 @@ function NutritionDialog({
         <TargetsDialog
           targets={nutrition.targets}
           onSave={(targets) => onSave({ targets })}
+          onClose={onClose}
+        />
+      )}
+      {editing === 'plan' && (
+        <SchedulePlanDialog
+          nutrition={nutrition}
+          products={products}
+          onSave={(plan) => onSave(plan)}
           onClose={onClose}
         />
       )}
@@ -168,14 +190,17 @@ function NutritionDialog({
 export function Nutrition({
   race,
   course,
+  estimate,
   data,
   request,
-}: Pick<PluginPageProps, 'data' | 'request'> & Pick<RaceAnalysis, 'race' | 'course'>) {
+}: Pick<PluginPageProps, 'data' | 'request'> & Pick<RaceAnalysis, 'race' | 'course' | 'estimate'>) {
   const action = useAction();
   const [editing, setEditing] = useState<Editing | null>(null);
   const racePlan = data.racePlans.find((candidate) => candidate.eventId === race.id);
   const courseId = course?.id ?? null;
   const nutrition = racePlan?.nutrition ?? emptyRaceNutrition;
+  const products = data.profile?.nutrition?.products ?? [];
+  const intake = hourlyIntake(nutrition.schedule, products);
   const saveNutrition = (changes: Partial<RaceNutrition>) =>
     mutate(request, [
       raceDayCommand({ nutrition: { ...nutrition, ...changes } }, racePlan, race.id, courseId),
@@ -221,8 +246,19 @@ export function Nutrition({
           </div>
           <TargetsCard
             targets={nutrition.targets}
+            planned={nutrition.schedule.length > 0 ? intake.perHour : null}
             busy={action.busy}
             onEdit={() => setEditing('targets')}
+          />
+          <DuringRaceCard
+            nutrition={nutrition}
+            products={products}
+            intake={intake}
+            estimate={estimate}
+            course={course}
+            stations={racePlan?.stations ?? []}
+            busy={action.busy}
+            onEdit={() => setEditing('plan')}
           />
         </TabsContent>
       </Tabs>
@@ -230,6 +266,7 @@ export function Nutrition({
       <NutritionDialog
         editing={editing}
         nutrition={nutrition}
+        products={products}
         onSave={saveNutrition}
         onClose={() => setEditing(null)}
       />

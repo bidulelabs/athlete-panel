@@ -150,3 +150,21 @@ export const nutritionTargetsFromForm = (form: FormData): RacePlan['nutrition'][
   fluidMillilitresPerHour: numeric(form.get('fluidMillilitresPerHour')),
   sodiumMilligramsPerHour: numeric(form.get('sodiumMilligramsPerHour')),
 });
+
+export function nutritionScheduleFromForm(
+  form: FormData,
+): Pick<RacePlan['nutrition'], 'schedule' | 'cues'> {
+  const servings = form.getAll('servings');
+  const everyMinutes = form.getAll('everyMinutes');
+  const cueTexts = form.getAll('cueText');
+  return {
+    schedule: form.getAll('productId').map((productId, index) => ({
+      productId: String(productId),
+      servings: Number(servings[index]),
+      everyMinutes: Number(everyMinutes[index]),
+    })),
+    cues: form
+      .getAll('cueWhen')
+      .map((when, index) => ({ when: String(when).trim(), text: String(cueTexts[index]).trim() })),
+  };
+}

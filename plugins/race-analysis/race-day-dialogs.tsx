@@ -12,6 +12,7 @@ import {
   Textarea,
   useAction,
 } from '@athlete-panel/ui';
+import type { ReactNode } from 'react';
 import type { RacePlan } from '@athlete-panel/contracts';
 import { distanceFieldText, startAndCutoffFromForm, stationFromForm } from './race-plan-form';
 
@@ -58,11 +59,20 @@ function CutoffFields({
   );
 }
 
-export function DialogActions({ action, onClose }: { action: ActionState; onClose: () => void }) {
+export function DialogActions({
+  action,
+  onClose,
+  children,
+}: {
+  action: ActionState;
+  onClose: () => void;
+  children?: ReactNode;
+}) {
   return (
     <>
       <ErrorMessage error={action.error} />
       <div className="dialog-actions">
+        {children}
         <Button type="button" variant="outline" onClick={onClose} disabled={action.busy}>
           Cancel
         </Button>

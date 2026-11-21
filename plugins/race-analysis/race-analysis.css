@@ -655,6 +655,30 @@
   font-size: 13px;
   padding: 0;
 }
+.race-rehearsal-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.race-rehearsal-amount input {
+  max-width: 7rem;
+}
+.race-rehearsal-lesson {
+  max-width: 36ch;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.race-dialog .dialog-actions {
+  flex-wrap: wrap;
+}
+.race-dialog-delete {
+  margin-right: auto;
+}
+.race-rehearsals td[data-label='Session'] {
+  overflow-wrap: anywhere;
+}
 .race-nutrition-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -831,6 +855,7 @@
     color: var(--muted);
     font-size: 11px;
   }
+  .race-rehearsals td[data-label='Session'],
   .race-nutrition-schedule td[data-label='What'],
   .race-nutrition-row,
   .race-nutrition-cue-row {

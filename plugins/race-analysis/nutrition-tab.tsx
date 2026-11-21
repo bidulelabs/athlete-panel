@@ -26,6 +26,7 @@ import { hourlyIntake, nutrients, plannedText } from './nutrition';
 import { PhaseTextDialog, SchedulePlanDialog, TargetsDialog } from './nutrition-dialogs';
 import { DuringRaceCard } from './nutrition-schedule';
 import { NeedsReviewNotice } from './needs-review-notice';
+import { RehearsalsCard } from './rehearsal-list';
 import { raceDayCommand } from './race-plan-form';
 
 type RaceNutrition = RacePlan['nutrition'];
@@ -260,6 +261,7 @@ export function Nutrition({
             busy={action.busy}
             onEdit={() => setEditing('plan')}
           />
+          <RehearsalsCard race={race} data={data} request={request} />
         </TabsContent>
       </Tabs>
       <NutritionPreferences preferences={data.profile?.nutrition?.preferences ?? ''} />

@@ -2,7 +2,7 @@
   "id": "athlete",
   "name": "Athlete",
   "description": "Profile, preferences and training constraints",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "hostApi": "^1.1.0",
   "dependencies": {
     "training": "^2.8.0"

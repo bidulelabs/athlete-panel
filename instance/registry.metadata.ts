@@ -3,12 +3,12 @@ export const registry = [
   {
     "path": "plugins/athlete",
     "enabled": true,
-    "version": "1.5.1",
+    "version": "1.6.0",
     "manifest": {
       "id": "athlete",
       "name": "Athlete",
       "description": "Profile, preferences and training constraints",
-      "version": "1.5.1",
+      "version": "1.6.0",
       "hostApi": "^1.1.0",
       "dependencies": {
         "training": "^2.8.0"
@@ -259,16 +259,16 @@ export const registry = [
   {
     "path": "plugins/race-analysis",
     "enabled": true,
-    "version": "1.4.1",
+    "version": "1.6.0",
     "manifest": {
       "id": "race-analysis",
       "name": "Race analysis",
       "description": "GPX courses, elevation and estimates from your past efforts",
-      "version": "1.4.1",
+      "version": "1.6.0",
       "hostApi": "^1.4.0",
       "dependencies": {
-        "athlete": "^1.5.0",
-        "training": "^2.7.0"
+        "athlete": "^1.6.0",
+        "training": "^2.8.0"
       },
       "optionalDependencies": {},
       "required": false,

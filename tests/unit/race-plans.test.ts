@@ -326,11 +326,14 @@ describe('race day fields', () => {
         'Start time: 07:00',
         'Finish cutoff · Days after race day: 1',
         'Aid stations · Aid station 2 · Distance: 9 km',
-        'Aid stations · Aid station 2 · Stop: 5 min',
+        'Aid stations · Aid station 2 · Planned stop: 5 min',
+        'Aid stations · Aid station 2 · Confirmed: Yes',
         'Aid stations · Aid station 2 · Drop bag · Item 1 · Servings: 2',
       ]),
     );
     expect(fields.join()).not.toContain('Step');
+    expect(fields.join()).not.toMatch(/ Id:|Product id/);
+    expect(fields.join()).not.toContain(id(40));
   });
 });
 
@@ -345,6 +348,11 @@ describe('race day field limits', () => {
         id: `00000000-0000-4000-8001-${String(index).padStart(12, '0')}`,
       }),
     );
+  const dropBagItems = (count: number) =>
+    Array.from({ length: count }, (_unused, index) => ({
+      productId: id(100 + index),
+      servings: 1,
+    }));
 
   it.each([
     [
@@ -359,12 +367,22 @@ describe('race day field limits', () => {
       {
         stations: [
           station(1, 1000, {
-            dropBag: Array.from({ length: 20 }, () => ({ productId: id(40), servings: 1 })),
+            dropBag: dropBagItems(20),
           }),
         ],
       },
     ],
     ['a stop of 24 hours', { stations: [station(1, 1000, { stopSeconds: 86400 })] }],
+    [
+      'a station cutoff six days after race day at 23:59',
+      { stations: [station(1, 1000, { cutoff: { dayOffset: 6, time: '23:59' } })] },
+    ],
+    ['an action of 300 characters', { stations: [station(1, 1000, { action: 'a'.repeat(300) })] }],
+    ['a source of 120 characters', { stations: [station(1, 1000, { source: 'a'.repeat(120) })] }],
+    [
+      'a drop bag item of 100 servings',
+      { stations: [station(1, 1000, { dropBag: [{ productId: id(40), servings: 100 }] })] },
+    ],
   ])('accepts %s', (_label, values) => {
     expect(both(values)).toEqual([true, true]);
   });
@@ -395,15 +413,74 @@ describe('race day field limits', () => {
       {
         stations: [
           station(1, 1000, {
-            dropBag: Array.from({ length: 21 }, () => ({ productId: id(40), servings: 1 })),
+            dropBag: dropBagItems(21),
           }),
         ],
       },
     ],
     ['food of 201 characters', { stations: [station(1, 1000, { food: 'a'.repeat(201) })] }],
+    ['an action of 301 characters', { stations: [station(1, 1000, { action: 'a'.repeat(301) })] }],
+    ['a source of 121 characters', { stations: [station(1, 1000, { source: 'a'.repeat(121) })] }],
+    [
+      'a station cutoff seven days after race day',
+      { stations: [station(1, 1000, { cutoff: { dayOffset: 7, time: '12:00' } })] },
+    ],
+    [
+      'a station cutoff at 24:00',
+      { stations: [station(1, 1000, { cutoff: { dayOffset: 0, time: '24:00' } })] },
+    ],
+    [
+      'a drop bag product id that is not a uuid',
+      { stations: [station(1, 1000, { dropBag: [{ productId: 'gel', servings: 1 }] })] },
+    ],
+    [
+      'a drop bag item of 101 servings',
+      { stations: [station(1, 1000, { dropBag: [{ productId: id(40), servings: 101 }] })] },
+    ],
+    [
+      'one product twice in a drop bag',
+      {
+        stations: [
+          station(1, 1000, {
+            dropBag: [
+              { productId: id(40), servings: 1 },
+              { productId: id(40), servings: 2 },
+            ],
+          }),
+        ],
+      },
+    ],
     ['an unknown station field', { stations: [station(1, 1000, { bag: true })] }],
   ])('refuses %s on create and on update', (_label, values) => {
     expect(both(values)).toEqual([false, false]);
+  });
+
+  it.each([
+    [
+      'a station name blank after trim',
+      [station(1, 1000, { name: ' ' })],
+      'Name each aid station.',
+    ],
+    [
+      'two stations with one id',
+      [station(1, 1000), station(1, 2000)],
+      'Each aid station needs its own id.',
+    ],
+    [
+      'one product twice in a drop bag',
+      [
+        station(1, 1000, {
+          dropBag: [
+            { productId: id(40), servings: 1 },
+            { productId: id(40), servings: 1 },
+          ],
+        }),
+      ],
+      'List each product once in a drop bag.',
+    ],
+  ])('explains %s in plain words', (_label, stations, message) => {
+    const parsed = commandSchema.safeParse(updateRacePlan({ stations }));
+    expect(parsed.error?.issues.map((issue) => issue.message)).toContain(message);
   });
 });
 

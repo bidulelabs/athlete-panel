@@ -1484,7 +1484,7 @@
                               "servings": {
                                 "type": "integer",
                                 "minimum": 1,
-                                "maximum": 9007199254740991
+                                "maximum": 100
                               }
                             },
                             "required": [
@@ -6680,7 +6680,7 @@
                                       "servings": {
                                         "type": "integer",
                                         "minimum": 1,
-                                        "maximum": 9007199254740991
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
@@ -6950,7 +6950,7 @@
                                       "servings": {
                                         "type": "integer",
                                         "minimum": 1,
-                                        "maximum": 9007199254740991
+                                        "maximum": 100
                                       }
                                     },
                                     "required": [
@@ -10266,7 +10266,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -10556,7 +10556,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -14818,7 +14818,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -15108,7 +15108,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -19387,7 +19387,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -19677,7 +19677,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -24370,7 +24370,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -24660,7 +24660,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -29352,7 +29352,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -29642,7 +29642,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -33933,7 +33933,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -34223,7 +34223,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -38525,7 +38525,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -38815,7 +38815,7 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 9007199254740991
+                                            "maximum": 100
                                           }
                                         },
                                         "required": [
@@ -45328,7 +45328,7 @@
                             "servings": {
                               "type": "integer",
                               "minimum": 1,
-                              "maximum": 9007199254740991
+                              "maximum": 100
                             }
                           },
                           "required": [
@@ -45598,7 +45598,7 @@
                             "servings": {
                               "type": "integer",
                               "minimum": 1,
-                              "maximum": 9007199254740991
+                              "maximum": 100
                             }
                           },
                           "required": [
@@ -49790,7 +49790,7 @@
                         "servings": {
                           "type": "integer",
                           "minimum": 1,
-                          "maximum": 9007199254740991
+                          "maximum": 100
                         }
                       },
                       "required": [

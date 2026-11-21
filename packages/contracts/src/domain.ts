@@ -446,15 +446,27 @@ const racePlanDayFields = {
       z
         .object({
           id: idSchema,
-          name: z.string().trim().min(1).max(80),
+          name: z
+            .string()
+            .trim()
+            .min(1, 'Name each aid station.')
+            .max(80, 'Keep an aid station name to 80 characters.'),
           distanceMeters: nonnegativeSchema.describe('Distance from the start line, in meters.'),
           cutoff: raceCutoff,
           stopSeconds: z.number().int().min(0).max(86400),
           water: z.boolean(),
           food: z.string().trim().max(200),
           dropBag: z
-            .array(z.object({ productId: idSchema, servings: z.number().int().min(1) }).strict())
-            .max(20),
+            .array(
+              z
+                .object({ productId: idSchema, servings: z.number().int().min(1).max(100) })
+                .strict(),
+            )
+            .max(20)
+            .refine(
+              (items) => new Set(items.map((item) => item.productId)).size === items.length,
+              'List each product once in a drop bag.',
+            ),
           action: z.string().trim().max(300),
           source: z.string().trim().max(120),
           verified: z.boolean(),

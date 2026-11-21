@@ -7,7 +7,7 @@ Use the documentation link for the version you installed. Each release page incl
 - Race analysis keeps an unsaved terrain draft saveable after you add, edit or remove a reference effort in the same tab; a change from another tab still requires reviewing saved data first. Reference efforts no longer return the redundant `comparison` field.
 - Training stores one race plan per race: the owner's target, a briefing, pacing by course section, assumptions and open questions. **Connect an agent** offers a **Race to prepare**: the agent of that connection reads the race's plan and a summary of its course (no coordinates or file names) and proposes the plan through the usual owner review, in the same proposal as phases and workouts; the target stays the owner's. Deleting a race deletes its plan, and one undo restores both. **Races** gains a **Preparation** tab to write the plan by hand and to see when a new course or target calls for a review, with the weeks left until race day (phase, target, planned sessions). See [Race preparation](features/race-preparation.md).
 
-- A race plan can hold a start time, a finish cutoff and aid stations (distance, cutoff, planned stop, water, food, drop bag, action, source, confirmed), set by the owner; they are not shown yet. Assistant proposal reviews label these fields. Assistants limited to a race see them in that race's plan.
+- A race plan can hold a start time, a finish cutoff and aid stations (distance, cutoff, planned stop, water, food, drop bag, action, source, confirmed), stored for the owner; no screen shows or edits them yet and assistants cannot propose them. Assistants limited to a race read them in that race's plan.
 
 ### Upgrade steps
 

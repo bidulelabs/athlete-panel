@@ -1,6 +1,7 @@
 import type { CourseEstimate, CourseSection, RacePlan } from '@athlete-panel/contracts';
 
 type RaceDay = Pick<RacePlan, 'startTime' | 'finishCutoff' | 'stations'>;
+type Station = RacePlan['stations'][number];
 type Cutoff = RacePlan['finishCutoff'];
 
 const secondsAfterMidnight = (time: string) =>
@@ -13,55 +14,65 @@ const sectionFraction = (section: CourseSection, fromMeters: number, toMeters: n
     (Math.min(toMeters, section.toMeters) - Math.max(fromMeters, section.fromMeters)) /
       (section.toMeters - section.fromMeters),
   );
+const courseLength = (sections: readonly CourseSection[]) => sections.at(-1)?.toMeters ?? null;
+const isBeyondCourse = (station: Station, sections: readonly CourseSection[]) => {
+  const courseMeters = courseLength(sections);
+  return courseMeters !== null && station.distanceMeters > courseMeters;
+};
+const stopSecondsOnCourse = (sections: readonly CourseSection[], stations: readonly Station[]) =>
+  stations
+    .filter((station) => !isBeyondCourse(station, sections))
+    .reduce((sum, station) => sum + station.stopSeconds, 0);
+
+export function movingSeconds(
+  estimate: CourseEstimate | null,
+  sections: readonly CourseSection[],
+  stations: readonly Station[],
+) {
+  return estimate && Math.max(0, estimate.seconds - stopSecondsOnCourse(sections, stations));
+}
 
 export function stationArrivals(
   estimate: CourseEstimate | null,
   sections: readonly CourseSection[],
   { startTime, finishCutoff, stations }: RaceDay,
 ) {
-  const courseMeters = sections.at(-1)?.toMeters ?? null;
-  const plannedStopSeconds = stations.reduce((sum, station) => sum + station.stopSeconds, 0);
-  const movingSeconds = estimate && Math.max(0, estimate.seconds - plannedStopSeconds);
-  const aimElapsedSecondsAt = (meters: number) =>
+  const courseMeters = courseLength(sections);
+  const plannedStopSeconds = stopSecondsOnCourse(sections, stations);
+  const totalMovingSeconds = movingSeconds(estimate, sections, stations);
+  const startSeconds = startTime === null ? null : secondsAfterMidnight(startTime);
+  const secondsBetween = (fromMeters: number, toMeters: number) =>
     estimate &&
     sections.reduce(
       (sum, section) =>
-        sum + estimate.sectionSeconds[section.index]! * sectionFraction(section, 0, meters),
+        sum +
+        estimate.sectionSeconds[section.index]! * sectionFraction(section, fromMeters, toMeters),
       0,
     );
-  const arrival = (aimElapsedSeconds: number | null, cutoff: Cutoff) => {
-    const elapsed =
-      estimate && aimElapsedSeconds !== null
-        ? {
-            aimSeconds: aimElapsedSeconds,
-            lowSeconds: (aimElapsedSeconds * estimate.lowSeconds) / estimate.seconds,
-            highSeconds: (aimElapsedSeconds * estimate.highSeconds) / estimate.seconds,
-          }
-        : null;
-    const start = startTime === null ? null : secondsAfterMidnight(startTime);
+  const arrivalRange = (secondsFromStart: number, offsetSeconds: number) => ({
+    seconds: offsetSeconds + secondsFromStart,
+    lowSeconds: offsetSeconds + (secondsFromStart * estimate!.lowSeconds) / estimate!.seconds,
+    highSeconds: offsetSeconds + (secondsFromStart * estimate!.highSeconds) / estimate!.seconds,
+  });
+  const arrival = (secondsFromStart: number | null, cutoff: Cutoff) => {
     const timeOfDay =
-      elapsed && start !== null
-        ? {
-            aimSeconds: start + elapsed.aimSeconds,
-            lowSeconds: start + elapsed.lowSeconds,
-            highSeconds: start + elapsed.highSeconds,
-          }
+      secondsFromStart !== null && startSeconds !== null
+        ? arrivalRange(secondsFromStart, startSeconds)
         : null;
     const cutoffSeconds = cutoffToSeconds(cutoff);
     return {
-      elapsed,
+      fromStart: secondsFromStart === null ? null : arrivalRange(secondsFromStart, 0),
       timeOfDay,
       cutoffSeconds,
       cutoffMarginSeconds:
         timeOfDay && cutoffSeconds !== null ? cutoffSeconds - timeOfDay.highSeconds : null,
     };
   };
-  const stationsOnCourse = stations.filter(
-    (station) => courseMeters === null || station.distanceMeters <= courseMeters,
-  );
   const legBoundaryMeters = [
     0,
-    ...stationsOnCourse.map((station) => station.distanceMeters),
+    ...stations
+      .filter((station) => !isBeyondCourse(station, sections))
+      .map((station) => station.distanceMeters),
     ...(courseMeters === null ? [] : [courseMeters]),
   ];
   const legs = legBoundaryMeters
@@ -69,40 +80,38 @@ export function stationArrivals(
     .map((toMeters, index) => ({ fromMeters: legBoundaryMeters[index]!, toMeters }))
     .filter((leg) => leg.toMeters > leg.fromMeters)
     .map(({ fromMeters, toMeters }) => {
-      const touched = sections.filter(
+      const legSections = sections.filter(
         (section) => sectionFraction(section, fromMeters, toMeters) > 0,
       );
-      const elapsed = estimate && aimElapsedSecondsAt(toMeters)! - aimElapsedSecondsAt(fromMeters)!;
+      const legSeconds = secondsBetween(fromMeters, toMeters);
       return {
         fromMeters,
         toMeters,
         ascentMeters:
-          touched.length && touched.every((section) => section.ascentMeters !== null)
-            ? touched.reduce(
+          legSections.length && legSections.every((section) => section.ascentMeters !== null)
+            ? legSections.reduce(
                 (sum, section) =>
                   sum + section.ascentMeters! * sectionFraction(section, fromMeters, toMeters),
                 0,
               )
             : null,
-        movingSeconds: elapsed === null ? null : (elapsed * movingSeconds!) / estimate!.seconds,
+        movingSeconds:
+          legSeconds === null ? null : (legSeconds * totalMovingSeconds!) / estimate!.seconds,
       };
     });
   return {
     stations: stations.map((station) => {
-      const beyondCourse = courseMeters !== null && station.distanceMeters > courseMeters;
+      const beyondCourse = isBeyondCourse(station, sections);
       return {
         station,
         beyondCourse,
-        ...arrival(
-          beyondCourse ? null : aimElapsedSecondsAt(station.distanceMeters),
-          station.cutoff,
-        ),
+        ...arrival(beyondCourse ? null : secondsBetween(0, station.distanceMeters), station.cutoff),
       };
     }),
     finish: { distanceMeters: courseMeters, ...arrival(estimate?.seconds ?? null, finishCutoff) },
     legs,
     plannedStopSeconds,
-    movingSeconds,
+    movingSeconds: totalMovingSeconds,
     stopsExceedEstimate: !!estimate && plannedStopSeconds > estimate.seconds,
   };
 }

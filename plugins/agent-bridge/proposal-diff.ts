@@ -46,7 +46,8 @@ const labels: Record<string, string> = {
   finishCutoff: 'Finish cutoff',
   stations: 'Aid stations',
   dayOffset: 'Days after race day',
-  stopSeconds: 'Stop',
+  stopSeconds: 'Planned stop',
+  verified: 'Confirmed',
   dropBag: 'Drop bag',
 };
 const listItemLabels: Record<string, string> = {
@@ -144,6 +145,7 @@ export function proposalRows(
     if (JSON.stringify(before) === JSON.stringify(after)) return;
     const key = path.at(-1) ?? '';
     if (path.length === 1 && ['id', 'revision'].includes(key)) return;
+    if (path[0] === 'stations' && ['id', 'productId'].includes(key)) return;
     const object = (value: unknown): value is Record<string, unknown> =>
       !!value && typeof value === 'object';
     if (object(before) || object(after)) {

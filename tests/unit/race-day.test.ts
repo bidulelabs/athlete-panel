@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CourseEstimate, CourseSection, RacePlan } from '@athlete-panel/contracts';
 import { movingSeconds, stationArrivals } from '../../plugins/race-analysis/race-day';
+import { clockTime } from '../../plugins/race-analysis/presentation';
 
 type Station = RacePlan['stations'][number];
 const section = (index: number, ascentMeters: number | null): CourseSection => ({
@@ -178,5 +179,17 @@ describe('station arrivals', () => {
       { fromMeters: 2500, toMeters: 10000, ascentMeters: null, movingSeconds: null },
       { fromMeters: 10000, toMeters: 20000, ascentMeters: null, movingSeconds: null },
     ]);
+  });
+});
+
+describe('clock time', () => {
+  it.each([
+    [0, '00:00'],
+    [7 * 3600 + 24 * 60 + 29, '07:24'],
+    [86400 - 20, '00:00 +1 day'],
+    [86400 + 70 * 60, '01:10 +1 day'],
+    [2 * 86400 + 15 * 3600, '15:00 +2 days'],
+  ])('shows %i seconds after race day midnight as %s', (seconds, label) => {
+    expect(clockTime(seconds)).toBe(label);
   });
 });

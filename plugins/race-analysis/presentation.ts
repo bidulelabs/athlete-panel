@@ -48,3 +48,9 @@ export function routeCoordinates(points: RacePoint[]) {
     y: 160 + (p.y - (minY + maxY) / 2) * scale,
   }));
 }
+export function clockTime(secondsAfterRaceDayMidnight: number) {
+  const minutes = Math.round(secondsAfterRaceDayMidnight / 60);
+  const days = Math.floor(minutes / 1440);
+  const time = `${String(Math.floor((minutes % 1440) / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  return days ? `${time} +${days} day${days === 1 ? '' : 's'}` : time;
+}

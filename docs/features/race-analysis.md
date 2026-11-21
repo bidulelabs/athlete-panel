@@ -4,7 +4,7 @@
 
 Help the owner understand an existing race's route, elevation, terrain and likely elapsed finish time using selected past efforts. Race analysis is an optional source plugin linked to Training-owned race events; it does not own another calendar or race record.
 
-Outside scope: AI preparation, training-plan generation, nutrition, an aid station screen, race cards, scenario comparison and post-race learning (issues 121–124), base maps, live navigation, watch export and automatic Garmin GPS/FIT ingestion.
+Outside scope: AI preparation, training-plan generation, nutrition, race cards, scenario comparison and post-race learning (issues 121–124), base maps, live navigation, watch export and automatic Garmin GPS/FIT ingestion.
 
 ## Intended behavior
 

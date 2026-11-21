@@ -1,0 +1,302 @@
+import { randomUUID } from 'node:crypto';
+import { test, expect, type Page } from '@playwright/test';
+import { courseRace, courseReferences, syntheticGpx } from '../fixtures/race-analysis';
+
+const password = process.env.E2E_PASSWORD;
+if (!password) throw new Error('Synthetic E2E_PASSWORD required.');
+
+async function signIn(page: Page, theme: string) {
+  await page.addInitScript((value) => localStorage.setItem('athlete-panel-theme', value), theme);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/login');
+  await page.getByLabel('Password', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+}
+async function ownerCommand(page: Page, baseURL: string, command: Record<string, unknown>) {
+  const response = await page.request.post('/api/plugins/training/mutate', {
+    headers: { Origin: baseURL },
+    data: { idempotencyKey: randomUUID(), commands: [command] },
+  });
+  expect(response.ok(), await response.text()).toBe(true);
+}
+async function createRace(page: Page, baseURL: string) {
+  const { title, date, kind, notes } = courseRace();
+  const id = randomUUID();
+  await ownerCommand(page, baseURL, {
+    action: 'event.create',
+    values: { id, title, date, kind, notes },
+  });
+  return id;
+}
+async function uploadCourse(page: Page, xml: string, replacing = false) {
+  await page.getByRole('tab', { name: 'Course', exact: true }).click();
+  await page
+    .getByRole('button', { name: replacing ? 'Replace GPX' : 'Upload GPX', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('GPX course file', { exact: true }).setInputFiles({
+    name: 'alpine-trail-42.gpx',
+    mimeType: 'application/gpx+xml',
+    buffer: Buffer.from(xml),
+  });
+  await dialog.getByRole('button', { name: 'Use this course', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+}
+async function addReferences(page: Page, baseURL: string, raceId: string) {
+  const readRevision = async () => {
+    const response = await page.request.post('/api/plugins/race-analysis/analysis', {
+      headers: { Origin: baseURL },
+      data: { raceId },
+    });
+    expect(response.ok(), await response.text()).toBe(true);
+    return ((await response.json()) as { revision: number }).revision;
+  };
+  for (const reference of courseReferences.slice(0, 3)) {
+    const response = await page.request.post('/api/plugins/race-analysis/uploads/track', {
+      headers: { Origin: baseURL },
+      multipart: {
+        file: {
+          name: reference.title + '.gpx',
+          mimeType: 'application/gpx+xml',
+          buffer: Buffer.from(syntheticGpx(reference)),
+        },
+        metadata: JSON.stringify({
+          raceId,
+          purpose: 'reference',
+          title: reference.title,
+          terrain: 3,
+          durationSeconds: null,
+          expectedRevision: await readRevision(),
+          idempotencyKey: randomUUID(),
+        }),
+      },
+    });
+    expect(response.ok(), await response.text()).toBe(true);
+  }
+}
+const openRaceDay = (page: Page) =>
+  page.getByRole('tab', { name: 'Race day', exact: true }).click();
+const stationNames = (page: Page) => page.locator('.race-stations th[scope="row"] strong');
+const reviewNotice = (page: Page) =>
+  page.getByText(
+    'The course or your target changed after this plan was written. Check that the stations still hold.',
+    { exact: true },
+  );
+async function fillStation(
+  page: Page,
+  station: { name: string; km: string; cutoff?: string; stop: string; source?: string },
+) {
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name', { exact: true }).fill(station.name);
+  await dialog.getByLabel(/^Distance from the start/).fill(station.km);
+  if (station.cutoff) await dialog.getByLabel('Time', { exact: true }).fill(station.cutoff);
+  await dialog.getByLabel('Planned stop (minutes)', { exact: true }).fill(station.stop);
+  await dialog.getByLabel('Water at this station', { exact: true }).focus();
+  await page.keyboard.press('Space');
+  if (station.source) {
+    await dialog.getByLabel(/^Source/).fill(station.source);
+    await dialog
+      .getByLabel('Confirmed by the organizer or the race guide', { exact: true })
+      .check();
+  }
+  await dialog.getByLabel('Name', { exact: true }).press('Enter');
+  await expect(dialog).toHaveCount(0);
+}
+
+for (const theme of ['light', 'dark']) {
+  test(`plan aid stations and race-day times by keyboard (${theme})`, async ({ page, baseURL }) => {
+    await signIn(page, theme);
+    const raceId = await createRace(page, baseURL!);
+    await page.goto(`/races?race=${raceId}`);
+    await page.getByRole('tab', { name: 'Course', exact: true }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Preparation', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Race day', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.getByRole('heading', { name: 'No aid stations yet' })).toBeVisible();
+    await expect(page.getByText('Arrival times are unknown', { exact: true })).toBeVisible();
+    await expect(page.getByText('Cutoffs and stops still show.', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Add past efforts on Course', exact: true }).click();
+    await expect(page.getByRole('tab', { name: 'Course', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+
+    await uploadCourse(page, syntheticGpx());
+    await addReferences(page, baseURL!, raceId);
+    await page.reload();
+    await openRaceDay(page);
+    await expect(page.getByText('Arrival times are unknown', { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByText('Set a start time to see arrival clock times and cutoff margins.', {
+        exact: true,
+      }),
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Add the first station', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await fillStation(page, { name: 'Grand Col', km: '28', cutoff: '12:45', stop: '6' });
+    await page.getByRole('button', { name: 'Add station', exact: true }).click();
+    await fillStation(page, {
+      name: 'Les Pins',
+      km: '9',
+      cutoff: '09:15',
+      stop: '4',
+      source: 'race guide',
+    });
+    await expect(stationNames(page)).toHaveText(['Les Pins', 'Grand Col']);
+    await expect(page.getByText('Confirmed · race guide', { exact: true })).toBeVisible();
+    await expect(page.getByText('Not confirmed', { exact: true })).toHaveCount(1);
+    await expect(page.getByText(/^Start → Les Pins · 9\.0 km/)).toBeVisible();
+    await expect(page.getByText(/^Grand Col → Finish/)).toBeVisible();
+    await expect(page.locator('.race-day-moving')).toHaveText(/^\d+h \d\dm moving, 10m stops$/);
+    await expect(page.locator('.race-day-headline')).toHaveText(
+      /^Finish \d+h \d\dm after the start$/,
+    );
+    await expect(page.getByText(/ up · about /).first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Add station', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Name', { exact: true }).fill('Same place');
+    await dialog.getByLabel(/^Distance from the start/).fill('9');
+    await dialog.getByLabel('Name', { exact: true }).press('Enter');
+    await expect(
+      dialog.getByText('Another aid station is already at this distance.', { exact: true }),
+    ).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(stationNames(page)).toHaveText(['Les Pins', 'Grand Col']);
+
+    await page.getByRole('button', { name: 'Change start time', exact: true }).click();
+    await dialog.getByLabel('Start time', { exact: true }).fill('07:00');
+    await dialog.getByLabel('Time', { exact: true }).fill('15:00');
+    await dialog.getByLabel('Start time', { exact: true }).press('Enter');
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator('.race-day-start')).toContainText('Start 07:00');
+    await expect(page.locator('.race-day-headline')).toHaveText(/^Start 07:00 → finish \d\d:\d\d$/);
+    await expect(page.locator('.race-day-cutoff')).toContainText('Finish cutoff 15:00 · ');
+    await expect(page.getByText(/^aim \d\d:\d\d$/).first()).toBeVisible();
+    await expect(page.getByText(/ (margin|after the cutoff)$/).first()).toBeVisible();
+
+    const viewport = page.viewportSize()!;
+    await page.setViewportSize({ width: 320, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.setViewportSize(viewport);
+
+    await uploadCourse(page, syntheticGpx({ km: 30, salt: 'replacement' }), true);
+    await openRaceDay(page);
+    await expect(reviewNotice(page)).toBeVisible();
+    await page.getByRole('tab', { name: 'Preparation', exact: true }).click();
+    await expect(page.getByText(/changed after this strategy was written/)).toBeVisible();
+    await openRaceDay(page);
+    await page.getByRole('button', { name: 'Mark as reviewed', exact: true }).click();
+    await expect(reviewNotice(page)).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Remove Les Pins', exact: true }).click();
+    await page.getByRole('button', { name: 'Remove station', exact: true }).click();
+    await expect(stationNames(page)).toHaveText(['Grand Col']);
+    await page.getByRole('button', { name: 'Remove Grand Col', exact: true }).click();
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(stationNames(page)).toHaveText(['Grand Col']);
+  });
+}
+
+test('keeps the station draft when the plan changed elsewhere, then saves it after a reload', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await createRace(page, baseURL!);
+  const racePlanId = randomUUID();
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.create',
+    values: { id: racePlanId, eventId: raceId, target: 'Finish comfortably' },
+  });
+  await page.goto(`/races?race=${raceId}`);
+  await openRaceDay(page);
+  await page.getByRole('button', { name: 'Add the first station', exact: true }).click();
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.update',
+    id: racePlanId,
+    expectedRevision: 1,
+    values: { startTime: '06:30' },
+  });
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Name', { exact: true }).fill('Les Pins');
+  await dialog.getByLabel(/^Distance from the start/).fill('9');
+  await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(dialog.getByText(/Use Reload saved data to review the saved version/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Reload saved data', exact: true }).click();
+  await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Les Pins');
+  await expect(page.locator('.race-day-start')).toContainText('Start 06:30');
+  await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(stationNames(page)).toHaveText(['Les Pins']);
+  await expect(page.locator('.race-day-start')).toContainText('Start 06:30');
+});
+
+test('shows a station beyond the course, a missed cutoff and stops longer than the estimate', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await createRace(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await uploadCourse(page, syntheticGpx());
+  await addReferences(page, baseURL!, raceId);
+  const station = (name: string, distanceMeters: number, values = {}) => ({
+    id: randomUUID(),
+    name,
+    distanceMeters,
+    cutoff: null,
+    stopSeconds: 0,
+    water: false,
+    food: '',
+    dropBag: [],
+    action: '',
+    source: '',
+    verified: false,
+    ...values,
+  });
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.create',
+    values: {
+      eventId: raceId,
+      startTime: '07:00',
+      finishCutoff: { dayOffset: 0, time: '08:00' },
+      stations: [
+        station('Les Pins', 9000, {
+          cutoff: { dayOffset: 0, time: '07:10' },
+          stopSeconds: 86400,
+        }),
+        station('Far Away', 90000),
+      ],
+    },
+  });
+  await page.reload();
+  await openRaceDay(page);
+  const farAway = page.locator('.race-stations tr').filter({ hasText: 'Far Away' });
+  await expect(farAway.getByText('Beyond the course', { exact: true })).toBeVisible();
+  await expect(farAway.getByText('No arrival', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Planned stops are longer than the whole estimate. Moving time is shown as 0.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.locator('.race-day-moving')).toHaveText(/^0h 00m moving, 24h stops$/);
+  const lesPins = page.locator('.race-stations tr').filter({ hasText: 'Les Pins' });
+  await expect(lesPins.locator('.race-late')).toHaveText(/ after the cutoff$/);
+  await expect(page.locator('.race-day-cutoff .race-late')).toHaveText(
+    /Latest finish is .+ after the cutoff$/,
+  );
+  await expect(page.getByText(/^Les Pins → Finish · /)).toBeVisible();
+  await expect(page.getByText(/^Far Away → /)).toHaveCount(0);
+});

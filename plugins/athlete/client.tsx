@@ -249,13 +249,13 @@ function ProfileForm({ data, request }: PluginPageProps) {
   );
 }
 
+const settingsTabs = ['profile', 'nutrition', 'notes', 'events', 'injuries'] as const;
+
 export default function AthletePage(props: PluginPageProps) {
   const confirm = useConfirm();
   const { envelope } = useWorkspace();
   const { data, request } = props;
-  const [tab, setTab] = useState<'profile' | 'nutrition' | 'notes' | 'events' | 'injuries'>(
-    'profile',
-  );
+  const [tab, setTab] = useState<(typeof settingsTabs)[number]>('profile');
   const [editing, setEditing] = useState<{ kind: ContextKind; record?: any } | null>(null);
   const action = useAction();
   const kind: ContextKind = tab === 'notes' ? 'note' : tab === 'events' ? 'event' : 'injury';
@@ -275,7 +275,7 @@ export default function AthletePage(props: PluginPageProps) {
       />
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
         <TabsList className="workspace-tabs" aria-label="Athlete settings">
-          {(['profile', 'nutrition', 'notes', 'events', 'injuries'] as const).map((value) => (
+          {settingsTabs.map((value) => (
             <TabsTrigger key={value} value={value}>
               {value === 'profile'
                 ? 'Profile & zones'

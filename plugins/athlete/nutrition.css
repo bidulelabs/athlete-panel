@@ -5,17 +5,70 @@
   justify-content: space-between;
   gap: 12px;
 }
-.nutrition-products-scroll {
-  overflow-x: auto;
-}
 .nutrition-products th.numeric,
 .nutrition-products td.numeric {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.nutrition-heading p {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 23px;
+.badge.tolerance-mild {
+  color: var(--fact-race);
+}
+.badge.tolerance-poor {
+  color: var(--danger);
+}
+.caffeine-note {
+  display: none;
+}
+.amount-hint {
+  margin-bottom: 8px;
+}
+@media (max-width: 760px) {
+  .nutrition-products thead {
+    display: none;
+  }
+  .nutrition-products,
+  .nutrition-products tbody {
+    display: block;
+  }
+  .nutrition-products tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 12px;
+    padding: 14px 0;
+  }
+  .nutrition-products td {
+    display: block;
+    padding: 0;
+    white-space: normal;
+  }
+  .nutrition-products td:first-child {
+    grid-column: 1 / 3;
+  }
+  .nutrition-products td.numeric {
+    text-align: left;
+  }
+  .nutrition-products td.numeric::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--faint);
+    font-size: 10px;
+  }
+  .nutrition-products td.caffeineMilligrams {
+    display: none;
+  }
+  .caffeine-note {
+    display: inline;
+  }
+  .nutrition-products td:last-child {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .nutrition-products .table-actions {
+    gap: 8px;
+  }
+  .nutrition-products .icon-button {
+    width: 44px;
+    height: 44px;
+  }
 }

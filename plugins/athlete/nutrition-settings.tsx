@@ -1,6 +1,10 @@
 'use client';
 
-import type { NutritionProduct, NutritionProfile } from '@athlete-panel/contracts';
+import {
+  nutritionAmountMaximums,
+  type NutritionProduct,
+  type NutritionProfile,
+} from '@athlete-panel/contracts';
 import {
   AddButton,
   Alert,
@@ -43,6 +47,12 @@ const toleranceLabels = {
   mild: 'Mild discomfort',
   poor: 'Poor',
   untested: 'Not tested',
+};
+const toleranceBadges = {
+  comfortable: 'badge success',
+  mild: 'badge tolerance-mild',
+  poor: 'badge tolerance-poor',
+  untested: 'badge',
 };
 const amountFields = [
   ['carbohydrateGrams', 'Carbs', 'g'],
@@ -123,6 +133,7 @@ function ProductDialog({
               <Input
                 type="number"
                 min="0"
+                max={nutritionAmountMaximums[name]}
                 step="any"
                 name={name}
                 placeholder="Unknown"
@@ -131,6 +142,7 @@ function ProductDialog({
             </Field>
           ))}
         </div>
+        <p className="muted-text amount-hint">Enter 0 if there is none.</p>
         <Field label="Your tolerance">
           <NativeSelect name="tolerance" defaultValue={product?.tolerance ?? 'untested'}>
             {Object.entries(toleranceLabels).map(([value, label]) => (
@@ -164,69 +176,70 @@ function ProductTable({
   onRemove: (product: NutritionProduct) => void;
 }) {
   return (
-    <div className="nutrition-products-scroll">
-      <Table className="nutrition-products">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Product</TableHead>
-            {amountFields.map(([name, label]) => (
-              <TableHead key={name} className="numeric">
-                {label}
-              </TableHead>
-            ))}
-            <TableHead>Your tolerance</TableHead>
-            <TableHead>
-              <span className="sr-only">Actions</span>
+    <Table className="nutrition-products">
+      <TableHeader>
+        <TableRow>
+          <TableHead>Product</TableHead>
+          {amountFields.map(([name, label]) => (
+            <TableHead key={name} className={`numeric ${name}`}>
+              {label}
             </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {products.map((product) => (
-            <TableRow key={product.id}>
-              <TableCell>
-                <strong>{product.name}</strong>
-                <div className="muted-text">
-                  {kindLabels[product.kind]} · {sourceLabels[product.source]}
-                </div>
-              </TableCell>
-              {amountFields.map(([name, , unit]) => (
-                <TableCell key={name} className="numeric">
-                  {amountText(product[name], unit)}
-                </TableCell>
-              ))}
-              <TableCell>
-                <Badge className={product.tolerance === 'comfortable' ? 'badge success' : 'badge'}>
-                  {toleranceLabels[product.tolerance]}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="table-actions">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="icon-button"
-                    aria-label={`Edit ${product.name}`}
-                    onClick={() => onEdit(product)}
-                  >
-                    <Edit3 size={15} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="icon-button"
-                    aria-label={`Remove ${product.name}`}
-                    disabled={busy}
-                    onClick={() => onRemove(product)}
-                  >
-                    <Trash2 size={15} />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
           ))}
-        </TableBody>
-      </Table>
-    </div>
+          <TableHead>Your tolerance</TableHead>
+          <TableHead>
+            <span className="sr-only">Actions</span>
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {products.map((product) => (
+          <TableRow key={product.id}>
+            <TableCell>
+              <strong>{product.name}</strong>
+              <div className="muted-text">
+                {kindLabels[product.kind]} · {sourceLabels[product.source]}
+                {!!product.caffeineMilligrams && (
+                  <span className="caffeine-note"> · {product.caffeineMilligrams} mg caffeine</span>
+                )}
+              </div>
+            </TableCell>
+            {amountFields.map(([name, label, unit]) => (
+              <TableCell key={name} className={`numeric ${name}`} data-label={label}>
+                {amountText(product[name], unit)}
+              </TableCell>
+            ))}
+            <TableCell>
+              <Badge className={toleranceBadges[product.tolerance]}>
+                {toleranceLabels[product.tolerance]}
+              </Badge>
+            </TableCell>
+            <TableCell>
+              <div className="table-actions">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="icon-button"
+                  aria-label={`Edit ${product.name}`}
+                  onClick={() => onEdit(product)}
+                >
+                  <Edit3 size={15} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="icon-button"
+                  aria-label={`Remove ${product.name}`}
+                  disabled={busy}
+                  onClick={() => onRemove(product)}
+                >
+                  <Trash2 size={15} />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -250,8 +263,9 @@ function CarryCapacityAndPreferencesForm({
   const [formKey, setFormKey] = useState(0);
   const [saved, setSaved] = useState(false);
   const changedElsewhere =
-    loadedNutrition.carryCapacityMillilitres !== nutrition.carryCapacityMillilitres ||
-    loadedNutrition.preferences !== nutrition.preferences;
+    !action.busy &&
+    (loadedNutrition.carryCapacityMillilitres !== nutrition.carryCapacityMillilitres ||
+      loadedNutrition.preferences !== nutrition.preferences);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaved(false);
@@ -309,24 +323,23 @@ function CarryCapacityAndPreferencesForm({
       <section className="profile-form-section">
         <h2>Diet and preferences</h2>
         <p>Plain text. Shared with an assistant only when you allow it for a race.</p>
-        <Field label="Diet and preferences">
-          <Textarea
-            name="preferences"
-            rows={4}
-            maxLength={2000}
-            defaultValue={loadedNutrition.preferences}
-            placeholder="e.g. Vegetarian. No lactose in the 3 hours before running."
-          />
-        </Field>
+        <Textarea
+          aria-label="Diet and preferences"
+          name="preferences"
+          rows={4}
+          maxLength={2000}
+          defaultValue={loadedNutrition.preferences}
+          placeholder="e.g. Vegetarian. No lactose in the 3 hours before running."
+        />
       </section>
       <ErrorMessage error={action.error} />
       {saved && (
         <div className="success-message" role="status">
           <Check size={15} />
-          Nutrition saved.
+          Capacity and preferences saved.
         </div>
       )}
-      <SubmitButton busy={action.busy}>Save nutrition</SubmitButton>
+      <SubmitButton busy={action.busy}>Save capacity and preferences</SubmitButton>
     </form>
   );
 }
@@ -339,16 +352,24 @@ export function NutritionSettings({ data, request }: PluginPageProps) {
   const revision = data.profile?.revision ?? null;
   const saveProducts = (products: NutritionProduct[], done?: () => void) =>
     void action.run(() => saveNutrition(request, { ...nutrition, products }, revision), done);
+  const close = () => {
+    action.setError(null);
+    setEditing(null);
+  };
+  if (!data.profile)
+    return (
+      <EmptyState icon={<UtensilsCrossed size={25} />} title="Save your profile first">
+        Nutrition is kept in your athlete profile. Save Profile & zones once, then come back.
+      </EmptyState>
+    );
   return (
     <div className="nutrition-settings">
       <section className="profile-form-section">
         <div className="nutrition-heading">
-          <div>
-            <h2>Products you use</h2>
-            <p>Reused by every race. Values per serving, from the label or your own estimate.</p>
-          </div>
+          <h2>Products you use</h2>
           <AddButton onClick={() => setEditing({})}>Add product</AddButton>
         </div>
+        <p>Reused by every race. Values per serving, from the label or your own estimate.</p>
         {!editing && <ErrorMessage error={action.error} />}
         {nutrition.products.length ? (
           <ProductTable
@@ -376,18 +397,16 @@ export function NutritionSettings({ data, request }: PluginPageProps) {
           product={editing.product}
           busy={action.busy}
           error={action.error}
-          onClose={() => {
-            action.setError(null);
-            setEditing(null);
-          }}
-          onSave={(product) =>
+          onClose={close}
+          onSave={(product) => {
+            if (!editing.product) return saveProducts([...nutrition.products, product], close);
+            if (!nutrition.products.some((other) => other.id === product.id))
+              return action.setError('This product was removed elsewhere.');
             saveProducts(
-              editing.product
-                ? nutrition.products.map((other) => (other.id === product.id ? product : other))
-                : [...nutrition.products, product],
-              () => setEditing(null),
-            )
-          }
+              nutrition.products.map((other) => (other.id === product.id ? product : other)),
+              close,
+            );
+          }}
         />
       )}
     </div>

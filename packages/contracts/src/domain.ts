@@ -82,16 +82,22 @@ const heartRateZones = z.object({ cycling: zoneBounds, running: zoneBounds }).st
 const ftpWatts = z.number().int().min(1).max(3000).nullable();
 const restingHeartRateBpm = z.number().int().min(25).max(120).nullable();
 const maxHeartRateBpm = z.number().int().min(100).max(240).nullable();
+export const nutritionAmountMaximums = {
+  carbohydrateGrams: 500,
+  fluidMillilitres: 5000,
+  sodiumMilligrams: 10000,
+  caffeineMilligrams: 1000,
+} as const;
 const amountPerServing = (max: number) => z.number().finite().min(0).max(max).nullable();
 export const nutritionProductSchema = z
   .object({
     id: idSchema,
     name: text,
     kind: z.enum(['gel', 'drink', 'food', 'other']),
-    carbohydrateGrams: amountPerServing(500),
-    fluidMillilitres: amountPerServing(5000),
-    sodiumMilligrams: amountPerServing(10000),
-    caffeineMilligrams: amountPerServing(1000),
+    carbohydrateGrams: amountPerServing(nutritionAmountMaximums.carbohydrateGrams),
+    fluidMillilitres: amountPerServing(nutritionAmountMaximums.fluidMillilitres),
+    sodiumMilligrams: amountPerServing(nutritionAmountMaximums.sodiumMilligrams),
+    caffeineMilligrams: amountPerServing(nutritionAmountMaximums.caffeineMilligrams),
     source: z.enum(['label', 'estimate']),
     tolerance: z.enum(['comfortable', 'mild', 'poor', 'untested']),
   })
@@ -1092,7 +1098,7 @@ export function describeAgentAccess(scope: GrantScope): string[] {
           `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
           `Create races and goals: ${planning.allowEventCreation === true ? 'permitted within the proposal dates' : 'not permitted'}.`,
           `Change plan phases: ${planning.allowPhaseChanges === true ? 'permitted for phases within the proposal dates' : 'not permitted'}.`,
-          `Race preparation: ${planning.raceId ? 'course summary and race plan of the selected race and your nutrition products and preferences shared, race plan proposals permitted' : 'not permitted'}.`,
+          `Race preparation: ${planning.raceId ? 'course summary and race plan of the selected race and your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted' : 'not permitted'}.`,
         ]
       : ['Proposal submission is not permitted.']),
     'Applying training changes requires your review and explicit approval in Athlete Panel.',

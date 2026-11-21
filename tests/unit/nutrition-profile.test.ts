@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   commandSchema,
+  historyResponseSchema,
+  nutritionAmountMaximums,
   emptyWorkspace,
   nutritionProfileSchema,
   profileValuesSchema,
@@ -65,6 +67,25 @@ describe('nutrition profile contract', () => {
   it('refuses a product name that is blank after trimming', () => {
     expect(accepts({ ...nutrition, products: [{ ...gel, name: '  Gel  ' }] })).toBe(true);
     expect(accepts({ ...nutrition, products: [{ ...gel, name: '   ' }] })).toBe(false);
+  });
+
+  it('accepts each amount at its maximum and refuses it above', () => {
+    for (const [name, maximum] of Object.entries(nutritionAmountMaximums)) {
+      const products = (value: number) => [{ ...gel, [name]: value }];
+      expect(accepts({ ...nutrition, products: products(maximum) })).toBe(true);
+      expect(accepts({ ...nutrition, products: products(maximum + 1) })).toBe(false);
+    }
+  });
+
+  it('keeps nutrition out of the history profile contract', () => {
+    const profile = {
+      ...profileValuesSchema.parse({ displayName: 'Synthetic owner' }),
+      id: 'owner',
+      revision: 1,
+    };
+    const profileField = historyResponseSchema.shape.profile;
+    expect(profileField.safeParse(profile).success).toBe(true);
+    expect(profileField.safeParse({ ...profile, nutrition }).success).toBe(false);
   });
 
   it('refuses invalid values', () => {

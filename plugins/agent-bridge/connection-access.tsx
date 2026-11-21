@@ -336,7 +336,7 @@ export function ConnectionAccess({
                   <br />
                   Race preparation:{' '}
                   {raceToPrepare
-                    ? `${raceToPrepare.title}, with your nutrition products and preferences`
+                    ? `${raceToPrepare.title}, with your nutrition profile (products, carry capacity, preferences)`
                     : 'not permitted'}
                   <br />
                   Can also read profile, goals, availability, zones, training, events, injuries,

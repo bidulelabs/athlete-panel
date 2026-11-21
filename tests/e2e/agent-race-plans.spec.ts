@@ -75,7 +75,7 @@ test('connect an agent to one race, then review, apply and undo its race plan', 
     await raceToPrepare.selectOption(raceId);
     await expect(page.locator('input[name="to"]')).toHaveValue(raceDate);
     await expect(page.getByRole('region', { name: 'Access summary' })).toContainText(
-      `Race preparation: ${raceTitle}, with your nutrition products and preferences`,
+      `Race preparation: ${raceTitle}, with your nutrition profile (products, carry capacity, preferences)`,
     );
     await page.getByLabel('Approval code', { exact: true }).fill(pending.code);
     const approval = page.waitForResponse((r) =>

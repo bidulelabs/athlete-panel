@@ -334,7 +334,10 @@ export function ConnectionAccess({
                   <br />
                   Change plan phases: {allowPhaseChanges ? 'permitted' : 'not permitted'}
                   <br />
-                  Race preparation: {raceToPrepare ? raceToPrepare.title : 'not permitted'}
+                  Race preparation:{' '}
+                  {raceToPrepare
+                    ? `${raceToPrepare.title}, with your nutrition profile (products, carry capacity, preferences)`
+                    : 'not permitted'}
                   <br />
                   Can also read profile, goals, availability, zones, training, events, injuries,
                   activities and health in this period.

@@ -3,12 +3,12 @@ export const registry = [
   {
     "path": "plugins/athlete",
     "enabled": true,
-    "version": "1.3.1",
+    "version": "1.4.0",
     "manifest": {
       "id": "athlete",
       "name": "Athlete",
       "description": "Profile, preferences and training constraints",
-      "version": "1.3.1",
+      "version": "1.4.0",
       "hostApi": "^1.1.0",
       "dependencies": {
         "training": "^2.5.0"

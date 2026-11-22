@@ -219,6 +219,10 @@ Race plans add the `racePlan` record to Training, `raceId` to planning scopes an
 
 Race plans gain `startTime`, `finishCutoff` and `stations`, owner fields only, released in Training 2.6 and Agent Bridge 2.5.1. Upgrade the application and CLI together, no SQL migration. Stored plans are read with no start time, no cutoff and no station. A planning context limited to a race includes these fields in its race plan: a context read by an agent before the upgrade no longer matches, so the agent reads it again; contexts of grants without a race are unchanged. Older parsers reject a race plan holding these fields, so roll back only with the matching pre-upgrade backup.
 
+#### Nutrition profile upgrade
+
+The athlete profile gains an optional `nutrition` key (products, carry capacity, preferences), released in Athlete 1.4 and Agent Bridge 2.5.1 with contracts 2.7. Upgrade the application as usual; no SQL migration. Existing profiles, grants and their context digests are unchanged until the owner saves nutrition. The profile is strict: older parsers reject a workspace whose profile holds `nutrition`, so roll back only with the matching pre-upgrade backup.
+
 ### Historical review and annual planning commands
 
 Historical ranges include both endpoints and may extend through the fifth calendar anniversary; planning ranges through the first. February 29 anniversaries clamp to February 28 in non-leap years. Existing grants retain their old dates and do not gain history access. Future scheduled records are permitted. The browser captures the current resolved week boundary for the review.

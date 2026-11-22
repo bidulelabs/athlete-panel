@@ -2,9 +2,9 @@
 
 ## Purpose and scope
 
-The athlete keeps one plan per race: what they want from it, a briefing and the effort to hold on each section of the course. An external assistant can write the strategy; the owner reviews it before anything is saved.
+The athlete keeps one plan per race: what they want from it, a briefing and the effort to hold on each section of the course. An external assistant can write the strategy; the owner reviews it before anything is saved. Settings keeps the nutrition products the athlete trains and races with, how much they can carry and their diet preferences, reused by every race.
 
-Outside scope: nutrition, what to carry between stations, drop bag contents, a printable race card, scenarios, the post-race review, a list of past versions and watch export.
+Outside scope: race-day nutrition in the race plan, what to carry between stations, drop bag contents, a printable race card, scenarios, the post-race review, a list of past versions and watch export.
 
 ## Intended behavior
 
@@ -42,6 +42,17 @@ Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/iss
 - When Agent Bridge is enabled, the tab links to the Agent workspace, where a connection is limited to the race and proposals are reviewed. The tab shows no proposal status of its own.
 - Assistants read and propose a race plan only through a planning connection limited to that race. Details in [Agent training](agent-training.md#race-plan-proposals).
 
+### Nutrition in Settings
+
+Requirement source: [issue #122](https://github.com/bidulelabs/athlete-panel/issues/122), first part.
+
+- The athlete profile holds an optional `nutrition`: up to 50 products, a carry capacity in millilitres and diet preferences of up to 2000 characters. A profile saved before this has no `nutrition` and reads as before.
+- A product has a name, a type (gel, drink, food or other), its carbohydrate, fluid, sodium and caffeine per serving, where the values come from (the label or the athlete's estimate) and the athlete's tolerance (comfortable, mild discomfort, poor or not tested). Each value may be unknown and has a maximum (500 g carbohydrate, 5000 ml fluid, 10000 mg sodium, 1000 mg caffeine). Product ids are unique.
+- **Settings** gains a **Nutrition** tab. Products are listed in a table, as cards below 760 px with caffeine in the grey line when above 0; an unknown value reads "unknown", a zero reads "0". Tolerance badges are coloured: comfortable as success, mild discomfort and poor as warnings. **Add product** and **Edit** open a dialog; saving it, or confirming **Remove**, saves the product list at once. **Save capacity and preferences** saves the rest.
+- Before the first profile save, the tab says **Save your profile first** and offers no editing, so nutrition never creates a profile with default settings.
+- A save over a profile changed elsewhere is refused and offers **Reload saved data**; the draft stays until **Load saved nutrition** replaces it. Saving an edit to a product removed elsewhere says "This product was removed elsewhere." and saves nothing. Saving **Profile & zones** leaves nutrition unchanged.
+- An assistant reads the profile's nutrition only through a planning connection limited to a race, whether or not that connection includes private notes. Other planning connections and historical review receive the profile without the `nutrition` key, so their context digest does not depend on it. Saving nutrition still changes the profile revision, so like any profile change it asks a connection that already read its context to read it again (`409 stale_context`).
+
 ## Acceptance scenarios
 
 | Situation | Expected result | Verification |
@@ -67,6 +78,12 @@ Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/iss
 | Station form: new or edited, miles, cutoff time empty with a day chosen, next-day cutoff, unchecked boxes | Meters and seconds; id and drop bag kept; unchanged distance kept exact; no cutoff; day kept | Form tests |
 | Plan with stations alone, course replaced / unchanged | Needs review in Race day and Preparation / not | Race day browser flow, form tests |
 | Station saved over a plan changed elsewhere | Refused, draft kept; saved after **Reload saved data** | Race day browser flow |
+| Nutrition with 50 products / 51, a repeated id, a blank name, a negative value, an amount above its maximum, unknown values | Accepted / refused, refused, refused, refused, refused, accepted | [Nutrition profile tests](../../tests/unit/nutrition-profile.test.ts) |
+| Profile & zones saved after nutrition | Nutrition unchanged | Nutrition profile tests, [Settings nutrition browser flow](../../tests/e2e/settings-nutrition.spec.ts) |
+| Owner adds, edits and removes a product, saves capacity and preferences | Saved; unknown values read "unknown"; poor tolerance and estimated values shown; cards with caffeine in the grey line and 44 px actions on a phone; by keyboard, light and dark, at 320 px | Settings nutrition browser flow |
+| Edit saved for a product removed elsewhere / tab opened before any profile | "This product was removed elsewhere." / **Save your profile first** | Settings nutrition browser flow |
+| Nutrition save over a profile changed elsewhere | Refused; the draft stays after **Reload saved data**; **Load saved nutrition** shows the saved values | Settings nutrition browser flow |
+| Planning connection without a race / limited to a race / historical review | No `nutrition` key / nutrition shared, then `stale_context` after it changes / no `nutrition` key | Nutrition profile tests, [nutrition integration](../../tests/integration/nutrition-profile.test.ts) |
 | Weeks from today to a race, with and without a phase or planned sessions; race on a Monday; race day; the day after or later | One row per week with phase, target and planned volume; race week included, until race day; no row after | [Week tests](../../tests/unit/preparation-weeks.test.ts), Preparation browser flow |
 
 ## Observed implementation
@@ -81,3 +98,4 @@ Training stores race plans as records of kind `racePlan`, beside plans, workouts
 - `startTime`, `finishCutoff` and `stations` are owner command fields only; the agent forms refuse them. Record: [decision 024](../decisions/024-race-day-in-race-plan.md).
 - Modern planning scopes carry optional `raceId`. The planning context has a `racePlans` key only when it is set.
 - No SQL migration. Upgrade and rollback: [race plan upgrade](../development.md#race-plan-upgrade) and [race day upgrade](../development.md#race-day-upgrade).
+- `profile.set` accepts `nutrition`, replaced as a whole. The Nutrition tab is `plugins/athlete/nutrition-settings.tsx`; Agent Bridge leaves `nutrition` out of the profile in `boundedContext` without `raceId`; Athlete's `historicalProfile` always leaves it out, and the history response contract has no `nutrition` key. No SQL migration. Upgrade and rollback: [nutrition profile upgrade](../development.md#nutrition-profile-upgrade).

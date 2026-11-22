@@ -510,7 +510,7 @@ describe('race plan scope', () => {
     const access = (planning: Record<string, unknown>) =>
       describeAgentAccess(grantScopeSchema.parse({ version: 2, history: null, planning }));
     expect(access({ ...scope, raceId })).toContain(
-      'Race preparation: course summary and race plan of the selected race shared, race plan proposals permitted.',
+      'Race preparation: course summary and race plan of the selected race and your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted.',
     );
     expect(access(scope)).toContain('Race preparation: not permitted.');
   });

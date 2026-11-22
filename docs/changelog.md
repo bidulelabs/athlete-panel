@@ -6,6 +6,7 @@ Use the documentation link for the version you installed. Each release page incl
 
 - Race analysis keeps an unsaved terrain draft saveable after you add, edit or remove a reference effort in the same tab; a change from another tab still requires reviewing saved data first. Reference efforts no longer return the redundant `comparison` field.
 - Training stores one race plan per race: the owner's target, a briefing, pacing by course section, assumptions and open questions. **Connect an agent** offers a **Race to prepare**: the agent of that connection reads the race's plan and a summary of its course (no coordinates or file names) and proposes the plan through the usual owner review, in the same proposal as phases and workouts; the target stays the owner's. Deleting a race deletes its plan, and one undo restores both. **Races** gains a **Preparation** tab to write the plan by hand and to see when a new course or target calls for a review, with the weeks left until race day (phase, target, planned sessions). See [Race preparation](features/race-preparation.md).
+- **Settings** gains a **Nutrition** tab: the gels, drinks and food you use with their carbohydrate, fluid, sodium and caffeine per serving (unknown values stay unknown), your tolerance of each, how much you can carry and your diet preferences. An agent reads them only through a connection limited to a race; other connections and historical review do not receive them. See [Race preparation](features/race-preparation.md#nutrition-in-settings).
 
 - A race plan can hold a start time, a finish cutoff and aid stations (distance, cutoff, planned stop, water, food, drop bag, action, source, confirmed), set by the owner; assistants cannot propose them yet. Assistants limited to a race read them in that race's plan.
 
@@ -14,6 +15,8 @@ Use the documentation link for the version you installed. Each release page incl
 ### Upgrade steps
 
 Earlier releases cannot read race plans holding aid stations: see [race day upgrade guidance](development.md#race-day-upgrade). Earlier releases cannot read stored race plans, grants limited to a race or race plan proposals: rollback after those records exist requires the matching pre-upgrade backup. See [race plan upgrade guidance](development.md#race-plan-upgrade).
+
+Earlier releases cannot read a profile holding nutrition: rollback after it is saved requires the matching pre-upgrade backup. See [nutrition profile upgrade guidance](development.md#nutrition-profile-upgrade).
 
 ## v0.5.0 (2026-11-13)
 

@@ -6,6 +6,7 @@ import {
   type Period,
   type RacePlan,
   type PlanningScope,
+  type Profile,
   type TrainingEvent,
 } from '../../packages/contracts/src';
 import { assert } from '../../packages/host/src/errors';
@@ -24,6 +25,8 @@ const withoutStepNotes = (steps: WorkoutStep[]): WorkoutStep[] =>
       ? { ...step, steps: step.steps.map((child) => ({ ...child, notes: '' })) }
       : { ...step, notes: '' },
   );
+export const withoutNutrition = ({ nutrition: _nutrition, ...profile }: Profile): Profile =>
+  profile;
 export function boundedContext(state: WorkspaceState, scope: Scope) {
   const within = (date: string | null) => date !== null && date >= scope.from && date <= scope.to;
   const workouts = state.workouts.filter(
@@ -38,7 +41,7 @@ export function boundedContext(state: WorkspaceState, scope: Scope) {
     : [];
   for (const note of notes) if (note.schedule.kind === 'plan') planIds.add(note.schedule.planId);
   return {
-    profile: state.profile,
+    profile: state.profile && !scope.raceId ? withoutNutrition(state.profile) : state.profile,
     plans: state.plans
       .filter((p) => planIds.has(p.id) || within(p.startDate))
       .map((p) => (scope.includeNotes ? p : { ...p, description: '' })),

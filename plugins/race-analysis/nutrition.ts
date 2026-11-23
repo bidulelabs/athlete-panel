@@ -29,9 +29,12 @@ export const nutrients = [
 
 export type Nutrient = (typeof nutrients)[number];
 
+export const findProduct = (products: readonly NutritionProduct[], productId: string) =>
+  products.find((product) => product.id === productId);
+
 export function hourlyIntake(schedule: Schedule, products: readonly NutritionProduct[]) {
   const scheduled = schedule.flatMap((item) => {
-    const product = products.find((candidate) => candidate.id === item.productId);
+    const product = findProduct(products, item.productId);
     return product ? [{ ...item, product }] : [];
   });
   const perHour = (amount: Nutrient['amount']) => {
@@ -59,7 +62,7 @@ export function hourlyIntake(schedule: Schedule, products: readonly NutritionPro
     removedProductIds: [
       ...new Set(
         schedule
-          .filter((item) => !products.some((product) => product.id === item.productId))
+          .filter((item) => !findProduct(products, item.productId))
           .map((item) => item.productId),
       ),
     ],

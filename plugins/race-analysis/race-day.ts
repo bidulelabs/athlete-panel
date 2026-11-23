@@ -115,3 +115,6 @@ export function stationArrivals(
     stopsExceedEstimate: !!estimate && plannedStopSeconds > estimate.seconds,
   };
 }
+
+export type RaceDayTiming = ReturnType<typeof stationArrivals>;
+export type StopArrival = Omit<RaceDayTiming['finish'], 'distanceMeters'>;

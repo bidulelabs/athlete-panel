@@ -923,3 +923,144 @@
   color: var(--muted);
   font-weight: 400;
 }
+.race-card-sheet {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+  margin: 24px 0;
+}
+.race-card-sheet h2,
+.race-card-sheet p {
+  margin: 0;
+}
+.race-card-review-line {
+  display: none;
+}
+.race-card-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 32px;
+  align-items: end;
+  padding: 20px 0;
+  border-block: 1px solid var(--line);
+}
+.race-card-finish {
+  display: block;
+  font-size: clamp(34px, 6vw, 46px);
+  font-weight: 640;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.race-card-text,
+.race-card-cues {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.race-card-cues {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+.race-card-stops {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.race-card-stops li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-areas: 'marker title time' 'marker body body';
+  gap: 4px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.race-card-title {
+  grid-area: title;
+}
+.race-card-body {
+  grid-area: body;
+}
+.race-card-body p {
+  margin: 0;
+}
+.race-card-detail {
+  color: var(--muted);
+  font-size: 14px;
+}
+.race-card-marker {
+  grid-area: marker;
+  font-weight: 600;
+}
+.race-card-time {
+  grid-area: time;
+  font-weight: 600;
+  text-align: right;
+}
+@media (max-width: 760px) {
+  .race-card .page-header {
+    flex-wrap: wrap;
+  }
+  .race-card .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .race-card .header-actions button {
+    flex: 1;
+  }
+  .race-card-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .race-card-stops li {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+  }
+}
+@media print {
+  body:has(.race-card) {
+    background: white;
+    color: black;
+    color-scheme: light;
+    --text: #000;
+    --muted: #444;
+    --line: #bbb;
+    --surface: #fff;
+    --surface-raised: #fff;
+  }
+  body:has(.race-card) .sidebar,
+  body:has(.race-card) .mobile-bar,
+  body:has(.race-card) .race-selector,
+  body:has(.race-card) .race-tabs,
+  body:has(.race-card) .race-card .header-actions,
+  body:has(.race-card) .race-card .race-review-notice {
+    display: none !important;
+  }
+  body:has(.race-card) .workspace-shell,
+  body:has(.race-card) .workspace-main,
+  body:has(.race-card) .page-content {
+    display: block;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    width: auto;
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .race-card-sheet {
+    max-width: none;
+    font-size: 10pt;
+  }
+  .race-card-review-line {
+    display: block;
+    border: 1px solid #000;
+    padding: 6px 10px;
+  }
+  .race-card-stops li {
+    break-inside: avoid;
+  }
+  .race-card .race-late {
+    font-weight: 700;
+    text-decoration: underline;
+  }
+}

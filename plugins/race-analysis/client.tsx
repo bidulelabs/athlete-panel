@@ -26,6 +26,7 @@ import { UploadDialog } from './upload-dialog';
 import { ReferenceEfforts } from './reference-efforts';
 import { Preparation } from './preparation';
 import { Nutrition } from './nutrition-tab';
+import { RaceCard } from './race-card-tab';
 import { RaceDay } from './race-day-tab';
 import { useRaceAction, useRaceAnalysis } from './use-analysis';
 import { estimateCourse } from './estimate';
@@ -395,7 +396,9 @@ function AnalysisView({
 }
 function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }) {
   const { value, error, loading, reload } = useRaceAnalysis(raceId);
-  const [tab, setTab] = useState<'course' | 'preparation' | 'race-day' | 'nutrition'>('course');
+  const [tab, setTab] = useState<'course' | 'preparation' | 'race-day' | 'nutrition' | 'race-card'>(
+    'course',
+  );
   if (!value)
     return (
       <div className="race-analysis">
@@ -422,6 +425,7 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
         <TabsTrigger value="preparation">Preparation</TabsTrigger>
         <TabsTrigger value="race-day">Race day</TabsTrigger>
         <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
+        <TabsTrigger value="race-card">Race card</TabsTrigger>
       </TabsList>
       <TabsContent value={tab}>
         {tab === 'course' ? (
@@ -445,6 +449,14 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
           />
         ) : tab === 'nutrition' ? (
           <Nutrition
+            race={value.race}
+            course={value.course}
+            estimate={value.estimate}
+            data={props.data}
+            request={props.request}
+          />
+        ) : tab === 'race-card' ? (
+          <RaceCard
             race={value.race}
             course={value.course}
             estimate={value.estimate}

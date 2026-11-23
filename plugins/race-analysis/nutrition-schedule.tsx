@@ -7,6 +7,7 @@ import { ToleranceBadge } from '../athlete/public/client';
 import {
   carbohydrateOverMovingTimeText,
   everyMinutesText,
+  findProduct,
   nutrients,
   type hourlyIntake,
 } from './nutrition';
@@ -39,7 +40,7 @@ function ScheduleRows({
       </thead>
       <tbody>
         {nutrition.schedule.map((item, index) => {
-          const product = products.find((candidate) => candidate.id === item.productId);
+          const product = findProduct(products, item.productId);
           const amounts = product && knownAmountsText(product, item.servings);
           return (
             <tr key={`${item.productId}-${index}`}>

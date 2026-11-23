@@ -1,21 +1,11 @@
 'use client';
 
 import type { NutritionProduct, RacePlan } from '@athlete-panel/contracts';
-import type { carryPlan } from './carry';
+import { litres, type carryPlan } from './carry';
 
 type CarryPlan = NonNullable<ReturnType<typeof carryPlan>>;
 type CarryLeg = CarryPlan['legs'][number];
 type Station = RacePlan['stations'][number];
-
-const litres = (millilitres: number) => `${Number((millilitres / 1000).toFixed(2))} L`;
-
-export function carriedText(leg: CarryLeg) {
-  const carried = [
-    ...(leg.waterMillilitres === null ? [] : [`${litres(leg.waterMillilitres)} water`]),
-    ...leg.products.map(({ product, servings }) => `${servings} × ${product.name}`),
-  ];
-  return carried.length ? carried.join(', ') : null;
-}
 
 function CapacityNotice({
   carry,

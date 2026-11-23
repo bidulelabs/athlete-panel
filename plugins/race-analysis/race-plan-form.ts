@@ -20,7 +20,7 @@ export function pacingRows(pacing: Pacing, sections: readonly CourseSection[]): 
   ].sort((a, b) => a.fromMeters - b.fromMeters);
 }
 
-const nutritionIsWritten = (nutrition: RacePlan['nutrition']) =>
+export const nutritionIsWritten = (nutrition: RacePlan['nutrition']) =>
   Object.values(nutrition.targets).some((target) => target !== null) ||
   nutrition.schedule.length > 0 ||
   nutrition.cues.length > 0 ||

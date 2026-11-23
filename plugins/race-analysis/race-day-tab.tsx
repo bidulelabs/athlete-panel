@@ -17,35 +17,25 @@ import {
 } from '@athlete-panel/ui';
 import { emptyRaceNutrition, type RaceAnalysis, type RacePlan } from '@athlete-panel/contracts';
 import { mutate } from '../training/public/client';
-import { carryPlan } from './carry';
-import { carriedText, WhatToCarry } from './carry-block';
-import { stationArrivals } from './race-day';
+import { carriedText, carryPlan } from './carry';
+import { WhatToCarry } from './carry-block';
+import { stationArrivals, type RaceDayTiming, type StopArrival } from './race-day';
 import { StartAndCutoffDialog, StationDialog } from './race-day-dialogs';
-import { clockTime, elevationLabel, finishTime } from './presentation';
+import {
+  arrivalRangeLabel,
+  clockTime,
+  cutoffMarginText,
+  elevationLabel,
+  finishTime,
+} from './presentation';
 import { NeedsReviewNotice } from './needs-review-notice';
 import { raceDayCommand, stationsAfterSave } from './race-plan-form';
 
 type Station = RacePlan['stations'][number];
-type RaceDayTiming = ReturnType<typeof stationArrivals>;
-type Arrival = Omit<RaceDayTiming['finish'], 'distanceMeters'>;
 type Leg = RaceDayTiming['legs'][number];
 type LegCarry = NonNullable<ReturnType<typeof carryPlan>>['legs'][number];
 
-function arrivalRangeLabel(arrival: Arrival) {
-  if (arrival.timeOfDay)
-    return {
-      range: `${clockTime(arrival.timeOfDay.lowSeconds)}–${clockTime(arrival.timeOfDay.highSeconds)}`,
-      aim: `aim ${clockTime(arrival.timeOfDay.seconds)}`,
-    };
-  if (arrival.fromStart)
-    return {
-      range: `${finishTime(arrival.fromStart.lowSeconds)}–${finishTime(arrival.fromStart.highSeconds)}`,
-      aim: 'after the start',
-    };
-  return null;
-}
-
-function ArrivalTimes({ arrival }: { arrival: Arrival }) {
+function ArrivalTimes({ arrival }: { arrival: StopArrival }) {
   const label = arrivalRangeLabel(arrival);
   if (!label) return <>Unknown</>;
   return (
@@ -56,23 +46,22 @@ function ArrivalTimes({ arrival }: { arrival: Arrival }) {
   );
 }
 
-function CutoffWithMargin({ arrival }: { arrival: Arrival }) {
+function CutoffWithMargin({ arrival }: { arrival: StopArrival }) {
   if (arrival.cutoffSeconds === null) return <>None</>;
+  const marginText = cutoffMarginText(arrival);
   return (
     <>
       {clockTime(arrival.cutoffSeconds)}
-      {arrival.cutoffMarginSeconds !== null && (
-        <small className={arrival.cutoffMarginSeconds < 0 ? 'race-late' : undefined}>
-          {arrival.cutoffMarginSeconds >= 0
-            ? `${duration(arrival.cutoffMarginSeconds)} margin`
-            : `${duration(-arrival.cutoffMarginSeconds)} after the cutoff`}
+      {marginText && (
+        <small className={arrival.cutoffMarginSeconds! < 0 ? 'race-late' : undefined}>
+          {marginText}
         </small>
       )}
     </>
   );
 }
 
-function FinishCutoff({ finish }: { finish: Arrival }) {
+function FinishCutoff({ finish }: { finish: StopArrival }) {
   if (finish.cutoffSeconds === null) return <p className="race-day-cutoff">No finish cutoff</p>;
   const margin = finish.cutoffMarginSeconds;
   return (

@@ -179,3 +179,13 @@ export function carryPlan(
     carryCapacityMillilitres,
   };
 }
+
+export const litres = (millilitres: number) => `${Number((millilitres / 1000).toFixed(2))} L`;
+
+export function carriedText(leg: NonNullable<ReturnType<typeof carryPlan>>['legs'][number]) {
+  const carried = [
+    ...(leg.waterMillilitres === null ? [] : [`${litres(leg.waterMillilitres)} water`]),
+    ...leg.products.map(({ product, servings }) => `${servings} × ${product.name}`),
+  ];
+  return carried.length ? carried.join(', ') : null;
+}

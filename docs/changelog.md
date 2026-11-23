@@ -18,6 +18,8 @@ Use the documentation link for the version you installed. Each release page incl
 
 - **Race day** shows what to carry on each leg row: the water and products to leave with, computed from the moving time, your nutrition schedule and targets, your carry capacity and your drop bags. A **What to carry** block shows what each drop bag holds and lacks, warns when a leg needs more water than you can carry, and says when the water need or the capacity is unknown. Without leg times nothing is shown. The station window now edits the drop bag with products from Settings. Nothing new is stored.
 
+- **Races** gains a **Race card** tab: the expected finish, your briefing, breakfast, each aid station with its arrival range, what to do and what to leave with, the cues, the food line and the recovery, on one page. **Print** keeps only the card, and **Download offline copy** saves one HTML file with no script and no link, marked with the plan revision and the download date. Nothing new is stored.
+
 ### Upgrade steps
 
 Earlier releases cannot read race plans holding aid stations or nutrition: see [race day upgrade guidance](development.md#race-day-upgrade) and [race nutrition upgrade guidance](development.md#race-nutrition-upgrade). Earlier releases cannot read stored race plans, grants limited to a race or race plan proposals: rollback after those records exist requires the matching pre-upgrade backup. See [race plan upgrade guidance](development.md#race-plan-upgrade).

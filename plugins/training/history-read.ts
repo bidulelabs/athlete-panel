@@ -24,6 +24,7 @@ export async function recentChanges() {
       select (select count(*)::int from visible) as count,
         (select coalesce(c#>>'{after,title}',c#>>'{before,title}',
           c#>>'{after,displayName}',c#>>'{before,displayName}',
+          case when c->>'entity'='raceScenario' then coalesce(c#>>'{after,name}',c#>>'{before,name}') end,
           case c->>'entity' when 'racePlan' then 'race plan' when 'rehearsal' then 'fueling rehearsal' else initcap(c->>'entity') end)
         from visible where c->>'entity'=split_part(summary,'.',1)
           and case split_part(summary,'.',2)

@@ -1,13 +1,14 @@
 import type { Plan, Workout, WorkspaceState } from '@athlete-panel/contracts';
 
 export function eventDeleteQuestion(state: WorkspaceState, eventId: string): string | null {
-  const hasRacePlan = state.racePlans.some((racePlan) => racePlan.eventId === eventId);
-  const hasRehearsals = state.rehearsals.some((rehearsal) => rehearsal.eventId === eventId);
-  if (hasRacePlan && hasRehearsals)
-    return 'Delete this event, its race plan and its fueling rehearsals?';
-  if (hasRacePlan) return 'Delete this event and its race plan?';
-  if (hasRehearsals) return 'Delete this event and its fueling rehearsals?';
-  return null;
+  const deletedWithRace = [
+    state.racePlans.some((racePlan) => racePlan.eventId === eventId) && 'its race plan',
+    state.raceScenarios.some((scenario) => scenario.eventId === eventId) && 'its race scenarios',
+    state.rehearsals.some((rehearsal) => rehearsal.eventId === eventId) && 'its fueling rehearsals',
+  ].filter((name) => name !== false);
+  const last = deletedWithRace.pop();
+  if (last === undefined) return null;
+  return `Delete this event${deletedWithRace.map((name) => `, ${name}`).join('')} and ${last}?`;
 }
 
 export function workoutDeleteQuestion(state: WorkspaceState, workout: Workout): string {

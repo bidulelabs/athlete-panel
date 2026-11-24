@@ -53,12 +53,12 @@ export const registry = [
   {
     "path": "plugins/training",
     "enabled": true,
-    "version": "2.10.0",
+    "version": "2.11.0",
     "manifest": {
       "id": "training",
       "name": "Training",
       "description": "Plans, workouts and recorded completion",
-      "version": "2.10.0",
+      "version": "2.11.0",
       "hostApi": "^1.3.0",
       "dependencies": {},
       "optionalDependencies": {},

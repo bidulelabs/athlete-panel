@@ -84,6 +84,13 @@ Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/iss
 - **Edit** opens the same window with the session locked and the products, values and planned servings as logged. **Delete rehearsal**, in the row of **Cancel** and **Save changes**, asks to confirm with **Delete rehearsal**. A save over a rehearsal changed elsewhere is refused with the server's message and **Reload saved data**; after the reload, saving applies the draft to the saved rehearsal.
 - Deleting the race, the session (once its completion is cleared) or the plan holding the session deletes the rehearsal in the same change, and one undo restores it. The confirmation says so: "Delete this event and its fueling rehearsals?", "Delete this event, its race plan and its fueling rehearsals?", "Delete “<session>” and its fueling rehearsals?" and "Delete “<plan>”, its planned sessions and their fueling rehearsals?". An undo that would bring back a rehearsal whose session is gone is refused and changes nothing.
 
+### Race scenarios
+
+- A race scenario stores one alternative to the race plan for a race that has a plan: a name (1 to 80 characters after trimming), an effort and weather assumption like the plan's, the stop at each aid station in seconds (0 to 24 hours, each station once, up to 60), and the course and stations (ids and distances, up to 60) it was made from. A race holds at most four.
+- Only the owner creates, edits and deletes scenarios. Assistants cannot write them and never read them: they are not in any planning context.
+- Deleting a race deletes its scenarios; the confirmation names them and one undo restores them. Undoing the deletion of a scenario is refused when the race already holds four others.
+- This release stores the record only; no screen shows scenarios yet.
+
 ### Nutrition in Settings
 
 Requirement source: [issue #122](https://github.com/bidulelabs/athlete-panel/issues/122), first part.
@@ -99,6 +106,11 @@ Requirement source: [issue #122](https://github.com/bidulelabs/athlete-panel/iss
 
 | Situation | Expected result | Verification |
 | --- | --- | --- |
+| Scenario for a goal, a race without a plan or an unknown race / a fifth scenario for a race | Refused | [Race scenario tests](../../tests/unit/race-scenarios.test.ts) |
+| Scenario with a duplicate or null stop, a blank name, or a change of race | Refused | Race scenario tests |
+| Update or delete with a stale revision / update repeating the stored values | Refused / no revision changes | Race scenario tests |
+| Race deleted, then undone / deletion of a scenario undone with four others present | Race, plan and scenarios restored / refused, records and history unchanged | [Race scenario integration](../../tests/integration/race-scenarios.test.ts) |
+| Scenario created while a race grant has read its context; an assistant proposes a scenario | Plan revision and context digest unchanged / refused | Race scenario integration |
 | Owner creates a plan with the target alone | Stored with an empty strategy | [Race plan tests](../../tests/unit/race-plans.test.ts) |
 | Second plan for a race / plan for a goal or a missing race | Refused | Race plan tests |
 | Race with a plan turned into a goal | Refused | Race plan tests |
@@ -171,5 +183,6 @@ Training stores race plans as records of kind `racePlan`, beside plans, workouts
 - `racePlan.create` and `racePlan.update` by the owner also accept `effortPercent` (-30 to 50), `weatherPercent` (-20 to 50), both in steps of 0.5, and `weatherNote` (up to 300 characters after trimming); omitted, an update keeps each value and a create stores 0, 0 and an empty note, as a plan stored before reads. The agent forms have no such fields and `boundedContext` leaves them out of `racePlans`, so no context digest depends on them. Upgrade and rollback: [race effort upgrade](../development.md#race-effort-upgrade).
 - Modern planning scopes carry optional `raceId`. The planning context has a `racePlans` key only when it is set.
 - No SQL migration. Upgrade and rollback: [race plan upgrade](../development.md#race-plan-upgrade), [race day upgrade](../development.md#race-day-upgrade) and [race nutrition upgrade](../development.md#race-nutrition-upgrade).
+- `raceScenario.create`, `raceScenario.update` and `raceScenario.delete` are owner commands only; the update never changes `eventId`. A workspace stored without scenarios reads as having none. No SQL migration: [race scenario upgrade](../development.md#race-scenario-upgrade).
 - `rehearsal.create`, `rehearsal.update` and `rehearsal.delete` are owner commands only. A planning context limited to a race and approved with `includeRehearsals` includes that race's rehearsals, in full whether or not it includes private notes; other contexts omit the `rehearsals` key. No SQL migration. Upgrade and rollback: [rehearsal upgrade](../development.md#rehearsal-upgrade).
 - `profile.set` accepts `nutrition`, replaced as a whole. The Nutrition tab is `plugins/athlete/nutrition-settings.tsx`; Agent Bridge leaves `nutrition` out of the profile in `boundedContext` without `raceId`; Athlete's `historicalProfile` always leaves it out, and the history response contract has no `nutrition` key. No SQL migration. Upgrade and rollback: [nutrition profile upgrade](../development.md#nutrition-profile-upgrade).

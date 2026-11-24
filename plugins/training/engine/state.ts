@@ -1,5 +1,6 @@
 import {
   workspaceStateSchema,
+  RACE_SCENARIO_LIMIT,
   canLinkSport,
   type Entity,
   type EntityKind,
@@ -18,6 +19,7 @@ export const collections = {
   period: 'periods',
   racePlan: 'racePlans',
   rehearsal: 'rehearsals',
+  raceScenario: 'raceScenarios',
   injury: 'injuries',
   activity: 'activities',
   health: 'health',
@@ -82,6 +84,17 @@ export function assertReferences(state: WorkspaceState): void {
     raceIdsWithPlan.add(racePlan.eventId);
   }
   assertRehearsalReferences(state);
+  const scenarioCountByRace = new Map<string, number>();
+  for (const scenario of state.raceScenarios) {
+    if (!raceIdsWithPlan.has(scenario.eventId))
+      fail('NOT_FOUND', 'A race scenario needs a race with a plan.', { id: scenario.id });
+    const scenarioCount = (scenarioCountByRace.get(scenario.eventId) ?? 0) + 1;
+    if (scenarioCount > RACE_SCENARIO_LIMIT)
+      fail('RACE_SCENARIO_LIMIT', `A race holds at most ${RACE_SCENARIO_LIMIT} scenarios.`, {
+        id: scenario.id,
+      });
+    scenarioCountByRace.set(scenario.eventId, scenarioCount);
+  }
   const linkedActivities = new Set<string>();
   for (const workout of state.workouts) {
     if (workout.completion?.source !== 'garmin') continue;

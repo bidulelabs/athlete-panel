@@ -930,6 +930,54 @@
     animation: none;
   }
 }
+.race-scenario-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.race-scenario {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.race-scenario small {
+  display: block;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.race-scenario [data-slot='badge'] {
+  margin-left: 8px;
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
+}
+.race-scenario .race-late {
+  color: var(--danger);
+}
+.race-scenario-finish {
+  font-size: 20px;
+  font-weight: 600;
+  text-align: right;
+}
+.race-scenario-finish small {
+  font-size: 12px;
+  font-weight: 400;
+}
+@media (max-width: 760px) {
+  .race-scenario {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .race-scenario-finish {
+    text-align: left;
+  }
+  .race-scenario > [data-slot='button'] {
+    justify-self: start;
+    min-height: 44px;
+  }
+}
 .race-agent {
   margin: 24px 0;
 }

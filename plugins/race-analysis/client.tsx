@@ -28,6 +28,7 @@ import { Preparation } from './preparation';
 import { Nutrition } from './nutrition-tab';
 import { RaceCard } from './race-card-tab';
 import { RaceDay } from './race-day-tab';
+import { Scenarios } from './scenario-list';
 import { useRaceAction, useRaceAnalysis } from './use-analysis';
 import { estimateCourse } from './estimate';
 import { adjustedEstimate } from './race-day';
@@ -402,9 +403,9 @@ function AnalysisView({
 }
 function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }) {
   const { value, error, loading, reload } = useRaceAnalysis(raceId);
-  const [tab, setTab] = useState<'course' | 'preparation' | 'race-day' | 'nutrition' | 'race-card'>(
-    'course',
-  );
+  const [tab, setTab] = useState<
+    'course' | 'preparation' | 'race-day' | 'scenarios' | 'nutrition' | 'race-card'
+  >('course');
   if (!value)
     return (
       <div className="race-analysis">
@@ -435,6 +436,7 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
         <TabsTrigger value="course">Course</TabsTrigger>
         <TabsTrigger value="preparation">Preparation</TabsTrigger>
         <TabsTrigger value="race-day">Race day</TabsTrigger>
+        <TabsTrigger value="scenarios">Scenarios</TabsTrigger>
         <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
         <TabsTrigger value="race-card">Race card</TabsTrigger>
       </TabsList>
@@ -454,6 +456,16 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
             race={value.race}
             course={value.course}
             estimate={estimateWithEffortAndWeather}
+            estimateReasons={value.estimateReasons}
+            data={props.data}
+            request={props.request}
+            onOpenCourse={() => setTab('course')}
+          />
+        ) : tab === 'scenarios' ? (
+          <Scenarios
+            race={value.race}
+            course={value.course}
+            estimate={value.estimate}
             estimateReasons={value.estimateReasons}
             data={props.data}
             request={props.request}

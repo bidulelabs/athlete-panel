@@ -97,7 +97,7 @@ for (const theme of ['light', 'dark']) {
     await page.goto(`/races?race=${raceId}`);
 
     await page.getByRole('tab', { name: 'Course', exact: true }).focus();
-    for (const name of ['Preparation', 'Race day', 'Nutrition', 'Race card']) {
+    for (const name of ['Preparation', 'Race day', 'Scenarios', 'Nutrition', 'Race card']) {
       await page.keyboard.press('ArrowRight');
       await expect(page.getByRole('tab', { name, exact: true })).toHaveAttribute(
         'aria-selected',

@@ -227,7 +227,7 @@ export function RehearsalDialog({
           />
         </Field>
         <p className="race-hint">
-          Saved with this race. Assistants do not read fueling rehearsals yet.
+          Saved with this race. An assistant connected for this race can read fueling rehearsals.
         </p>
         <DialogActions action={action} onClose={onClose}>
           {rehearsal && (

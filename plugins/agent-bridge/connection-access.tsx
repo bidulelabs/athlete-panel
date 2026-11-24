@@ -207,7 +207,7 @@ export function ConnectionAccess({
             {racesToPrepare.length > 0 && (
               <Field
                 label="Race to prepare"
-                hint="Shares the plan and course summary of this race, and allows race plan proposals for it."
+                hint="Shares the plan, fueling rehearsals and course summary of this race, and allows race plan proposals for it."
               >
                 <NativeSelect
                   name="raceId"
@@ -336,7 +336,7 @@ export function ConnectionAccess({
                   <br />
                   Race preparation:{' '}
                   {raceToPrepare
-                    ? `${raceToPrepare.title}, with your nutrition profile (products, carry capacity, preferences)`
+                    ? `${raceToPrepare.title}, with its fueling rehearsals and your nutrition profile (products, carry capacity, preferences)`
                     : 'not permitted'}
                   <br />
                   Can also read profile, goals, availability, zones, training, events, injuries,

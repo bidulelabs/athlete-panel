@@ -1,5 +1,6 @@
 import { addDays } from '@athlete-panel/ui';
 import type { NutritionProduct, RacePlan, Rehearsal, Workout } from '@athlete-panel/contracts';
+import { intakesBy } from './carry';
 
 type ScheduleEntry = RacePlan['nutrition']['schedule'][number];
 export type RehearsalValues = Pick<
@@ -16,7 +17,7 @@ export const isCompletedOrPartial = (workout: Workout) =>
 export const plannedServings = (entry: ScheduleEntry, durationSeconds: number | null) =>
   durationSeconds === null
     ? null
-    : Math.floor(durationSeconds / 60 / entry.everyMinutes) * entry.servings;
+    : intakesBy(durationSeconds / 60, entry.everyMinutes) * entry.servings;
 
 export function plannedItems(
   schedule: readonly ScheduleEntry[],

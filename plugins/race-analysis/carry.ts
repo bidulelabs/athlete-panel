@@ -15,7 +15,7 @@ type TimedLeg = {
 const minuteTolerance = 1e-6;
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
 const roundUpServings = (exact: number) => Math.ceil(exact - minuteTolerance);
-const intakesBy = (minutes: number, everyMinutes: number) =>
+export const intakesBy = (minutes: number, everyMinutes: number) =>
   Math.floor((minutes + minuteTolerance) / everyMinutes);
 const nextRestockIndex = (restocks: readonly boolean[], index: number) => {
   const next = restocks.indexOf(true, index + 1);

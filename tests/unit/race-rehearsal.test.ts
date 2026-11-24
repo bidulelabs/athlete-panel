@@ -70,6 +70,9 @@ describe('planned servings', () => {
     expect(plannedServings({ productId: id(101), servings: 1, everyMinutes: 60 }, 9600)).toBe(2);
     expect(plannedServings({ productId: id(101), servings: 0.5, everyMinutes: 60 }, 9600)).toBe(1);
     expect(plannedServings({ productId: id(101), servings: 1, everyMinutes: 60 }, 3000)).toBe(0);
+    expect(
+      plannedServings({ productId: id(101), servings: 1, everyMinutes: 60 }, 3599.999994),
+    ).toBe(1);
   });
 
   it('is unknown without the session duration', () => {

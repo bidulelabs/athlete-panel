@@ -41,7 +41,7 @@ const render = (records: ProposalDetails['changes'], filtered: boolean) =>
   renderToStaticMarkup(
     createElement(ProposedEdits, {
       changes: records,
-      planTitles: {},
+      namesById: {},
       filtered,
       collapsed: !filtered,
     }),

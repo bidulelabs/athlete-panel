@@ -53,12 +53,12 @@ export const registry = [
   {
     "path": "plugins/training",
     "enabled": true,
-    "version": "2.8.0",
+    "version": "2.9.0",
     "manifest": {
       "id": "training",
       "name": "Training",
       "description": "Plans, workouts and recorded completion",
-      "version": "2.8.0",
+      "version": "2.9.0",
       "hostApi": "^1.3.0",
       "dependencies": {},
       "optionalDependencies": {},
@@ -259,12 +259,12 @@ export const registry = [
   {
     "path": "plugins/race-analysis",
     "enabled": true,
-    "version": "1.7.0",
+    "version": "1.7.1",
     "manifest": {
       "id": "race-analysis",
       "name": "Race analysis",
       "description": "GPX courses, elevation and estimates from your past efforts",
-      "version": "1.7.0",
+      "version": "1.7.1",
       "hostApi": "^1.4.0",
       "dependencies": {
         "athlete": "^1.6.0",
@@ -339,15 +339,15 @@ export const registry = [
   {
     "path": "plugins/agent-bridge",
     "enabled": true,
-    "version": "2.5.1",
+    "version": "2.6.0",
     "manifest": {
       "id": "agent-bridge",
       "name": "Agent workspace",
       "description": "Review training changes from your external agent",
-      "version": "2.5.1",
+      "version": "2.6.0",
       "hostApi": "^1.3.0",
       "dependencies": {
-        "training": "^2.5.0",
+        "training": "^2.9.0",
         "athlete": "^1.3.0",
         "activity-records": "^2.1.0"
       },

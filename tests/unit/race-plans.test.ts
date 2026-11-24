@@ -139,6 +139,36 @@ describe('race plan commands', () => {
     });
   });
 
+  describe('a plan that needs review after the owner changed the target', () => {
+    const writtenForOldTarget = { courseId, target: 'Under 8 hours' };
+    const needsReview = () => {
+      const written = run(
+        run(workspaceWithRaces(), [createRacePlan({ target: 'Under 8 hours' })]).state,
+        [updateRacePlan(agentWrites)],
+        'agent',
+      ).state;
+      return run(written, [updateRacePlan({ target: 'Under 7 hours' }, 2)]).state;
+    };
+
+    it('stays so when the agent only writes race day fields', () => {
+      const [racePlan] = run(
+        needsReview(),
+        [updateRacePlan({ courseId, startTime: '07:00' }, 3)],
+        'agent',
+      ).state.racePlans;
+      expect(racePlan).toMatchObject({ startTime: '07:00', writtenFor: writtenForOldTarget });
+    });
+
+    it('is reviewed when the agent writes the strategy', () => {
+      const [racePlan] = run(
+        needsReview(),
+        [updateRacePlan({ courseId, briefing: 'Go out slower.' }, 3)],
+        'agent',
+      ).state.racePlans;
+      expect(racePlan!.writtenFor).toEqual({ courseId, target: 'Under 7 hours' });
+    });
+  });
+
   it('lets the agent create a plan with an empty target', () => {
     const [racePlan] = run(
       workspaceWithRaces(),
@@ -246,6 +276,21 @@ const station = (number: number, distanceMeters: number, values: Record<string, 
   verified: false,
   ...values,
 });
+const agentStation = (
+  number: number,
+  distanceMeters: number,
+  values: Record<string, unknown> = {},
+) => {
+  const { source: _source, verified: _verified, ...rest } = station(number, distanceMeters, values);
+  return rest;
+};
+const dropBagItem = (servings: number) => ({ productId: id(40), servings });
+const scheduleRow = (servings: number, everyMinutes: number) => ({
+  productId: id(40),
+  servings,
+  everyMinutes,
+});
+const nutritionWith = (values: Record<string, unknown>) => ({ ...emptyRaceNutrition, ...values });
 const raceDay = {
   startTime: '07:00',
   finishCutoff: { dayOffset: 1, time: '01:30' },
@@ -272,6 +317,10 @@ const raceDay = {
     breakfast: 'Oats and a banana at 04:00.',
     recovery: 'Recovery drink at the finish.',
   },
+};
+const agentRaceDay = {
+  ...raceDay,
+  stations: [agentStation(1, 0), agentStation(2, 9000)],
 };
 
 describe('race day fields', () => {
@@ -311,18 +360,119 @@ describe('race day fields', () => {
   it.each([
     ['create', createRacePlan({ ...agentWrites, id: undefined })],
     ['update', updateRacePlan(agentWrites)],
-  ])(
-    'refuses race day fields from the agent on %s, accepts the strategy alone',
-    (_label, command) => {
-      const values = (command as { values: object }).values;
-      expect(agentCommandSchema.safeParse(command).success).toBe(true);
-      for (const field of Object.entries(raceDay))
-        expect(
-          agentCommandSchema.safeParse({ ...command, values: { ...values, [field[0]]: field[1] } })
-            .success,
-        ).toBe(false);
-    },
-  );
+  ])('accepts the race day fields from the agent on %s', (_label, command) => {
+    const values = (command as { values: object }).values;
+    const withValues = (extra: object) => ({ ...command, values: { ...values, ...extra } });
+    expect(agentCommandSchema.safeParse(withValues({})).success).toBe(true);
+    expect(agentCommandSchema.safeParse(withValues(agentRaceDay)).success).toBe(true);
+    expect(
+      agentCommandSchema.safeParse(
+        withValues({ stations: [agentStation(1, 0, { id: undefined })] }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['verified', { verified: true }],
+    ['source', { source: 'race guide' }],
+  ])('refuses a station from the agent carrying %s', (_label, extra) => {
+    const stations = [{ ...agentStation(1, 0), ...extra }];
+    expect(agentCommandSchema.safeParse(updateRacePlan({ ...agentWrites, stations })).success).toBe(
+      false,
+    );
+    expect(
+      agentCommandSchema.safeParse(createRacePlan({ ...agentWrites, id: undefined, stations }))
+        .success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['a null station', { stations: [null] }],
+    ['61 stations', { stations: Array.from({ length: 61 }, (_u, n) => agentStation(n, n * 10)) }],
+    [
+      'stations that do not get farther',
+      { stations: [agentStation(1, 500), agentStation(2, 500)] },
+    ],
+    [
+      'two stations with the same id',
+      { stations: [agentStation(1, 0), agentStation(2, 10, { id: id(31) })] },
+    ],
+    ['a station named with blanks', { stations: [agentStation(1, 0, { name: '   ' })] }],
+    ['a start time of 24:00', { startTime: '24:00' }],
+    [
+      'a negative drop bag amount',
+      { stations: [agentStation(1, 0, { dropBag: [dropBagItem(-1)] })] },
+    ],
+    ['a food row of 0 servings', { nutrition: nutritionWith({ schedule: [scheduleRow(0, 30)] }) }],
+    ['a food row every 0 minutes', { nutrition: nutritionWith({ schedule: [scheduleRow(1, 0)] }) }],
+    [
+      'a negative hourly target',
+      {
+        nutrition: nutritionWith({
+          targets: { ...emptyRaceNutrition.targets, carbohydrateGramsPerHour: -1 },
+        }),
+      },
+    ],
+  ])('refuses %s from the agent', (_label, extra) => {
+    expect(agentCommandSchema.safeParse(updateRacePlan({ ...agentWrites, ...extra })).success).toBe(
+      false,
+    );
+  });
+
+  describe('stations written by the agent', () => {
+    const owned = () => run(workspaceWithRaces(), [createRacePlan(raceDay)]).state;
+    const agentUpdate = (stations: object[]) =>
+      run(owned(), [updateRacePlan({ courseId, stations })], 'agent').state.racePlans[0]!.stations;
+    const second = raceDay.stations[1]!;
+    const agentSecond = (values: Record<string, unknown>) =>
+      agentStation(2, 9000, {
+        cutoff: second.cutoff,
+        food: second.food,
+        dropBag: second.dropBag,
+        action: second.action,
+        ...values,
+      });
+
+    it('keeps the owner confirmation and source of a station left as read', () => {
+      expect(agentUpdate([agentStation(1, 0), agentSecond({ stopSeconds: 900 })])[1]).toMatchObject(
+        { stopSeconds: 900, verified: true, source: 'race guide' },
+      );
+    });
+
+    it.each([
+      ['moves it', { distanceMeters: 9500 }],
+      ['renames it', { name: 'Synthetic renamed station' }],
+    ])('clears the confirmation when the agent %s, and keeps its source', (_label, change) => {
+      expect(agentUpdate([agentStation(1, 0), agentSecond(change)])[1]).toMatchObject({
+        verified: false,
+        source: 'race guide',
+      });
+    });
+
+    it('starts a new station unconfirmed with no source', () => {
+      const stations = agentUpdate([agentStation(1, 0), agentSecond({}), agentStation(3, 20000)]);
+      expect(stations[1]).toMatchObject({ verified: true });
+      expect(stations[2]).toMatchObject({ verified: false, source: '' });
+    });
+
+    it('creates a plan whose stations start unconfirmed', () => {
+      const created = run(
+        workspaceWithRaces(),
+        [createRacePlan({ ...agentWrites, courseId, stations: [agentStation(1, 0)] })],
+        'agent',
+      ).state.racePlans[0]!;
+      expect(created.stations).toEqual([{ ...agentStation(1, 0), source: '', verified: false }]);
+    });
+
+    it('leaves the owner free to confirm and to clear a station', () => {
+      const cleared = run(owned(), [
+        updateRacePlan({
+          stations: [station(1, 0, { verified: true }), { ...second, verified: false }],
+        }),
+      ]).state.racePlans[0]!.stations;
+      expect(cleared.map((item) => item.verified)).toEqual([true, false]);
+    });
+  });
 
   it('reads a plan stored before race day fields with none of them', () => {
     const [stored] = run(workspaceWithRaces(), [createRacePlan()]).state.racePlans;
@@ -620,8 +770,11 @@ describe('race plan scope', () => {
   it('says whether race preparation is permitted', () => {
     const access = (planning: Record<string, unknown>) =>
       describeAgentAccess(grantScopeSchema.parse({ version: 2, history: null, planning }));
+    expect(access({ ...scope, raceId, includeRehearsals: true })).toContain(
+      'Race preparation: course summary and race plan of the selected race, its fueling rehearsals, your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted.',
+    );
     expect(access({ ...scope, raceId })).toContain(
-      'Race preparation: course summary and race plan of the selected race and your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted.',
+      'Race preparation: course summary and race plan of the selected race, your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted.',
     );
     expect(access(scope)).toContain('Race preparation: not permitted.');
   });

@@ -78,12 +78,12 @@ function GroupSummary({ changes }: { changes: ProposalDetails['changes'] }) {
 
 export function ProposedEdits({
   changes,
-  planTitles,
+  namesById,
   collapsed,
   filtered,
 }: {
   changes: ProposalDetails['changes'];
-  planTitles: Record<string, string>;
+  namesById: Record<string, string>;
   collapsed: boolean;
   filtered: boolean;
 }) {
@@ -91,20 +91,20 @@ export function ProposedEdits({
   const exceedsInlineLimit = changes.length > MONTH_GROUP_CHANGE_LIMIT;
   const collapseWeeks = collapsed || exceedsInlineLimit;
   if (months.filter((month) => month.month).length <= 2 && !exceedsInlineLimit)
-    return <ProposedEditsByWeek changes={changes} planTitles={planTitles} collapsed={collapsed} />;
+    return <ProposedEditsByWeek changes={changes} namesById={namesById} collapsed={collapsed} />;
   return months.map((month) =>
     month.month ? (
       <ProposalMonth
         key={month.month}
         month={month}
-        planTitles={planTitles}
+        namesById={namesById}
         collapsed={!filtered || exceedsInlineLimit}
       />
     ) : (
       <ProposedEditsByWeek
         key="undated"
         changes={month.changes}
-        planTitles={planTitles}
+        namesById={namesById}
         collapsed={collapseWeeks}
       />
     ),
@@ -113,11 +113,11 @@ export function ProposedEdits({
 
 function ProposalMonth({
   month,
-  planTitles,
+  namesById,
   collapsed,
 }: {
   month: { month: string | null; changes: ProposalDetails['changes'] };
-  planTitles: Record<string, string>;
+  namesById: Record<string, string>;
   collapsed: boolean;
 }) {
   const [expanded, setExpanded] = useState(!collapsed);
@@ -133,11 +133,7 @@ function ProposalMonth({
         <ChevronRight size={16} aria-hidden="true" />
       </summary>
       {expanded && (
-        <ProposedEditsByWeek
-          changes={month.changes}
-          planTitles={planTitles}
-          collapsed={collapsed}
-        />
+        <ProposedEditsByWeek changes={month.changes} namesById={namesById} collapsed={collapsed} />
       )}
     </details>
   );
@@ -145,19 +141,19 @@ function ProposalMonth({
 
 function ProposedEditsByWeek({
   changes,
-  planTitles,
+  namesById,
   collapsed,
 }: {
   collapsed: boolean;
   changes: ProposalDetails['changes'];
-  planTitles: Record<string, string>;
+  namesById: Record<string, string>;
 }) {
   const { weekStartsOn } = useWorkspace();
   return groupChangesByWeek(changes, weekStartsOn).map((week) => (
     <ProposalWeek
       key={week.weekStart ?? 'undated'}
       week={week}
-      planTitles={planTitles}
+      namesById={namesById}
       collapsed={collapsed}
     />
   ));
@@ -165,11 +161,11 @@ function ProposedEditsByWeek({
 
 function ProposalWeek({
   week,
-  planTitles,
+  namesById,
   collapsed,
 }: {
   week: { weekStart: string | null; changes: ProposalDetails['changes'] };
-  planTitles: Record<string, string>;
+  namesById: Record<string, string>;
   collapsed: boolean;
 }) {
   const [expanded, setExpanded] = useState(!collapsed);
@@ -190,7 +186,7 @@ function ProposalWeek({
           week.changes.map((change) => (
             <ReviewChange
               change={change}
-              planTitles={planTitles}
+              namesById={namesById}
               caption="Proposed field changes"
               key={`${change.entity}:${change.id}`}
             />
@@ -205,12 +201,12 @@ const pluralCountLabel = (count: number, noun: string) =>
 
 export function ReviewChange({
   change,
-  planTitles,
+  namesById,
   caption,
   context = false,
 }: {
   change: ProposalDetails['changes'][number];
-  planTitles: Record<string, string>;
+  namesById: Record<string, string>;
   caption: string;
   context?: boolean;
 }) {
@@ -237,6 +233,8 @@ export function ReviewChange({
           pluralCountLabel(record.pacing.length, 'section'),
           pluralCountLabel(record.assumptions.length, 'assumption'),
           pluralCountLabel(record.openQuestions.length, 'open question'),
+          pluralCountLabel(record.stations.length, 'aid station'),
+          pluralCountLabel(record.nutrition.schedule.length, 'scheduled product'),
         ]
       : []),
     ...(change.entity === 'period' && record && 'editedWeeks' in record
@@ -258,7 +256,9 @@ export function ReviewChange({
       record.distanceMeters != null &&
       distance(record.distanceMeters, units),
   ].filter(Boolean);
-  const rows = expanded ? proposalRows(change, units, planTitles) : [];
+  const rows = expanded
+    ? proposalRows(change, units, namesById, data.profile ? undefined : 'Unknown product')
+    : [];
   const single = !context && action !== 'update';
   const beforeLabel = context ? 'When the agent read it' : 'Before';
   const afterLabel = context ? 'Now' : 'After';

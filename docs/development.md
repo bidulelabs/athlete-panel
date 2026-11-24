@@ -225,7 +225,11 @@ Race plans gain `nutrition` (targets per hour, a food schedule, cues and days-be
 
 #### Rehearsal upgrade
 
-Training gains the `rehearsal` record (a fueling rehearsal logged on a completed or partial session for a race) and the owner commands `rehearsal.create`, `rehearsal.update` and `rehearsal.delete`, released in Training 2.8 with contracts 2.9. Upgrade the application and CLI together, no SQL migration. Agents cannot write rehearsals and no planning context includes them yet. Older releases ignore stored rehearsals but cannot read a change history that holds one, so roll back only with the matching pre-upgrade backup.
+Training gains the `rehearsal` record (a fueling rehearsal logged on a completed or partial session for a race) and the owner commands `rehearsal.create`, `rehearsal.update` and `rehearsal.delete`, released in Training 2.8 with contracts 2.9. Upgrade the application and CLI together, no SQL migration. Agents cannot write rehearsals; see Race assistant upgrade for their planning context. Older releases ignore stored rehearsals but cannot read a change history that holds one, so roll back only with the matching pre-upgrade backup.
+
+#### Race assistant upgrade
+
+An assistant connected for a race can write `startTime`, `finishCutoff`, `stations` and `nutrition` of that race's plan, and a planning context gains `rehearsals`, the race's fueling rehearsals, only for a grant approved with `includeRehearsals`, released in Training 2.9, Agent Bridge 2.6 and Race analysis 1.7.1 with contracts 2.10. Upgrade the application and CLI together, no SQL migration. Grants approved before the upgrade, with or without a race, keep their exact context and digest and do not receive rehearsals: approve the connection again to share them. A grant approved after the upgrade with a race reads rehearsals, and logging one asks that connection to read its context again. Stations written by an assistant start not confirmed; the agent schema has no `verified` or `source`. Older CLIs reject the new fields, so roll back only with the matching pre-upgrade backup.
 
 #### Nutrition profile upgrade
 

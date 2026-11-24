@@ -2,6 +2,7 @@ import {
   agentCommandSchema,
   AGENT_COMMAND_LIMIT,
   commandsSchema,
+  type AgentCommand,
   type Command,
   type CommandInput,
   type MutationResult,
@@ -32,7 +33,7 @@ const agentActions = new Set<string>(
  */
 export function applyCommands(
   input: WorkspaceState,
-  inputs: readonly CommandInput[] | readonly Command[],
+  inputs: readonly CommandInput[] | readonly Command[] | readonly AgentCommand[],
   options: EngineOptions,
 ): MutationResult {
   const initial = validateWorkspace(input);

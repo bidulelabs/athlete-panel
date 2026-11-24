@@ -190,7 +190,9 @@ export function ConnectionApproval({ id, onDone }: { id: string; onDone: () => v
                         includeNotes: form.get('includeNotes') === 'on',
                         allowEventCreation: form.get('allowEventCreation') === 'on',
                         allowPhaseChanges: form.get('allowPhaseChanges') === 'on',
-                        ...(form.get('raceId') ? { raceId: String(form.get('raceId')) } : {}),
+                        ...(form.get('raceId')
+                          ? { raceId: String(form.get('raceId')), includeRehearsals: true }
+                          : {}),
                       },
                   expiresInHours: Number(form.get('expiresInHours')),
                 });

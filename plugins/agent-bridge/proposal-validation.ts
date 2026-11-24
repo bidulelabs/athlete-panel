@@ -1,4 +1,5 @@
 import {
+  type AgentCommand,
   type Command,
   type EntityChange,
   type WorkspaceState,
@@ -75,7 +76,12 @@ export function boundedContext(state: WorkspaceState, scope: Scope) {
       .map((e) => (scope.includeNotes ? e : { ...e, notes: '' })),
     periods: state.periods.filter((p) => p.startDate <= scope.to && p.endDate >= scope.from),
     ...(scope.raceId
-      ? { racePlans: state.racePlans.filter((racePlan) => racePlan.eventId === scope.raceId) }
+      ? {
+          racePlans: state.racePlans.filter((racePlan) => racePlan.eventId === scope.raceId),
+        }
+      : {}),
+    ...(scope.raceId && scope.includeRehearsals
+      ? { rehearsals: state.rehearsals.filter((rehearsal) => rehearsal.eventId === scope.raceId) }
       : {}),
     injuries: state.injuries
       .filter((i) => i.startDate <= scope.to && (i.endDate === null || i.endDate >= scope.from))
@@ -85,7 +91,47 @@ export function boundedContext(state: WorkspaceState, scope: Scope) {
   };
 }
 export type BoundedContext = ReturnType<typeof boundedContext>;
-export function assertReadableSources(commands: Command[], state: WorkspaceState, scope: Scope) {
+export function assertKnownProducts(commands: Command[], state: WorkspaceState) {
+  const profileProductIds = new Set(
+    state.profile?.nutrition?.products.map((product) => product.id),
+  );
+  for (const command of commands) {
+    if (command.action !== 'racePlan.create' && command.action !== 'racePlan.update') continue;
+    const saved =
+      command.action === 'racePlan.update'
+        ? state.racePlans.find((racePlan) => racePlan.id === command.id)
+        : undefined;
+    const keptProductIds = new Set([
+      ...(saved?.stations ?? []).flatMap((station) =>
+        station.dropBag.map((item) => item.productId),
+      ),
+      ...(saved?.nutrition.schedule ?? []).map((row) => row.productId),
+    ]);
+    const known = (productId: string) =>
+      profileProductIds.has(productId) || keptProductIds.has(productId);
+    const { stations, nutrition } = command.values;
+    for (const station of stations ?? [])
+      assert(
+        station.dropBag.every((item) => known(item.productId)),
+        'unknown_product',
+        `The drop bag of aid station "${station.name}" names a product that is not in the nutrition profile. Read the context again and use the product ids it lists.`,
+        400,
+      );
+    (nutrition?.schedule ?? []).forEach((row, index) =>
+      assert(
+        known(row.productId),
+        'unknown_product',
+        `Food schedule row ${index + 1} names a product that is not in the nutrition profile. Read the context again and use the product ids it lists.`,
+        400,
+      ),
+    );
+  }
+}
+export function assertReadableSources(
+  commands: readonly (Command | AgentCommand)[],
+  state: WorkspaceState,
+  scope: Scope,
+) {
   const context = boundedContext(state, scope);
   for (const command of commands) {
     if (command.action === 'workout.reorder') {

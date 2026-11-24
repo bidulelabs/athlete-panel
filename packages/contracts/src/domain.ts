@@ -486,63 +486,98 @@ export const raceNutritionMaximums = {
   scheduleRows: 30,
   cues: 20,
 } as const;
-const hourlyTarget = (max: number) => z.number().finite().min(0).max(max).nullable();
-const racePlanDayFields = {
-  startTime: raceClockTime.nullable(),
-  finishCutoff: raceCutoff,
-  stations: z
+const hourlyTarget = (max: number, unit: string) =>
+  z.number().finite().min(0).max(max).nullable().describe(`Target in ${unit}. Null when unknown.`);
+const racePlanStationFields = {
+  id: idSchema,
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name each aid station.')
+    .max(80, 'Keep an aid station name to 80 characters.'),
+  distanceMeters: nonnegativeSchema.describe('Distance from the start line, in meters.'),
+  cutoff: raceCutoff,
+  stopSeconds: z
+    .number()
+    .int()
+    .min(0)
+    .max(86400)
+    .describe('Planned stop at this station, in seconds.'),
+  water: z.boolean(),
+  food: z.string().trim().max(200),
+  dropBag: z
     .array(
       z
         .object({
-          id: idSchema,
-          name: z
-            .string()
-            .trim()
-            .min(1, 'Name each aid station.')
-            .max(80, 'Keep an aid station name to 80 characters.'),
-          distanceMeters: nonnegativeSchema.describe('Distance from the start line, in meters.'),
-          cutoff: raceCutoff,
-          stopSeconds: z.number().int().min(0).max(86400),
-          water: z.boolean(),
-          food: z.string().trim().max(200),
-          dropBag: z
-            .array(
-              z
-                .object({ productId: idSchema, servings: z.number().int().min(1).max(100) })
-                .strict(),
-            )
-            .max(20)
-            .refine(
-              (items) => new Set(items.map((item) => item.productId)).size === items.length,
-              'List each product once in a drop bag.',
-            ),
-          action: z.string().trim().max(300),
-          source: z.string().trim().max(120),
-          verified: z.boolean(),
+          productId: idSchema,
+          servings: z
+            .number()
+            .int()
+            .min(1)
+            .max(100)
+            .describe('Whole servings of the product left in the drop bag.'),
         })
         .strict(),
     )
+    .max(20)
+    .refine(
+      (items) => new Set(items.map((item) => item.productId)).size === items.length,
+      'List each product once in a drop bag.',
+    ),
+  action: z.string().trim().max(300),
+  source: z.string().trim().max(120),
+  verified: z.boolean(),
+};
+const racePlanStationSchema = z.object(racePlanStationFields).strict();
+const racePlanStationCommandSchema = racePlanStationSchema.partial({
+  source: true,
+  verified: true,
+});
+const racePlanStationAgentSchema = racePlanStationSchema
+  .omit({ source: true, verified: true })
+  .extend({
+    id: idSchema
+      .optional()
+      .describe('Id of an existing aid station, as read. Leave out for a new one.'),
+  });
+const stationsInCourseOrder = <Station extends z.ZodType<{ id?: string; distanceMeters: number }>>(
+  station: Station,
+) =>
+  z
+    .array(station)
     .max(60)
     .refine(
       (stations) =>
         stations.every(
-          (station, index) =>
-            index === 0 || station.distanceMeters > stations[index - 1]!.distanceMeters,
+          (item, index) => index === 0 || item.distanceMeters > stations[index - 1]!.distanceMeters,
         ),
       'Aid stations run in course order, each farther than the one before.',
     )
-    .refine(
-      (stations) => new Set(stations.map((station) => station.id)).size === stations.length,
-      'Each aid station needs its own id.',
-    )
-    .describe('Aid stations in course order.'),
+    .refine((stations) => {
+      const ids = stations.flatMap((item) => (item.id ? [item.id] : []));
+      return new Set(ids).size === ids.length;
+    }, 'Each aid station needs its own id.')
+    .describe('Aid stations in course order.');
+const racePlanDayFields = {
+  startTime: raceClockTime.nullable(),
+  finishCutoff: raceCutoff,
+  stations: stationsInCourseOrder(racePlanStationSchema),
   nutrition: z
     .object({
       targets: z
         .object({
-          carbohydrateGramsPerHour: hourlyTarget(raceNutritionMaximums.carbohydrateGramsPerHour),
-          fluidMillilitresPerHour: hourlyTarget(raceNutritionMaximums.fluidMillilitresPerHour),
-          sodiumMilligramsPerHour: hourlyTarget(raceNutritionMaximums.sodiumMilligramsPerHour),
+          carbohydrateGramsPerHour: hourlyTarget(
+            raceNutritionMaximums.carbohydrateGramsPerHour,
+            'grams of carbohydrate per hour',
+          ),
+          fluidMillilitresPerHour: hourlyTarget(
+            raceNutritionMaximums.fluidMillilitresPerHour,
+            'millilitres of fluid per hour',
+          ),
+          sodiumMilligramsPerHour: hourlyTarget(
+            raceNutritionMaximums.sodiumMilligramsPerHour,
+            'milligrams of sodium per hour',
+          ),
         })
         .strict(),
       schedule: z
@@ -550,8 +585,18 @@ const racePlanDayFields = {
           z
             .object({
               productId: idSchema,
-              servings: z.number().finite().positive().max(raceNutritionMaximums.servings),
-              everyMinutes: z.number().int().min(1).max(raceNutritionMaximums.everyMinutes),
+              servings: z
+                .number()
+                .finite()
+                .positive()
+                .max(raceNutritionMaximums.servings)
+                .describe('Servings of the product at each intake.'),
+              everyMinutes: z
+                .number()
+                .int()
+                .min(1)
+                .max(raceNutritionMaximums.everyMinutes)
+                .describe('Minutes between two intakes of the product.'),
             })
             .strict(),
         )
@@ -572,6 +617,12 @@ const racePlanDayFields = {
     })
     .strict()
     .describe('What to eat and drink before, during and after the race.'),
+};
+const racePlanAgentDayFields = {
+  startTime: racePlanDayFields.startTime.optional(),
+  finishCutoff: racePlanDayFields.finishCutoff.optional(),
+  stations: stationsInCourseOrder(racePlanStationAgentSchema).optional(),
+  nutrition: racePlanDayFields.nutrition.optional(),
 };
 export const emptyRaceNutrition: z.infer<typeof racePlanDayFields.nutrition> = {
   targets: {
@@ -963,6 +1014,7 @@ const agentRacePlanCreateCommand = z
         ...createId,
         eventId: racePlanSchema.shape.eventId,
         ...racePlanAgentFields,
+        ...racePlanAgentDayFields,
         courseId: racePlanCourseId,
       })
       .strict(),
@@ -972,7 +1024,11 @@ const agentRacePlanUpdateCommand = z
   .object({
     action: z.literal('racePlan.update'),
     ...existing,
-    values: z.object(racePlanAgentFields).strict().partial().extend({ courseId: racePlanCourseId }),
+    values: z
+      .object(racePlanAgentFields)
+      .strict()
+      .partial()
+      .extend({ ...racePlanAgentDayFields, courseId: racePlanCourseId }),
   })
   .strict();
 export const agentCommandSchema = z.discriminatedUnion('action', [
@@ -1052,7 +1108,7 @@ export const commandSchema = z.discriminatedUnion('action', [
           openQuestions: racePlanAgentFields.openQuestions.default([]),
           startTime: racePlanDayFields.startTime.optional(),
           finishCutoff: racePlanDayFields.finishCutoff.optional(),
-          stations: racePlanDayFields.stations.optional(),
+          stations: stationsInCourseOrder(racePlanStationCommandSchema).optional(),
           nutrition: racePlanDayFields.nutrition.optional(),
           courseId: racePlanCourseId.default(null),
         })
@@ -1069,6 +1125,7 @@ export const commandSchema = z.discriminatedUnion('action', [
             target: racePlanTarget,
             ...racePlanAgentFields,
             ...racePlanDayFields,
+            stations: stationsInCourseOrder(racePlanStationCommandSchema),
             courseId: racePlanCourseId,
           })
           .strict(),
@@ -1102,6 +1159,7 @@ export const commandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('injury.update'), ...existing, values: injuryPatchSchema }).strict(),
   z.object({ action: z.literal('injury.delete'), ...existing }).strict(),
 ]);
+export type AgentCommand = z.infer<typeof agentCommandSchema>;
 export type Command = z.infer<typeof commandSchema>;
 export type CommandInput = z.input<typeof commandSchema>;
 export const commandsSchema = z.array(commandSchema).min(1).max(200);
@@ -1177,6 +1235,7 @@ export const planningScopeSchema = z
     allowEventCreation: z.boolean().optional(),
     allowPhaseChanges: z.boolean().optional(),
     raceId: idSchema.optional(),
+    includeRehearsals: z.boolean().optional(),
   })
   .strict()
   .superRefine((scope, ctx) => calendarRange(scope, 1, ctx));
@@ -1286,7 +1345,7 @@ export function describeAgentAccess(scope: GrantScope): string[] {
           `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
           `Create races and goals: ${planning.allowEventCreation === true ? 'permitted within the proposal dates' : 'not permitted'}.`,
           `Change plan phases: ${planning.allowPhaseChanges === true ? 'permitted for phases within the proposal dates' : 'not permitted'}.`,
-          `Race preparation: ${planning.raceId ? 'course summary and race plan of the selected race and your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted' : 'not permitted'}.`,
+          `Race preparation: ${planning.raceId ? `course summary and race plan of the selected race, ${planning.includeRehearsals === true ? 'its fueling rehearsals, ' : ''}your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted` : 'not permitted'}.`,
         ]
       : ['Proposal submission is not permitted.']),
     'Applying training changes requires your review and explicit approval in Athlete Panel.',

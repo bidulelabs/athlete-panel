@@ -7,6 +7,7 @@ import {
   scopeFromGrant,
   planningScope,
   agentGrantValuesSchema,
+  type AgentCommand,
   type Command,
   proposalApplyInputSchema,
   proposalDetailsSchema,
@@ -28,6 +29,7 @@ import {
   hasStepNotes,
   hasExerciseInstructions,
   assertReadableSources,
+  assertKnownProducts,
   assertBounded,
 } from './proposal-validation';
 import { evaluateProposal, reviewProposal } from './proposal-review';
@@ -94,18 +96,38 @@ export async function contextForToken(token: string) {
     };
   });
 }
-function assignIds(commands: Command[]): Command[] {
-  return commands.map((c) =>
-    c.action.endsWith('.create') || c.action.endsWith('.duplicate')
+const stationsWithIds = <Station extends { id?: string }>(stations: Station[]) =>
+  stations.map((station) => ({ ...station, id: station.id ?? randomUUID() }));
+function assignIds(agentCommands: AgentCommand[]): Command[] {
+  return agentCommands.map((command) => {
+    if (command.action === 'racePlan.update')
+      return {
+        ...command,
+        values: {
+          ...command.values,
+          stations: command.values.stations && stationsWithIds(command.values.stations),
+        },
+      };
+    if (command.action === 'racePlan.create')
+      return {
+        ...command,
+        values: {
+          ...command.values,
+          stations: command.values.stations && stationsWithIds(command.values.stations),
+          id: command.values.id ?? randomUUID(),
+        },
+      };
+    return command.action.endsWith('.create') || command.action.endsWith('.duplicate')
       ? ({
-          ...c,
+          ...command,
           values: {
-            ...('values' in c ? c.values : {}),
-            id: ('values' in c && 'id' in c.values && c.values.id) || randomUUID(),
+            ...('values' in command ? command.values : {}),
+            id:
+              ('values' in command && 'id' in command.values && command.values.id) || randomUUID(),
           },
         } as Command)
-      : c,
-  );
+      : command;
+  });
 }
 export async function submitProposal(token: string, body: unknown) {
   const candidate = await grantForToken(token, connection());
@@ -143,6 +165,7 @@ export async function submitProposal(token: string, body: unknown) {
         const snapshot = await proposalBaseline(tx, grant.id, input.contextDigest, context);
         const commands = assignIds(input.commands);
         assertReadableSources(commands, before, scope);
+        assertKnownProducts(commands, before);
         const racePlanCommands = commands.filter(
           (command) => command.action === 'racePlan.create' || command.action === 'racePlan.update',
         );

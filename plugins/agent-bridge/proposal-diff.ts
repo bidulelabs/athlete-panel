@@ -37,6 +37,7 @@ const labels: Record<string, string> = {
   firstWeek: 'First week',
   lastWeek: 'Last week',
   eventId: 'Race',
+  workoutId: 'Session',
   openQuestions: 'Open questions',
   fromMeters: 'From',
   toMeters: 'To',
@@ -49,6 +50,12 @@ const labels: Record<string, string> = {
   stopSeconds: 'Planned stop',
   verified: 'Confirmed',
   dropBag: 'Drop bag',
+  everyMinutes: 'Every',
+  carbohydrateGramsPerHour: 'Carbohydrate',
+  fluidMillilitresPerHour: 'Fluid',
+  sodiumMilligramsPerHour: 'Sodium',
+  productId: 'Product',
+  daysBefore: 'Days before',
 };
 const listItemLabels: Record<string, string> = {
   exercises: 'Exercise',
@@ -57,6 +64,14 @@ const listItemLabels: Record<string, string> = {
   openQuestions: 'Open question',
   stations: 'Aid station',
   dropBag: 'Item',
+  schedule: 'Row',
+  cues: 'Cue',
+};
+const unitsByField: Record<string, string> = {
+  carbohydrateGramsPerHour: 'g per hour',
+  fluidMillilitresPerHour: 'ml per hour',
+  sodiumMilligramsPerHour: 'mg per hour',
+  everyMinutes: 'min',
 };
 const readable = (key: string) =>
   labels[key] ??
@@ -88,7 +103,8 @@ function valueText(
   leafKey: string,
   parent: Record<string, unknown>,
   units: 'metric' | 'imperial',
-  plans: Record<string, string>,
+  namesById: Record<string, string>,
+  missingProductName: string,
   path: string[],
 ) {
   const weeklyField = path.find((part) => part.startsWith('weekly'));
@@ -97,8 +113,12 @@ function valueText(
   if (value === null) return key.toLowerCase().includes('date') ? 'Unscheduled' : 'Not set';
   if (value === '') return 'Empty';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (key === 'planId' && typeof value === 'string') return plans[value] ?? value;
+  if (['planId', 'eventId', 'workoutId'].includes(key) && typeof value === 'string')
+    return namesById[value] ?? value;
+  if (key === 'productId' && typeof value === 'string')
+    return namesById[value] ?? missingProductName;
   if (typeof value === 'number') {
+    if (unitsByField[key]) return `${value} ${unitsByField[key]}`;
     if (key.endsWith('Seconds')) {
       const hours = Math.floor(value / 3600),
         minutes = Math.floor((value % 3600) / 60),
@@ -132,7 +152,8 @@ function valueText(
 export function proposalRows(
   change: EntityChange,
   units: 'metric' | 'imperial' = 'metric',
-  plans: Record<string, string> = {},
+  namesById: Record<string, string> = {},
+  missingProductName = 'Product no longer in your profile',
 ): ReviewRow[] {
   const rows: ReviewRow[] = [];
   const visit = (
@@ -145,7 +166,12 @@ export function proposalRows(
     if (JSON.stringify(before) === JSON.stringify(after)) return;
     const key = path.at(-1) ?? '';
     if (path.length === 1 && ['id', 'revision'].includes(key)) return;
-    if (path[0] === 'stations' && ['id', 'productId'].includes(key)) return;
+    if (path[0] === 'stations' && key === 'id') return;
+    if (
+      before === undefined &&
+      (after === null || after === '' || (Array.isArray(after) && !after.length))
+    )
+      return;
     const object = (value: unknown): value is Record<string, unknown> =>
       !!value && typeof value === 'object';
     if (object(before) || object(after)) {
@@ -164,13 +190,15 @@ export function proposalRows(
             ? `${listItemLabels[path[index - 1]!] ?? 'Step'} ${Number(part) + 1}`
             : path.length === 1 && part === 'notes' && change.entity === 'workout'
               ? 'Workout description'
-              : path[index - 1] === 'editedWeeks'
-                ? `Week of ${part}`
-                : readable(part),
+              : part === 'schedule' && path[0] === 'nutrition'
+                ? 'Food schedule'
+                : path[index - 1] === 'editedWeeks'
+                  ? `Week of ${part}`
+                  : readable(part),
         )
         .join(' · '),
-      before: valueText(before, key, beforeParent, units, plans, path),
-      after: valueText(after, key, afterParent, units, plans, path),
+      before: valueText(before, key, beforeParent, units, namesById, missingProductName, path),
+      after: valueText(after, key, afterParent, units, namesById, missingProductName, path),
     });
   };
   visit(change.before ?? {}, change.after ?? {}, []);

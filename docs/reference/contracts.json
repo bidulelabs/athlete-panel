@@ -1592,7 +1592,8 @@
                         "stopSeconds": {
                           "type": "integer",
                           "minimum": 0,
-                          "maximum": 86400
+                          "maximum": 86400,
+                          "description": "Planned stop at this station, in seconds."
                         },
                         "water": {
                           "type": "boolean"
@@ -1615,7 +1616,8 @@
                               "servings": {
                                 "type": "integer",
                                 "minimum": 1,
-                                "maximum": 100
+                                "maximum": 100,
+                                "description": "Whole servings of the product left in the drop bag."
                               }
                             },
                             "required": [
@@ -1682,7 +1684,8 @@
                               {
                                 "type": "null"
                               }
-                            ]
+                            ],
+                            "description": "Target in grams of carbohydrate per hour. Null when unknown."
                           },
                           "fluidMillilitresPerHour": {
                             "anyOf": [
@@ -1694,7 +1697,8 @@
                               {
                                 "type": "null"
                               }
-                            ]
+                            ],
+                            "description": "Target in millilitres of fluid per hour. Null when unknown."
                           },
                           "sodiumMilligramsPerHour": {
                             "anyOf": [
@@ -1706,7 +1710,8 @@
                               {
                                 "type": "null"
                               }
-                            ]
+                            ],
+                            "description": "Target in milligrams of sodium per hour. Null when unknown."
                           }
                         },
                         "required": [
@@ -1730,12 +1735,14 @@
                             "servings": {
                               "type": "number",
                               "exclusiveMinimum": 0,
-                              "maximum": 100
+                              "maximum": 100,
+                              "description": "Servings of the product at each intake."
                             },
                             "everyMinutes": {
                               "type": "integer",
                               "minimum": 1,
-                              "maximum": 1440
+                              "maximum": 1440,
+                              "description": "Minutes between two intakes of the product."
                             }
                           },
                           "required": [
@@ -3287,6 +3294,9 @@
                             "type": "string",
                             "format": "uuid",
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "includeRehearsals": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -7189,7 +7199,8 @@
                                 "stopSeconds": {
                                   "type": "integer",
                                   "minimum": 0,
-                                  "maximum": 86400
+                                  "maximum": 86400,
+                                  "description": "Planned stop at this station, in seconds."
                                 },
                                 "water": {
                                   "type": "boolean"
@@ -7212,7 +7223,8 @@
                                       "servings": {
                                         "type": "integer",
                                         "minimum": 1,
-                                        "maximum": 100
+                                        "maximum": 100,
+                                        "description": "Whole servings of the product left in the drop bag."
                                       }
                                     },
                                     "required": [
@@ -7243,9 +7255,7 @@
                                 "water",
                                 "food",
                                 "dropBag",
-                                "action",
-                                "source",
-                                "verified"
+                                "action"
                               ],
                               "additionalProperties": false
                             },
@@ -7267,7 +7277,8 @@
                                       {
                                         "type": "null"
                                       }
-                                    ]
+                                    ],
+                                    "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                   },
                                   "fluidMillilitresPerHour": {
                                     "anyOf": [
@@ -7279,7 +7290,8 @@
                                       {
                                         "type": "null"
                                       }
-                                    ]
+                                    ],
+                                    "description": "Target in millilitres of fluid per hour. Null when unknown."
                                   },
                                   "sodiumMilligramsPerHour": {
                                     "anyOf": [
@@ -7291,7 +7303,8 @@
                                       {
                                         "type": "null"
                                       }
-                                    ]
+                                    ],
+                                    "description": "Target in milligrams of sodium per hour. Null when unknown."
                                   }
                                 },
                                 "required": [
@@ -7315,12 +7328,14 @@
                                     "servings": {
                                       "type": "number",
                                       "exclusiveMinimum": 0,
-                                      "maximum": 100
+                                      "maximum": 100,
+                                      "description": "Servings of the product at each intake."
                                     },
                                     "everyMinutes": {
                                       "type": "integer",
                                       "minimum": 1,
-                                      "maximum": 1440
+                                      "maximum": 1440,
+                                      "description": "Minutes between two intakes of the product."
                                     }
                                   },
                                   "required": [
@@ -7587,7 +7602,8 @@
                                 "stopSeconds": {
                                   "type": "integer",
                                   "minimum": 0,
-                                  "maximum": 86400
+                                  "maximum": 86400,
+                                  "description": "Planned stop at this station, in seconds."
                                 },
                                 "water": {
                                   "type": "boolean"
@@ -7610,7 +7626,8 @@
                                       "servings": {
                                         "type": "integer",
                                         "minimum": 1,
-                                        "maximum": 100
+                                        "maximum": 100,
+                                        "description": "Whole servings of the product left in the drop bag."
                                       }
                                     },
                                     "required": [
@@ -7641,9 +7658,7 @@
                                 "water",
                                 "food",
                                 "dropBag",
-                                "action",
-                                "source",
-                                "verified"
+                                "action"
                               ],
                               "additionalProperties": false
                             },
@@ -7665,7 +7680,8 @@
                                       {
                                         "type": "null"
                                       }
-                                    ]
+                                    ],
+                                    "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                   },
                                   "fluidMillilitresPerHour": {
                                     "anyOf": [
@@ -7677,7 +7693,8 @@
                                       {
                                         "type": "null"
                                       }
-                                    ]
+                                    ],
+                                    "description": "Target in millilitres of fluid per hour. Null when unknown."
                                   },
                                   "sodiumMilligramsPerHour": {
                                     "anyOf": [
@@ -7689,7 +7706,8 @@
                                       {
                                         "type": "null"
                                       }
-                                    ]
+                                    ],
+                                    "description": "Target in milligrams of sodium per hour. Null when unknown."
                                   }
                                 },
                                 "required": [
@@ -7713,12 +7731,14 @@
                                     "servings": {
                                       "type": "number",
                                       "exclusiveMinimum": 0,
-                                      "maximum": 100
+                                      "maximum": 100,
+                                      "description": "Servings of the product at each intake."
                                     },
                                     "everyMinutes": {
                                       "type": "integer",
                                       "minimum": 1,
-                                      "maximum": 1440
+                                      "maximum": 1440,
+                                      "description": "Minutes between two intakes of the product."
                                     }
                                   },
                                   "required": [
@@ -11571,7 +11591,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -11594,7 +11615,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -11661,7 +11683,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -11673,7 +11696,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -11685,7 +11709,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -11709,12 +11734,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -12002,7 +12029,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -12025,7 +12053,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -12092,7 +12121,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -12104,7 +12134,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -12116,7 +12147,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -12140,12 +12172,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -16970,7 +17004,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -16993,7 +17028,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -17060,7 +17096,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -17072,7 +17109,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -17084,7 +17122,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -17108,12 +17147,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -17401,7 +17442,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -17424,7 +17466,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -17491,7 +17534,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -17503,7 +17547,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -17515,7 +17560,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -17539,12 +17585,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -22386,7 +22434,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -22409,7 +22458,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -22476,7 +22526,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -22488,7 +22539,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -22500,7 +22552,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -22524,12 +22577,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -22817,7 +22872,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -22840,7 +22896,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -22907,7 +22964,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -22919,7 +22977,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -22931,7 +22990,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -22955,12 +23015,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -28216,7 +28278,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -28239,7 +28302,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -28306,7 +28370,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -28318,7 +28383,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -28330,7 +28396,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -28354,12 +28421,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -28647,7 +28716,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -28670,7 +28740,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -28737,7 +28808,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -28749,7 +28821,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -28761,7 +28834,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -28785,12 +28859,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -30400,6 +30476,9 @@
                           "type": "string",
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "includeRehearsals": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -30563,6 +30642,9 @@
                               "type": "string",
                               "format": "uuid",
                               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "includeRehearsals": {
+                              "type": "boolean"
                             }
                           },
                           "required": [
@@ -34045,7 +34127,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -34068,7 +34151,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -34135,7 +34219,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -34147,7 +34232,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -34159,7 +34245,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -34183,12 +34270,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -34476,7 +34565,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -34499,7 +34589,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -34566,7 +34657,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -34578,7 +34670,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -34590,7 +34683,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -34614,12 +34708,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -39473,7 +39569,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -39496,7 +39593,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -39563,7 +39661,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -39575,7 +39674,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -39587,7 +39687,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -39611,12 +39712,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -39904,7 +40007,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -39927,7 +40031,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -39994,7 +40099,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -40006,7 +40112,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -40018,7 +40125,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -40042,12 +40150,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -44912,7 +45022,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -44935,7 +45046,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -45002,7 +45114,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -45014,7 +45127,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -45026,7 +45140,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -45050,12 +45165,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -45343,7 +45460,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     },
                                     "water": {
                                       "type": "boolean"
@@ -45366,7 +45484,8 @@
                                           "servings": {
                                             "type": "integer",
                                             "minimum": 1,
-                                            "maximum": 100
+                                            "maximum": 100,
+                                            "description": "Whole servings of the product left in the drop bag."
                                           }
                                         },
                                         "required": [
@@ -45433,7 +45552,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in grams of carbohydrate per hour. Null when unknown."
                                       },
                                       "fluidMillilitresPerHour": {
                                         "anyOf": [
@@ -45445,7 +45565,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in millilitres of fluid per hour. Null when unknown."
                                       },
                                       "sodiumMilligramsPerHour": {
                                         "anyOf": [
@@ -45457,7 +45578,8 @@
                                           {
                                             "type": "null"
                                           }
-                                        ]
+                                        ],
+                                        "description": "Target in milligrams of sodium per hour. Null when unknown."
                                       }
                                     },
                                     "required": [
@@ -45481,12 +45603,14 @@
                                         "servings": {
                                           "type": "number",
                                           "exclusiveMinimum": 0,
-                                          "maximum": 100
+                                          "maximum": 100,
+                                          "description": "Servings of the product at each intake."
                                         },
                                         "everyMinutes": {
                                           "type": "integer",
                                           "minimum": 1,
-                                          "maximum": 1440
+                                          "maximum": 1440,
+                                          "description": "Minutes between two intakes of the product."
                                         }
                                       },
                                       "required": [
@@ -47129,6 +47253,9 @@
                                   "type": "string",
                                   "format": "uuid",
                                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "includeRehearsals": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
@@ -47331,6 +47458,9 @@
                           "type": "string",
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "includeRehearsals": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -47538,6 +47668,9 @@
                                   "type": "string",
                                   "format": "uuid",
                                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "includeRehearsals": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
@@ -47772,6 +47905,9 @@
                                   "type": "string",
                                   "format": "uuid",
                                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "includeRehearsals": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
@@ -52431,7 +52567,8 @@
                       "stopSeconds": {
                         "type": "integer",
                         "minimum": 0,
-                        "maximum": 86400
+                        "maximum": 86400,
+                        "description": "Planned stop at this station, in seconds."
                       },
                       "water": {
                         "type": "boolean"
@@ -52454,7 +52591,8 @@
                             "servings": {
                               "type": "integer",
                               "minimum": 1,
-                              "maximum": 100
+                              "maximum": 100,
+                              "description": "Whole servings of the product left in the drop bag."
                             }
                           },
                           "required": [
@@ -52485,9 +52623,7 @@
                       "water",
                       "food",
                       "dropBag",
-                      "action",
-                      "source",
-                      "verified"
+                      "action"
                     ],
                     "additionalProperties": false
                   },
@@ -52509,7 +52645,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Target in grams of carbohydrate per hour. Null when unknown."
                         },
                         "fluidMillilitresPerHour": {
                           "anyOf": [
@@ -52521,7 +52658,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Target in millilitres of fluid per hour. Null when unknown."
                         },
                         "sodiumMilligramsPerHour": {
                           "anyOf": [
@@ -52533,7 +52671,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Target in milligrams of sodium per hour. Null when unknown."
                         }
                       },
                       "required": [
@@ -52557,12 +52696,14 @@
                           "servings": {
                             "type": "number",
                             "exclusiveMinimum": 0,
-                            "maximum": 100
+                            "maximum": 100,
+                            "description": "Servings of the product at each intake."
                           },
                           "everyMinutes": {
                             "type": "integer",
                             "minimum": 1,
-                            "maximum": 1440
+                            "maximum": 1440,
+                            "description": "Minutes between two intakes of the product."
                           }
                         },
                         "required": [
@@ -52829,7 +52970,8 @@
                       "stopSeconds": {
                         "type": "integer",
                         "minimum": 0,
-                        "maximum": 86400
+                        "maximum": 86400,
+                        "description": "Planned stop at this station, in seconds."
                       },
                       "water": {
                         "type": "boolean"
@@ -52852,7 +52994,8 @@
                             "servings": {
                               "type": "integer",
                               "minimum": 1,
-                              "maximum": 100
+                              "maximum": 100,
+                              "description": "Whole servings of the product left in the drop bag."
                             }
                           },
                           "required": [
@@ -52883,9 +53026,7 @@
                       "water",
                       "food",
                       "dropBag",
-                      "action",
-                      "source",
-                      "verified"
+                      "action"
                     ],
                     "additionalProperties": false
                   },
@@ -52907,7 +53048,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Target in grams of carbohydrate per hour. Null when unknown."
                         },
                         "fluidMillilitresPerHour": {
                           "anyOf": [
@@ -52919,7 +53061,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Target in millilitres of fluid per hour. Null when unknown."
                         },
                         "sodiumMilligramsPerHour": {
                           "anyOf": [
@@ -52931,7 +53074,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Target in milligrams of sodium per hour. Null when unknown."
                         }
                       },
                       "required": [
@@ -52955,12 +53099,14 @@
                           "servings": {
                             "type": "number",
                             "exclusiveMinimum": 0,
-                            "maximum": 100
+                            "maximum": 100,
+                            "description": "Servings of the product at each intake."
                           },
                           "everyMinutes": {
                             "type": "integer",
                             "minimum": 1,
-                            "maximum": 1440
+                            "maximum": 1440,
+                            "description": "Minutes between two intakes of the product."
                           }
                         },
                         "required": [
@@ -55829,6 +55975,286 @@
                   },
                   "description": "What the athlete still has to answer for the strategy to hold."
                 },
+                "startTime": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                      "description": "Wall-clock time in the profile timezone, HH:MM."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "finishCutoff": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "dayOffset": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6,
+                          "description": "Days after the race date."
+                        },
+                        "time": {
+                          "type": "string",
+                          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                          "description": "Wall-clock time in the profile timezone, HH:MM."
+                        }
+                      },
+                      "required": [
+                        "dayOffset",
+                        "time"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "stations": {
+                  "maxItems": 60,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "description": "Id of an existing aid station, as read. Leave out for a new one.",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "distanceMeters": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Distance from the start line, in meters."
+                      },
+                      "cutoff": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "dayOffset": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Days after the race date."
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                "description": "Wall-clock time in the profile timezone, HH:MM."
+                              }
+                            },
+                            "required": [
+                              "dayOffset",
+                              "time"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "stopSeconds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 86400,
+                        "description": "Planned stop at this station, in seconds."
+                      },
+                      "water": {
+                        "type": "boolean"
+                      },
+                      "food": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "dropBag": {
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "productId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "servings": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 100,
+                              "description": "Whole servings of the product left in the drop bag."
+                            }
+                          },
+                          "required": [
+                            "productId",
+                            "servings"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "action": {
+                        "type": "string",
+                        "maxLength": 300
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "distanceMeters",
+                      "cutoff",
+                      "stopSeconds",
+                      "water",
+                      "food",
+                      "dropBag",
+                      "action"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Aid stations in course order."
+                },
+                "nutrition": {
+                  "type": "object",
+                  "properties": {
+                    "targets": {
+                      "type": "object",
+                      "properties": {
+                        "carbohydrateGramsPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 500
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Target in grams of carbohydrate per hour. Null when unknown."
+                        },
+                        "fluidMillilitresPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 5000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Target in millilitres of fluid per hour. Null when unknown."
+                        },
+                        "sodiumMilligramsPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 10000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Target in milligrams of sodium per hour. Null when unknown."
+                        }
+                      },
+                      "required": [
+                        "carbohydrateGramsPerHour",
+                        "fluidMillilitresPerHour",
+                        "sodiumMilligramsPerHour"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "schedule": {
+                      "maxItems": 30,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "productId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "servings": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100,
+                            "description": "Servings of the product at each intake."
+                          },
+                          "everyMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440,
+                            "description": "Minutes between two intakes of the product."
+                          }
+                        },
+                        "required": [
+                          "productId",
+                          "servings",
+                          "everyMinutes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "cues": {
+                      "maxItems": 20,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "when": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          }
+                        },
+                        "required": [
+                          "when",
+                          "text"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "daysBefore": {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    "breakfast": {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    "recovery": {
+                      "type": "string",
+                      "maxLength": 4000
+                    }
+                  },
+                  "required": [
+                    "targets",
+                    "schedule",
+                    "cues",
+                    "daysBefore",
+                    "breakfast",
+                    "recovery"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What to eat and drink before, during and after the race."
+                },
                 "courseId": {
                   "anyOf": [
                     {
@@ -55938,6 +56364,286 @@
                     "maxLength": 300
                   },
                   "description": "What the athlete still has to answer for the strategy to hold."
+                },
+                "startTime": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                      "description": "Wall-clock time in the profile timezone, HH:MM."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "finishCutoff": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "dayOffset": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6,
+                          "description": "Days after the race date."
+                        },
+                        "time": {
+                          "type": "string",
+                          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                          "description": "Wall-clock time in the profile timezone, HH:MM."
+                        }
+                      },
+                      "required": [
+                        "dayOffset",
+                        "time"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "stations": {
+                  "maxItems": 60,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "description": "Id of an existing aid station, as read. Leave out for a new one.",
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "distanceMeters": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Distance from the start line, in meters."
+                      },
+                      "cutoff": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "dayOffset": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Days after the race date."
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                "description": "Wall-clock time in the profile timezone, HH:MM."
+                              }
+                            },
+                            "required": [
+                              "dayOffset",
+                              "time"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "stopSeconds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 86400,
+                        "description": "Planned stop at this station, in seconds."
+                      },
+                      "water": {
+                        "type": "boolean"
+                      },
+                      "food": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "dropBag": {
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "productId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "servings": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 100,
+                              "description": "Whole servings of the product left in the drop bag."
+                            }
+                          },
+                          "required": [
+                            "productId",
+                            "servings"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "action": {
+                        "type": "string",
+                        "maxLength": 300
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "distanceMeters",
+                      "cutoff",
+                      "stopSeconds",
+                      "water",
+                      "food",
+                      "dropBag",
+                      "action"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "description": "Aid stations in course order."
+                },
+                "nutrition": {
+                  "type": "object",
+                  "properties": {
+                    "targets": {
+                      "type": "object",
+                      "properties": {
+                        "carbohydrateGramsPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 500
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Target in grams of carbohydrate per hour. Null when unknown."
+                        },
+                        "fluidMillilitresPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 5000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Target in millilitres of fluid per hour. Null when unknown."
+                        },
+                        "sodiumMilligramsPerHour": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 10000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Target in milligrams of sodium per hour. Null when unknown."
+                        }
+                      },
+                      "required": [
+                        "carbohydrateGramsPerHour",
+                        "fluidMillilitresPerHour",
+                        "sodiumMilligramsPerHour"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "schedule": {
+                      "maxItems": 30,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "productId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "servings": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100,
+                            "description": "Servings of the product at each intake."
+                          },
+                          "everyMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440,
+                            "description": "Minutes between two intakes of the product."
+                          }
+                        },
+                        "required": [
+                          "productId",
+                          "servings",
+                          "everyMinutes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "cues": {
+                      "maxItems": 20,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "when": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          }
+                        },
+                        "required": [
+                          "when",
+                          "text"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "daysBefore": {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    "breakfast": {
+                      "type": "string",
+                      "maxLength": 4000
+                    },
+                    "recovery": {
+                      "type": "string",
+                      "maxLength": 4000
+                    }
+                  },
+                  "required": [
+                    "targets",
+                    "schedule",
+                    "cues",
+                    "daysBefore",
+                    "breakfast",
+                    "recovery"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What to eat and drink before, during and after the race."
                 },
                 "courseId": {
                   "anyOf": [
@@ -57558,7 +58264,8 @@
                   "stopSeconds": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 86400
+                    "maximum": 86400,
+                    "description": "Planned stop at this station, in seconds."
                   },
                   "water": {
                     "type": "boolean"
@@ -57581,7 +58288,8 @@
                         "servings": {
                           "type": "integer",
                           "minimum": 1,
-                          "maximum": 100
+                          "maximum": 100,
+                          "description": "Whole servings of the product left in the drop bag."
                         }
                       },
                       "required": [
@@ -57648,7 +58356,8 @@
                         {
                           "type": "null"
                         }
-                      ]
+                      ],
+                      "description": "Target in grams of carbohydrate per hour. Null when unknown."
                     },
                     "fluidMillilitresPerHour": {
                       "anyOf": [
@@ -57660,7 +58369,8 @@
                         {
                           "type": "null"
                         }
-                      ]
+                      ],
+                      "description": "Target in millilitres of fluid per hour. Null when unknown."
                     },
                     "sodiumMilligramsPerHour": {
                       "anyOf": [
@@ -57672,7 +58382,8 @@
                         {
                           "type": "null"
                         }
-                      ]
+                      ],
+                      "description": "Target in milligrams of sodium per hour. Null when unknown."
                     }
                   },
                   "required": [
@@ -57696,12 +58407,14 @@
                       "servings": {
                         "type": "number",
                         "exclusiveMinimum": 0,
-                        "maximum": 100
+                        "maximum": 100,
+                        "description": "Servings of the product at each intake."
                       },
                       "everyMinutes": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 1440
+                        "maximum": 1440,
+                        "description": "Minutes between two intakes of the product."
                       }
                     },
                     "required": [
@@ -58701,6 +59414,9 @@
                     "type": "string",
                     "format": "uuid",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "includeRehearsals": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -60708,6 +61424,9 @@
                       "type": "string",
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "includeRehearsals": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -60915,6 +61634,9 @@
                               "type": "string",
                               "format": "uuid",
                               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "includeRehearsals": {
+                              "type": "boolean"
                             }
                           },
                           "required": [

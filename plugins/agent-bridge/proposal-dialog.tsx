@@ -19,7 +19,7 @@ import {
   type ProposalSummary,
   type ProposalDetails,
 } from '@athlete-panel/contracts';
-import { summarizeProposal, planTitlesById } from './proposal-weeks';
+import { summarizeProposal, namesById as namesByIdOf } from './proposal-weeks';
 import { ReviewChange } from './proposal-changes';
 import { ProposalBrowser } from './proposal-browser';
 import { changeAction, describeTypes } from './proposal-presentation';
@@ -83,7 +83,7 @@ function ProposalDialog({
   onApplied: (receipt: ProposalReceipt) => void;
 }) {
   const { request, data } = useWorkspace();
-  const planTitles = planTitlesById(data.plans, proposal.changes);
+  const namesById = namesByIdOf(data, proposal.changes);
   const action = useAction();
   const [acknowledged, setAcknowledged] = useState(false);
   const [idempotencyKey] = useState(requestId);
@@ -192,7 +192,7 @@ function ProposalDialog({
               {review.contextChanges.map((change, index) => (
                 <ReviewChange
                   change={change}
-                  planTitles={planTitles}
+                  namesById={namesById}
                   caption="When the agent read your data and now"
                   context
                   key={index}
@@ -204,7 +204,7 @@ function ProposalDialog({
         <section aria-label="Proposed edits">
           <ProposalBrowser
             changes={proposal.changes}
-            planTitles={planTitles}
+            namesById={namesById}
             onFilterChange={setFiltered}
           />
         </section>

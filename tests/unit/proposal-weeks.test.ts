@@ -11,6 +11,7 @@ import { editedWeekFacts } from '../../plugins/agent-bridge/proposal-presentatio
 import {
   groupChangesByWeek,
   groupChangesByMonth,
+  namesById,
   planTitlesById,
   summarizeProposal,
 } from '../../plugins/agent-bridge/proposal-weeks';
@@ -323,5 +324,69 @@ describe('phase in review', () => {
   it('dates the change from the first to the last day of the period', () => {
     expect(groupChangesByWeek([change], 1).map((week) => week.weekStart)).toEqual(['2026-11-02']);
     expect(summarizeProposal([change])).toMatchObject({ from: '2026-11-02', to: '2027-01-31' });
+  });
+});
+
+describe('names of the records a change points to', () => {
+  it('reads plans, races, sessions and products from the workspace and the change', () => {
+    const race = eventSchema.parse({
+      id: '00000000-0000-4000-8000-000000000020',
+      revision: 1,
+      title: 'Synthetic race',
+      kind: 'race',
+      date: '2027-06-20',
+    });
+    const productId = '00000000-0000-4000-8000-000000000030';
+    const names = namesById(
+      {
+        plans: [{ id: plan.id, title: plan.title }],
+        events: [{ id: race.id, title: race.title }],
+        workouts: [{ id: workout(1, 'Long run').id, title: 'Long run' }],
+        profile: {
+          nutrition: {
+            products: [
+              { id: productId, name: 'Synthetic gel', kind: 'gel', carbohydrateGrams: 30 },
+            ],
+          },
+        },
+      },
+      [],
+    );
+    expect(names).toEqual({
+      [plan.id]: 'Base block',
+      [race.id]: 'Synthetic race',
+      [workout(1, 'Long run').id]: 'Long run',
+      [productId]: 'Synthetic gel',
+    });
+    expect(namesById({ plans: [], events: [], workouts: [] }, [])).toEqual({});
+  });
+
+  it('tells apart products that share a name', () => {
+    const product = (id: number, kind: string, carbohydrateGrams: number | null) => ({
+      id: `00000000-0000-4000-8000-0000000001${id}`,
+      name: 'Orchard gel',
+      kind,
+      carbohydrateGrams,
+    });
+    const namesOf = (...products: ReturnType<typeof product>[]) =>
+      Object.values(
+        namesById(
+          { plans: [], events: [], workouts: [], profile: { nutrition: { products } } },
+          [],
+        ),
+      );
+    expect(namesOf(product(1, 'gel', 30), product(2, 'gel', 45))).toEqual([
+      'Orchard gel (30 g carbs)',
+      'Orchard gel (45 g carbs)',
+    ]);
+    expect(namesOf(product(1, 'gel', 30), product(2, 'chew', 30))).toEqual([
+      'Orchard gel (gel)',
+      'Orchard gel (chew)',
+    ]);
+    expect(namesOf(product(1, 'gel', 30), product(2, 'gel', 30))).toEqual([
+      'Orchard gel (1)',
+      'Orchard gel (2)',
+    ]);
+    expect(namesOf(product(1, 'gel', null))).toEqual(['Orchard gel']);
   });
 });

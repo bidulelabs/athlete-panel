@@ -829,6 +829,34 @@ describe('race plan effort and weather assumption', () => {
     expect(afterAgent.racePlans[0]).toMatchObject(assumption);
   });
 
+  it('stores the assumption given at creation, and none as 0, 0 and an empty note', () => {
+    const empty = run(workspaceWithRaces(), [createRacePlan()]).state.racePlans[0];
+    expect(empty).toMatchObject({ effortPercent: 0, weatherPercent: 0, weatherNote: '' });
+    const given = run(workspaceWithRaces(), [createRacePlan(assumption)]).state.racePlans[0];
+    expect(given).toMatchObject(assumption);
+  });
+
+  it.each([
+    ['effort over 50', { effortPercent: 50.5 }],
+    ['weather under -20', { weatherPercent: -21 }],
+    ['a 301-character note', { weatherNote: 'a'.repeat(301) }],
+  ])('refuses %s at creation', (_label, values) => {
+    const refused = commandSchema.safeParse(createRacePlan(values));
+    expect(refused.success).toBe(false);
+    expect(refused.error?.issues.map((issue) => issue.code)).not.toContain('unrecognized_keys');
+  });
+
+  it('gives an assistant no way to create a plan with them', () => {
+    const agentCreate = (values: Record<string, unknown>) =>
+      agentCommandSchema.safeParse({
+        action: 'racePlan.create',
+        values: { eventId: raceId, ...agentWrites, ...values },
+      }).success;
+    expect(agentCreate({})).toBe(true);
+    expect(agentCreate({ effortPercent: 5 })).toBe(false);
+    expect(agentCreate({ weatherNote: 'Hot' })).toBe(false);
+  });
+
   it('replays an identical assumption without a new revision', () => {
     const withEffort = run(planned(), [updateRacePlan(assumption)]).state;
     const replay = run(withEffort, [updateRacePlan(assumption, 2)]);

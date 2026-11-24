@@ -1118,6 +1118,9 @@ export const commandSchema = z.discriminatedUnion('action', [
           finishCutoff: racePlanDayFields.finishCutoff.optional(),
           stations: stationsInCourseOrder(racePlanStationCommandSchema).optional(),
           nutrition: racePlanDayFields.nutrition.optional(),
+          effortPercent: racePlanAssumptionFields.effortPercent.optional(),
+          weatherPercent: racePlanAssumptionFields.weatherPercent.optional(),
+          weatherNote: racePlanAssumptionFields.weatherNote.optional(),
           courseId: racePlanCourseId.default(null),
         })
         .strict(),

@@ -3,6 +3,7 @@ import { effectiveDate } from '../../dates';
 import type { CommandContext } from '../context';
 import { fail } from '../errors';
 import { bucket, equal } from '../state';
+import { deleteRehearsalsWithoutRaceOrSession } from './rehearsal';
 
 export function handleWorkout(
   context: CommandContext,
@@ -69,6 +70,7 @@ export function handleWorkout(
           'Clear completion or unlink the activity before deleting this workout.',
         );
       state.workouts = state.workouts.filter((item) => item.id !== workout.id);
+      deleteRehearsalsWithoutRaceOrSession(state);
       ordering.remove(workout);
       break;
     }

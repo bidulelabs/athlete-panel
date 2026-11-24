@@ -10,11 +10,11 @@ const EXPANDED_CHANGE_LIMIT = 20;
 
 export function ProposalBrowser({
   changes,
-  planTitles,
+  namesById,
   onFilterChange,
 }: {
   changes: ProposalDetails['changes'];
-  planTitles: Record<string, string>;
+  namesById: Record<string, string>;
   onFilterChange: (filtered: boolean) => void;
 }) {
   const [query, setQuery] = useState('');
@@ -92,7 +92,7 @@ export function ProposalBrowser({
         <ProposedEdits
           key={JSON.stringify([query.trim(), type, action])}
           changes={visible}
-          planTitles={planTitles}
+          namesById={namesById}
           filtered={filtered}
           collapsed={!filtered && changes.length > EXPANDED_CHANGE_LIMIT}
         />

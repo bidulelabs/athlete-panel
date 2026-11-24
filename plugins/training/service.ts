@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   commandsSchema,
+  racePlanSchema,
   type EntityChange,
   type Workout,
   type WorkspaceState,
@@ -117,7 +118,12 @@ export async function undoChange(body: unknown) {
       for (const change of original) {
         const current = findEntity(state, change.entity, change.id);
         assert(
-          canonical(current) === canonical(change.after),
+          canonical(current) ===
+            canonical(
+              change.entity === 'racePlan' && change.after
+                ? racePlanSchema.parse(change.after)
+                : change.after,
+            ),
           'undo_conflict',
           'A later edit prevents restoring the whole change. No records were changed.',
           409,

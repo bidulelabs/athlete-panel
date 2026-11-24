@@ -1,0 +1,6 @@
+.badge.tolerance-mild {
+  color: var(--fact-race);
+}
+.badge.tolerance-poor {
+  color: var(--danger);
+}

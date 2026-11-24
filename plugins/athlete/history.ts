@@ -7,7 +7,9 @@ export async function athleteHistoryVersion(tx: Transaction): Promise<string> {
 export async function historicalProfile(tx: Transaction) {
   const rows =
     await tx`select data from athlete.records where kind='profile' and deleted=false limit 1`;
-  return rows[0] ? profileSchema.parse(rows[0].data) : null;
+  if (!rows[0]) return null;
+  const { nutrition: _nutrition, ...profile } = profileSchema.parse(rows[0].data);
+  return profile;
 }
 export async function readAthleteHistory(tx: Transaction, q: HistorySelection) {
   const rows = await tx<

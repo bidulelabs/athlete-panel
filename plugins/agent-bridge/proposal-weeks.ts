@@ -48,6 +48,56 @@ export function planTitlesById(
   return titles;
 }
 
+export function namesById(
+  workspace: {
+    plans: readonly { id: string; title: string }[];
+    events: readonly { id: string; title: string }[];
+    workouts: readonly { id: string; title: string }[];
+    profile?: { nutrition?: { products: readonly ProductForName[] } } | null;
+  },
+  changes: readonly EntityChange[],
+): Record<string, string> {
+  const titles = planTitlesById(workspace.plans, changes);
+  for (const record of [...workspace.events, ...workspace.workouts])
+    titles[record.id] = record.title;
+  for (const change of changes) {
+    const record = change.entity === 'event' ? (change.after ?? change.before) : null;
+    if (record && 'title' in record) titles[record.id] = record.title;
+  }
+  Object.assign(titles, productNamesById(workspace.profile?.nutrition?.products ?? []));
+  return titles;
+}
+
+interface ProductForName {
+  id: string;
+  name: string;
+  kind: string;
+  carbohydrateGrams: number | null;
+}
+function productNamesById(products: readonly ProductForName[]): Record<string, string> {
+  const carbohydrateText = (product: ProductForName) =>
+    product.carbohydrateGrams === null ? 'carbs unknown' : `${product.carbohydrateGrams} g carbs`;
+  const details: ((product: ProductForName) => string)[] = [
+    carbohydrateText,
+    (product) => product.kind,
+    (product) => `${product.kind}, ${carbohydrateText(product)}`,
+  ];
+  const names: Record<string, string> = {};
+  for (const product of products) {
+    const sameName = products.filter((other) => other.name === product.name);
+    const detail = details.find(
+      (describe) => new Set(sameName.map(describe)).size === sameName.length,
+    );
+    names[product.id] =
+      sameName.length === 1
+        ? product.name
+        : detail
+          ? `${product.name} (${detail(product)})`
+          : `${product.name} (${sameName.indexOf(product) + 1})`;
+  }
+  return names;
+}
+
 /** Month membership follows each record's resulting date (previous date for deletions).
  * A week crossing a month is shown in both months, with only that month's records. */
 export function groupChangesByMonth<Change extends EntityChange>(changes: readonly Change[]) {

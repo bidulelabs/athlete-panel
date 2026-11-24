@@ -21,7 +21,8 @@ import type { RaceAnalysis, RacePlan } from '@athlete-panel/contracts';
 import { mutate } from '../training/public/client';
 import { targetRangeLabel, todayInTimeZone } from '../training/public/shared';
 import { weeksUntilRace } from './preparation-weeks';
-import { pacingRows, racePlanCommand, strategyNeedsReview } from './race-plan-form';
+import { NeedsReviewNotice } from './needs-review-notice';
+import { pacingRows, racePlanCommand } from './race-plan-form';
 
 export function Preparation({
   race,
@@ -55,36 +56,15 @@ export function Preparation({
           year: 'numeric',
         })}
       />
-      {savedPlan && strategyNeedsReview(savedPlan, courseId) && (
-        <div className="race-recovery" role="status">
-          <p>
-            The course or your target changed after this strategy was written. Check that it still
-            holds.
-          </p>
-          {draft ? (
-            <p>Save your changes before marking the plan as reviewed.</p>
-          ) : (
-            <Button
-              variant="outline"
-              disabled={action.busy}
-              onClick={() =>
-                void action.run(() =>
-                  mutate(request, [
-                    {
-                      action: 'racePlan.update',
-                      id: savedPlan.id,
-                      expectedRevision: savedPlan.revision,
-                      values: { courseId },
-                    },
-                  ]),
-                )
-              }
-            >
-              Mark as reviewed
-            </Button>
-          )}
-        </div>
-      )}
+      <NeedsReviewNotice
+        racePlan={savedPlan}
+        courseId={courseId}
+        request={request}
+        hasUnsavedChanges={draft !== null}
+      >
+        The course or your target changed after this strategy was written. Check that it still
+        holds.
+      </NeedsReviewNotice>
       <form
         key={racePlan?.revision ?? 0}
         className="race-form"

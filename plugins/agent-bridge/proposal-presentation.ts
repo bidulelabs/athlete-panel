@@ -34,6 +34,7 @@ export const typeLabels: Record<string, string> = {
   profile: 'Profile',
   period: 'Phase',
   racePlan: 'Race plan',
+  rehearsal: 'Fueling rehearsal',
 };
 export const changeAction = (change: EntityChange) =>
   !change.before ? 'create' : !change.after ? 'delete' : 'update';

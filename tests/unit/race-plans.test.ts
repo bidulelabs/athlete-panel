@@ -3,9 +3,11 @@ import {
   agentCommandSchema,
   commandSchema,
   describeAgentAccess,
+  emptyRaceNutrition,
   emptyWorkspace,
   grantScopeSchema,
   planningScopeSchema,
+  racePlanSchema,
   type CommandInput,
   type WorkspaceState,
 } from '@athlete-panel/contracts';
@@ -64,6 +66,10 @@ describe('race plan commands', () => {
         pacing: [],
         assumptions: [],
         openQuestions: [],
+        startTime: null,
+        finishCutoff: null,
+        stations: [],
+        nutrition: emptyRaceNutrition,
         writtenFor: { courseId: null, target: 'Finish comfortably' },
       },
     ]);
@@ -130,6 +136,36 @@ describe('race plan commands', () => {
       briefing: agentWrites.briefing,
       pacing: agentWrites.pacing,
       writtenFor: { courseId, target: 'Under 8 hours' },
+    });
+  });
+
+  describe('a plan that needs review after the owner changed the target', () => {
+    const writtenForOldTarget = { courseId, target: 'Under 8 hours' };
+    const needsReview = () => {
+      const written = run(
+        run(workspaceWithRaces(), [createRacePlan({ target: 'Under 8 hours' })]).state,
+        [updateRacePlan(agentWrites)],
+        'agent',
+      ).state;
+      return run(written, [updateRacePlan({ target: 'Under 7 hours' }, 2)]).state;
+    };
+
+    it('stays so when the agent only writes race day fields', () => {
+      const [racePlan] = run(
+        needsReview(),
+        [updateRacePlan({ courseId, startTime: '07:00' }, 3)],
+        'agent',
+      ).state.racePlans;
+      expect(racePlan).toMatchObject({ startTime: '07:00', writtenFor: writtenForOldTarget });
+    });
+
+    it('is reviewed when the agent writes the strategy', () => {
+      const [racePlan] = run(
+        needsReview(),
+        [updateRacePlan({ courseId, briefing: 'Go out slower.' }, 3)],
+        'agent',
+      ).state.racePlans;
+      expect(racePlan!.writtenFor).toEqual({ courseId, target: 'Under 7 hours' });
     });
   });
 
@@ -226,6 +262,489 @@ describe('race plan field limits', () => {
   });
 });
 
+const station = (number: number, distanceMeters: number, values: Record<string, unknown> = {}) => ({
+  id: id(30 + number),
+  name: `Synthetic station ${number}`,
+  distanceMeters,
+  cutoff: null,
+  stopSeconds: 300,
+  water: true,
+  food: '',
+  dropBag: [],
+  action: '',
+  source: '',
+  verified: false,
+  ...values,
+});
+const agentStation = (
+  number: number,
+  distanceMeters: number,
+  values: Record<string, unknown> = {},
+) => {
+  const { source: _source, verified: _verified, ...rest } = station(number, distanceMeters, values);
+  return rest;
+};
+const dropBagItem = (servings: number) => ({ productId: id(40), servings });
+const scheduleRow = (servings: number, everyMinutes: number) => ({
+  productId: id(40),
+  servings,
+  everyMinutes,
+});
+const nutritionWith = (values: Record<string, unknown>) => ({ ...emptyRaceNutrition, ...values });
+const raceDay = {
+  startTime: '07:00',
+  finishCutoff: { dayOffset: 1, time: '01:30' },
+  stations: [
+    station(1, 0),
+    station(2, 9000, {
+      cutoff: { dayOffset: 0, time: '09:15' },
+      food: 'bananas',
+      dropBag: [{ productId: id(40), servings: 2 }],
+      action: 'Refill both bottles',
+      source: 'race guide',
+      verified: true,
+    }),
+  ],
+  nutrition: {
+    targets: {
+      carbohydrateGramsPerHour: 60,
+      fluidMillilitresPerHour: 500,
+      sodiumMilligramsPerHour: null,
+    },
+    schedule: [{ productId: id(40), servings: 0.5, everyMinutes: 30 }],
+    cues: [{ when: 'Long climbs', text: 'Eat on the gentler approach' }],
+    daysBefore: 'More rice and pasta from Thursday.',
+    breakfast: 'Oats and a banana at 04:00.',
+    recovery: 'Recovery drink at the finish.',
+  },
+};
+const agentRaceDay = {
+  ...raceDay,
+  stations: [agentStation(1, 0), agentStation(2, 9000)],
+};
+
+describe('race day fields', () => {
+  it('stores the start time, finish cutoff, aid stations and nutrition on create and on update', () => {
+    const created = run(workspaceWithRaces(), [createRacePlan(raceDay)]).state;
+    expect(created.racePlans[0]).toMatchObject(raceDay);
+    const updated = run(run(workspaceWithRaces(), [createRacePlan()]).state, [
+      updateRacePlan(raceDay),
+    ]).state;
+    expect(updated.racePlans[0]).toMatchObject({ revision: 2, ...raceDay });
+  });
+
+  it('keeps them when an owner update leaves them out, and clears them when it names them', () => {
+    const planned = run(workspaceWithRaces(), [createRacePlan(raceDay)]).state;
+    const retargeted = run(planned, [updateRacePlan({ target: 'Under 8 hours' })]).state;
+    expect(retargeted.racePlans[0]).toMatchObject({ target: 'Under 8 hours', ...raceDay });
+    const cleared = run(retargeted, [
+      updateRacePlan(
+        { startTime: null, finishCutoff: null, stations: [], nutrition: emptyRaceNutrition },
+        2,
+      ),
+    ]).state;
+    expect(cleared.racePlans[0]).toMatchObject({
+      startTime: null,
+      finishCutoff: null,
+      stations: [],
+      nutrition: emptyRaceNutrition,
+    });
+  });
+
+  it('keeps them when the agent updates the strategy', () => {
+    const planned = run(workspaceWithRaces(), [createRacePlan(raceDay)]).state;
+    const [racePlan] = run(planned, [updateRacePlan(agentWrites)], 'agent').state.racePlans;
+    expect(racePlan).toMatchObject({ briefing: agentWrites.briefing, ...raceDay });
+  });
+
+  it.each([
+    ['create', createRacePlan({ ...agentWrites, id: undefined })],
+    ['update', updateRacePlan(agentWrites)],
+  ])('accepts the race day fields from the agent on %s', (_label, command) => {
+    const values = (command as { values: object }).values;
+    const withValues = (extra: object) => ({ ...command, values: { ...values, ...extra } });
+    expect(agentCommandSchema.safeParse(withValues({})).success).toBe(true);
+    expect(agentCommandSchema.safeParse(withValues(agentRaceDay)).success).toBe(true);
+    expect(
+      agentCommandSchema.safeParse(
+        withValues({ stations: [agentStation(1, 0, { id: undefined })] }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['verified', { verified: true }],
+    ['source', { source: 'race guide' }],
+  ])('refuses a station from the agent carrying %s', (_label, extra) => {
+    const stations = [{ ...agentStation(1, 0), ...extra }];
+    expect(agentCommandSchema.safeParse(updateRacePlan({ ...agentWrites, stations })).success).toBe(
+      false,
+    );
+    expect(
+      agentCommandSchema.safeParse(createRacePlan({ ...agentWrites, id: undefined, stations }))
+        .success,
+    ).toBe(false);
+  });
+
+  it.each([
+    ['a null station', { stations: [null] }],
+    ['61 stations', { stations: Array.from({ length: 61 }, (_u, n) => agentStation(n, n * 10)) }],
+    [
+      'stations that do not get farther',
+      { stations: [agentStation(1, 500), agentStation(2, 500)] },
+    ],
+    [
+      'two stations with the same id',
+      { stations: [agentStation(1, 0), agentStation(2, 10, { id: id(31) })] },
+    ],
+    ['a station named with blanks', { stations: [agentStation(1, 0, { name: '   ' })] }],
+    ['a start time of 24:00', { startTime: '24:00' }],
+    [
+      'a negative drop bag amount',
+      { stations: [agentStation(1, 0, { dropBag: [dropBagItem(-1)] })] },
+    ],
+    ['a food row of 0 servings', { nutrition: nutritionWith({ schedule: [scheduleRow(0, 30)] }) }],
+    ['a food row every 0 minutes', { nutrition: nutritionWith({ schedule: [scheduleRow(1, 0)] }) }],
+    [
+      'a negative hourly target',
+      {
+        nutrition: nutritionWith({
+          targets: { ...emptyRaceNutrition.targets, carbohydrateGramsPerHour: -1 },
+        }),
+      },
+    ],
+  ])('refuses %s from the agent', (_label, extra) => {
+    expect(agentCommandSchema.safeParse(updateRacePlan({ ...agentWrites, ...extra })).success).toBe(
+      false,
+    );
+  });
+
+  describe('stations written by the agent', () => {
+    const owned = () => run(workspaceWithRaces(), [createRacePlan(raceDay)]).state;
+    const agentUpdate = (stations: object[]) =>
+      run(owned(), [updateRacePlan({ courseId, stations })], 'agent').state.racePlans[0]!.stations;
+    const second = raceDay.stations[1]!;
+    const agentSecond = (values: Record<string, unknown>) =>
+      agentStation(2, 9000, {
+        cutoff: second.cutoff,
+        food: second.food,
+        dropBag: second.dropBag,
+        action: second.action,
+        ...values,
+      });
+
+    it('keeps the owner confirmation and source of a station left as read', () => {
+      expect(agentUpdate([agentStation(1, 0), agentSecond({ stopSeconds: 900 })])[1]).toMatchObject(
+        { stopSeconds: 900, verified: true, source: 'race guide' },
+      );
+    });
+
+    it.each([
+      ['moves it', { distanceMeters: 9500 }],
+      ['renames it', { name: 'Synthetic renamed station' }],
+    ])('clears the confirmation when the agent %s, and keeps its source', (_label, change) => {
+      expect(agentUpdate([agentStation(1, 0), agentSecond(change)])[1]).toMatchObject({
+        verified: false,
+        source: 'race guide',
+      });
+    });
+
+    it('starts a new station unconfirmed with no source', () => {
+      const stations = agentUpdate([agentStation(1, 0), agentSecond({}), agentStation(3, 20000)]);
+      expect(stations[1]).toMatchObject({ verified: true });
+      expect(stations[2]).toMatchObject({ verified: false, source: '' });
+    });
+
+    it('creates a plan whose stations start unconfirmed', () => {
+      const created = run(
+        workspaceWithRaces(),
+        [createRacePlan({ ...agentWrites, courseId, stations: [agentStation(1, 0)] })],
+        'agent',
+      ).state.racePlans[0]!;
+      expect(created.stations).toEqual([{ ...agentStation(1, 0), source: '', verified: false }]);
+    });
+
+    it('leaves the owner free to confirm and to clear a station', () => {
+      const cleared = run(owned(), [
+        updateRacePlan({
+          stations: [station(1, 0, { verified: true }), { ...second, verified: false }],
+        }),
+      ]).state.racePlans[0]!.stations;
+      expect(cleared.map((item) => item.verified)).toEqual([true, false]);
+    });
+  });
+
+  it('reads a plan stored before race day fields with none of them', () => {
+    const [stored] = run(workspaceWithRaces(), [createRacePlan()]).state.racePlans;
+    const {
+      startTime: _startTime,
+      finishCutoff: _finishCutoff,
+      stations: _stations,
+      nutrition: _nutrition,
+      ...old
+    } = stored!;
+    expect(racePlanSchema.parse(old)).toEqual(stored);
+  });
+
+  it('gives each plan stored before nutrition its own empty lists', () => {
+    const [stored] = run(workspaceWithRaces(), [createRacePlan()]).state.racePlans;
+    const { nutrition: _nutrition, ...old } = stored!;
+    const first = racePlanSchema.parse(old);
+    const second = racePlanSchema.parse(old);
+    expect(first.nutrition.schedule).not.toBe(second.nutrition.schedule);
+    expect(first.nutrition.targets).not.toBe(second.nutrition.targets);
+  });
+
+  it('names aid stations and their fields in the review rows', () => {
+    const planned = run(workspaceWithRaces(), [createRacePlan()]).state;
+    const [change] = run(planned, [updateRacePlan({ ...raceDay, nutrition: undefined })]).changes;
+    const fields = proposalRows(change!, 'metric').map((row) => `${row.field}: ${row.after}`);
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        'Start time: 07:00',
+        'Finish cutoff · Days after race day: 1',
+        'Aid stations · Aid station 2 · Distance: 9 km',
+        'Aid stations · Aid station 2 · Planned stop: 5 min',
+        'Aid stations · Aid station 2 · Confirmed: Yes',
+        'Aid stations · Aid station 2 · Drop bag · Item 1 · Servings: 2',
+      ]),
+    );
+    expect(fields.join()).not.toContain('Step');
+    expect(fields.join()).not.toMatch(/ Id:|Product id/);
+    expect(fields.join()).not.toContain(id(40));
+  });
+});
+
+describe('race day field limits', () => {
+  const both = (values: Record<string, unknown>) => [
+    commandSchema.safeParse(createRacePlan(values)).success,
+    commandSchema.safeParse(updateRacePlan(values)).success,
+  ];
+  const stations = (count: number) =>
+    Array.from({ length: count }, (_unused, index) =>
+      station(index, index * 1000, {
+        id: `00000000-0000-4000-8001-${String(index).padStart(12, '0')}`,
+      }),
+    );
+  const dropBagItems = (count: number) =>
+    Array.from({ length: count }, (_unused, index) => ({
+      productId: id(100 + index),
+      servings: 1,
+    }));
+
+  it.each([
+    [
+      'a start at midnight and a cutoff at 23:59',
+      { startTime: '00:00', finishCutoff: { dayOffset: 0, time: '23:59' } },
+    ],
+    ['a cutoff six days after race day', { finishCutoff: { dayOffset: 6, time: '12:00' } }],
+    ['a station at the start line', { stations: [station(1, 0)] }],
+    ['60 stations', { stations: stations(60) }],
+    [
+      'a drop bag of 20 items',
+      {
+        stations: [
+          station(1, 1000, {
+            dropBag: dropBagItems(20),
+          }),
+        ],
+      },
+    ],
+    ['a stop of 24 hours', { stations: [station(1, 1000, { stopSeconds: 86400 })] }],
+    [
+      'a station cutoff six days after race day at 23:59',
+      { stations: [station(1, 1000, { cutoff: { dayOffset: 6, time: '23:59' } })] },
+    ],
+    ['an action of 300 characters', { stations: [station(1, 1000, { action: 'a'.repeat(300) })] }],
+    ['a source of 120 characters', { stations: [station(1, 1000, { source: 'a'.repeat(120) })] }],
+    [
+      'a drop bag item of 100 servings',
+      { stations: [station(1, 1000, { dropBag: [{ productId: id(40), servings: 100 }] })] },
+    ],
+  ])('accepts %s', (_label, values) => {
+    expect(both(values)).toEqual([true, true]);
+  });
+
+  it.each([
+    ['24:00', { startTime: '24:00' }],
+    ['7:00', { startTime: '7:00' }],
+    ['07:60', { startTime: '07:60' }],
+    ['a cutoff seven days after race day', { finishCutoff: { dayOffset: 7, time: '12:00' } }],
+    ['a cutoff on a fractional day', { finishCutoff: { dayOffset: 0.5, time: '12:00' } }],
+    ['a null station', { stations: [null] }],
+    ['a station name blank after trim', { stations: [station(1, 1000, { name: '   ' })] }],
+    ['a station name of 81 characters', { stations: [station(1, 1000, { name: 'a'.repeat(81) })] }],
+    ['61 stations', { stations: stations(61) }],
+    ['two stations at the same distance', { stations: [station(1, 1000), station(2, 1000)] }],
+    ['stations out of course order', { stations: [station(1, 2000), station(2, 1000)] }],
+    ['two stations with one id', { stations: [station(1, 1000), station(1, 2000)] }],
+    ['a negative distance', { stations: [station(1, -1)] }],
+    ['a negative stop', { stations: [station(1, 1000, { stopSeconds: -1 })] }],
+    ['a fractional stop', { stations: [station(1, 1000, { stopSeconds: 1.5 })] }],
+    ['a stop over 24 hours', { stations: [station(1, 1000, { stopSeconds: 86401 })] }],
+    [
+      'a drop bag item with no serving',
+      { stations: [station(1, 1000, { dropBag: [{ productId: id(40), servings: 0 }] })] },
+    ],
+    [
+      'a drop bag of 21 items',
+      {
+        stations: [
+          station(1, 1000, {
+            dropBag: dropBagItems(21),
+          }),
+        ],
+      },
+    ],
+    ['food of 201 characters', { stations: [station(1, 1000, { food: 'a'.repeat(201) })] }],
+    ['an action of 301 characters', { stations: [station(1, 1000, { action: 'a'.repeat(301) })] }],
+    ['a source of 121 characters', { stations: [station(1, 1000, { source: 'a'.repeat(121) })] }],
+    [
+      'a station cutoff seven days after race day',
+      { stations: [station(1, 1000, { cutoff: { dayOffset: 7, time: '12:00' } })] },
+    ],
+    [
+      'a station cutoff at 24:00',
+      { stations: [station(1, 1000, { cutoff: { dayOffset: 0, time: '24:00' } })] },
+    ],
+    [
+      'a drop bag product id that is not a uuid',
+      { stations: [station(1, 1000, { dropBag: [{ productId: 'gel', servings: 1 }] })] },
+    ],
+    [
+      'a drop bag item of 101 servings',
+      { stations: [station(1, 1000, { dropBag: [{ productId: id(40), servings: 101 }] })] },
+    ],
+    [
+      'one product twice in a drop bag',
+      {
+        stations: [
+          station(1, 1000, {
+            dropBag: [
+              { productId: id(40), servings: 1 },
+              { productId: id(40), servings: 2 },
+            ],
+          }),
+        ],
+      },
+    ],
+    ['an unknown station field', { stations: [station(1, 1000, { bag: true })] }],
+  ])('refuses %s on create and on update', (_label, values) => {
+    expect(both(values)).toEqual([false, false]);
+  });
+
+  it.each([
+    [
+      'a station name blank after trim',
+      [station(1, 1000, { name: ' ' })],
+      'Name each aid station.',
+    ],
+    [
+      'two stations with one id',
+      [station(1, 1000), station(1, 2000)],
+      'Each aid station needs its own id.',
+    ],
+    [
+      'one product twice in a drop bag',
+      [
+        station(1, 1000, {
+          dropBag: [
+            { productId: id(40), servings: 1 },
+            { productId: id(40), servings: 1 },
+          ],
+        }),
+      ],
+      'List each product once in a drop bag.',
+    ],
+  ])('explains %s in plain words', (_label, stations, message) => {
+    const parsed = commandSchema.safeParse(updateRacePlan({ stations }));
+    expect(parsed.error?.issues.map((issue) => issue.message)).toContain(message);
+  });
+});
+
+describe('race nutrition field limits', () => {
+  const both = (changes: Record<string, unknown>) => {
+    const nutrition = { ...raceDay.nutrition, ...changes };
+    return [
+      commandSchema.safeParse(createRacePlan({ nutrition })).success,
+      commandSchema.safeParse(updateRacePlan({ nutrition })).success,
+    ];
+  };
+  const scheduleItem = (values: Record<string, unknown> = {}) => ({
+    productId: id(40),
+    servings: 1,
+    everyMinutes: 30,
+    ...values,
+  });
+  const cue = (values: Record<string, unknown> = {}) => ({
+    when: 'From 4h',
+    text: 'Salt',
+    ...values,
+  });
+
+  it.each([
+    ['30 schedule rows', { schedule: Array.from({ length: 30 }, () => scheduleItem()) }],
+    ['20 cues', { cues: Array.from({ length: 20 }, () => cue()) }],
+    [
+      'half a serving every minute',
+      { schedule: [scheduleItem({ servings: 0.5, everyMinutes: 1 })] },
+    ],
+    [
+      '100 servings once a day',
+      { schedule: [scheduleItem({ servings: 100, everyMinutes: 1440 })] },
+    ],
+    [
+      'the highest targets',
+      {
+        targets: {
+          carbohydrateGramsPerHour: 500,
+          fluidMillilitresPerHour: 5000,
+          sodiumMilligramsPerHour: 10000,
+        },
+      },
+    ],
+    ['texts of 4000 characters', { breakfast: 'a'.repeat(4000), recovery: 'a'.repeat(4000) }],
+  ])('accepts %s', (_label, changes) => {
+    expect(both(changes)).toEqual([true, true]);
+  });
+
+  it.each([
+    ['a null schedule row', { schedule: [null] }],
+    ['31 schedule rows', { schedule: Array.from({ length: 31 }, () => scheduleItem()) }],
+    ['no serving', { schedule: [scheduleItem({ servings: 0 })] }],
+    ['negative servings', { schedule: [scheduleItem({ servings: -1 })] }],
+    ['101 servings', { schedule: [scheduleItem({ servings: 101 })] }],
+    ['every 0 minutes', { schedule: [scheduleItem({ everyMinutes: 0 })] }],
+    ['every 1441 minutes', { schedule: [scheduleItem({ everyMinutes: 1441 })] }],
+    ['every 1.5 minutes', { schedule: [scheduleItem({ everyMinutes: 1.5 })] }],
+    ['a product id that is not a uuid', { schedule: [scheduleItem({ productId: 'gel' })] }],
+    ['21 cues', { cues: Array.from({ length: 21 }, () => cue()) }],
+    ['a cue blank after trim', { cues: [cue({ text: '   ' })] }],
+    ['a cue time of 81 characters', { cues: [cue({ when: 'a'.repeat(81) })] }],
+    ['a cue of 301 characters', { cues: [cue({ text: 'a'.repeat(301) })] }],
+    ['a breakfast of 4001 characters', { breakfast: 'a'.repeat(4001) }],
+    [
+      'a negative target',
+      { targets: { ...raceDay.nutrition.targets, carbohydrateGramsPerHour: -1 } },
+    ],
+    [
+      'a sodium target over 10000 mg',
+      { targets: { ...raceDay.nutrition.targets, sodiumMilligramsPerHour: 10001 } },
+    ],
+    ['targets with a field missing', { targets: { carbohydrateGramsPerHour: 60 } }],
+    ['an unknown nutrition field', { caffeine: 'none' }],
+  ])('refuses %s on create and on update', (_label, changes) => {
+    expect(both(changes)).toEqual([false, false]);
+  });
+
+  it('refuses a nutrition patch missing one of its fields', () => {
+    const { schedule: _schedule, ...withoutSchedule } = raceDay.nutrition;
+    expect(commandSchema.safeParse(updateRacePlan({ nutrition: withoutSchedule })).success).toBe(
+      false,
+    );
+  });
+});
+
 describe('race plan scope', () => {
   const scope = { from: '2026-11-01', to: '2027-06-30', includeNotes: false };
 
@@ -251,8 +770,11 @@ describe('race plan scope', () => {
   it('says whether race preparation is permitted', () => {
     const access = (planning: Record<string, unknown>) =>
       describeAgentAccess(grantScopeSchema.parse({ version: 2, history: null, planning }));
+    expect(access({ ...scope, raceId, includeRehearsals: true })).toContain(
+      'Race preparation: course summary and race plan of the selected race, its fueling rehearsals, your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted.',
+    );
     expect(access({ ...scope, raceId })).toContain(
-      'Race preparation: course summary and race plan of the selected race shared, race plan proposals permitted.',
+      'Race preparation: course summary and race plan of the selected race, your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted.',
     );
     expect(access(scope)).toContain('Race preparation: not permitted.');
   });

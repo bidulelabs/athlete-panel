@@ -1,5 +1,6 @@
 import type { RacePoint } from '@athlete-panel/contracts';
-import { elevation } from '@athlete-panel/ui';
+import { duration, elevation } from '@athlete-panel/ui';
+import type { StopArrival } from './race-day';
 
 export const terrainNames = ['Smooth', 'Stony', 'Mountain', 'Rocky', 'Scrambling'];
 export const slopeBands = [
@@ -47,4 +48,28 @@ export function routeCoordinates(points: RacePoint[]) {
     x: 160 + (p.x - (minX + maxX) / 2) * scale,
     y: 160 + (p.y - (minY + maxY) / 2) * scale,
   }));
+}
+export function clockTime(secondsAfterRaceDayMidnight: number) {
+  const minutes = Math.round(secondsAfterRaceDayMidnight / 60);
+  const days = Math.floor(minutes / 1440);
+  const time = `${String(Math.floor((minutes % 1440) / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  return days ? `${time} +${days} day${days === 1 ? '' : 's'}` : time;
+}
+export function arrivalRangeLabel(arrival: StopArrival) {
+  if (arrival.timeOfDay)
+    return {
+      range: `${clockTime(arrival.timeOfDay.lowSeconds)}–${clockTime(arrival.timeOfDay.highSeconds)}`,
+      aim: `aim ${clockTime(arrival.timeOfDay.seconds)}`,
+    };
+  if (arrival.fromStart)
+    return {
+      range: `${finishTime(arrival.fromStart.lowSeconds)}–${finishTime(arrival.fromStart.highSeconds)}`,
+      aim: 'after the start',
+    };
+  return null;
+}
+export function cutoffMarginText(arrival: StopArrival) {
+  const margin = arrival.cutoffMarginSeconds;
+  if (margin === null) return null;
+  return margin >= 0 ? `${duration(margin)} margin` : `${duration(-margin)} after the cutoff`;
 }

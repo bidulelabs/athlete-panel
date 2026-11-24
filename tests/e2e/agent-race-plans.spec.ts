@@ -75,7 +75,7 @@ test('connect an agent to one race, then review, apply and undo its race plan', 
     await raceToPrepare.selectOption(raceId);
     await expect(page.locator('input[name="to"]')).toHaveValue(raceDate);
     await expect(page.getByRole('region', { name: 'Access summary' })).toContainText(
-      `Race preparation: ${raceTitle}`,
+      `Race preparation: ${raceTitle}, with its fueling rehearsals and your nutrition profile (products, carry capacity, preferences)`,
     );
     await page.getByLabel('Approval code', { exact: true }).fill(pending.code);
     const approval = page.waitForResponse((r) =>
@@ -84,7 +84,11 @@ test('connect an agent to one race, then review, apply and undo its race plan', 
     await page.getByRole('button', { name: 'Approve connection', exact: true }).click();
     const approved = await (await approval).json();
     grantId = approved.grant.id;
-    expect(approved.grant.planning).toMatchObject({ raceId, to: raceDate });
+    expect(approved.grant.planning).toMatchObject({
+      raceId,
+      includeRehearsals: true,
+      to: raceDate,
+    });
 
     const headers = { Authorization: `Bearer ${pending.token}` };
     const read = await request.get('/api/agent/context', { headers });
@@ -115,6 +119,31 @@ test('connect an agent to one race, then review, apply and undo its race plan', 
               assumptions: ['Dry trail'],
               openQuestions: ['Poles allowed?'],
               courseId: context.raceCourse.courseId,
+              startTime: '07:00',
+              stations: [
+                {
+                  name: 'Synthetic hut',
+                  distanceMeters: 4000,
+                  cutoff: null,
+                  stopSeconds: 300,
+                  water: true,
+                  food: '',
+                  dropBag: [],
+                  action: 'Refill both bottles',
+                },
+              ],
+              nutrition: {
+                targets: {
+                  carbohydrateGramsPerHour: 60,
+                  fluidMillilitresPerHour: null,
+                  sodiumMilligramsPerHour: null,
+                },
+                schedule: [],
+                cues: [],
+                daysBefore: '',
+                breakfast: '',
+                recovery: '',
+              },
             },
           },
           {
@@ -151,9 +180,14 @@ test('connect an agent to one race, then review, apply and undo its race plan', 
     await expect(racePlanRow.locator('summary')).toContainText(raceTitle);
     await expect(racePlanRow.locator('summary')).toContainText('2 sections');
     await expect(racePlanRow.locator('summary')).toContainText('1 open question');
+    await expect(racePlanRow.locator('summary')).toContainText('1 aid station');
     await racePlanRow.locator('summary').first().click();
     await expect(racePlanRow).toContainText('Pacing · Section 1 · Effort');
     await expect(racePlanRow).toContainText('Open questions · Open question 1');
+    await expect(racePlanRow).toContainText('Aid stations · Aid station 1 · Name');
+    await expect(racePlanRow).toContainText('60 g per hour');
+    await expect(racePlanRow).not.toContainText('Finish cutoff');
+    await expect(racePlanRow).not.toContainText('Not set');
     await dialog.getByRole('checkbox').check();
     const application = page.waitForResponse((r) => r.url().endsWith('/agent-bridge/apply'));
     await dialog.getByRole('button', { name: /^Apply all \d+ changes$/ }).click();
@@ -170,6 +204,9 @@ test('connect an agent to one race, then review, apply and undo its race plan', 
       'Easy, walk the steep ramps',
     );
     await expect(page.getByText(/changed after this strategy was written/)).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Race day', exact: true }).click();
+    await expect(page.getByText('Synthetic hut').first()).toBeVisible();
+    await expect(page.getByText('Not confirmed').first()).toBeVisible();
     await page.goto('/calendar');
     await owner('agent-bridge/undo', { id: auditId, idempotencyKey: randomUUID() });
     auditId = undefined;

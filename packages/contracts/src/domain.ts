@@ -82,6 +82,42 @@ const heartRateZones = z.object({ cycling: zoneBounds, running: zoneBounds }).st
 const ftpWatts = z.number().int().min(1).max(3000).nullable();
 const restingHeartRateBpm = z.number().int().min(25).max(120).nullable();
 const maxHeartRateBpm = z.number().int().min(100).max(240).nullable();
+export const nutritionAmountMaximums = {
+  carbohydrateGrams: 500,
+  fluidMillilitres: 5000,
+  sodiumMilligrams: 10000,
+  caffeineMilligrams: 1000,
+} as const;
+const amountPerServing = (max: number) => z.number().finite().min(0).max(max).nullable();
+const toleranceLevels = ['comfortable', 'mild', 'poor'] as const;
+export const nutritionProductSchema = z
+  .object({
+    id: idSchema,
+    name: text,
+    kind: z.enum(['gel', 'drink', 'food', 'other']),
+    carbohydrateGrams: amountPerServing(nutritionAmountMaximums.carbohydrateGrams),
+    fluidMillilitres: amountPerServing(nutritionAmountMaximums.fluidMillilitres),
+    sodiumMilligrams: amountPerServing(nutritionAmountMaximums.sodiumMilligrams),
+    caffeineMilligrams: amountPerServing(nutritionAmountMaximums.caffeineMilligrams),
+    source: z.enum(['label', 'estimate']),
+    tolerance: z.enum([...toleranceLevels, 'untested']),
+  })
+  .strict();
+export type NutritionProduct = z.infer<typeof nutritionProductSchema>;
+export const nutritionProfileSchema = z
+  .object({
+    products: z
+      .array(nutritionProductSchema)
+      .max(50)
+      .refine(
+        (products) => new Set(products.map((product) => product.id)).size === products.length,
+        'Each product needs its own id.',
+      ),
+    carryCapacityMillilitres: z.number().int().min(0).max(20000).nullable(),
+    preferences: z.string().max(2000),
+  })
+  .strict();
+export type NutritionProfile = z.infer<typeof nutritionProfileSchema>;
 export const profileValuesSchema = z
   .object({
     displayName: text.default('Athlete'),
@@ -104,6 +140,7 @@ export const profileValuesSchema = z
     ftpWatts: ftpWatts.default(null),
     restingHeartRateBpm: restingHeartRateBpm.optional(),
     maxHeartRateBpm: maxHeartRateBpm.optional(),
+    nutrition: nutritionProfileSchema.optional(),
   })
   .strict();
 export const profileSchema = profileValuesSchema.extend({
@@ -427,16 +464,220 @@ const racePlanAgentFields = {
 const racePlanCourseId = idSchema
   .nullable()
   .describe('Id of the course the strategy was written for. Null when the race has no course.');
+const raceClockTime = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a time in HH:MM format.')
+  .describe('Wall-clock time in the profile timezone, HH:MM.');
+const raceCutoff = z
+  .object({
+    dayOffset: z.number().int().min(0).max(6).describe('Days after the race date.'),
+    time: raceClockTime,
+  })
+  .strict()
+  .nullable();
+export const raceNutritionMaximums = {
+  carbohydrateGramsPerHour: 500,
+  fluidMillilitresPerHour: 5000,
+  sodiumMilligramsPerHour: 10000,
+  servings: 100,
+  everyMinutes: 1440,
+  cueWhen: 80,
+  cueText: 300,
+  scheduleRows: 30,
+  cues: 20,
+} as const;
+const hourlyTarget = (max: number, unit: string) =>
+  z.number().finite().min(0).max(max).nullable().describe(`Target in ${unit}. Null when unknown.`);
+const racePlanStationFields = {
+  id: idSchema,
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name each aid station.')
+    .max(80, 'Keep an aid station name to 80 characters.'),
+  distanceMeters: nonnegativeSchema.describe('Distance from the start line, in meters.'),
+  cutoff: raceCutoff,
+  stopSeconds: z
+    .number()
+    .int()
+    .min(0)
+    .max(86400)
+    .describe('Planned stop at this station, in seconds.'),
+  water: z.boolean(),
+  food: z.string().trim().max(200),
+  dropBag: z
+    .array(
+      z
+        .object({
+          productId: idSchema,
+          servings: z
+            .number()
+            .int()
+            .min(1)
+            .max(100)
+            .describe('Whole servings of the product left in the drop bag.'),
+        })
+        .strict(),
+    )
+    .max(20)
+    .refine(
+      (items) => new Set(items.map((item) => item.productId)).size === items.length,
+      'List each product once in a drop bag.',
+    ),
+  action: z.string().trim().max(300),
+  source: z.string().trim().max(120),
+  verified: z.boolean(),
+};
+const racePlanStationSchema = z.object(racePlanStationFields).strict();
+const racePlanStationCommandSchema = racePlanStationSchema.partial({
+  source: true,
+  verified: true,
+});
+const racePlanStationAgentSchema = racePlanStationSchema
+  .omit({ source: true, verified: true })
+  .extend({
+    id: idSchema
+      .optional()
+      .describe('Id of an existing aid station, as read. Leave out for a new one.'),
+  });
+const stationsInCourseOrder = <Station extends z.ZodType<{ id?: string; distanceMeters: number }>>(
+  station: Station,
+) =>
+  z
+    .array(station)
+    .max(60)
+    .refine(
+      (stations) =>
+        stations.every(
+          (item, index) => index === 0 || item.distanceMeters > stations[index - 1]!.distanceMeters,
+        ),
+      'Aid stations run in course order, each farther than the one before.',
+    )
+    .refine((stations) => {
+      const ids = stations.flatMap((item) => (item.id ? [item.id] : []));
+      return new Set(ids).size === ids.length;
+    }, 'Each aid station needs its own id.')
+    .describe('Aid stations in course order.');
+const racePlanDayFields = {
+  startTime: raceClockTime.nullable(),
+  finishCutoff: raceCutoff,
+  stations: stationsInCourseOrder(racePlanStationSchema),
+  nutrition: z
+    .object({
+      targets: z
+        .object({
+          carbohydrateGramsPerHour: hourlyTarget(
+            raceNutritionMaximums.carbohydrateGramsPerHour,
+            'grams of carbohydrate per hour',
+          ),
+          fluidMillilitresPerHour: hourlyTarget(
+            raceNutritionMaximums.fluidMillilitresPerHour,
+            'millilitres of fluid per hour',
+          ),
+          sodiumMilligramsPerHour: hourlyTarget(
+            raceNutritionMaximums.sodiumMilligramsPerHour,
+            'milligrams of sodium per hour',
+          ),
+        })
+        .strict(),
+      schedule: z
+        .array(
+          z
+            .object({
+              productId: idSchema,
+              servings: z
+                .number()
+                .finite()
+                .positive()
+                .max(raceNutritionMaximums.servings)
+                .describe('Servings of the product at each intake.'),
+              everyMinutes: z
+                .number()
+                .int()
+                .min(1)
+                .max(raceNutritionMaximums.everyMinutes)
+                .describe('Minutes between two intakes of the product.'),
+            })
+            .strict(),
+        )
+        .max(raceNutritionMaximums.scheduleRows),
+      cues: z
+        .array(
+          z
+            .object({
+              when: z.string().trim().min(1).max(raceNutritionMaximums.cueWhen),
+              text: z.string().trim().min(1).max(raceNutritionMaximums.cueText),
+            })
+            .strict(),
+        )
+        .max(raceNutritionMaximums.cues),
+      daysBefore: notes,
+      breakfast: notes,
+      recovery: notes,
+    })
+    .strict()
+    .describe('What to eat and drink before, during and after the race.'),
+};
+const racePlanAgentDayFields = {
+  startTime: racePlanDayFields.startTime.optional(),
+  finishCutoff: racePlanDayFields.finishCutoff.optional(),
+  stations: stationsInCourseOrder(racePlanStationAgentSchema).optional(),
+  nutrition: racePlanDayFields.nutrition.optional(),
+};
+export const emptyRaceNutrition: z.infer<typeof racePlanDayFields.nutrition> = {
+  targets: {
+    carbohydrateGramsPerHour: null,
+    fluidMillilitresPerHour: null,
+    sodiumMilligramsPerHour: null,
+  },
+  schedule: [],
+  cues: [],
+  daysBefore: '',
+  breakfast: '',
+  recovery: '',
+};
 export const racePlanSchema = z
   .object({
     eventId: idSchema.describe('Id of the race this plan prepares.'),
     target: racePlanTarget,
     ...racePlanAgentFields,
+    startTime: racePlanDayFields.startTime.default(null),
+    finishCutoff: racePlanDayFields.finishCutoff.default(null),
+    stations: racePlanDayFields.stations.default([]),
+    nutrition: racePlanDayFields.nutrition.default(() => structuredClone(emptyRaceNutrition)),
     writtenFor: z.object({ courseId: racePlanCourseId, target: racePlanTarget }).strict(),
   })
   .strict()
   .extend(base);
 export type RacePlan = z.infer<typeof racePlanSchema>;
+const rehearsalFields = {
+  items: z
+    .array(
+      z
+        .object({
+          productName: text,
+          carbohydrateGrams: amountPerServing(500),
+          fluidMillilitres: amountPerServing(5000),
+          plannedServings: z.number().finite().min(0).max(144000).nullable(),
+          takenServings: z.number().finite().min(0).max(100).multipleOf(0.5),
+        })
+        .strict(),
+    )
+    .max(50),
+  extraFluidMillilitres: z.number().int().min(0).max(20000),
+  stomach: z.enum(toleranceLevels),
+  conditions: z.string().trim().max(120),
+  lesson: notes,
+};
+export const rehearsalSchema = z
+  .object({
+    eventId: idSchema.describe('Id of the race this rehearsal prepares.'),
+    workoutId: idSchema.describe('Id of the completed session the rehearsal was run on.'),
+    ...rehearsalFields,
+  })
+  .strict()
+  .extend(base);
+export type Rehearsal = z.infer<typeof rehearsalSchema>;
 const weeklyRange = z
   .object({
     min: nonnegativeSchema.describe('Lowest weekly value, in the unit named by the target field.'),
@@ -622,6 +863,7 @@ export const workspaceStateSchema = z
     events: z.array(eventSchema),
     periods: z.array(periodSchema).default([]),
     racePlans: z.array(racePlanSchema).default([]),
+    rehearsals: z.array(rehearsalSchema).default([]),
     injuries: z.array(injurySchema),
     activities: z.array(activitySchema),
     health: z.array(healthRecordSchema),
@@ -636,6 +878,7 @@ export const emptyWorkspace = (): WorkspaceState => ({
   events: [],
   periods: [],
   racePlans: [],
+  rehearsals: [],
   injuries: [],
   activities: [],
   health: [],
@@ -675,6 +918,7 @@ const profilePatchSchema = z
     ftpWatts,
     restingHeartRateBpm,
     maxHeartRateBpm,
+    nutrition: nutritionProfileSchema,
   })
   .strict()
   .partial();
@@ -770,6 +1014,7 @@ const agentRacePlanCreateCommand = z
         ...createId,
         eventId: racePlanSchema.shape.eventId,
         ...racePlanAgentFields,
+        ...racePlanAgentDayFields,
         courseId: racePlanCourseId,
       })
       .strict(),
@@ -779,7 +1024,11 @@ const agentRacePlanUpdateCommand = z
   .object({
     action: z.literal('racePlan.update'),
     ...existing,
-    values: z.object(racePlanAgentFields).strict().partial().extend({ courseId: racePlanCourseId }),
+    values: z
+      .object(racePlanAgentFields)
+      .strict()
+      .partial()
+      .extend({ ...racePlanAgentDayFields, courseId: racePlanCourseId }),
   })
   .strict();
 export const agentCommandSchema = z.discriminatedUnion('action', [
@@ -857,6 +1106,10 @@ export const commandSchema = z.discriminatedUnion('action', [
           pacing: racePlanAgentFields.pacing.default([]),
           assumptions: racePlanAgentFields.assumptions.default([]),
           openQuestions: racePlanAgentFields.openQuestions.default([]),
+          startTime: racePlanDayFields.startTime.optional(),
+          finishCutoff: racePlanDayFields.finishCutoff.optional(),
+          stations: stationsInCourseOrder(racePlanStationCommandSchema).optional(),
+          nutrition: racePlanDayFields.nutrition.optional(),
           courseId: racePlanCourseId.default(null),
         })
         .strict(),
@@ -868,17 +1121,45 @@ export const commandSchema = z.discriminatedUnion('action', [
       ...existing,
       values: nonemptyPatch(
         z
-          .object({ target: racePlanTarget, ...racePlanAgentFields, courseId: racePlanCourseId })
+          .object({
+            target: racePlanTarget,
+            ...racePlanAgentFields,
+            ...racePlanDayFields,
+            stations: stationsInCourseOrder(racePlanStationCommandSchema),
+            courseId: racePlanCourseId,
+          })
           .strict(),
       ),
     })
     .strict(),
+  z
+    .object({
+      action: z.literal('rehearsal.create'),
+      values: z
+        .object({
+          ...createId,
+          eventId: rehearsalSchema.shape.eventId,
+          workoutId: rehearsalSchema.shape.workoutId,
+          ...rehearsalFields,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('rehearsal.update'),
+      ...existing,
+      values: nonemptyPatch(z.object(rehearsalFields).strict()),
+    })
+    .strict(),
+  z.object({ action: z.literal('rehearsal.delete'), ...existing }).strict(),
   z
     .object({ action: z.literal('injury.create'), values: injuryValuesSchema.extend(createId) })
     .strict(),
   z.object({ action: z.literal('injury.update'), ...existing, values: injuryPatchSchema }).strict(),
   z.object({ action: z.literal('injury.delete'), ...existing }).strict(),
 ]);
+export type AgentCommand = z.infer<typeof agentCommandSchema>;
 export type Command = z.infer<typeof commandSchema>;
 export type CommandInput = z.input<typeof commandSchema>;
 export const commandsSchema = z.array(commandSchema).min(1).max(200);
@@ -890,6 +1171,7 @@ export type EntityKind =
   | 'event'
   | 'period'
   | 'racePlan'
+  | 'rehearsal'
   | 'injury'
   | 'activity'
   | 'health';
@@ -901,6 +1183,7 @@ export type Entity =
   | TrainingEvent
   | Period
   | RacePlan
+  | Rehearsal
   | Injury
   | Activity
   | HealthRecord;
@@ -952,6 +1235,7 @@ export const planningScopeSchema = z
     allowEventCreation: z.boolean().optional(),
     allowPhaseChanges: z.boolean().optional(),
     raceId: idSchema.optional(),
+    includeRehearsals: z.boolean().optional(),
   })
   .strict()
   .superRefine((scope, ctx) => calendarRange(scope, 1, ctx));
@@ -1061,7 +1345,7 @@ export function describeAgentAccess(scope: GrantScope): string[] {
           `Training proposals: ${planning.from} through ${planning.to}; profile, training, events, injuries, activities and health; ${planning.includeNotes ? 'private notes included' : 'private notes excluded'}.`,
           `Create races and goals: ${planning.allowEventCreation === true ? 'permitted within the proposal dates' : 'not permitted'}.`,
           `Change plan phases: ${planning.allowPhaseChanges === true ? 'permitted for phases within the proposal dates' : 'not permitted'}.`,
-          `Race preparation: ${planning.raceId ? 'course summary and race plan of the selected race shared, race plan proposals permitted' : 'not permitted'}.`,
+          `Race preparation: ${planning.raceId ? `course summary and race plan of the selected race, ${planning.includeRehearsals === true ? 'its fueling rehearsals, ' : ''}your nutrition profile (products, carry capacity, preferences) shared, race plan proposals permitted` : 'not permitted'}.`,
         ]
       : ['Proposal submission is not permitted.']),
     'Applying training changes requires your review and explicit approval in Athlete Panel.',

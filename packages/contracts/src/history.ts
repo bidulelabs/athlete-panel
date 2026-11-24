@@ -233,7 +233,7 @@ export const historyResponseSchema = z.object({
   nextCursor: z.string().nullable(),
   records: z.array(historyRecordSchema).max(200).optional(),
   summaries: z.array(historySummarySchema).max(200).optional(),
-  profile: profileSchema.nullable().optional(),
+  profile: profileSchema.omit({ nutrition: true }).nullable().optional(),
   profileMeaning: z.literal('Current profile; not historical settings.').optional(),
   availability: z
     .array(

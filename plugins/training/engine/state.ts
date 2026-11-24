@@ -17,6 +17,7 @@ export const collections = {
   event: 'events',
   period: 'periods',
   racePlan: 'racePlans',
+  rehearsal: 'rehearsals',
   injury: 'injuries',
   activity: 'activities',
   health: 'health',
@@ -30,6 +31,21 @@ export function allEntities(state: WorkspaceState): Array<{ entity: EntityKind; 
       entries.push({ entity: entity as EntityKind, value });
   }
   return entries;
+}
+function assertRehearsalReferences(state: WorkspaceState): void {
+  const seenEventAndWorkoutKeys = new Set<string>();
+  for (const rehearsal of state.rehearsals) {
+    if (!state.events.some((event) => event.id === rehearsal.eventId && event.kind === 'race'))
+      fail('NOT_FOUND', 'A fueling rehearsal needs a race.', { id: rehearsal.id });
+    if (!state.workouts.some((workout) => workout.id === rehearsal.workoutId))
+      fail('NOT_FOUND', 'A fueling rehearsal needs its session.', { id: rehearsal.id });
+    const eventAndWorkoutKey = `${rehearsal.eventId}:${rehearsal.workoutId}`;
+    if (seenEventAndWorkoutKeys.has(eventAndWorkoutKey))
+      fail('REHEARSAL_EXISTS', 'This session already has a fueling rehearsal for this race.', {
+        id: rehearsal.id,
+      });
+    seenEventAndWorkoutKeys.add(eventAndWorkoutKey);
+  }
 }
 export function assertReferences(state: WorkspaceState): void {
   const ids = new Set<string>();
@@ -65,6 +81,7 @@ export function assertReferences(state: WorkspaceState): void {
       fail('RACE_PLAN_EXISTS', 'This race already has a plan.', { id: racePlan.id });
     raceIdsWithPlan.add(racePlan.eventId);
   }
+  assertRehearsalReferences(state);
   const linkedActivities = new Set<string>();
   for (const workout of state.workouts) {
     if (workout.completion?.source !== 'garmin') continue;

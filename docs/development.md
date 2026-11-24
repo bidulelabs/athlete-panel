@@ -215,6 +215,26 @@ Plan phase proposals add `allowPhaseChanges` to planning scopes and `period.*` c
 
 Race plans add the `racePlan` record to Training, `raceId` to planning scopes and `racePlan.create` and `racePlan.update` to owner commands and agent proposals, released in Agent Bridge 2.5 and Training 2.5. Follow the [event proposal upgrade](#event-proposal-upgrade) steps: upgrade the application and CLI together, no SQL migration. Existing grants keep their scopes and their planning context is unchanged. Older parsers reject a workspace holding a race plan, and these grants and proposals, so roll back only with the matching pre-upgrade backup.
 
+#### Race day upgrade
+
+Race plans gain `startTime`, `finishCutoff` and `stations`, owner fields only, released in Training 2.6 and Agent Bridge 2.5.1. Upgrade the application and CLI together, no SQL migration. Stored plans are read with no start time, no cutoff and no station. A planning context limited to a race includes these fields in its race plan: a context read by an agent before the upgrade no longer matches, so the agent reads it again; contexts of grants without a race are unchanged. Older parsers reject a race plan holding these fields, so roll back only with the matching pre-upgrade backup.
+
+#### Race nutrition upgrade
+
+Race plans gain `nutrition` (targets per hour, a food schedule, cues and days-before, breakfast and recovery texts), an owner field only, released in Training 2.7 with contracts 2.8. Upgrade the application and CLI together, no SQL migration. Stored plans are read with unknown targets, no schedule, no cue and empty texts. A planning context limited to a race includes `nutrition` in its race plan from the upgrade on: a context read by an agent before the upgrade no longer matches, so the agent reads it again; contexts of grants without a race are unchanged. Older parsers reject a race plan holding `nutrition`, so roll back only with the matching pre-upgrade backup.
+
+#### Rehearsal upgrade
+
+Training gains the `rehearsal` record (a fueling rehearsal logged on a completed or partial session for a race) and the owner commands `rehearsal.create`, `rehearsal.update` and `rehearsal.delete`, released in Training 2.8 with contracts 2.9. Upgrade the application and CLI together, no SQL migration. Agents cannot write rehearsals; see Race assistant upgrade for their planning context. Older releases ignore stored rehearsals but cannot read a change history that holds one, so roll back only with the matching pre-upgrade backup.
+
+#### Race assistant upgrade
+
+An assistant connected for a race can write `startTime`, `finishCutoff`, `stations` and `nutrition` of that race's plan, and a planning context gains `rehearsals`, the race's fueling rehearsals, only for a grant approved with `includeRehearsals`, released in Training 2.9, Agent Bridge 2.6 and Race analysis 1.7.1 with contracts 2.10. Upgrade the application and CLI together, no SQL migration. Grants approved before the upgrade, with or without a race, keep their exact context and digest and do not receive rehearsals: approve the connection again to share them. A grant approved after the upgrade with a race reads rehearsals, and logging one asks that connection to read its context again. Stations written by an assistant start not confirmed; the agent schema has no `verified` or `source`. Older CLIs reject the new fields, so roll back only with the matching pre-upgrade backup.
+
+#### Nutrition profile upgrade
+
+The athlete profile gains an optional `nutrition` key (products, carry capacity, preferences), released in Athlete 1.4 and Agent Bridge 2.5.1 with contracts 2.7. Upgrade the application as usual; no SQL migration. Existing profiles, grants and their context digests are unchanged until the owner saves nutrition. The profile is strict: older parsers reject a workspace whose profile holds `nutrition`, so roll back only with the matching pre-upgrade backup.
+
 ### Historical review and annual planning commands
 
 Historical ranges include both endpoints and may extend through the fifth calendar anniversary; planning ranges through the first. February 29 anniversaries clamp to February 28 in non-leap years. Existing grants retain their old dates and do not gain history access. Future scheduled records are permitted. The browser captures the current resolved week boundary for the review.

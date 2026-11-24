@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { CourseSection, RacePlan } from '@athlete-panel/contracts';
+import { emptyRaceNutrition, type CourseSection, type RacePlan } from '@athlete-panel/contracts';
 import {
+  dropBagFromForm,
   pacingRows,
+  nutritionScheduleFromForm,
+  nutritionTargetsFromForm,
+  raceDayCommand,
   racePlanCommand,
+  startAndCutoffFromForm,
+  stationFromForm,
+  stationsAfterSave,
   strategyNeedsReview,
 } from '../../plugins/race-analysis/race-plan-form';
 
@@ -27,9 +34,26 @@ const racePlan = (values: Partial<RacePlan> = {}): RacePlan => ({
   pacing: [{ fromMeters: 0, toMeters: 5000, effort: 'Easy' }],
   assumptions: ['Dry trail'],
   openQuestions: [],
+  startTime: null,
+  finishCutoff: null,
+  stations: [],
+  nutrition: emptyRaceNutrition,
   writtenFor: { courseId, target: 'Finish comfortably' },
   ...values,
 });
+const existingStation: RacePlan['stations'][number] = {
+  id: '00000000-0000-4000-8000-000000000030',
+  name: 'Les Pins',
+  distanceMeters: 9000,
+  cutoff: { dayOffset: 0, time: '09:15' },
+  stopSeconds: 240,
+  water: true,
+  food: 'bananas',
+  dropBag: [{ productId: '00000000-0000-4000-8000-000000000040', servings: 2 }],
+  action: 'Refill both bottles',
+  source: 'race guide',
+  verified: true,
+};
 const unwritten = { briefing: '', pacing: [], assumptions: [], openQuestions: [] };
 const filledForm = (fields: Record<string, string>, efforts: string[]) => {
   const form = new FormData();
@@ -89,6 +113,63 @@ describe('strategy needs review', () => {
       racePlan({ ...unwritten, openQuestions: ['Poles?'] }),
       replacedCourseId,
       true,
+    ],
+    [
+      'only stations are written and the course was replaced',
+      racePlan({ ...unwritten, stations: [existingStation] }),
+      replacedCourseId,
+      true,
+    ],
+    [
+      'only stations are written and nothing changed',
+      racePlan({ ...unwritten, stations: [existingStation] }),
+      courseId,
+      false,
+    ],
+    [
+      'only a breakfast is written and the course was replaced',
+      racePlan({ ...unwritten, nutrition: { ...emptyRaceNutrition, breakfast: 'Oats' } }),
+      replacedCourseId,
+      true,
+    ],
+    [
+      'only a carbohydrate target is set and the course was replaced',
+      racePlan({
+        ...unwritten,
+        nutrition: {
+          ...emptyRaceNutrition,
+          targets: { ...emptyRaceNutrition.targets, carbohydrateGramsPerHour: 60 },
+        },
+      }),
+      replacedCourseId,
+      true,
+    ],
+    [
+      'only a cue is written and the course was replaced',
+      racePlan({
+        ...unwritten,
+        nutrition: { ...emptyRaceNutrition, cues: [{ when: 'Climbs', text: 'Walk and eat' }] },
+      }),
+      replacedCourseId,
+      true,
+    ],
+    [
+      'it was written without a target and a target was set since',
+      racePlan({ target: 'Under 8 hours', writtenFor: { courseId, target: '' } }),
+      courseId,
+      false,
+    ],
+    [
+      'it was written for a target that was cleared since',
+      racePlan({ target: '' }),
+      courseId,
+      true,
+    ],
+    [
+      'only a breakfast is written and nothing changed',
+      racePlan({ ...unwritten, nutrition: { ...emptyRaceNutrition, breakfast: 'Oats' } }),
+      courseId,
+      false,
     ],
   ])('when %s', (_label, plan, activeCourseId, expected) => {
     expect(strategyNeedsReview(plan, activeCourseId)).toBe(expected);
@@ -155,9 +236,285 @@ describe('race plan command', () => {
     ]);
   });
 
+  it('leaves the start time, finish cutoff and aid stations out of the update', () => {
+    const planned = racePlan({
+      startTime: '07:00',
+      finishCutoff: { dayOffset: 0, time: '15:00' },
+      stations: [
+        {
+          id: '00000000-0000-4000-8000-000000000030',
+          name: 'Synthetic col',
+          distanceMeters: 9000,
+          cutoff: null,
+          stopSeconds: 240,
+          water: true,
+          food: '',
+          dropBag: [],
+          action: '',
+          source: '',
+          verified: false,
+        },
+      ],
+    });
+    const command = racePlanCommand(
+      savedForm({ target: 'Under 8 hours', briefing: 'Go' }),
+      rows,
+      planned,
+      raceId,
+      courseId,
+    );
+    expect(Object.keys((command as { values: object }).values).sort()).toEqual([
+      'briefing',
+      'courseId',
+      'target',
+    ]);
+  });
+
   it('removes a planned section whose effort was cleared', () => {
     expect(
       racePlanCommand(savedForm({}, ['', '', '']), rows, racePlan(), raceId, courseId),
     ).toMatchObject({ values: { pacing: [], courseId } });
+  });
+});
+
+describe('race day command', () => {
+  it('updates only the race day fields of a saved plan', () => {
+    expect(raceDayCommand({ startTime: '07:00' }, racePlan(), raceId, courseId)).toEqual({
+      action: 'racePlan.update',
+      id: racePlanId,
+      expectedRevision: 3,
+      values: { startTime: '07:00' },
+    });
+  });
+
+  it('creates the plan with the course in use when the race has none', () => {
+    expect(raceDayCommand({ stations: [existingStation] }, undefined, raceId, courseId)).toEqual({
+      action: 'racePlan.create',
+      values: { eventId: raceId, stations: [existingStation], courseId },
+    });
+  });
+});
+
+const stationForm = (fields: Record<string, string> = {}) => {
+  const form = new FormData();
+  for (const [name, text] of Object.entries({
+    name: ' Les Pins ',
+    distance: '9',
+    cutoffDay: '0',
+    cutoffTime: '09:15',
+    stopMinutes: '4',
+    water: 'on',
+    food: ' bananas ',
+    action: 'Refill both bottles',
+    source: 'race guide',
+    verified: 'on',
+    ...fields,
+  }))
+    if (text !== '' || !['water', 'verified'].includes(name)) form.set(name, text);
+  return form;
+};
+
+describe('station from form', () => {
+  it('builds a new station in meters and seconds with a fresh id', () => {
+    const station = stationFromForm(stationForm(), undefined, 'metric');
+    expect(station).toEqual({ ...existingStation, id: station.id, dropBag: [] });
+    expect(station.id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('keeps the id of the station being edited and reads its drop bag from the form', () => {
+    const form = stationForm({ name: 'Les Pins' });
+    form.append('dropBagProductId', existingStation.dropBag[0]!.productId);
+    form.append('dropBagServings', '2');
+    expect(stationFromForm(form, existingStation, 'metric')).toEqual(existingStation);
+  });
+
+  it('empties the drop bag when every item was removed', () => {
+    expect(stationFromForm(stationForm(), existingStation, 'metric').dropBag).toEqual([]);
+  });
+
+  it('reads the distance in miles and keeps an unchanged distance exact', () => {
+    const imperial = { ...existingStation, distanceMeters: 9001 };
+    expect(
+      stationFromForm(stationForm({ distance: '5.593' }), imperial, 'imperial').distanceMeters,
+    ).toBe(9001);
+    expect(
+      stationFromForm(stationForm({ distance: '6' }), imperial, 'imperial').distanceMeters,
+    ).toBe(9656);
+  });
+
+  it('stores no cutoff when the time is empty, even with a day chosen', () => {
+    expect(
+      stationFromForm(stationForm({ cutoffDay: '1', cutoffTime: '' }), undefined, 'metric').cutoff,
+    ).toBeNull();
+  });
+
+  it('stores a next-day cutoff when the time is filled', () => {
+    expect(
+      stationFromForm(stationForm({ cutoffDay: '1', cutoffTime: '01:30' }), undefined, 'metric')
+        .cutoff,
+    ).toEqual({ dayOffset: 1, time: '01:30' });
+  });
+
+  it('reads unchecked water and confirmation as false', () => {
+    expect(
+      stationFromForm(stationForm({ water: '', verified: '' }), existingStation, 'metric'),
+    ).toMatchObject({ water: false, verified: false });
+  });
+});
+
+describe('drop bag from form', () => {
+  it('reads each product with its servings, a product removed from Settings included', () => {
+    const removedProductId = '00000000-0000-4000-8000-000000000099';
+    const form = new FormData();
+    for (const [productId, servings] of [
+      [existingStation.dropBag[0]!.productId, '2'],
+      [removedProductId, '3'],
+    ]) {
+      form.append('dropBagProductId', productId!);
+      form.append('dropBagServings', servings!);
+    }
+    expect(dropBagFromForm(form)).toEqual([
+      { productId: existingStation.dropBag[0]!.productId, servings: 2 },
+      { productId: removedProductId, servings: 3 },
+    ]);
+  });
+
+  it('reads no drop bag from a form without items', () => {
+    expect(dropBagFromForm(new FormData())).toEqual([]);
+  });
+});
+
+describe('stations after save', () => {
+  const later = {
+    ...existingStation,
+    id: '00000000-0000-4000-8000-000000000031',
+    distanceMeters: 19000,
+  };
+
+  it('inserts a new station in course order', () => {
+    const earlier = {
+      ...existingStation,
+      id: '00000000-0000-4000-8000-000000000032',
+      distanceMeters: 4000,
+    };
+    expect(
+      stationsAfterSave([existingStation, later], earlier).map((station) => station.id),
+    ).toEqual([earlier.id, existingStation.id, later.id]);
+  });
+
+  it('refuses a second station at the same distance', () => {
+    const twin = { ...later, id: '00000000-0000-4000-8000-000000000033' };
+    expect(() => stationsAfterSave([existingStation, later], twin)).toThrow(
+      'Another aid station is already at this distance.',
+    );
+  });
+
+  it('replaces an edited station and moves it to its new place', () => {
+    const moved = { ...existingStation, distanceMeters: 25000 };
+    expect(stationsAfterSave([existingStation, later], moved)).toEqual([later, moved]);
+  });
+});
+
+describe('start and cutoff from form', () => {
+  const startForm = (fields: Record<string, string>) => {
+    const form = new FormData();
+    for (const [name, text] of Object.entries(fields)) form.set(name, text);
+    return form;
+  };
+
+  it('reads a start time and a next-day finish cutoff', () => {
+    expect(
+      startAndCutoffFromForm(
+        startForm({ startTime: '07:00', finishCutoffDay: '1', finishCutoffTime: '02:00' }),
+      ),
+    ).toEqual({ startTime: '07:00', finishCutoff: { dayOffset: 1, time: '02:00' } });
+  });
+
+  it('clears both when the times are empty, even with a day chosen', () => {
+    expect(
+      startAndCutoffFromForm(
+        startForm({ startTime: '', finishCutoffDay: '2', finishCutoffTime: '' }),
+      ),
+    ).toEqual({ startTime: null, finishCutoff: null });
+  });
+});
+
+describe('nutrition targets from the form', () => {
+  const targetsForm = (fields: Record<string, string>) => {
+    const form = new FormData();
+    for (const [name, text] of Object.entries(fields)) form.set(name, text);
+    return form;
+  };
+
+  it('reads an empty field as unknown and 0 as 0', () => {
+    expect(
+      nutritionTargetsFromForm(
+        targetsForm({
+          carbohydrateGramsPerHour: '62.5',
+          fluidMillilitresPerHour: '',
+          sodiumMilligramsPerHour: '0',
+        }),
+      ),
+    ).toEqual({
+      carbohydrateGramsPerHour: 62.5,
+      fluidMillilitresPerHour: null,
+      sodiumMilligramsPerHour: 0,
+    });
+  });
+});
+
+describe('nutrition schedule from the form', () => {
+  const productId = '00000000-0000-4000-8000-000000000040';
+  const otherProductId = '00000000-0000-4000-8000-000000000041';
+  const scheduleForm = (rows: [string, string, string][], cues: [string, string][]) => {
+    const form = new FormData();
+    for (const [id, servings, everyMinutes] of rows) {
+      form.append('productId', id);
+      form.append('servings', servings);
+      form.append('everyMinutes', everyMinutes);
+    }
+    for (const [when, text] of cues) {
+      form.append('cueWhen', when);
+      form.append('cueText', text);
+    }
+    return form;
+  };
+
+  it('reads each product row in order, half servings included', () => {
+    expect(
+      nutritionScheduleFromForm(
+        scheduleForm(
+          [
+            [productId, '1', '30'],
+            [otherProductId, '0.5', '60'],
+          ],
+          [],
+        ),
+      ).schedule,
+    ).toEqual([
+      { productId, servings: 1, everyMinutes: 30 },
+      { productId: otherProductId, servings: 0.5, everyMinutes: 60 },
+    ]);
+  });
+
+  it('reads each cue in order, trimmed', () => {
+    expect(
+      nutritionScheduleFromForm(
+        scheduleForm(
+          [],
+          [
+            [' Long climbs ', ' Eat early '],
+            ['From 4h', 'Swap a gel for crackers'],
+          ],
+        ),
+      ).cues,
+    ).toEqual([
+      { when: 'Long climbs', text: 'Eat early' },
+      { when: 'From 4h', text: 'Swap a gel for crackers' },
+    ]);
+  });
+
+  it('reads no rows and no cues as an empty plan', () => {
+    expect(nutritionScheduleFromForm(new FormData())).toEqual({ schedule: [], cues: [] });
   });
 });

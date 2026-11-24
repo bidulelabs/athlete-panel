@@ -38,10 +38,11 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { mutate } from '../training/public/client';
+import { eventDeleteQuestion, mutate } from '../training/public/client';
 import { effectiveDate } from '../training/public/shared';
 import { OnboardingDialog, OnboardingResume } from './onboarding-client';
 import { PreferenceFields, suggestedPreferences } from './preferences';
+import { NutritionSettings } from './nutrition-settings';
 export const contributions = { welcome: OnboardingDialog };
 
 import { ContextEditor, type ContextKind } from './context-editor';
@@ -248,11 +249,13 @@ function ProfileForm({ data, request }: PluginPageProps) {
   );
 }
 
+const settingsTabs = ['profile', 'nutrition', 'notes', 'events', 'injuries'] as const;
+
 export default function AthletePage(props: PluginPageProps) {
   const confirm = useConfirm();
   const { envelope } = useWorkspace();
   const { data, request } = props;
-  const [tab, setTab] = useState<'profile' | 'notes' | 'events' | 'injuries'>('profile');
+  const [tab, setTab] = useState<(typeof settingsTabs)[number]>('profile');
   const [editing, setEditing] = useState<{ kind: ContextKind; record?: any } | null>(null);
   const action = useAction();
   const kind: ContextKind = tab === 'notes' ? 'note' : tab === 'events' ? 'event' : 'injury';
@@ -264,14 +267,15 @@ export default function AthletePage(props: PluginPageProps) {
         title="Athlete & context"
         description="Your preferences, goals, and the details that shape your plan."
         actions={
-          tab !== 'profile' && (
+          tab !== 'profile' &&
+          tab !== 'nutrition' && (
             <AddButton onClick={() => setEditing({ kind })}>Add {kind}</AddButton>
           )
         }
       />
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
         <TabsList className="workspace-tabs" aria-label="Athlete settings">
-          {(['profile', 'notes', 'events', 'injuries'] as const).map((value) => (
+          {settingsTabs.map((value) => (
             <TabsTrigger key={value} value={value}>
               {value === 'profile'
                 ? 'Profile & zones'
@@ -291,6 +295,8 @@ export default function AthletePage(props: PluginPageProps) {
               </details>
               <ProfileForm key={`setup-${envelope.onboarding?.revision ?? 0}`} {...props} />
             </>
+          ) : tab === 'nutrition' ? (
+            <NutritionSettings {...props} />
           ) : (
             <>
               <ErrorMessage error={action.error} />
@@ -387,9 +393,7 @@ export default function AthletePage(props: PluginPageProps) {
                           onClick={async () => {
                             if (
                               await confirm(
-                                data.racePlans.some((racePlan) => racePlan.eventId === record.id)
-                                  ? 'Delete this event and its race plan?'
-                                  : `Delete this ${kind}?`,
+                                eventDeleteQuestion(data, record.id) ?? `Delete this ${kind}?`,
                               )
                             )
                               void action.run(() =>

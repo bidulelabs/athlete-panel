@@ -59,6 +59,7 @@ function contextChanges(
     ['events', 'event'],
     ['periods', 'period'],
     ['racePlans', 'racePlan'],
+    ['rehearsals', 'rehearsal'],
     ['injuries', 'injury'],
     ['activities', 'activity'],
     ['health', 'health'],

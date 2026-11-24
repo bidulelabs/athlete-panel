@@ -22,6 +22,7 @@ export const repositories = {
   event: trainingRepository,
   period: trainingRepository,
   racePlan: trainingRepository,
+  rehearsal: trainingRepository,
   activity: recordsRepository,
   health: recordsRepository,
 };
@@ -32,6 +33,7 @@ export const collections = {
   event: 'events',
   period: 'periods',
   racePlan: 'racePlans',
+  rehearsal: 'rehearsals',
   injury: 'injuries',
   activity: 'activities',
   health: 'health',

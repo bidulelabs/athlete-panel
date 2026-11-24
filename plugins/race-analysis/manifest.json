@@ -5,8 +5,8 @@
   "version": "1.7.0",
   "hostApi": "^1.4.0",
   "dependencies": {
-    "athlete": "^1.5.0",
-    "training": "^2.7.0"
+    "athlete": "^1.6.0",
+    "training": "^2.8.0"
   },
   "required": false,
   "routes": [

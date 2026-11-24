@@ -3,6 +3,7 @@ import type { CommandContext } from '../context';
 import { fail } from '../errors';
 import { duplicateChildId } from '../identities';
 import { historyInPlan } from '../state';
+import { deleteRehearsalsWithoutRaceOrSession } from './rehearsal';
 
 export function handlePlan(
   context: CommandContext,
@@ -49,6 +50,7 @@ export function handlePlan(
       state.notes = state.notes.filter(
         (item) => item.schedule.kind !== 'plan' || item.schedule.planId !== plan.id,
       );
+      deleteRehearsalsWithoutRaceOrSession(state);
       state.plans = state.plans.filter((item) => item.id !== plan.id);
       ordering.normalize();
       break;

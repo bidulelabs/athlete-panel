@@ -42,6 +42,7 @@ import {
 import { ArrowDown, ArrowUp, Copy, Edit3, Link2, Plus, Repeat2, Trash2, X } from 'lucide-react';
 import { useId, useState, type FormEvent } from 'react';
 import { effectiveDate } from './dates';
+import { workoutDeleteQuestion } from './delete-questions';
 import { matchingDate } from './activity-matching';
 import { WorkoutStatus, WorkoutSource } from './completion-state';
 import { InspectorPanel } from './inspector-panel';
@@ -1086,7 +1087,7 @@ export function WorkoutInspector({
             style={{ color: 'var(--danger)' }}
             disabled={action.busy}
             onClick={async () => {
-              if (await confirm(`Delete “${workout.title}”?`, 'Delete workout'))
+              if (await confirm(workoutDeleteQuestion(data, workout), 'Delete workout'))
                 void action.run(
                   () =>
                     mutate(request, [

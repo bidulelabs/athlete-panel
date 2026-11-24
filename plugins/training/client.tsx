@@ -35,6 +35,7 @@ import { Fragment, useState, type ReactNode } from 'react';
 
 import { mutate, WorkoutEditor, WorkoutInspector } from './editors';
 import { addDays } from './dates';
+import { planDeleteQuestion } from './delete-questions';
 import { planWeeks, plannedDuration } from './plan-workouts';
 import { prescriptionPreview } from './prescription';
 import { TrainingHistory } from './history';
@@ -418,9 +419,7 @@ function PlanDetails({
               variant="ghost"
               disabled={action.busy}
               onClick={async () => {
-                if (
-                  await confirm(`Delete “${plan.title}” and its planned sessions?`, 'Delete plan')
-                )
+                if (await confirm(planDeleteQuestion(data, plan, workouts), 'Delete plan'))
                   void action.run(
                     () =>
                       mutate(request, [

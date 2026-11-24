@@ -16,6 +16,10 @@ const labels: Record<string, string> = {
   sportSubgroup: 'Sport subgroup',
   completion: 'Completion',
 };
+export const entityNames: Partial<Record<EntityChange['entity'], string>> = {
+  racePlan: 'race plan',
+  rehearsal: 'fueling rehearsal',
+};
 const readable = (key: string) =>
   labels[key] ?? key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (s) => s.toUpperCase());
 
@@ -23,7 +27,7 @@ export function recordName(change: EntityChange) {
   const value = change.after ?? change.before;
   if (value && 'title' in value) return value.title;
   if (value && 'displayName' in value) return value.displayName;
-  return readable(change.entity);
+  return readable(entityNames[change.entity] ?? change.entity);
 }
 
 export function changedFields(change: EntityChange) {

@@ -21,7 +21,7 @@ import {
 } from '@athlete-panel/ui';
 import { ChevronDown, History, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { historyFields, historyRecords, recordName } from './history-summary';
+import { entityNames, historyFields, historyRecords, recordName } from './history-summary';
 import './history.css';
 
 function HistoryEntry({
@@ -125,9 +125,7 @@ function HistoryEntry({
               <p className="training-history-record-kind">
                 {record.entity === 'health'
                   ? 'Health record'
-                  : record.entity === 'racePlan'
-                    ? 'race plan'
-                    : record.entity}{' '}
+                  : (entityNames[record.entity] ?? record.entity)}{' '}
                 · {!record.before ? 'Added' : !record.after ? 'Deleted' : 'Updated'}
               </p>
               <dl>

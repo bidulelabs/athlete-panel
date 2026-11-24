@@ -43,7 +43,13 @@ import {
   ExtensionSlot,
 } from '@athlete-panel/ui';
 import { effectiveDate } from '../training/public/shared';
-import { mutate, WorkoutStatus, WorkoutSource, LinkWorkoutDialog } from '../training/public/client';
+import {
+  eventDeleteQuestion,
+  mutate,
+  WorkoutStatus,
+  WorkoutSource,
+  LinkWorkoutDialog,
+} from '../training/public/client';
 import type { SleepNight } from './projection';
 import './cards.css';
 
@@ -465,9 +471,7 @@ export function ContextDetails({
           <AlertDialogDescription>
             {item.kind === 'injury'
               ? 'Delete this constraint from every affected day?'
-              : data.racePlans.some((racePlan) => racePlan.eventId === item.record.id)
-                ? 'Delete this event and its race plan?'
-                : `Delete this ${item.kind}?`}
+              : (eventDeleteQuestion(data, item.record.id) ?? `Delete this ${item.kind}?`)}
           </AlertDialogDescription>
           <ErrorMessage error={action.error} />
           <div className="ui-confirm-actions">

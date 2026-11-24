@@ -38,7 +38,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { mutate } from '../training/public/client';
+import { eventDeleteQuestion, mutate } from '../training/public/client';
 import { effectiveDate } from '../training/public/shared';
 import { OnboardingDialog, OnboardingResume } from './onboarding-client';
 import { PreferenceFields, suggestedPreferences } from './preferences';
@@ -393,9 +393,7 @@ export default function AthletePage(props: PluginPageProps) {
                           onClick={async () => {
                             if (
                               await confirm(
-                                data.racePlans.some((racePlan) => racePlan.eventId === record.id)
-                                  ? 'Delete this event and its race plan?'
-                                  : `Delete this ${kind}?`,
+                                eventDeleteQuestion(data, record.id) ?? `Delete this ${kind}?`,
                               )
                             )
                               void action.run(() =>

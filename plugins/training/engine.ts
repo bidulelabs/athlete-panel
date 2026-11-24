@@ -18,6 +18,7 @@ import { handlePeriod } from './engine/handlers/period';
 import { handlePlan } from './engine/handlers/plan';
 import { handleProfile } from './engine/handlers/profile';
 import { handleRacePlan } from './engine/handlers/race-plan';
+import { handleRehearsal } from './engine/handlers/rehearsal';
 import { handleWorkout } from './engine/handlers/workout';
 import { validateWorkspace } from './engine/state';
 export { effectiveDate } from './dates';
@@ -91,6 +92,11 @@ export function applyCommands(
       case 'racePlan.create':
       case 'racePlan.update':
         handleRacePlan(context, command);
+        break;
+      case 'rehearsal.create':
+      case 'rehearsal.update':
+      case 'rehearsal.delete':
+        handleRehearsal(context, command);
         break;
       case 'injury.create':
       case 'injury.update':

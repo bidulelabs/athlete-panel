@@ -15,6 +15,8 @@ Use the documentation link for the version you installed. Each release page incl
 - **Races** gains a **Nutrition** tab: targets per hour for carbohydrate, fluid and sodium (unset targets read "unknown"), free texts for the days before, breakfast and recovery, and your diet preferences from Settings. The race plan stores them, set by the owner only. Assistants limited to a race see them in that race's plan. See [Race preparation](features/race-preparation.md#nutrition-in-the-race-plan).
 
 - **Nutrition** in **Races** gains the food plan during the race: products from Settings with servings and how often, and cues in your own words, edited in one window. It shows what each intake brings with the product's tolerance, what the plan gives per hour beside each target, the carbohydrate over the moving time when the course has an estimate, and which products are left out for an unknown value or because they were removed from Settings.
+- Training stores fueling rehearsals of a race. Deleting a race, a session (once its completion is cleared) or a plan holding a rehearsed session also deletes its rehearsals, the confirmation says so, and one undo restores them. Agents cannot write rehearsals, and a proposal that would delete one is refused.
+- **Nutrition** in **Races** lists the race's fueling rehearsals and logs one on a session completed or partial in the last 12 weeks: the servings planned from the race's food plan and those taken, plain water, the stomach, the conditions and what to keep or change. An empty field is never counted as 0. Each rehearsal can be edited, its session locked, or deleted.
 
 - **Race day** shows what to carry on each leg row: the water and products to leave with, computed from the moving time, your nutrition schedule and targets, your carry capacity and your drop bags. A **What to carry** block shows what each drop bag holds and lacks, warns when a leg needs more water than you can carry, and says when the water need or the capacity is unknown. Without leg times nothing is shown. The station window now edits the drop bag with products from Settings. Nothing new is stored.
 
@@ -22,7 +24,7 @@ Use the documentation link for the version you installed. Each release page incl
 
 ### Upgrade steps
 
-Earlier releases cannot read race plans holding aid stations or nutrition: see [race day upgrade guidance](development.md#race-day-upgrade) and [race nutrition upgrade guidance](development.md#race-nutrition-upgrade). Earlier releases cannot read stored race plans, grants limited to a race or race plan proposals: rollback after those records exist requires the matching pre-upgrade backup. See [race plan upgrade guidance](development.md#race-plan-upgrade).
+Earlier releases cannot read a change history holding a fueling rehearsal: see [rehearsal upgrade guidance](development.md#rehearsal-upgrade). Earlier releases cannot read race plans holding aid stations or nutrition: see [race day upgrade guidance](development.md#race-day-upgrade) and [race nutrition upgrade guidance](development.md#race-nutrition-upgrade). Earlier releases cannot read stored race plans, grants limited to a race or race plan proposals: rollback after those records exist requires the matching pre-upgrade backup. See [race plan upgrade guidance](development.md#race-plan-upgrade).
 
 Earlier releases cannot read a profile holding nutrition: rollback after it is saved requires the matching pre-upgrade backup. See [nutrition profile upgrade guidance](development.md#nutrition-profile-upgrade).
 

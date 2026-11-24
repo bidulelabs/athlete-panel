@@ -7,7 +7,6 @@ import {
   proposalReviewInputSchema,
   proposalReviewSchema,
   proposalExpiresAt,
-  type Entity,
   type EntityChange,
   type WorkspaceState,
   type ProposalReview,
@@ -21,8 +20,9 @@ import {
   boundedContext,
   assertReadableSources,
   assertBounded,
-  withoutEffortAssumption,
+  withoutEffortAndWeather,
   type BoundedContext,
+  type RacePlanWithoutEffortAndWeather,
 } from './proposal-validation';
 
 type ProposalRow = {
@@ -38,11 +38,15 @@ type ProposalRow = {
   scope: unknown;
 };
 function contextChanges(
-  before: WorkspaceState,
+  before: Omit<WorkspaceState, 'racePlans'> & { racePlans: RacePlanWithoutEffortAndWeather[] },
   after: BoundedContext,
 ): ProposalReview['contextChanges'] {
   const changes: ProposalReview['contextChanges'] = [];
-  const compare = (entity: EntityChange['entity'], previous: Entity[], current: Entity[]) => {
+  const compare = (
+    entity: EntityChange['entity'],
+    previous: { id: string }[],
+    current: { id: string }[],
+  ) => {
     const old = new Map(previous.map((record) => [record.id, record]));
     const next = new Map(current.map((record) => [record.id, record]));
     for (const id of new Set([...old.keys(), ...next.keys()])) {
@@ -144,7 +148,7 @@ export async function evaluateProposal(tx: Transaction, input: { id: string; dig
       409,
     );
     review.contextChanges = contextChanges(
-      { ...context.snapshot, racePlans: context.snapshot.racePlans.map(withoutEffortAssumption) },
+      { ...context.snapshot, racePlans: context.snapshot.racePlans.map(withoutEffortAndWeather) },
       current,
     );
     changed = review.contextChanges.length > 0;

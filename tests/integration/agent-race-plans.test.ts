@@ -792,7 +792,7 @@ it('asks a race grant to read again once a rehearsal is logged', async () => {
   expect(review.contextChanges.map((change) => change.entity)).toContain('rehearsal');
 });
 
-const withoutAssumption = <Plan extends object>(plan: Plan) => {
+const withoutEffortAndWeather = <Plan extends object>(plan: Plan) => {
   const {
     effortPercent: _effortPercent,
     weatherPercent: _weatherPercent,
@@ -815,8 +815,8 @@ async function storeProposalAsBeforeAssumption(proposal: { id: string }) {
     change.entity === 'racePlan'
       ? {
           ...change,
-          before: change.before && withoutAssumption(change.before),
-          after: change.after && withoutAssumption(change.after),
+          before: change.before && withoutEffortAndWeather(change.before),
+          after: change.after && withoutEffortAndWeather(change.after),
         }
       : change,
   );
@@ -906,8 +906,8 @@ it('undoes a change stored before the assumption existed', async () => {
   const changes = (entry!.changes as { before: object | null; after: object | null }[]).map(
     (change) => ({
       ...change,
-      before: change.before && withoutAssumption(change.before),
-      after: change.after && withoutAssumption(change.after),
+      before: change.before && withoutEffortAndWeather(change.before),
+      after: change.after && withoutEffortAndWeather(change.after),
     }),
   );
   await connection()`update host.changes set changes = ${connection().json(changes as never)} where id = ${applied.id}`;

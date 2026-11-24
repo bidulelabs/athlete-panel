@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { CourseEstimate, CourseSection, RacePlan } from '@athlete-panel/contracts';
-import { movingSeconds, stationArrivals } from '../../plugins/race-analysis/race-day';
+import {
+  adjustedEstimate,
+  movingSeconds,
+  stationArrivals,
+} from '../../plugins/race-analysis/race-day';
 import { clockTime } from '../../plugins/race-analysis/presentation';
 
 type Station = RacePlan['stations'][number];
@@ -191,5 +195,116 @@ describe('clock time', () => {
     [2 * 86400 + 15 * 3600, '15:00 +2 days'],
   ])('shows %i seconds after race day midnight as %s', (seconds, label) => {
     expect(clockTime(seconds)).toBe(label);
+  });
+});
+
+describe('adjusted estimate', () => {
+  const planStops = [station(1, 2500), station(2, 10000, { stopSeconds: 600 })];
+  const assumption = (
+    effortPercent: number,
+    weatherPercent: number,
+    scenarioStops = planStops,
+  ) => ({
+    effortPercent,
+    weatherPercent,
+    stations: scenarioStops,
+  });
+  const withStop = (id: number, stopSeconds: number) =>
+    planStops.map((planned, index) => (index === id - 1 ? { ...planned, stopSeconds } : planned));
+  const adjusted = (effort: number, weather: number, scenarioStops = planStops) =>
+    adjustedEstimate(estimate, sections, planStops, assumption(effort, weather, scenarioStops))!;
+
+  it('returns the same estimate with no effort, no weather and the plan stops', () => {
+    expect(adjustedEstimate(estimate, sections, planStops, assumption(0, 0))).toBe(estimate);
+  });
+
+  it('returns the same estimate when the stops outlast it, so the times stay as they were', () => {
+    const longStops = [station(1, 2500, { stopSeconds: 7000 })];
+    expect(adjustedEstimate(estimate, sections, longStops, assumption(0, 0, longStops))).toBe(
+      estimate,
+    );
+  });
+
+  it('returns nothing without an estimate', () => {
+    expect(adjustedEstimate(null, sections, planStops, assumption(8, 6))).toBeNull();
+  });
+
+  it('moves the finish by the added stop and leaves the moving time alone', () => {
+    const scenarioStops = withStop(1, 300 + 720);
+    const result = adjusted(0, 0, scenarioStops);
+    expect(result.seconds).toBe(6720);
+    expect(movingSeconds(result, sections, scenarioStops)).toBe(
+      movingSeconds(estimate, sections, planStops),
+    );
+  });
+
+  it('delays only the stations after a longer stop', () => {
+    const result = adjusted(0, 0, withStop(2, 600 + 1800));
+    const before = stationArrivals(estimate, sections, { ...raceDay, stations: planStops });
+    const after = stationArrivals(result, sections, { ...raceDay, stations: planStops });
+    expect(after.stations[0]!.fromStart!.seconds).toBe(before.stations[0]!.fromStart!.seconds);
+    expect(after.finish.fromStart!.seconds).toBe(before.finish.fromStart!.seconds + 1800);
+  });
+
+  it('counts a stop exactly on a section boundary in the section after it', () => {
+    const boundaryStops = [station(1, 5000)];
+    const result = adjustedEstimate(estimate, sections, boundaryStops, {
+      ...assumption(0, 0),
+      stations: [station(1, 5000, { stopSeconds: 900 })],
+    })!;
+    expect(result.sectionSeconds).toEqual([1000, 2600, 3000]);
+  });
+
+  it('puts a stop at the course end in the last section', () => {
+    const endStops = [station(1, 15000)];
+    const result = adjustedEstimate(estimate, sections, endStops, {
+      ...assumption(0, 0),
+      stations: [station(1, 15000, { stopSeconds: 900 })],
+    })!;
+    expect(result.sectionSeconds).toEqual([1000, 2000, 3600]);
+  });
+
+  it('ignores the stop of a station beyond the course', () => {
+    const beyondStops = [station(1, 20000)];
+    expect(
+      adjustedEstimate(estimate, sections, beyondStops, {
+        ...assumption(0, 0),
+        stations: [station(1, 20000, { stopSeconds: 9000 })],
+      }),
+    ).toBe(estimate);
+  });
+
+  it('composes effort and weather on the moving time only', () => {
+    const result = adjusted(8, 6);
+    const factor = 1.08 * 1.06;
+    expect(result.seconds).toBeCloseTo(6000 + 5100 * (factor - 1), 6);
+    expect(movingSeconds(result, sections, planStops)).toBeCloseTo(5100 * factor, 6);
+    expect(result.lowSeconds / result.seconds).toBeCloseTo(0.8, 9);
+    expect(result.highSeconds / result.seconds).toBeCloseTo(1.2, 9);
+    expect(result.sectionSeconds.reduce((sum, value) => sum + value, 0)).toBe(result.seconds);
+  });
+
+  it('shrinks the times with a negative effort', () => {
+    expect(adjusted(-10, 0).seconds).toBeCloseTo(6000 - 510, 6);
+  });
+
+  it('keeps stops out of the effort factor when they outlast the estimate', () => {
+    const longStops = [station(1, 2500, { stopSeconds: 7000 })];
+    const result = adjustedEstimate(estimate, sections, longStops, {
+      ...assumption(20, 0),
+      stations: longStops,
+    });
+    expect(result!.seconds).toBe(6000);
+  });
+
+  it('moves the finish cutoff margin past midnight with the adjusted finish', () => {
+    const { finish } = stationArrivals(adjusted(20, 0), sections, {
+      ...raceDay,
+      stations: planStops,
+    });
+    expect(finish.cutoffMarginSeconds).toBeCloseTo(
+      86400 + 1800 - sevenAm - (7200 * 7020) / 6000,
+      6,
+    );
   });
 });

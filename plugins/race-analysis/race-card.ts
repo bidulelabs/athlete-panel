@@ -6,6 +6,7 @@ import {
   arrivalRangeLabel,
   clockTime,
   cutoffMarginText,
+  effortAndWeatherText,
   elevationLabel,
   finishTime,
 } from './presentation';
@@ -163,6 +164,8 @@ export function raceCardContent({
   return {
     revision: racePlan.revision,
     writtenFor: writtenForText(racePlan, course),
+    effortAndWeather: effortAndWeatherText(racePlan),
+    weatherNote: racePlan.weatherNote,
     expectedFinish: finish.timeOfDay
       ? clockTime(finish.timeOfDay.seconds)
       : finish.fromStart

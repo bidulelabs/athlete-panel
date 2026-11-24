@@ -13,10 +13,15 @@ import {
   Textarea,
   useAction,
 } from '@athlete-panel/ui';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { NutritionProduct, RacePlan } from '@athlete-panel/contracts';
 import { ProductField, RemovableRow, useEditorRows } from './editor-rows';
-import { distanceFieldText, startAndCutoffFromForm, stationFromForm } from './race-plan-form';
+import {
+  changedEffortAndWeatherFromForm,
+  distanceFieldText,
+  startAndCutoffFromForm,
+  stationFromForm,
+} from './race-plan-form';
 
 type Station = RacePlan['stations'][number];
 type ActionState = ReturnType<typeof useAction>;
@@ -185,6 +190,83 @@ export function StartAndCutoffDialog({
           cutoff={racePlan?.finishCutoff ?? null}
           readOnly={action.busy}
         />
+        <DialogActions action={action} onClose={onClose} />
+      </form>
+    </Modal>
+  );
+}
+
+export function EffortAndWeatherDialog({
+  racePlan,
+  onSave,
+  onClose,
+}: {
+  racePlan: RacePlan | undefined;
+  onSave: (
+    values: Partial<Pick<RacePlan, 'effortPercent' | 'weatherPercent' | 'weatherNote'>>,
+  ) => Promise<unknown>;
+  onClose: () => void;
+}) {
+  const action = useAction();
+  const [opened] = useState(racePlan);
+  return (
+    <Modal
+      open
+      onClose={() => !action.busy && onClose()}
+      title="Effort and weather"
+      description="Your own assumption. It changes moving time on Race day, Nutrition and the race card."
+      className="race-dialog"
+    >
+      <form
+        className="dialog-body race-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const changed = changedEffortAndWeatherFromForm(
+            new FormData(event.currentTarget),
+            opened,
+          );
+          if (Object.keys(changed).length === 0) return onClose();
+          void action.run(() => onSave(changed), onClose);
+        }}
+      >
+        <Field
+          label="Effort (%)"
+          hint="Moving time changes by this much. 8 is 8 % longer, -5 is shorter."
+        >
+          <Input
+            type="number"
+            name="effortPercent"
+            required
+            min={-30}
+            max={50}
+            step={0.5}
+            inputMode="decimal"
+            defaultValue={opened?.effortPercent ?? 0}
+            readOnly={action.busy}
+          />
+        </Field>
+        <Field label="Weather (%)" hint="Heat, mud or wind. Added on top of effort.">
+          <Input
+            type="number"
+            name="weatherPercent"
+            required
+            min={-20}
+            max={50}
+            step={0.5}
+            inputMode="decimal"
+            defaultValue={opened?.weatherPercent ?? 0}
+            readOnly={action.busy}
+          />
+        </Field>
+        <Field label="Weather note" hint="Your own words, not a forecast.">
+          <Textarea
+            name="weatherNote"
+            rows={2}
+            maxLength={300}
+            defaultValue={opened?.weatherNote ?? ''}
+            readOnly={action.busy}
+          />
+        </Field>
         <DialogActions action={action} onClose={onClose} />
       </form>
     </Modal>

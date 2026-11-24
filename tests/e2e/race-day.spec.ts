@@ -148,6 +148,159 @@ for (const theme of ['light', 'dark']) {
   });
 }
 
+const minutesOf = (text: string) => {
+  const [, hours, minutes] = /(\d+)h (\d\d)m/.exec(text)!;
+  return Number(hours) * 60 + Number(minutes);
+};
+const effortDialogButton = (page: Page) =>
+  page.getByRole('button', { name: 'Change effort and weather', exact: true });
+const raceDayEffortWeather = (page: Page) => page.locator('.race-day-effort-weather');
+
+for (const theme of ['light', 'dark']) {
+  test(`adjusts the finish with effort and weather by keyboard (${theme})`, async ({
+    page,
+    baseURL,
+  }) => {
+    await signIn(page, theme);
+    const raceId = await createRace(page, baseURL!);
+    await page.goto(`/races?race=${raceId}`);
+    await uploadCourse(page, syntheticGpx());
+    await addReferences(page, baseURL!, raceId);
+    await ownerCommand(page, baseURL!, {
+      action: 'racePlan.create',
+      values: {
+        eventId: raceId,
+        stations: [
+          {
+            id: randomUUID(),
+            name: 'Les Pins',
+            distanceMeters: 9000,
+            cutoff: null,
+            stopSeconds: 0,
+            water: true,
+            food: '',
+            dropBag: [],
+            action: '',
+            source: '',
+            verified: true,
+          },
+        ],
+      },
+    });
+    await page.reload();
+    const courseFinish = await page.locator('.race-finish').innerText();
+    await expect(page.getByText('Before effort and weather', { exact: true })).toHaveCount(0);
+
+    await openRaceDay(page);
+    await expect(page.locator('.race-day-headline')).toHaveText(
+      `Finish ${courseFinish} after the start`,
+    );
+    await page.getByRole('tab', { name: 'Race card', exact: true }).click();
+    await expect(page.locator('.race-card-finish')).toHaveText(courseFinish);
+    await expect(page.getByText(/your assumption/)).toHaveCount(0);
+    await openRaceDay(page);
+    await expect(raceDayEffortWeather(page)).toContainText('No effort or weather assumption');
+
+    await effortDialogButton(page).focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByLabel('Effort (%)', { exact: true })).toHaveValue('0');
+    await dialog.getByLabel('Effort (%)', { exact: true }).press('Enter');
+    await expect(dialog).toHaveCount(0);
+    await expect(raceDayEffortWeather(page)).toContainText('No effort or weather assumption');
+
+    await effortDialogButton(page).click();
+    const viewport = page.viewportSize()!;
+    await page.setViewportSize({ width: 320, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.setViewportSize(viewport);
+    await dialog.getByLabel('Effort (%)', { exact: true }).fill('20');
+    await dialog.getByLabel('Weather (%)', { exact: true }).fill('10');
+    await dialog.getByLabel('Weather note', { exact: true }).fill('Hot afternoon expected');
+    await dialog.getByLabel('Effort (%)', { exact: true }).press('Enter');
+    await expect(dialog).toHaveCount(0);
+    await expect(raceDayEffortWeather(page)).toContainText(
+      'Effort +20 % · weather +10 % (your assumption)',
+    );
+    await expect(raceDayEffortWeather(page)).toContainText('Hot afternoon expected');
+    const adjustedMinutes = minutesOf(await page.locator('.race-day-headline').innerText());
+    expect(adjustedMinutes).toBeGreaterThanOrEqual(Math.floor(minutesOf(courseFinish) * 1.32) - 1);
+    expect(adjustedMinutes).toBeLessThanOrEqual(Math.ceil(minutesOf(courseFinish) * 1.32) + 1);
+    await expect(page.locator('.race-day-moving')).toHaveText(/ moving, 0m stops$/);
+
+    await page.getByRole('tab', { name: 'Race card', exact: true }).click();
+    expect(minutesOf(await page.locator('.race-card-finish').innerText())).toBe(adjustedMinutes);
+    await expect(
+      page.getByText('Effort +20 % · weather +10 % (your assumption)', { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Hot afternoon expected', { exact: true })).toBeVisible();
+    await page.getByRole('tab', { name: 'Course', exact: true }).click();
+    await expect(page.locator('.race-finish')).toHaveText(courseFinish);
+    await expect(page.getByText('Before effort and weather', { exact: true })).toBeVisible();
+    await expect(reviewNotice(page)).toHaveCount(0);
+  });
+}
+
+test('creates the plan when effort and weather are the first thing saved', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await createRace(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await openRaceDay(page);
+  await effortDialogButton(page).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Weather (%)', { exact: true }).fill('-5');
+  await dialog.getByLabel('Weather (%)', { exact: true }).press('Enter');
+  await expect(dialog).toHaveCount(0);
+  await expect(raceDayEffortWeather(page)).toContainText(
+    'Effort 0 % · weather -5 % (your assumption)',
+  );
+});
+
+test('keeps typed effort and weather after a failed save or a change made elsewhere', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await createRace(page, baseURL!);
+  const racePlanId = randomUUID();
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.create',
+    values: { id: racePlanId, eventId: raceId, target: 'Finish comfortably' },
+  });
+  await page.goto(`/races?race=${raceId}`);
+  await openRaceDay(page);
+  await effortDialogButton(page).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Effort (%)', { exact: true }).fill('12.5');
+  const outage = '**/api/plugins/training/**';
+  await page.route(outage, (route) =>
+    route.fulfill({ status: 503, json: { error: { message: 'Synthetic outage' } } }),
+  );
+  await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(dialog.getByText('Synthetic outage')).toBeVisible();
+  await expect(dialog.getByLabel('Effort (%)', { exact: true })).toHaveValue('12.5');
+  await page.unroute(outage);
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.update',
+    id: racePlanId,
+    expectedRevision: 1,
+    values: { startTime: '06:30' },
+  });
+  await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(dialog.getByText(/Use Reload saved data to review the saved version/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Reload saved data', exact: true }).click();
+  await expect(dialog.getByLabel('Effort (%)', { exact: true })).toHaveValue('12.5');
+  await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(raceDayEffortWeather(page)).toContainText('Effort +12.5 % · weather 0 %');
+  await expect(page.locator('.race-day-start')).toContainText('Start 06:30');
+});
+
 test('keeps the station draft when the plan changed elsewhere, then saves it after a reload', async ({
   page,
   baseURL,

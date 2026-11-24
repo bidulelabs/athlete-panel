@@ -24,12 +24,57 @@ const stopSecondsOnCourse = (sections: readonly CourseSection[], stations: reado
     .filter((station) => !isBeyondCourse(station, sections))
     .reduce((sum, station) => sum + station.stopSeconds, 0);
 
+const sectionIndexAtDistance = (sections: readonly CourseSection[], meters: number) => {
+  const position = sections.findIndex((section) => meters < section.toMeters);
+  return position === -1 ? sections.length - 1 : position;
+};
+
 export function movingSeconds(
   estimate: CourseEstimate | null,
   sections: readonly CourseSection[],
   stations: readonly Station[],
 ) {
   return estimate && Math.max(0, estimate.seconds - stopSecondsOnCourse(sections, stations));
+}
+
+export function adjustedEstimate(
+  estimate: CourseEstimate | null,
+  sections: readonly CourseSection[],
+  planStations: readonly Station[],
+  {
+    effortPercent,
+    weatherPercent,
+    stations,
+  }: Pick<RacePlan, 'effortPercent' | 'weatherPercent'> & { stations: readonly Station[] },
+) {
+  if (!estimate) return null;
+  const factor = (1 + effortPercent / 100) * (1 + weatherPercent / 100);
+  const planStopSeconds = new Map(planStations.map((station) => [station.id, station.stopSeconds]));
+  const stopSecondsChanges = stations
+    .filter((station) => !isBeyondCourse(station, sections))
+    .map((station) => ({
+      sectionIndex: sectionIndexAtDistance(sections, station.distanceMeters),
+      seconds: station.stopSeconds - (planStopSeconds.get(station.id) ?? 0),
+    }))
+    .filter((change) => change.seconds !== 0);
+  if (factor === 1 && stopSecondsChanges.length === 0) return estimate;
+  const movingTimeFactor =
+    1 + (movingSeconds(estimate, sections, planStations)! * (factor - 1)) / estimate.seconds;
+  const sectionSeconds = estimate.sectionSeconds.map(
+    (seconds, position) =>
+      seconds * movingTimeFactor +
+      stopSecondsChanges
+        .filter((change) => change.sectionIndex === position)
+        .reduce((sum, change) => sum + change.seconds, 0),
+  );
+  const seconds = sectionSeconds.reduce((sum, value) => sum + value, 0);
+  return {
+    ...estimate,
+    seconds,
+    lowSeconds: (estimate.lowSeconds * seconds) / estimate.seconds,
+    highSeconds: (estimate.highSeconds * seconds) / estimate.seconds,
+    sectionSeconds,
+  };
 }
 
 export function stationArrivals(

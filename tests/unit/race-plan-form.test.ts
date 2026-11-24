@@ -7,6 +7,7 @@ import {
   nutritionTargetsFromForm,
   raceDayCommand,
   racePlanCommand,
+  changedEffortAndWeatherFromForm,
   startAndCutoffFromForm,
   stationFromForm,
   stationsAfterSave,
@@ -167,6 +168,17 @@ describe('strategy needs review', () => {
       racePlan({ target: '' }),
       courseId,
       true,
+    ],
+    [
+      'only an effort, a weather and its note are set and the course was replaced',
+      racePlan({
+        ...unwritten,
+        effortPercent: 10,
+        weatherPercent: 5,
+        weatherNote: 'Hot afternoon',
+      }),
+      replacedCourseId,
+      false,
     ],
     [
       'only a breakfast is written and nothing changed',
@@ -439,6 +451,67 @@ describe('start and cutoff from form', () => {
         startForm({ startTime: '', finishCutoffDay: '2', finishCutoffTime: '' }),
       ),
     ).toEqual({ startTime: null, finishCutoff: null });
+  });
+});
+
+describe('changed effort and weather from the form', () => {
+  const effortAndWeatherForm = (fields: Record<string, string> = {}) => {
+    const form = new FormData();
+    for (const [name, text] of Object.entries({
+      effortPercent: '8',
+      weatherPercent: '6',
+      weatherNote: 'Hot afternoon',
+      ...fields,
+    }))
+      form.set(name, text);
+    return form;
+  };
+  const saved = { effortPercent: 8, weatherPercent: 6, weatherNote: 'Hot afternoon' };
+
+  it('sends nothing when the form still holds the saved values', () => {
+    expect(changedEffortAndWeatherFromForm(effortAndWeatherForm(), saved)).toEqual({});
+  });
+
+  it('sends only the field that changed', () => {
+    expect(
+      changedEffortAndWeatherFromForm(effortAndWeatherForm({ weatherPercent: '7.5' }), saved),
+    ).toEqual({
+      weatherPercent: 7.5,
+    });
+    expect(
+      changedEffortAndWeatherFromForm(effortAndWeatherForm({ effortPercent: '-5' }), saved),
+    ).toEqual({
+      effortPercent: -5,
+    });
+  });
+
+  it('trims the note and sends nothing when only spaces were added', () => {
+    expect(
+      changedEffortAndWeatherFromForm(
+        effortAndWeatherForm({ weatherNote: ' Hot afternoon ' }),
+        saved,
+      ),
+    ).toEqual({});
+    expect(
+      changedEffortAndWeatherFromForm(effortAndWeatherForm({ weatherNote: '   ' }), saved),
+    ).toEqual({
+      weatherNote: '',
+    });
+  });
+
+  it('compares with zero and an empty note when the race has no plan yet', () => {
+    expect(
+      changedEffortAndWeatherFromForm(
+        effortAndWeatherForm({ effortPercent: '0', weatherPercent: '0', weatherNote: '' }),
+        undefined,
+      ),
+    ).toEqual({});
+    expect(
+      changedEffortAndWeatherFromForm(
+        effortAndWeatherForm({ effortPercent: '8', weatherPercent: '0', weatherNote: '' }),
+        undefined,
+      ),
+    ).toEqual({ effortPercent: 8 });
   });
 });
 

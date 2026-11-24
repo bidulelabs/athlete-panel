@@ -4,8 +4,18 @@ import type { CommandInput, CourseSection, RacePlan } from '@athlete-panel/contr
 type Pacing = RacePlan['pacing'];
 type Station = RacePlan['stations'][number];
 type RaceDayValues = Partial<
-  Pick<RacePlan, 'startTime' | 'finishCutoff' | 'stations' | 'nutrition'>
+  Pick<
+    RacePlan,
+    | 'startTime'
+    | 'finishCutoff'
+    | 'stations'
+    | 'nutrition'
+    | 'effortPercent'
+    | 'weatherPercent'
+    | 'weatherNote'
+  >
 >;
+type EffortAndWeather = Pick<RacePlan, 'effortPercent' | 'weatherPercent' | 'weatherNote'>;
 
 export function pacingRows(pacing: Pacing, sections: readonly CourseSection[]): Pacing {
   const unplannedSections = sections.filter(
@@ -113,6 +123,23 @@ export const startAndCutoffFromForm = (form: FormData) => ({
   startTime: String(form.get('startTime')) || null,
   finishCutoff: cutoffFromForm(form, 'finishCutoff'),
 });
+
+export function changedEffortAndWeatherFromForm(
+  form: FormData,
+  opened: EffortAndWeather | undefined,
+) {
+  const typed: EffortAndWeather = {
+    effortPercent: Number(form.get('effortPercent')),
+    weatherPercent: Number(form.get('weatherPercent')),
+    weatherNote: String(form.get('weatherNote')).trim(),
+  };
+  const saved = opened ?? { effortPercent: 0, weatherPercent: 0, weatherNote: '' };
+  return Object.fromEntries(
+    Object.entries(typed).filter(
+      ([field, value]) => value !== saved[field as keyof EffortAndWeather],
+    ),
+  ) as Partial<EffortAndWeather>;
+}
 
 export function dropBagFromForm(form: FormData): Station['dropBag'] {
   const servings = form.getAll('dropBagServings');

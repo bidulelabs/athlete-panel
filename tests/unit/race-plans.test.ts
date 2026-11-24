@@ -70,6 +70,9 @@ describe('race plan commands', () => {
         finishCutoff: null,
         stations: [],
         nutrition: emptyRaceNutrition,
+        effortPercent: 0,
+        weatherPercent: 0,
+        weatherNote: '',
         writtenFor: { courseId: null, target: 'Finish comfortably' },
       },
     ]);
@@ -796,5 +799,72 @@ describe('race plan review rows', () => {
       ]),
     );
     expect(fields.join()).not.toContain('Step');
+  });
+});
+
+describe('race plan effort and weather assumption', () => {
+  const planned = () => run(workspaceWithRaces(), [createRacePlan({ target: 'Finish' })]).state;
+  const assumption = { effortPercent: 8, weatherPercent: 6.5, weatherNote: 'Hot afternoon' };
+
+  it('reads a plan stored before the assumption as no effort, no weather and an empty note', () => {
+    const [stored] = planned().racePlans;
+    const {
+      effortPercent: _effortPercent,
+      weatherPercent: _weatherPercent,
+      weatherNote: _weatherNote,
+      ...old
+    } = stored!;
+    expect(racePlanSchema.parse(old)).toMatchObject({
+      effortPercent: 0,
+      weatherPercent: 0,
+      weatherNote: '',
+    });
+  });
+
+  it('keeps the effort when an owner update omits it, and when an agent updates the strategy', () => {
+    const withEffort = run(planned(), [updateRacePlan(assumption)]).state;
+    const afterOwner = run(withEffort, [updateRacePlan({ target: 'Win' }, 2)]).state;
+    expect(afterOwner.racePlans[0]).toMatchObject(assumption);
+    const afterAgent = run(afterOwner, [updateRacePlan(agentWrites, 3)], 'agent').state;
+    expect(afterAgent.racePlans[0]).toMatchObject(assumption);
+  });
+
+  it('replays an identical assumption without a new revision', () => {
+    const withEffort = run(planned(), [updateRacePlan(assumption)]).state;
+    const replay = run(withEffort, [updateRacePlan(assumption, 2)]);
+    expect(replay.changes).toEqual([]);
+    expect(replay.state.racePlans[0]!.revision).toBe(2);
+  });
+
+  it.each([
+    ['effort under -30', { effortPercent: -31 }],
+    ['effort over 50', { effortPercent: 50.5 }],
+    ['effort off the half-point step', { effortPercent: 50.25 }],
+    ['weather under -20', { weatherPercent: -20.5 }],
+    ['weather over 50', { weatherPercent: 51 }],
+    ['a 301-character note', { weatherNote: 'a'.repeat(301) }],
+  ])('refuses %s', (_label, values) => {
+    expect(() => run(planned(), [updateRacePlan(values)])).toThrow();
+  });
+
+  it.each([
+    ['effort -30', { effortPercent: -30 }],
+    ['effort 50 and weather 50', { effortPercent: 50, weatherPercent: 50 }],
+    ['a 300-character note', { weatherNote: 'a'.repeat(300) }],
+  ])('accepts %s', (_label, values) => {
+    expect(run(planned(), [updateRacePlan(values)]).state.racePlans[0]).toMatchObject(values);
+  });
+
+  it('gives an assistant no way to write them', () => {
+    const agentValues = (values: Record<string, unknown>) =>
+      agentCommandSchema.safeParse({
+        action: 'racePlan.update',
+        id: racePlanId,
+        expectedRevision: 1,
+        values: { ...agentWrites, ...values },
+      }).success;
+    expect(agentValues({})).toBe(true);
+    expect(agentValues({ effortPercent: 5 })).toBe(false);
+    expect(agentValues({ weatherNote: 'Hot' })).toBe(false);
   });
 });

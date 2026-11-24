@@ -21,6 +21,7 @@ import {
   boundedContext,
   assertReadableSources,
   assertBounded,
+  withoutEffortAssumption,
   type BoundedContext,
 } from './proposal-validation';
 
@@ -142,7 +143,10 @@ export async function evaluateProposal(tx: Transaction, input: { id: string; dig
       'The saved context no longer matches its digest.',
       409,
     );
-    review.contextChanges = contextChanges(context.snapshot, current);
+    review.contextChanges = contextChanges(
+      { ...context.snapshot, racePlans: context.snapshot.racePlans.map(withoutEffortAssumption) },
+      current,
+    );
     changed = review.contextChanges.length > 0;
   }
   try {

@@ -16,6 +16,8 @@ Store the start time, the finish cutoff and the aid stations as fields of the [r
 
 Validation lives in the field schemas: stations in course order with distinct ids, `HH:MM` times, cutoffs up to six days after race day. Owner update patches carry no defaults, so an update that omits a field keeps it. Agents of the granted race write them through a narrower station schema without `verified` or `source`: the engine keeps the owner's values by station id, a new station starts unconfirmed, and an agent that renames or moves a confirmed station clears its confirmation.
 
+The plan also holds the owner's effort and weather assumption: `effortPercent` and `weatherPercent`, each a percentage of the moving time in steps of 0.5, and a `weatherNote` of up to 300 characters. They live in the plan, not in a separate record, so every view of the race and the race card use the same assumption. The assistant neither sees nor writes it: the planning context leaves the three fields out of `racePlans`, so no digest depends on them, and the agent forms have no such fields, so an agent update keeps the owner's values.
+
 Arrivals, margins, legs and moving time are computed when shown, from the course estimate and the plan, and never stored. Times are wall-clock times in the profile timezone, counted from race-day midnight.
 
 ## Consequences

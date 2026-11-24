@@ -618,6 +618,11 @@ const racePlanDayFields = {
     .strict()
     .describe('What to eat and drink before, during and after the race.'),
 };
+const racePlanAssumptionFields = {
+  effortPercent: z.number().min(-30).max(50).multipleOf(0.5),
+  weatherPercent: z.number().min(-20).max(50).multipleOf(0.5),
+  weatherNote: z.string().trim().max(300),
+};
 const racePlanAgentDayFields = {
   startTime: racePlanDayFields.startTime.optional(),
   finishCutoff: racePlanDayFields.finishCutoff.optional(),
@@ -645,6 +650,9 @@ export const racePlanSchema = z
     finishCutoff: racePlanDayFields.finishCutoff.default(null),
     stations: racePlanDayFields.stations.default([]),
     nutrition: racePlanDayFields.nutrition.default(() => structuredClone(emptyRaceNutrition)),
+    effortPercent: racePlanAssumptionFields.effortPercent.default(0),
+    weatherPercent: racePlanAssumptionFields.weatherPercent.default(0),
+    weatherNote: racePlanAssumptionFields.weatherNote.default(''),
     writtenFor: z.object({ courseId: racePlanCourseId, target: racePlanTarget }).strict(),
   })
   .strict()
@@ -1125,6 +1133,7 @@ export const commandSchema = z.discriminatedUnion('action', [
             target: racePlanTarget,
             ...racePlanAgentFields,
             ...racePlanDayFields,
+            ...racePlanAssumptionFields,
             stations: stationsInCourseOrder(racePlanStationCommandSchema),
             courseId: racePlanCourseId,
           })

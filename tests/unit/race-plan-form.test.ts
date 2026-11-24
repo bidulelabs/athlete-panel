@@ -38,6 +38,9 @@ const racePlan = (values: Partial<RacePlan> = {}): RacePlan => ({
   finishCutoff: null,
   stations: [],
   nutrition: emptyRaceNutrition,
+  effortPercent: 0,
+  weatherPercent: 0,
+  weatherNote: '',
   writtenFor: { courseId, target: 'Finish comfortably' },
   ...values,
 });

@@ -11,14 +11,20 @@ import {
   effortAndWeatherText,
   finishTime,
 } from './presentation';
-import { heaviestLeg, type ScenarioOutcome, type scenarioChanges } from './scenarios';
+import {
+  heaviestLeg,
+  type PlanChange,
+  type ScenarioOutcome,
+  type scenarioChanges,
+} from './scenarios';
 
-export type ScenarioAction = 'Edit' | 'Duplicate' | 'Delete';
+export type ScenarioAction = 'Apply' | 'Edit' | 'Duplicate' | 'Delete';
 export type ScenarioColumn = {
   scenario: RaceScenario;
   outcome: ScenarioOutcome;
   changes: ReturnType<typeof scenarioChanges>;
   outdatedReasons: string[];
+  planChanges: PlanChange[];
 };
 
 type CellNote = { text: string; late?: boolean };
@@ -156,6 +162,13 @@ const WhyItChanges = ({ reasons }: { reasons: string[] }) =>
     </ul>
   );
 
+export const applyBlockedReason = ({ outdatedReasons, planChanges }: ScenarioColumn) =>
+  outdatedReasons.length > 0
+    ? 'Outdated: review the stops and save it again before applying.'
+    : planChanges.length === 0
+      ? 'Same as the plan: nothing to apply.'
+      : null;
+
 const subscribeToPhoneWidth = (notify: () => void) => {
   const query = window.matchMedia('(max-width: 760px)');
   query.addEventListener('change', notify);
@@ -186,22 +199,36 @@ export function ScenarioComparison({
   const rows = comparisonRows(planOutcome);
   const assumptionSummary = ({ scenario, outcome }: ScenarioColumn) =>
     assumptionText(scenario, outcome, 'No effort or weather change');
-  const actions = ({ scenario }: ScenarioColumn) => (
-    <NativeSelect
-      aria-label={`${scenario.name} actions`}
-      aria-describedby={atLimit ? 'race-scenario-limit' : undefined}
-      value=""
-      disabled={busy}
-      onChange={(event) => onAction(scenario, event.target.value as ScenarioAction)}
-    >
-      <option value="">Actions</option>
-      <option value="Edit">Edit</option>
-      <option value="Duplicate" disabled={atLimit}>
-        Duplicate
-      </option>
-      <option value="Delete">Delete</option>
-    </NativeSelect>
-  );
+  const actions = (column: ScenarioColumn) => {
+    const { scenario } = column;
+    const blockedReason = applyBlockedReason(column);
+    const blockedId = `race-apply-blocked-${scenario.id}`;
+    const describedBy = [atLimit && 'race-scenario-limit', blockedReason && blockedId]
+      .filter(Boolean)
+      .join(' ');
+    return (
+      <>
+        <NativeSelect
+          aria-label={`${scenario.name} actions`}
+          aria-describedby={describedBy || undefined}
+          value=""
+          disabled={busy}
+          onChange={(event) => onAction(scenario, event.target.value as ScenarioAction)}
+        >
+          <option value="">Actions</option>
+          <option value="Apply" disabled={blockedReason !== null}>
+            Apply to plan…
+          </option>
+          <option value="Edit">Edit</option>
+          <option value="Duplicate" disabled={atLimit}>
+            Duplicate
+          </option>
+          <option value="Delete">Delete</option>
+        </NativeSelect>
+        {blockedReason && <small id={blockedId}>{blockedReason}</small>}
+      </>
+    );
+  };
   return (
     <>
       {isPhone && (

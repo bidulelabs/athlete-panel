@@ -1,10 +1,5 @@
-import type {
-  CommandInput,
-  CourseEstimate,
-  RacePlan,
-  RaceScenario,
-} from '@athlete-panel/contracts';
-import { estimateRange, scenarioStations } from './scenarios';
+import type { CommandInput, RacePlan, RaceScenario } from '@athlete-panel/contracts';
+import { planChanges, scenarioStations } from './scenarios';
 
 type ScenarioFields = Pick<
   RaceScenario,
@@ -93,6 +88,23 @@ export function duplicateScenarioCommand(scenario: RaceScenario): CommandInput {
       weatherNote,
       stops,
       basedOn,
+    },
+  };
+}
+
+export function applyScenarioCommand(plan: RacePlan, scenario: RaceScenario): CommandInput {
+  const changes = planChanges(plan, scenario);
+  return {
+    action: 'racePlan.update',
+    id: plan.id,
+    expectedRevision: plan.revision,
+    values: {
+      ...Object.fromEntries(
+        changes.flatMap((change) => (change.field === 'stop' ? [] : [[change.field, change.to]])),
+      ),
+      ...(changes.some((change) => change.field === 'stop')
+        ? { stations: scenarioStations(plan.stations, scenario) }
+        : {}),
     },
   };
 }

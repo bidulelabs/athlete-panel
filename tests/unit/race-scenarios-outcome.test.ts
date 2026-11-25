@@ -7,6 +7,7 @@ import {
   type RaceScenario,
 } from '@athlete-panel/contracts';
 import {
+  planChanges,
   scenarioChanges,
   scenarioOutcome,
   scenarioOutdatedReasons,
@@ -412,5 +413,48 @@ describe('scenario outdated reasons', () => {
     expect(
       reasons(plan.stations, 'other-course', {}, scenarioWith(), { ...estimate, seconds: 6300 }),
     ).toEqual(['The course changed.']);
+  });
+});
+
+describe('plan changes', () => {
+  const planWithNote = { ...plan, weatherNote: 'Dry' } as RacePlan;
+  const planStops = plan.stations.map(({ id, stopSeconds }) => ({ stationId: id, stopSeconds }));
+  const sameAsPlan = scenarioWith({ stops: planStops, weatherNote: 'Dry' });
+
+  it('is empty when the scenario already equals the plan', () => {
+    expect(planChanges(planWithNote, sameAsPlan)).toEqual([]);
+  });
+
+  it('is empty when the scenario lists no stops', () => {
+    expect(planChanges(planWithNote, { ...sameAsPlan, stops: [] })).toEqual([]);
+  });
+
+  it('lists the one station whose stop changes', () => {
+    expect(
+      planChanges(planWithNote, {
+        ...sameAsPlan,
+        stops: [{ stationId: firstStation.id, stopSeconds: 180 }, ...planStops.slice(1)],
+      }),
+    ).toEqual([
+      { field: 'stop', stationId: firstStation.id, name: firstStation.name, from: 300, to: 180 },
+    ]);
+  });
+
+  it('lists effort alone', () => {
+    expect(planChanges(planWithNote, { ...sameAsPlan, effortPercent: 5 })).toEqual([
+      { field: 'effortPercent', from: 0, to: 5 },
+    ]);
+  });
+
+  it('lists weather alone', () => {
+    expect(planChanges(planWithNote, { ...sameAsPlan, weatherPercent: -2 })).toEqual([
+      { field: 'weatherPercent', from: 0, to: -2 },
+    ]);
+  });
+
+  it('lists the note alone', () => {
+    expect(planChanges(planWithNote, { ...sameAsPlan, weatherNote: 'Hot valley' })).toEqual([
+      { field: 'weatherNote', from: 'Dry', to: 'Hot valley' },
+    ]);
   });
 });

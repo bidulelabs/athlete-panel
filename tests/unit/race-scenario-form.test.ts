@@ -6,6 +6,7 @@ import {
   type RaceScenario,
 } from '@athlete-panel/contracts';
 import {
+  applyScenarioCommand,
   changedScenarioValues,
   createScenarioCommand,
   duplicateScenarioCommand,
@@ -224,5 +225,51 @@ describe('scenario commands', () => {
   ])('leaves out %s that the copy name cannot hold whole', (_label, emoji) => {
     const command = duplicateScenarioCommand({ ...scenario, name: `${'x'.repeat(72)}${emoji}` });
     expect((command as { values: { name: string } }).values.name).toBe(`${'x'.repeat(72)} (copy)`);
+  });
+});
+
+describe('apply scenario command', () => {
+  const savedPlan = {
+    ...plan,
+    id: '00000000-0000-4000-8000-0000000000cc',
+    revision: 7,
+    weatherNote: '',
+  } as RacePlan;
+  const sameAsPlan = {
+    ...scenario,
+    effortPercent: 0,
+    weatherPercent: 0,
+    weatherNote: '',
+    stops: savedPlan.stations.map(({ id, stopSeconds }) => ({ stationId: id, stopSeconds })),
+  } as RaceScenario;
+
+  it('sends one update with the revision it was opened on and everything that changes', () => {
+    expect(applyScenarioCommand(savedPlan, scenario)).toEqual({
+      action: 'racePlan.update',
+      id: savedPlan.id,
+      expectedRevision: 7,
+      values: {
+        effortPercent: 8,
+        weatherPercent: 6,
+        weatherNote: 'Hot valley',
+        stations: [{ ...firstStation, stopSeconds: 600 }, secondStation],
+      },
+    });
+  });
+
+  it('sends only the effort when only the effort changes, and no course', () => {
+    const command = applyScenarioCommand(savedPlan, { ...sameAsPlan, effortPercent: 5 });
+    expect(command).toMatchObject({ values: { effortPercent: 5 } });
+    expect(Object.keys((command as { values: object }).values)).toEqual(['effortPercent']);
+  });
+
+  it('sends the whole station list when only one stop changes', () => {
+    const command = applyScenarioCommand(savedPlan, {
+      ...sameAsPlan,
+      stops: [{ stationId: secondStation.id, stopSeconds: 0 }],
+    });
+    expect((command as { values: object }).values).toEqual({
+      stations: [firstStation, { ...secondStation, stopSeconds: 0 }],
+    });
   });
 });

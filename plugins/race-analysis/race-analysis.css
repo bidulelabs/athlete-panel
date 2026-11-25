@@ -1143,3 +1143,7 @@
 .race-scenario-toolbar .race-hint {
   margin: 0;
 }
+.race-stations .race-was {
+  color: var(--muted);
+  text-decoration: line-through;
+}

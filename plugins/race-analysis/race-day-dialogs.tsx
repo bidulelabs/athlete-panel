@@ -128,10 +128,12 @@ function CutoffFields({
 export function DialogActions({
   action,
   onClose,
+  submitLabel,
   children,
 }: {
   action: ActionState;
   onClose: () => void;
+  submitLabel?: string;
   children?: ReactNode;
 }) {
   return (
@@ -142,7 +144,7 @@ export function DialogActions({
         <Button type="button" variant="outline" onClick={onClose} disabled={action.busy}>
           Cancel
         </Button>
-        <SubmitButton busy={action.busy} />
+        <SubmitButton busy={action.busy}>{submitLabel}</SubmitButton>
       </div>
     </>
   );

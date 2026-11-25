@@ -229,7 +229,7 @@ for (const theme of ['light', 'dark']) {
     await dialog.getByLabel('Name', { exact: true }).fill('Hot and careful');
     await dialog.getByLabel('Effort (%)', { exact: true }).fill('8');
     await dialog.getByLabel('Weather (%)', { exact: true }).fill('6');
-    await dialog.getByLabel('Why this weather assumption').fill('Hot valley');
+    await dialog.getByLabel('Weather note').fill('Hot valley');
     await dialog.getByLabel('Les Pins stop in this scenario (minutes)').fill('9');
     await expect(dialog.getByText('enter every value')).toHaveCount(0);
     await page.setViewportSize({ width: 320, height: 900 });

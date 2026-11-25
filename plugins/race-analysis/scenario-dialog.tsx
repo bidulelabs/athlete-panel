@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Field, Input, Modal, distance, duration, useAction } from '@athlete-panel/ui';
 import type { CommandInput, RacePlan, RaceScenario } from '@athlete-panel/contracts';
-import { DialogActions } from './race-day-dialogs';
+import { DialogActions, EffortAndWeatherFields } from './race-day-dialogs';
 import { changedScenarioValues, createScenarioCommand, stopMinutesText } from './scenario-form';
 import { scenarioStations } from './scenarios';
 
@@ -85,42 +85,14 @@ export function ScenarioDialog({
             readOnly={action.busy}
           />
         </Field>
-        <Field label="Effort (%)" hint="Positive is slower. Applied on moving time.">
-          <Input
-            type="number"
-            name="effortPercent"
-            required
-            min={-30}
-            max={50}
-            step={0.5}
-            inputMode="decimal"
-            value={typedEffort}
-            onChange={(event) => setTypedEffort(event.target.value)}
-            readOnly={action.busy}
-          />
-        </Field>
-        <Field label="Weather (%)" hint="Your own assumption, not a forecast.">
-          <Input
-            type="number"
-            name="weatherPercent"
-            required
-            min={-20}
-            max={50}
-            step={0.5}
-            inputMode="decimal"
-            value={typedWeather}
-            onChange={(event) => setTypedWeather(event.target.value)}
-            readOnly={action.busy}
-          />
-        </Field>
-        <Field label="Why this weather assumption">
-          <Input
-            name="weatherNote"
-            maxLength={300}
-            defaultValue={assumption.weatherNote}
-            readOnly={action.busy}
-          />
-        </Field>
+        <EffortAndWeatherFields
+          effortPercent={assumption.effortPercent}
+          weatherPercent={assumption.weatherPercent}
+          weatherNote={assumption.weatherNote}
+          typedEffort={{ value: typedEffort, onChange: setTypedEffort }}
+          typedWeather={{ value: typedWeather, onChange: setTypedWeather }}
+          readOnly={action.busy}
+        />
         {stations.length === 0 ? (
           <p className="race-hint">
             The plan has no aid stations yet, so there are no stops to change.

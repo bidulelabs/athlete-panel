@@ -146,7 +146,7 @@ describe('changed scenario values', () => {
     const planWithAddedStation = planWith([firstStation, secondStation, addedStation]);
     const changed = changedScenarioValues(
       formOf(),
-      { ...opened, plan: planWithAddedStation, outdated: true },
+      { ...opened, outdated: true },
       { ...current, plan: planWithAddedStation },
     );
     expect(Object.keys(changed).sort()).toEqual(['basedOn', 'stops']);

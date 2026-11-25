@@ -102,7 +102,7 @@ export function Scenarios({
                 </Button>
               </div>
             )}
-            {scenarios.length === 0 ? (
+            {scenarios.length === 0 && (
               <EmptyState
                 icon={<Flag size={25} />}
                 title="Compare options before choosing"
@@ -111,82 +111,82 @@ export function Scenarios({
                 Try a calmer or faster effort, longer stops, or a hot-day assumption. Your plan
                 stays as it is until you apply one.
               </EmptyState>
-            ) : (
-              <>
-                <div className="race-scenario-toolbar">
-                  {newScenarioButton}
-                  {atLimit && (
-                    <p id="race-scenario-limit" className="race-hint">
-                      A race holds at most {RACE_SCENARIO_LIMIT} scenarios. Delete one to add
-                      another.
-                    </p>
-                  )}
-                </div>
-                <ul className="race-scenario-list" role="list">
-                  {scenarios.map((scenario) => {
-                    const outcome = outcomeOf(scenario);
-                    const outdatedReasons = scenarioOutdatedReasons(
-                      racePlan,
-                      courseId,
-                      estimate,
-                      scenario,
-                      units,
-                    );
-                    return (
-                      <li key={scenario.id} className="race-scenario">
-                        <div>
-                          <strong>{scenario.name}</strong>
-                          {outdatedReasons.length > 0 && <Badge variant="outline">Outdated</Badge>}
-                          <small>
-                            {effortAndWeatherText(scenario) ?? 'No effort or weather change'} ·{' '}
-                            {duration(outcome.stopSeconds)} of stops
+            )}
+            {scenarios.length > 0 && (
+              <div className="race-scenario-toolbar">
+                {newScenarioButton}
+                {atLimit && (
+                  <p id="race-scenario-limit" className="race-hint">
+                    A race holds at most {RACE_SCENARIO_LIMIT} scenarios. Delete one to add another.
+                  </p>
+                )}
+              </div>
+            )}
+            {scenarios.length > 0 && (
+              <ul className="race-scenario-list" role="list">
+                {scenarios.map((scenario) => {
+                  const outcome = outcomeOf(scenario);
+                  const outdatedReasons = scenarioOutdatedReasons(
+                    racePlan,
+                    courseId,
+                    estimate,
+                    scenario,
+                    units,
+                  );
+                  return (
+                    <li key={scenario.id} className="race-scenario">
+                      <div>
+                        <strong>{scenario.name}</strong>
+                        {outdatedReasons.length > 0 && <Badge variant="outline">Outdated</Badge>}
+                        <small>
+                          {effortAndWeatherText(scenario) ?? 'No effort or weather change'} ·{' '}
+                          {duration(outcome.stopSeconds)} of stops
+                        </small>
+                        {outdatedReasons.map((reason, position) => (
+                          <small key={position} className="race-late">
+                            {reason}
                           </small>
-                          {outdatedReasons.map((reason, position) => (
-                            <small key={position} className="race-late">
-                              {reason}
-                            </small>
-                          ))}
-                        </div>
-                        <span className="race-scenario-finish">
-                          <small>Finish</small>
-                          {finishText(outcome)}
-                        </span>
-                        <div className="race-scenario-actions">
-                          <Button
-                            variant="ghost"
-                            aria-label={`Edit ${scenario.name}`}
-                            disabled={action.busy}
-                            onClick={() => setEditing(scenario.id)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            aria-label={`Duplicate ${scenario.name}`}
-                            aria-describedby={atLimit ? 'race-scenario-limit' : undefined}
-                            disabled={atLimit || action.busy}
-                            onClick={() =>
-                              void action.run(() =>
-                                mutate(request, [duplicateScenarioCommand(scenario)]),
-                              )
-                            }
-                          >
-                            Duplicate
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            aria-label={`Delete ${scenario.name}`}
-                            disabled={action.busy}
-                            onClick={() => void deleteScenario(scenario)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
+                        ))}
+                      </div>
+                      <span className="race-scenario-finish">
+                        <small>Finish</small>
+                        {finishText(outcome)}
+                      </span>
+                      <div className="race-scenario-actions">
+                        <Button
+                          variant="ghost"
+                          aria-label={`Edit ${scenario.name}`}
+                          disabled={action.busy}
+                          onClick={() => setEditing(scenario.id)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          aria-label={`Duplicate ${scenario.name}`}
+                          aria-describedby={atLimit ? 'race-scenario-limit' : undefined}
+                          disabled={atLimit || action.busy}
+                          onClick={() =>
+                            void action.run(() =>
+                              mutate(request, [duplicateScenarioCommand(scenario)]),
+                            )
+                          }
+                        >
+                          Duplicate
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          aria-label={`Delete ${scenario.name}`}
+                          disabled={action.busy}
+                          onClick={() => void deleteScenario(scenario)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </>
         )}

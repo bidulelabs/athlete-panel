@@ -9,7 +9,10 @@ import { distance } from '@athlete-panel/ui';
 import { carryPlan } from './carry';
 import { adjustedEstimate, stationArrivals } from './race-day';
 
-export function scenarioStations(planStations: RacePlan['stations'], scenario: RaceScenario) {
+export function scenarioStations(
+  planStations: RacePlan['stations'],
+  scenario: Pick<RaceScenario, 'stops'>,
+) {
   const stopSecondsByStationId = new Map(
     scenario.stops.map((stop) => [stop.stationId, stop.stopSeconds]),
   );
@@ -23,7 +26,7 @@ export function scenarioOutcome(
   estimate: CourseEstimate | null,
   sections: readonly CourseSection[],
   plan: RacePlan,
-  scenario: RaceScenario | null,
+  scenario: Pick<RaceScenario, 'effortPercent' | 'weatherPercent' | 'stops'> | null,
   { products, carryCapacityMillilitres }: CarryInputs,
 ) {
   const assumption = scenario ?? plan;

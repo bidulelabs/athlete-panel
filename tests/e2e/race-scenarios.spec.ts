@@ -210,9 +210,14 @@ async function raceWithPlan(page: Page, baseURL: string) {
 
 const scenarioRow = (page: Page, name: string) =>
   page.locator('.race-scenario').filter({ has: page.locator('strong', { hasText: name }) });
-const readScenarios = async (page: Page) => {
+const readScenarios = async (page: Page, raceId: string) => {
   const workspace = await page.request.get('/api/workspace?from=2030-01-01&to=2030-01-07');
-  return (await workspace.json()).state.raceScenarios as { id: string; revision: number }[];
+  const scenarios = (await workspace.json()).state.raceScenarios as {
+    id: string;
+    eventId: string;
+    revision: number;
+  }[];
+  return scenarios.filter((saved) => saved.eventId === raceId);
 };
 
 for (const theme of ['light', 'dark']) {
@@ -340,7 +345,7 @@ test('keeps the draft when the scenario changed elsewhere, then saves it after a
   await page.getByRole('button', { name: 'Edit Hot', exact: true }).click();
   const dialog = dialogOf(page);
   await dialog.getByLabel('Name', { exact: true }).fill('Hot and dry');
-  const [{ id, revision }] = await readScenarios(page);
+  const [{ id, revision }] = await readScenarios(page, raceId);
   await ownerCommand(page, baseURL!, {
     action: 'raceScenario.update',
     id,

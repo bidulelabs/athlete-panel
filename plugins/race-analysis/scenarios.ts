@@ -6,7 +6,7 @@ import type {
   RaceScenario,
 } from '@athlete-panel/contracts';
 import { distance } from '@athlete-panel/ui';
-import { carryPlan } from './carry';
+import { carryPlan, litres } from './carry';
 import { signedPercent } from './presentation';
 import { adjustedEstimate, stationArrivals } from './race-day';
 
@@ -121,7 +121,7 @@ export function scenarioOutdatedReasons(
   ];
 }
 
-const listText = (items: readonly string[]) =>
+export const listText = (items: readonly string[]) =>
   items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
 
 const signedMinutes = (seconds: number) =>
@@ -174,4 +174,70 @@ export function scenarioChanges(
           ]),
     ],
   };
+}
+
+export function heaviestLeg(carry: NonNullable<ScenarioOutcome['carry']>, units: string) {
+  const leg = carry.legs.reduce((most, candidate) =>
+    (candidate.waterNeededMillilitres ?? 0) > (most.waterNeededMillilitres ?? 0) ? candidate : most,
+  );
+  const label =
+    leg === carry.legs.at(-1) ? 'Last leg' : `The leg ending at ${distance(leg.toMeters, units)}`;
+  return { leg, label };
+}
+
+export type ScenarioNotice = {
+  kind: 'outdated' | 'missed-cutoffs' | 'carry-over-capacity';
+  title: string;
+  body: string;
+};
+
+export function scenarioNotices(
+  scenario: Pick<RaceScenario, 'name'>,
+  outcome: ScenarioOutcome,
+  outdatedReasons: readonly string[],
+  units: string,
+): ScenarioNotice[] {
+  const missedBy = (name: string, marginSeconds: number | null) =>
+    marginSeconds !== null && marginSeconds < 0
+      ? [`${name} by ${Math.ceil(-marginSeconds / 60)} min`]
+      : [];
+  const missedCutoffTexts = [
+    ...outcome.cutoffs.flatMap(({ name, cutoffMarginSeconds }) =>
+      missedBy(name, cutoffMarginSeconds),
+    ),
+    ...missedBy('the finish', outcome.finish.cutoffMarginSeconds),
+  ];
+  const legOverBottles =
+    outcome.carry && outcome.carry.legs.some((leg) => leg.waterOverCapacity)
+      ? heaviestLeg(outcome.carry, units)
+      : null;
+  return [
+    ...(outdatedReasons.length === 0
+      ? []
+      : [
+          {
+            kind: 'outdated' as const,
+            title: `\u201c${scenario.name}\u201d was saved before the plan changed`,
+            body: [...outdatedReasons, 'Review the stops, then save it again.'].join(' '),
+          },
+        ]),
+    ...(missedCutoffTexts.length === 0
+      ? []
+      : [
+          {
+            kind: 'missed-cutoffs' as const,
+            title: `\u201c${scenario.name}\u201d misses ${missedCutoffTexts.length} ${missedCutoffTexts.length === 1 ? 'cutoff' : 'cutoffs'} at its latest arrival`,
+            body: `${listText(missedCutoffTexts).replace(/^./, (first) => first.toUpperCase())}. Shorter stops or a calmer start may not be enough: check the course estimate.`,
+          },
+        ]),
+    ...(legOverBottles === null
+      ? []
+      : [
+          {
+            kind: 'carry-over-capacity' as const,
+            title: `${scenario.name}: ${legOverBottles.label} needs ${litres(legOverBottles.leg.waterNeededMillilitres!)}, bottles hold ${litres(outcome.carry!.carryCapacityMillilitres!)}`,
+            body: 'Slower legs need more to drink. Add capacity in Settings or plan a refill.',
+          },
+        ]),
+  ];
 }

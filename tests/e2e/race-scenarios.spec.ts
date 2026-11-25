@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { syntheticGpx } from '../fixtures/race-analysis';
-import { addReferences, createRace, ownerCommand, signIn, uploadCourse } from './race-helpers';
+import {
+  addReferences,
+  createRace,
+  ownerCommand,
+  setNutrition,
+  signIn,
+  uploadCourse,
+} from './race-helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -134,8 +141,24 @@ for (const theme of ['light', 'dark']) {
     await expect(calmHead).toContainText('Effort -5 % · weather 0 % (your assumption)');
     await expect(page.getByText('Outdated', { exact: true })).toHaveCount(1);
     await expect(movedStationHead).toContainText('Outdated');
-    await expect(movedStationHead).toContainText('Les Pins was moved.');
+    await expect(movedStationHead).not.toContainText('Les Pins was moved.');
     await expect(calmHead).not.toContainText('Outdated');
+    await expect(page.locator('.race-data-notice strong')).toHaveText([
+      '“Ambitious” was saved before the plan changed',
+      'Ranges are not guarantees',
+    ]);
+    const outdatedNotice = page.locator('.race-data-notice', { hasText: 'was saved before' });
+    await expect(outdatedNotice).toContainText(
+      'Les Pins was moved. Review the stops, then save it again.',
+    );
+    await page.getByText('How this is worked out', { exact: true }).click();
+    await expect(page.getByText('Margins use the latest arrival.')).toBeVisible();
+    await page.getByText('How this is worked out', { exact: true }).click();
+    await pressEnterOn(page, outdatedNotice.getByRole('button', { name: 'Review stops' }));
+    await expect(dialogOf(page).getByLabel('Name', { exact: true })).toHaveValue('Ambitious');
+    await expect(dialogOf(page).getByLabel('Effort (%)', { exact: true })).toHaveValue('-10');
+    await page.keyboard.press('Escape');
+    await expect(dialogOf(page)).toHaveCount(0);
 
     const finishRow = rowOf(page, 'Expected finish').locator('td');
     await expect(finishRow).toHaveCount(4);
@@ -507,3 +530,77 @@ test('reaches each Actions select by Tab and leaves it on Actions after Edit', a
   await expect(actionsOf(page, 'Hot')).toHaveValue('');
   await expect(scenarioNames(page)).toHaveText(['Calm', 'Hot']);
 });
+
+for (const theme of ['light', 'dark']) {
+  test(`warns about a missed cutoff and a leg over the bottles of a scenario, and keeps the notices at 320 px (${theme})`, async ({
+    page,
+    baseURL,
+  }) => {
+    await signIn(page, theme);
+    const raceId = await createRace(page, baseURL!);
+    await page.goto(`/races?race=${raceId}`);
+    await uploadCourse(page, syntheticGpx());
+    await addReferences(page, baseURL!, raceId);
+    const analysis = await page.request.post('/api/plugins/race-analysis/analysis', {
+      headers: { Origin: baseURL! },
+      data: { raceId },
+    });
+    const { course } = (await analysis.json()) as { course: { id: string } };
+    await setNutrition(page, baseURL!, { carryCapacityMillilitres: 250 });
+    const tightStation = station('Tight Col', 9000, { cutoff: { dayOffset: 0, time: '07:10' } });
+    await ownerCommand(page, baseURL!, {
+      action: 'racePlan.create',
+      values: {
+        eventId: raceId,
+        courseId: course.id,
+        startTime: '07:00',
+        finishCutoff: { dayOffset: 0, time: '07:20' },
+        stations: [tightStation],
+        nutrition: {
+          targets: {
+            carbohydrateGramsPerHour: null,
+            fluidMillilitresPerHour: 500,
+            sodiumMilligramsPerHour: null,
+          },
+          schedule: [],
+          cues: [],
+          daysBefore: '',
+          breakfast: '',
+          recovery: '',
+        },
+      },
+    });
+    await ownerCommand(
+      page,
+      baseURL!,
+      scenario(raceId, 'Hot and careful', {
+        effortPercent: 8,
+        basedOn: {
+          courseId: course.id,
+          stations: [{ id: tightStation.id, distanceMeters: 9000 }],
+        },
+      }),
+    );
+    await page.goto(`/races?race=${raceId}`);
+    await openScenarios(page);
+
+    const missedNotice = page.locator('.race-data-notice', { hasText: 'misses 2 cutoffs' });
+    await expect(missedNotice.locator('strong')).toHaveText(
+      '“Hot and careful” misses 2 cutoffs at its latest arrival',
+    );
+    await expect(missedNotice).toContainText(/Tight Col by \d+ min and the finish by \d+ min\./);
+    await expect(missedNotice).toContainText('check the course estimate');
+    const carryNotice = page.locator('.race-data-notice', { hasText: 'bottles hold 0.25 L' });
+    await expect(carryNotice.locator('strong')).toHaveText(
+      /^Hot and careful: (Last leg|The leg ending at [\d.]+ km) needs [\d.]+ L, bottles hold 0.25 L$/,
+    );
+    await expect(carryNotice).toContainText('Add capacity in Settings or plan a refill.');
+    await expect(page.getByRole('button', { name: 'Review stops' })).toHaveCount(0);
+    await noOverflowAt320(page);
+    await page.setViewportSize({ width: 390, height: 800 });
+    await expect(missedNotice).toBeVisible();
+    await expect(carryNotice).toBeVisible();
+    await expect(page.getByText('Ranges are not guarantees')).toBeVisible();
+    await noOverflowAt320(page);
+  });
+}

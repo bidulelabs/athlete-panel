@@ -17,6 +17,7 @@ import {
 } from '@athlete-panel/contracts';
 import { mutate } from '../training/public/client';
 import { ScenarioDialog } from './scenario-dialog';
+import { ScenarioExplanations, ScenarioNotices } from './scenario-notices';
 import {
   ScenarioComparison,
   finishText,
@@ -144,6 +145,12 @@ export function Scenarios({
                 busy={action.busy}
                 onAction={runScenarioAction}
               />
+            )}
+            {columns.length > 0 && (
+              <>
+                <ScenarioNotices columns={columns} units={units} onReviewStops={setEditing} />
+                <ScenarioExplanations />
+              </>
             )}
           </>
         )}

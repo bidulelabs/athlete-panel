@@ -473,7 +473,8 @@
 .race-day-cutoff {
   margin: 12px 0 0;
 }
-.race-stations small {
+.race-stations small,
+.race-scenario-table small {
   display: block;
   color: var(--muted);
   font-size: 12px;
@@ -557,13 +558,16 @@
 .race-carry .race-disclosure-body li + li {
   margin-top: 6px;
 }
-.race-stations {
+.race-stations,
+.race-scenario-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 .race-stations th,
-.race-stations td {
+.race-stations td,
+.race-scenario-table th,
+.race-scenario-table td {
   text-align: left;
   vertical-align: top;
   padding: 12px 8px;
@@ -575,7 +579,8 @@
   font-weight: 600;
   border-top: 0;
 }
-.race-stations th[scope='row'] {
+.race-stations th[scope='row'],
+.race-scenario-table th[scope='row'] {
   font-weight: 400;
   overflow-wrap: anywhere;
 }
@@ -930,51 +935,35 @@
     animation: none;
   }
 }
-.race-scenario-list {
-  list-style: none;
-  margin: 16px 0 0;
-  padding: 0;
+.race-scenario-scroll {
+  overflow-x: auto;
+  margin-top: 16px;
 }
-.race-scenario {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: start;
-  gap: 16px;
-  padding: 12px 0;
-  border-top: 1px solid var(--line);
+.race-scenario-table {
+  table-layout: fixed;
 }
-.race-scenario small {
+.race-scenario-table th strong {
   display: block;
-  color: var(--muted);
-  overflow-wrap: anywhere;
 }
-.race-scenario [data-slot='badge'] {
-  margin-left: 8px;
+.race-scenario-table [data-slot='badge'] {
+  margin: 4px 0;
   color: var(--accent-ink);
   border-color: var(--accent-line);
 }
-.race-scenario .race-late {
-  color: var(--danger);
+.race-scenario-table select {
+  margin-top: 8px;
 }
-.race-scenario-finish {
-  font-size: 20px;
-  font-weight: 600;
-  text-align: right;
+.race-scenario-plan {
+  background: var(--surface-raised);
 }
-.race-scenario-finish small {
-  font-size: 12px;
-  font-weight: 400;
+.race-scenario-table tbody tr:first-child td > span:first-child {
+  display: block;
+  font-size: 22px;
+  font-weight: 640;
 }
-@media (max-width: 760px) {
-  .race-scenario {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-  }
-  .race-scenario-finish {
-    text-align: left;
-  }
-  .race-scenario-actions [data-slot='button'] {
-    min-height: 44px;
+@media (min-width: 761px) {
+  .race-scenario-table {
+    min-width: 720px;
   }
 }
 .race-agent {
@@ -1150,9 +1139,4 @@
 }
 .race-scenario-toolbar .race-hint {
   margin: 0;
-}
-.race-scenario-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
 }

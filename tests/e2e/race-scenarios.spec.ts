@@ -3,7 +3,19 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 import { syntheticGpx } from '../fixtures/race-analysis';
 import { addReferences, createRace, ownerCommand, signIn, uploadCourse } from './race-helpers';
 
-const scenarioNames = (page: Page) => page.locator('.race-scenario strong');
+test.beforeEach(async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+});
+const scenarioHeads = (page: Page) =>
+  page
+    .locator('.race-scenario-table thead th:not(.race-scenario-plan)')
+    .filter({ has: page.locator('strong') });
+const scenarioNames = (page: Page) => scenarioHeads(page).locator('strong');
+const actionsOf = (page: Page, name: string) => page.getByLabel(`${name} actions`, { exact: true });
+const rowOf = (page: Page, label: string) =>
+  page
+    .locator('.race-scenario-table tbody tr')
+    .filter({ has: page.getByRole('rowheader', { name: label }) });
 const openScenarios = async (page: Page) => {
   await page.getByRole('tab', { name: 'Race day', exact: true }).focus();
   await page.keyboard.press('ArrowRight');
@@ -63,13 +75,14 @@ for (const theme of ['light', 'dark']) {
     });
     const { course } = (await analysis.json()) as { course: { id: string } };
     const lesPins = station('Les Pins', 9000);
-    const grandCol = station('Grand Col', 28000);
+    const grandCol = station('Grand Col', 28000, { cutoff: { dayOffset: 0, time: '23:30' } });
     await ownerCommand(page, baseURL!, {
       action: 'racePlan.create',
       values: {
         eventId: raceId,
         courseId: course.id,
         startTime: '07:00',
+        finishCutoff: { dayOffset: 0, time: '23:59' },
         stations: [lesPins, grandCol],
       },
     });
@@ -111,31 +124,89 @@ for (const theme of ['light', 'dark']) {
 
     await expect(page.getByRole('heading', { name: 'Compare race-day options' })).toBeVisible();
     await expect(scenarioNames(page)).toHaveText(['Ambitious', 'Ambitious', 'Hot and careful']);
-    const rows = page.locator('.race-scenario');
-    const hotRow = rows.filter({ hasText: 'Hot and careful' });
-    const calmRow = rows.filter({ hasText: 'Effort -5 %' });
-    const movedStationRow = rows.filter({ hasText: 'Effort -10 %' });
-    await expect(hotRow).toContainText(
+    const hotHead = scenarioHeads(page).filter({ hasText: 'Hot and careful' });
+    const calmHead = scenarioHeads(page).filter({ hasText: 'Effort -5 %' });
+    const movedStationHead = scenarioHeads(page).filter({ hasText: 'Effort -10 %' });
+    await expect(page.locator('.race-scenario-plan strong')).toHaveText('Current plan');
+    await expect(hotHead).toContainText(
       'Effort +8 % · weather +6 % (your assumption) · 20m of stops',
     );
-    await expect(hotRow.locator('.race-scenario-finish')).toContainText(/Finish\d\d:\d\d/);
-    await expect(calmRow).toContainText('Effort -5 % · weather 0 % (your assumption)');
+    await expect(calmHead).toContainText('Effort -5 % · weather 0 % (your assumption)');
     await expect(page.getByText('Outdated', { exact: true })).toHaveCount(1);
-    await expect(movedStationRow).toContainText('Outdated');
-    await expect(movedStationRow).toContainText('Les Pins was moved.');
-    await expect(calmRow).not.toContainText('Outdated');
+    await expect(movedStationHead).toContainText('Outdated');
+    await expect(movedStationHead).toContainText('Les Pins was moved.');
+    await expect(calmHead).not.toContainText('Outdated');
+
+    const finishRow = rowOf(page, 'Expected finish').locator('td');
+    await expect(finishRow).toHaveCount(4);
+    await expect(finishRow.nth(0)).toContainText(/^\d\d:\d\d/);
+    await expect(finishRow.nth(0)).toContainText(/range \d\d:\d\d–\d\d:\d\d/);
+    await expect(finishRow.nth(3)).toContainText(/\d+h( \d+m)? later|\d+m later/);
+    await expect(finishRow.nth(1)).toContainText(/earlier/);
+    await expect(rowOf(page, 'Moving · stopped').locator('td').nth(3)).toContainText(' · 20m');
+    await expect(rowOf(page, 'Finish cutoff 23:59').locator('td').nth(3)).toContainText('margin');
+    await expect(rowOf(page, 'Grand Col · cutoff 23:30').locator('td').nth(0)).toContainText(
+      /\d\d:\d\d · latest \d\d:\d\d/,
+    );
+    await expect(rowOf(page, 'What to carry')).toBeVisible();
+    const whyRow = rowOf(page, 'Why it changes').locator('td');
+    await expect(whyRow.nth(0)).toHaveText('The reference');
+    await expect(whyRow.nth(3)).toContainText(/Moving time \+\d+ min: effort \+8 %, weather \+6 %/);
+    await expect(whyRow.nth(3)).toContainText('Stops +10 min: Grand Col 15 min');
+    await expect(rowOf(page, 'Why it changes')).toContainText(/Moving time -\d+ min: effort -5 %/);
+
+    const boxes = await page
+      .locator('.race-scenario-table thead th')
+      .evaluateAll((heads) =>
+        heads.map((head) => head.getBoundingClientRect()).map(({ x, y }) => ({ x, y })),
+      );
+    expect(new Set(boxes.map(({ y }) => y)).size).toBe(1);
+    expect(boxes.map(({ x }) => x)).toEqual([...boxes.map(({ x }) => x)].sort((a, b) => a - b));
     await noOverflowAt320(page);
 
-    await page.getByRole('button', { name: 'Delete Hot and careful', exact: true }).focus();
-    await page.keyboard.press('Enter');
+    await actionsOf(page, 'Hot and careful').selectOption('Delete');
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(scenarioNames(page)).toHaveCount(3);
-    await page.getByRole('button', { name: 'Delete Hot and careful', exact: true }).focus();
-    await page.keyboard.press('Enter');
+    await actionsOf(page, 'Hot and careful').selectOption('Delete');
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(scenarioNames(page)).toHaveText(['Ambitious', 'Ambitious']);
   });
 }
+
+test('shows one scenario at a time on a phone, with the plan value under each row', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'dark');
+  const { raceId, basedOn, grandCol } = await raceWithPlan(page, baseURL!);
+  await ownerCommand(
+    page,
+    baseURL!,
+    scenario(raceId, 'Longer stops', {
+      stops: [{ stationId: grandCol.id, stopSeconds: 900 }],
+      basedOn,
+    }),
+  );
+  await ownerCommand(page, baseURL!, scenario(raceId, 'Same as plan', { basedOn }));
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await expect(page.locator('.race-scenario-plan')).toHaveCount(0);
+  await expect(scenarioNames(page)).toHaveText(['Longer stops']);
+  const picker = page.getByRole('combobox', { name: 'Scenario', exact: true });
+  await expect(picker.locator('option')).toHaveCount(2);
+  await expect(rowOf(page, 'Moving · stopped')).toContainText('plan: ');
+  await expect(rowOf(page, 'Moving · stopped')).toContainText('· 20m');
+  const why = page.locator('details', { hasText: 'Why it changes' });
+  await expect(why).not.toHaveAttribute('open', '');
+  await why.getByText('Why it changes').click();
+  await expect(why).toContainText('Stops +10 min: Grand Col 15 min');
+  await picker.selectOption({ index: 1 });
+  await expect(scenarioNames(page)).toHaveText(['Same as plan']);
+  await why.getByText('Why it changes').click();
+  await expect(why).toContainText('No change from the plan');
+  await noOverflowAt320(page);
+});
 
 test('says a race plan is needed before any scenario', async ({ page, baseURL }) => {
   await signIn(page, 'light');
@@ -173,7 +244,10 @@ test('invites the first scenario of a race with a plan, and says when finish tim
   await page.goto(`/races?race=${raceId}`);
   await openScenarios(page);
   await expect(scenarioNames(page)).toHaveText(['Longer stops']);
-  await expect(page.locator('.race-scenario-finish')).toContainText('Unknown');
+  await expect(rowOf(page, 'Expected finish')).toContainText('Unknown');
+  await expect(rowOf(page, 'Why it changes')).toContainText(
+    'Effort +5 %: not calculated without a course estimate',
+  );
   await page.getByRole('button', { name: 'Open Course', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Course', exact: true })).toHaveAttribute(
     'aria-selected',
@@ -209,7 +283,7 @@ async function raceWithPlan(page: Page, baseURL: string) {
 }
 
 const scenarioRow = (page: Page, name: string) =>
-  page.locator('.race-scenario').filter({ has: page.locator('strong', { hasText: name }) });
+  scenarioHeads(page).filter({ has: page.locator('strong', { hasText: name }) });
 const readScenarios = async (page: Page, raceId: string) => {
   const workspace = await page.request.get('/api/workspace?from=2030-01-01&to=2030-01-07');
   const scenarios = (await workspace.json()).state.raceScenarios as {
@@ -248,10 +322,7 @@ for (const theme of ['light', 'dark']) {
     await expect(row).toContainText('Effort +8 % · weather +6 % (your assumption) · 14m of stops');
     await expect(row).not.toContainText('Outdated');
 
-    await pressEnterOn(
-      page,
-      page.getByRole('button', { name: 'Edit Hot and careful', exact: true }),
-    );
+    await actionsOf(page, 'Hot and careful').selectOption('Edit');
     await expect(dialog.getByLabel('Effort (%)', { exact: true })).toHaveValue('8');
     await expect(dialog.getByLabel('Les Pins stop in this scenario (minutes)')).toHaveValue('9');
     await dialog.getByLabel('Effort (%)', { exact: true }).fill('10');
@@ -259,10 +330,7 @@ for (const theme of ['light', 'dark']) {
     await expect(dialog).toHaveCount(0);
     await expect(row).toContainText('Effort +10 %');
 
-    await pressEnterOn(
-      page,
-      page.getByRole('button', { name: 'Duplicate Hot and careful', exact: true }),
-    );
+    await actionsOf(page, 'Hot and careful').selectOption('Duplicate');
     await expect(scenarioNames(page)).toHaveText(['Hot and careful', 'Hot and careful (copy)']);
     await expect(scenarioRow(page, 'Hot and careful (copy)')).toContainText('Effort +10 %');
     await noOverflowAt320(page);
@@ -280,12 +348,13 @@ test('disables New scenario and Duplicate with their reason at four scenarios', 
   await page.goto(`/races?race=${raceId}`);
   await openScenarios(page);
   await expect(page.getByRole('button', { name: 'New scenario', exact: true })).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Duplicate One', exact: true })).toBeEnabled();
+  const duplicateOfOne = actionsOf(page, 'One').locator('option[value="Duplicate"]');
+  await expect(duplicateOfOne).toBeEnabled();
   await ownerCommand(page, baseURL!, scenario(raceId, 'Four', { basedOn }));
   await page.goto(`/races?race=${raceId}`);
   await openScenarios(page);
   await expect(page.getByRole('button', { name: 'New scenario', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Duplicate One', exact: true })).toBeDisabled();
+  await expect(duplicateOfOne).toBeDisabled();
   await expect(
     page.getByText('A race holds at most 4 scenarios. Delete one to add another.'),
   ).toBeVisible();
@@ -321,12 +390,12 @@ test('saves an outdated scenario unchanged to bring it up to date, and sends not
       mutations.push(request.url());
   });
 
-  await page.getByRole('button', { name: 'Edit Current', exact: true }).click();
+  await actionsOf(page, 'Current').selectOption('Edit');
   await saveButton(page).click();
   await expect(dialogOf(page)).toHaveCount(0);
   expect(mutations).toHaveLength(0);
 
-  await page.getByRole('button', { name: 'Edit Old', exact: true }).click();
+  await actionsOf(page, 'Old').selectOption('Edit');
   await dialogOf(page).getByLabel('Name', { exact: true }).press('Enter');
   await expect(dialogOf(page)).toHaveCount(0);
   await expect(page.getByText('Outdated', { exact: true })).toHaveCount(0);
@@ -342,7 +411,7 @@ test('keeps the draft when the scenario changed elsewhere, then saves it after a
   await ownerCommand(page, baseURL!, scenario(raceId, 'Hot', { basedOn }));
   await page.goto(`/races?race=${raceId}`);
   await openScenarios(page);
-  await page.getByRole('button', { name: 'Edit Hot', exact: true }).click();
+  await actionsOf(page, 'Hot').selectOption('Edit');
   const dialog = dialogOf(page);
   await dialog.getByLabel('Name', { exact: true }).fill('Hot and dry');
   const [{ id, revision }] = await readScenarios(page, raceId);
@@ -405,4 +474,25 @@ test('refuses the fourth scenario made from a second tab and keeps the draft', a
   await saveButton(page).click();
   await expect(dialog.getByText('A race holds at most 4 scenarios.')).toBeVisible();
   await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Late one');
+});
+
+test('reaches each Actions select by Tab and leaves it on Actions after Edit', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const { raceId, basedOn } = await raceWithPlan(page, baseURL!);
+  await ownerCommand(page, baseURL!, scenario(raceId, 'Calm', { basedOn }));
+  await ownerCommand(page, baseURL!, scenario(raceId, 'Hot', { basedOn }));
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await actionsOf(page, 'Calm').focus();
+  await page.keyboard.press('Tab');
+  await expect(actionsOf(page, 'Hot')).toBeFocused();
+  await actionsOf(page, 'Hot').selectOption('Edit');
+  await expect(dialogOf(page)).toBeVisible();
+  await dialogOf(page).getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(dialogOf(page)).toHaveCount(0);
+  await expect(actionsOf(page, 'Hot')).toHaveValue('');
+  await expect(scenarioNames(page)).toHaveText(['Calm', 'Hot']);
 });

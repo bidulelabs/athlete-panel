@@ -7,6 +7,7 @@ import {
   type RaceScenario,
 } from '@athlete-panel/contracts';
 import {
+  scenarioChanges,
   scenarioOutcome,
   scenarioOutdatedReasons,
   scenarioStations,
@@ -125,7 +126,13 @@ describe('scenario outcome', () => {
     expect(withoutEstimate.carry).toBeNull();
     expect(withoutEstimate.stopSeconds).toBe(900 + 600);
     expect(withoutEstimate.cutoffs).toEqual([
-      { name: firstStation.name, cutoffMarginSeconds: null },
+      {
+        stationId: firstStation.id,
+        name: firstStation.name,
+        timeOfDay: null,
+        cutoffSeconds: 8 * 3600,
+        cutoffMarginSeconds: null,
+      },
     ]);
   });
 
@@ -140,6 +147,99 @@ describe('scenario outcome', () => {
   it('measures the finish margin against a cutoff the next day', () => {
     const latestFinishSeconds = 7 * 3600 + 7200 + 900;
     expect(planOutcome.finish.cutoffMarginSeconds).toBe(86400 + 1800 - latestFinishSeconds);
+  });
+});
+
+const changesOf = (
+  scenario: RaceScenario,
+  withEstimate: CourseEstimate | null = estimate,
+): ReturnType<typeof scenarioChanges> =>
+  scenarioChanges(outcomeOf(null, withEstimate), outcomeOf(scenario, withEstimate), plan, scenario);
+
+describe('scenario changes', () => {
+  it('gives no reason and a delta of 0 when nothing differs from the plan', () => {
+    expect(changesOf(scenarioWith())).toEqual({ finishDeltaMinutes: 0, reasons: [] });
+  });
+
+  it('explains an effort change by the moving time it adds', () => {
+    const changes = changesOf(scenarioWith({ effortPercent: 10 }));
+    expect(changes.reasons).toEqual(['Moving time +9 min: effort +10 %']);
+    expect(changes.finishDeltaMinutes).toBe(9);
+  });
+
+  it('names only the weather when the effort equals the one of the plan', () => {
+    expect(changesOf(scenarioWith({ effortPercent: 0, weatherPercent: 6 })).reasons).toEqual([
+      'Moving time +5 min: weather +6 %',
+    ]);
+  });
+
+  it('names the stations of a longer stop with their stop in the scenario', () => {
+    const changes = changesOf(
+      scenarioWith({
+        stops: [
+          { stationId: firstStation.id, stopSeconds: 300 + 480 },
+          { stationId: secondStation.id, stopSeconds: 600 + 600 },
+          { stationId: stationBeyondCourse.id, stopSeconds: 300 + 480 },
+        ],
+      }),
+    );
+    expect(changes.reasons).toEqual([
+      'Stops +18 min: Synthetic station 1 13 min, Synthetic station 2 20 min',
+    ]);
+    expect(changes.finishDeltaMinutes).toBe(18);
+  });
+
+  it('groups stations that stop as long in the scenario, longer or shorter than in the plan', () => {
+    expect(
+      changesOf(
+        scenarioWith({
+          stops: [
+            { stationId: firstStation.id, stopSeconds: 300 + 480 },
+            { stationId: secondStation.id, stopSeconds: 600 - 180 },
+          ],
+        }),
+      ).reasons,
+    ).toEqual(['Stops +5 min: Synthetic station 1 13 min, Synthetic station 2 7 min']);
+    expect(
+      changesOf(
+        scenarioWith({
+          stops: [
+            { stationId: firstStation.id, stopSeconds: 900 },
+            { stationId: secondStation.id, stopSeconds: 900 },
+          ],
+        }),
+      ).reasons,
+    ).toEqual(['Stops +15 min: Synthetic station 1 and Synthetic station 2 15 min']);
+  });
+
+  it('gives the effort and the stops together, and a negative delta for an earlier finish', () => {
+    const changes = changesOf(
+      scenarioWith({
+        effortPercent: -10,
+        stops: [{ stationId: secondStation.id, stopSeconds: 600 - 300 }],
+      }),
+    );
+    expect(changes.reasons).toEqual([
+      'Moving time -9 min: effort -10 %',
+      'Stops -5 min: Synthetic station 2 5 min',
+    ]);
+    expect(changes.finishDeltaMinutes).toBe(-13);
+  });
+
+  it('says the effort is not calculated without an estimate, and keeps the stops', () => {
+    const changes = changesOf(
+      scenarioWith({
+        effortPercent: 8,
+        weatherPercent: 6,
+        stops: [{ stationId: firstStation.id, stopSeconds: 900 }],
+      }),
+      null,
+    );
+    expect(changes.finishDeltaMinutes).toBeNull();
+    expect(changes.reasons).toEqual([
+      'Effort +8 %, weather +6 %: not calculated without a course estimate',
+      'Stops +10 min: Synthetic station 1 15 min',
+    ]);
   });
 });
 

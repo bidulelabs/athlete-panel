@@ -259,12 +259,12 @@ export const registry = [
   {
     "path": "plugins/race-analysis",
     "enabled": true,
-    "version": "1.10.0",
+    "version": "1.11.0",
     "manifest": {
       "id": "race-analysis",
       "name": "Race analysis",
       "description": "GPX courses, elevation and estimates from your past efforts",
-      "version": "1.10.0",
+      "version": "1.11.0",
       "hostApi": "^1.4.0",
       "dependencies": {
         "athlete": "^1.6.0",

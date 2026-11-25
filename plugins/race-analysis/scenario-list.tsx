@@ -3,11 +3,9 @@
 import { useState } from 'react';
 import { Flag } from 'lucide-react';
 import {
-  Badge,
   Button,
   EmptyState,
   ErrorMessage,
-  duration,
   useAction,
   useConfirm,
   type PluginPageProps,
@@ -18,19 +16,15 @@ import {
   type RaceScenario,
 } from '@athlete-panel/contracts';
 import { mutate } from '../training/public/client';
-import { clockTime, effortAndWeatherText, finishTime } from './presentation';
 import { ScenarioDialog } from './scenario-dialog';
+import {
+  ScenarioComparison,
+  finishText,
+  type ScenarioAction,
+  type ScenarioColumn,
+} from './scenario-comparison';
 import { duplicateScenarioCommand } from './scenario-form';
-import { scenarioOutcome, scenarioOutdatedReasons } from './scenarios';
-
-type Outcome = ReturnType<typeof scenarioOutcome>;
-
-const finishText = ({ finish }: Outcome) =>
-  finish.timeOfDay
-    ? clockTime(finish.timeOfDay.seconds)
-    : finish.fromStart
-      ? `${finishTime(finish.fromStart.seconds)} after the start`
-      : 'Unknown';
+import { scenarioChanges, scenarioOutcome, scenarioOutdatedReasons } from './scenarios';
 
 export function Scenarios({
   race,
@@ -59,6 +53,18 @@ export function Scenarios({
       products: data.profile?.nutrition?.products ?? [],
       carryCapacityMillilitres: data.profile?.nutrition?.carryCapacityMillilitres ?? null,
     });
+  const planOutcome = racePlan && outcomeOf(null);
+  const columns: ScenarioColumn[] = racePlan
+    ? scenarios.map((scenario) => {
+        const outcome = outcomeOf(scenario);
+        return {
+          scenario,
+          outcome,
+          changes: scenarioChanges(planOutcome!, outcome, racePlan, scenario),
+          outdatedReasons: scenarioOutdatedReasons(racePlan, courseId, estimate, scenario, units),
+        };
+      })
+    : [];
   const scenarioBeingEdited = scenarios.find((scenario) => scenario.id === editing);
   const newScenarioButton = (
     <Button
@@ -76,6 +82,12 @@ export function Scenarios({
           { action: 'raceScenario.delete', id: scenario.id, expectedRevision: scenario.revision },
         ]),
       );
+  }
+  function runScenarioAction(scenario: RaceScenario, scenarioAction: ScenarioAction) {
+    if (scenarioAction === 'Edit') setEditing(scenario.id);
+    if (scenarioAction === 'Delete') void deleteScenario(scenario);
+    if (scenarioAction === 'Duplicate')
+      void action.run(() => mutate(request, [duplicateScenarioCommand(scenario)]));
   }
   return (
     <div className="race-analysis race-scenarios" aria-busy={action.busy}>
@@ -122,71 +134,16 @@ export function Scenarios({
                 )}
               </div>
             )}
-            {scenarios.length > 0 && (
-              <ul className="race-scenario-list" role="list">
-                {scenarios.map((scenario) => {
-                  const outcome = outcomeOf(scenario);
-                  const outdatedReasons = scenarioOutdatedReasons(
-                    racePlan,
-                    courseId,
-                    estimate,
-                    scenario,
-                    units,
-                  );
-                  return (
-                    <li key={scenario.id} className="race-scenario">
-                      <div>
-                        <strong>{scenario.name}</strong>
-                        {outdatedReasons.length > 0 && <Badge variant="outline">Outdated</Badge>}
-                        <small>
-                          {effortAndWeatherText(scenario) ?? 'No effort or weather change'} ·{' '}
-                          {duration(outcome.stopSeconds)} of stops
-                        </small>
-                        {outdatedReasons.map((reason, position) => (
-                          <small key={position} className="race-late">
-                            {reason}
-                          </small>
-                        ))}
-                      </div>
-                      <span className="race-scenario-finish">
-                        <small>Finish</small>
-                        {finishText(outcome)}
-                      </span>
-                      <div className="race-scenario-actions">
-                        <Button
-                          variant="ghost"
-                          aria-label={`Edit ${scenario.name}`}
-                          disabled={action.busy}
-                          onClick={() => setEditing(scenario.id)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          aria-label={`Duplicate ${scenario.name}`}
-                          aria-describedby={atLimit ? 'race-scenario-limit' : undefined}
-                          disabled={atLimit || action.busy}
-                          onClick={() =>
-                            void action.run(() =>
-                              mutate(request, [duplicateScenarioCommand(scenario)]),
-                            )
-                          }
-                        >
-                          Duplicate
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          aria-label={`Delete ${scenario.name}`}
-                          disabled={action.busy}
-                          onClick={() => void deleteScenario(scenario)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+            {columns.length > 0 && (
+              <ScenarioComparison
+                planOutcome={planOutcome!}
+                racePlan={racePlan}
+                columns={columns}
+                units={units}
+                atLimit={atLimit}
+                busy={action.busy}
+                onAction={runScenarioAction}
+              />
             )}
           </>
         )}

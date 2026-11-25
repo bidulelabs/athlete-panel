@@ -68,12 +68,12 @@ export function arrivalRangeLabel(arrival: StopArrival) {
     };
   return null;
 }
-export function cutoffMarginText(arrival: StopArrival) {
+export function cutoffMarginText(arrival: Pick<StopArrival, 'cutoffMarginSeconds'>) {
   const margin = arrival.cutoffMarginSeconds;
   if (margin === null) return null;
   return margin >= 0 ? `${duration(margin)} margin` : `${duration(-margin)} after the cutoff`;
 }
-const signedPercent = (percent: number) => `${percent > 0 ? '+' : ''}${percent} %`;
+export const signedPercent = (percent: number) => `${percent > 0 ? '+' : ''}${percent} %`;
 export const effortAndWeatherText = (plan?: Pick<RacePlan, 'effortPercent' | 'weatherPercent'>) =>
   !plan || (plan.effortPercent === 0 && plan.weatherPercent === 0)
     ? null

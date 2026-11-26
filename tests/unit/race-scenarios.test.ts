@@ -221,18 +221,23 @@ describe('race scenario record', () => {
     ).toThrow('This command is not available to the training agent.');
   });
 
-  it('reads a scenario stored without the stops, effort and weather it was made from', () => {
-    const stored = run(racePlanned(), [
-      createScenario(1, {
-        basedOn: {
-          courseId: null,
-          stations: [{ id: stationId, distanceMeters: 12000, stopSeconds: 300 }],
-          effortPercent: 0,
-          weatherPercent: 0,
+  it('keeps the estimate, stops, cutoffs, effort and weather a scenario was made from, and reads one stored without them', () => {
+    const madeFrom = {
+      courseId: null,
+      stations: [
+        {
+          id: stationId,
+          distanceMeters: 12000,
+          stopSeconds: 300,
+          cutoff: { dayOffset: 0, time: '11:00' },
         },
-      }),
-    ]).state;
-    expect(stored.raceScenarios[0]!.basedOn.effortPercent).toBe(0);
+      ],
+      courseEstimateSeconds: 6000,
+      effortPercent: 0,
+      weatherPercent: 0,
+    };
+    const stored = run(racePlanned(), [createScenario(1, { basedOn: madeFrom })]).state;
+    expect(stored.raceScenarios[0]!.basedOn).toEqual(madeFrom);
     expect(workspaceStateSchema.parse(withScenario()).raceScenarios[0]!.basedOn).toEqual(
       scenarioValues.basedOn,
     );

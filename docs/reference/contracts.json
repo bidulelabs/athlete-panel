@@ -2102,6 +2102,34 @@
                               "minimum": 0,
                               "maximum": 86400,
                               "description": "Planned stop at this station, in seconds."
+                            },
+                            "cutoff": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "dayOffset": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 6,
+                                      "description": "Days after the race date."
+                                    },
+                                    "time": {
+                                      "type": "string",
+                                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                      "description": "Wall-clock time in the profile timezone, HH:MM."
+                                    }
+                                  },
+                                  "required": [
+                                    "dayOffset",
+                                    "time"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
                           },
                           "required": [
@@ -2110,6 +2138,17 @@
                           ],
                           "additionalProperties": false
                         }
+                      },
+                      "courseEstimateSeconds": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "effortPercent": {
                         "type": "number",
@@ -8406,6 +8445,34 @@
                                       "minimum": 0,
                                       "maximum": 86400,
                                       "description": "Planned stop at this station, in seconds."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
                                     }
                                   },
                                   "required": [
@@ -8414,6 +8481,17 @@
                                   ],
                                   "additionalProperties": false
                                 }
+                              },
+                              "courseEstimateSeconds": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "exclusiveMinimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               },
                               "effortPercent": {
                                 "type": "number",
@@ -8557,6 +8635,34 @@
                                       "minimum": 0,
                                       "maximum": 86400,
                                       "description": "Planned stop at this station, in seconds."
+                                    },
+                                    "cutoff": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "dayOffset": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 6,
+                                              "description": "Days after the race date."
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                              "description": "Wall-clock time in the profile timezone, HH:MM."
+                                            }
+                                          },
+                                          "required": [
+                                            "dayOffset",
+                                            "time"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
                                     }
                                   },
                                   "required": [
@@ -8565,6 +8671,17 @@
                                   ],
                                   "additionalProperties": false
                                 }
+                              },
+                              "courseEstimateSeconds": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "exclusiveMinimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               },
                               "effortPercent": {
                                 "type": "number",
@@ -13304,6 +13421,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -13312,6 +13457,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -13454,6 +13610,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -13462,6 +13646,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -19102,6 +19297,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -19110,6 +19333,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -19252,6 +19486,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -19260,6 +19522,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -24917,6 +25190,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -24925,6 +25226,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -25067,6 +25379,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -25075,6 +25415,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -31146,6 +31497,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -31154,6 +31533,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -31296,6 +31686,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -31304,6 +31722,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -37380,6 +37809,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -37388,6 +37845,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -37530,6 +37998,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -37538,6 +38034,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -43207,6 +43714,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -43215,6 +43750,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -43357,6 +43903,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -43365,6 +43939,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -49045,6 +49630,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -49053,6 +49666,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -49195,6 +49819,34 @@
                                           "minimum": 0,
                                           "maximum": 86400,
                                           "description": "Planned stop at this station, in seconds."
+                                        },
+                                        "cutoff": {
+                                          "anyOf": [
+                                            {
+                                              "type": "object",
+                                              "properties": {
+                                                "dayOffset": {
+                                                  "type": "integer",
+                                                  "minimum": 0,
+                                                  "maximum": 6,
+                                                  "description": "Days after the race date."
+                                                },
+                                                "time": {
+                                                  "type": "string",
+                                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                                  "description": "Wall-clock time in the profile timezone, HH:MM."
+                                                }
+                                              },
+                                              "required": [
+                                                "dayOffset",
+                                                "time"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -49203,6 +49855,17 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "courseEstimateSeconds": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "effortPercent": {
                                     "type": "number",
@@ -56835,6 +57498,34 @@
                             "minimum": 0,
                             "maximum": 86400,
                             "description": "Planned stop at this station, in seconds."
+                          },
+                          "cutoff": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "dayOffset": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 6,
+                                    "description": "Days after the race date."
+                                  },
+                                  "time": {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  }
+                                },
+                                "required": [
+                                  "dayOffset",
+                                  "time"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -56843,6 +57534,17 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "courseEstimateSeconds": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "effortPercent": {
                       "type": "number",
@@ -56986,6 +57688,34 @@
                             "minimum": 0,
                             "maximum": 86400,
                             "description": "Planned stop at this station, in seconds."
+                          },
+                          "cutoff": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "dayOffset": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 6,
+                                    "description": "Days after the race date."
+                                  },
+                                  "time": {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                    "description": "Wall-clock time in the profile timezone, HH:MM."
+                                  }
+                                },
+                                "required": [
+                                  "dayOffset",
+                                  "time"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -56994,6 +57724,17 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "courseEstimateSeconds": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "effortPercent": {
                       "type": "number",
@@ -62359,6 +63100,34 @@
                         "minimum": 0,
                         "maximum": 86400,
                         "description": "Planned stop at this station, in seconds."
+                      },
+                      "cutoff": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "dayOffset": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Days after the race date."
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                                "description": "Wall-clock time in the profile timezone, HH:MM."
+                              }
+                            },
+                            "required": [
+                              "dayOffset",
+                              "time"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
                     },
                     "required": [
@@ -62367,6 +63136,17 @@
                     ],
                     "additionalProperties": false
                   }
+                },
+                "courseEstimateSeconds": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "effortPercent": {
                   "type": "number",

@@ -715,10 +715,12 @@ const raceScenarioFields = {
               id: idSchema,
               distanceMeters: nonnegativeSchema,
               stopSeconds: racePlanStationFields.stopSeconds.optional(),
+              cutoff: racePlanStationFields.cutoff.optional(),
             })
             .strict(),
         )
         .max(raceScenarioStationLimit),
+      courseEstimateSeconds: z.number().finite().positive().nullable().optional(),
       effortPercent: racePlanAssumptionFields.effortPercent.optional(),
       weatherPercent: racePlanAssumptionFields.weatherPercent.optional(),
     })

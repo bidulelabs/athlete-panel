@@ -164,6 +164,17 @@ for (const theme of ['light', 'dark']) {
     expect(boxes.map(({ x }) => x)).toEqual([...boxes.map(({ x }) => x)].sort((a, b) => a - b));
     await noOverflowAt320(page);
 
+    const viewport = page.viewportSize()!;
+    await page.setViewportSize({ width: 390, height: 900 });
+    await expect(rowOf(page, 'Expected finish')).toContainText(
+      /plan: \d\d:\d\d · range \d\d:\d\d–\d\d:\d\d/,
+    );
+    await expect(rowOf(page, 'Finish cutoff 23:59')).toContainText(/plan: .+ margin/);
+    await expect(rowOf(page, 'Grand Col · cutoff 23:30')).toContainText(
+      /plan: \d\d:\d\d · latest \d\d:\d\d · .+ margin/,
+    );
+    await page.setViewportSize(viewport);
+
     await actionsOf(page, 'Hot and careful').selectOption('Delete');
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(scenarioNames(page)).toHaveCount(3);

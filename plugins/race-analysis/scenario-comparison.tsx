@@ -130,7 +130,14 @@ function comparisonRows(planOutcome: ScenarioOutcome, units: string) {
 function CellView({ cell, planCell }: { cell: ComparisonCell; planCell?: ComparisonCell }) {
   const notes: CellNote[] = [
     ...(cell.notes ?? []),
-    ...(planCell ? [{ text: `plan: ${planCell.main}` }] : []),
+    ...(planCell
+      ? [
+          {
+            text: `plan: ${[planCell.main, ...(planCell.notes ?? []).map((note) => note.text)].join(' · ')}`,
+            late: planCell.late || planCell.notes?.some((note) => note.late),
+          },
+        ]
+      : []),
   ];
   return (
     <>

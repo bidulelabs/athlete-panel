@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { scenarioNotices, type ScenarioOutcome } from '../../plugins/race-analysis/scenarios';
 
-const leg = (toMeters: number, waterNeededMillilitres: number | null, capacity = 1000) => ({
+const leg = (
+  fromMeters: number,
+  toMeters: number,
+  waterNeededMillilitres: number | null,
+  {
+    stationName,
+    nextRefillMeters = toMeters,
+  }: { stationName?: string; nextRefillMeters?: number } = {},
+) => ({
+  fromMeters,
   toMeters,
+  station: stationName === undefined ? undefined : { name: stationName },
   waterNeededMillilitres,
-  waterOverCapacity: waterNeededMillilitres !== null && waterNeededMillilitres > capacity,
+  waterNextRefillMeters: waterNeededMillilitres === null ? null : nextRefillMeters,
+  waterOverCapacity: waterNeededMillilitres !== null && waterNeededMillilitres > 1000,
 });
 const outcomeWith = (values: {
   finishMargin?: number | null;
@@ -18,10 +29,10 @@ const outcomeWith = (values: {
       name,
       cutoffMarginSeconds,
     })),
-    carry: { carryCapacityMillilitres: 1000, legs: values.legs ?? [leg(42000, 800)] },
+    carry: { carryCapacityMillilitres: 1000, legs: values.legs ?? [leg(0, 42000, 800)] },
   }) as unknown as ScenarioOutcome;
 const noticesOf = (outcome: ScenarioOutcome, outdatedReasons: string[] = []) =>
-  scenarioNotices({ name: 'Hot and careful' }, outcome, outdatedReasons, 'metric');
+  scenarioNotices({ name: 'Hot and careful' }, outcome, outdatedReasons);
 
 describe('scenario notices', () => {
   it('says nothing about a scenario that keeps every cutoff, fits its bottles and is up to date', () => {
@@ -58,24 +69,39 @@ describe('scenario notices', () => {
     ).toEqual([]);
   });
 
-  it('names the last leg when it needs more than the bottles hold', () => {
-    const [notice] = noticesOf(outcomeWith({ legs: [leg(20000, 700), leg(42000, 1200)] }));
+  it('names the finish when the water lasts from the last refill to the finish', () => {
+    const [notice] = noticesOf(
+      outcomeWith({
+        legs: [
+          leg(0, 20000, 700),
+          leg(20000, 42000, 1200, { stationName: 'Les Pins', nextRefillMeters: 42000 }),
+        ],
+      }),
+    );
     expect(notice).toEqual({
       kind: 'carry-over-capacity',
-      title: 'Hot and careful: Last leg needs 1.2 L, bottles hold 1 L',
+      title: 'Hot and careful: water until the finish needs 1.2 L, bottles hold 1 L',
       body: 'Slower legs need more to drink. Add capacity in Settings or plan a refill.',
     });
   });
 
-  it('names the leg by its end when it is not the last one', () => {
-    const [notice] = noticesOf(outcomeWith({ legs: [leg(28000, 1200), leg(42000, 700)] }));
+  it('names the station with the next water, not a dry station on the way', () => {
+    const [notice] = noticesOf(
+      outcomeWith({
+        legs: [
+          leg(0, 10000, 1200, { nextRefillMeters: 28000 }),
+          leg(10000, 28000, null, { stationName: 'Dry Pass' }),
+          leg(28000, 42000, 700, { stationName: 'Grand Col', nextRefillMeters: 42000 }),
+        ],
+      }),
+    );
     expect(notice!.title).toBe(
-      'Hot and careful: The leg ending at 28.0 km needs 1.2 L, bottles hold 1 L',
+      'Hot and careful: water until Grand Col needs 1.2 L, bottles hold 1 L',
     );
   });
 
   it('stays quiet when the heaviest leg is exactly what the bottles hold', () => {
-    expect(noticesOf(outcomeWith({ legs: [leg(42000, 1000)] }))).toEqual([]);
+    expect(noticesOf(outcomeWith({ legs: [leg(0, 42000, 1000)] }))).toEqual([]);
   });
 
   it('stays quiet without a carry plan', () => {
@@ -87,13 +113,13 @@ describe('scenario notices', () => {
     expect(notice).toEqual({
       kind: 'outdated',
       title: '“Hot and careful” was saved before the plan changed',
-      body: 'The course changed. Grand Col was moved. Review the stops, then save it again.',
+      body: 'The course changed. Grand Col was moved. Review it, then save it again.',
     });
   });
 
   it('lists the outdated, missed cutoff and carry notices in that order', () => {
     expect(
-      noticesOf(outcomeWith({ finishMargin: -60, legs: [leg(42000, 1200)] }), [
+      noticesOf(outcomeWith({ finishMargin: -60, legs: [leg(0, 42000, 1200)] }), [
         'The course changed.',
       ]).map(({ kind }) => kind),
     ).toEqual(['outdated', 'missed-cutoffs', 'carry-over-capacity']);

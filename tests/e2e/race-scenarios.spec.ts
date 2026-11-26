@@ -149,7 +149,7 @@ for (const theme of ['light', 'dark']) {
     ]);
     const outdatedNotice = page.locator('.race-data-notice', { hasText: 'was saved before' });
     await expect(outdatedNotice).toContainText(
-      'Les Pins was moved. Review the stops, then save it again.',
+      'Les Pins was moved. Review it, then save it again.',
     );
     await page.getByText('How this is worked out', { exact: true }).click();
     await expect(page.getByText('Margins use the latest arrival.')).toBeVisible();
@@ -592,7 +592,7 @@ for (const theme of ['light', 'dark']) {
     await expect(missedNotice).toContainText('check the course estimate');
     const carryNotice = page.locator('.race-data-notice', { hasText: 'bottles hold 0.25 L' });
     await expect(carryNotice.locator('strong')).toHaveText(
-      /^Hot and careful: (Last leg|The leg ending at [\d.]+ km) needs [\d.]+ L, bottles hold 0.25 L$/,
+      /^Hot and careful: water until (the finish|.+) needs [\d.]+ L, bottles hold 0.25 L$/,
     );
     await expect(carryNotice).toContainText('Add capacity in Settings or plan a refill.');
     await expect(page.getByRole('button', { name: 'Review stops' })).toHaveCount(0);

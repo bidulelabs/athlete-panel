@@ -176,13 +176,12 @@ export function scenarioChanges(
   };
 }
 
-export function heaviestLeg(carry: NonNullable<ScenarioOutcome['carry']>, units: string) {
+export function heaviestLeg(carry: NonNullable<ScenarioOutcome['carry']>) {
   const leg = carry.legs.reduce((most, candidate) =>
     (candidate.waterNeededMillilitres ?? 0) > (most.waterNeededMillilitres ?? 0) ? candidate : most,
   );
-  const label =
-    leg === carry.legs.at(-1) ? 'Last leg' : `The leg ending at ${distance(leg.toMeters, units)}`;
-  return { leg, label };
+  const nextWater = carry.legs.find((later) => later.fromMeters === leg.waterNextRefillMeters);
+  return { leg, label: `water until ${nextWater ? nextWater.station!.name : 'the finish'}` };
 }
 
 export type ScenarioNotice = {
@@ -195,7 +194,6 @@ export function scenarioNotices(
   scenario: Pick<RaceScenario, 'name'>,
   outcome: ScenarioOutcome,
   outdatedReasons: readonly string[],
-  units: string,
 ): ScenarioNotice[] {
   const missedBy = (name: string, marginSeconds: number | null) =>
     marginSeconds !== null && marginSeconds < 0
@@ -209,7 +207,7 @@ export function scenarioNotices(
   ];
   const legOverBottles =
     outcome.carry && outcome.carry.legs.some((leg) => leg.waterOverCapacity)
-      ? heaviestLeg(outcome.carry, units)
+      ? heaviestLeg(outcome.carry)
       : null;
   return [
     ...(outdatedReasons.length === 0
@@ -218,7 +216,7 @@ export function scenarioNotices(
           {
             kind: 'outdated' as const,
             title: `\u201c${scenario.name}\u201d was saved before the plan changed`,
-            body: [...outdatedReasons, 'Review the stops, then save it again.'].join(' '),
+            body: [...outdatedReasons, 'Review it, then save it again.'].join(' '),
           },
         ]),
     ...(missedCutoffTexts.length === 0

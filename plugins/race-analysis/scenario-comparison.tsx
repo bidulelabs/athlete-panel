@@ -61,13 +61,13 @@ function finishCell(outcome: ScenarioOutcome, changes: Changes): ComparisonCell 
   };
 }
 
-function carryCell({ carry }: ScenarioOutcome, units: string): ComparisonCell {
+function carryCell({ carry }: ScenarioOutcome): ComparisonCell {
   if (!carry) return { main: 'Unknown' };
-  const { leg: heaviest, label: legName } = heaviestLeg(carry, units);
+  const { leg: heaviest, label: legName } = heaviestLeg(carry);
   if (heaviest.waterNeededMillilitres === null) return { main: 'No water need set' };
   const capacity = carry.carryCapacityMillilitres;
   return {
-    main: `${legName} needs ${litres(heaviest.waterNeededMillilitres)}`,
+    main: `${legName.replace(/^./, (first) => first.toUpperCase())} needs ${litres(heaviest.waterNeededMillilitres)}`,
     notes: [
       {
         text: capacity === null ? 'no bottle size set' : `bottles hold ${litres(capacity)}`,
@@ -77,7 +77,7 @@ function carryCell({ carry }: ScenarioOutcome, units: string): ComparisonCell {
   };
 }
 
-function comparisonRows(planOutcome: ScenarioOutcome, units: string) {
+function comparisonRows(planOutcome: ScenarioOutcome) {
   const planFinish = planOutcome.finish;
   return [
     { key: 'finish', label: 'Expected finish', cell: finishCell },
@@ -116,7 +116,7 @@ function comparisonRows(planOutcome: ScenarioOutcome, units: string) {
     {
       key: 'carry',
       label: 'What to carry',
-      cell: (outcome: ScenarioOutcome) => carryCell(outcome, units),
+      cell: carryCell,
     },
   ];
 }
@@ -167,7 +167,6 @@ export function ScenarioComparison({
   planOutcome,
   racePlan,
   columns,
-  units,
   atLimit,
   busy,
   onAction,
@@ -175,7 +174,6 @@ export function ScenarioComparison({
   planOutcome: ScenarioOutcome;
   racePlan: RacePlan;
   columns: ScenarioColumn[];
-  units: string;
   atLimit: boolean;
   busy: boolean;
   onAction: (scenario: RaceScenario, action: ScenarioAction) => void;
@@ -185,7 +183,7 @@ export function ScenarioComparison({
   const selectedColumn =
     columns.find((column) => column.scenario.id === selectedScenarioId) ?? columns[0]!;
   const visibleColumns = isPhone ? [selectedColumn] : columns;
-  const rows = comparisonRows(planOutcome, units);
+  const rows = comparisonRows(planOutcome);
   const assumptionSummary = ({ scenario, outcome }: ScenarioColumn) =>
     assumptionText(scenario, outcome, 'No effort or weather change');
   const actions = ({ scenario }: ScenarioColumn) => (

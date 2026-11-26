@@ -6,17 +6,15 @@ import { scenarioNotices } from './scenarios';
 
 export function ScenarioNotices({
   columns,
-  units,
   onReviewStops,
 }: {
   columns: ScenarioColumn[];
-  units: string;
   onReviewStops: (scenarioId: string) => void;
 }) {
   return (
     <>
       {columns.flatMap(({ scenario, outcome, outdatedReasons }) =>
-        scenarioNotices(scenario, outcome, outdatedReasons, units).map(({ kind, title, body }) => (
+        scenarioNotices(scenario, outcome, outdatedReasons).map(({ kind, title, body }) => (
           <div
             key={`${scenario.id}-${kind}`}
             className={`race-data-notice${kind === 'missed-cutoffs' ? ' race-notice-danger' : ''}`}
@@ -53,8 +51,8 @@ export function ScenarioExplanations() {
         </summary>
         <ul className="race-disclosure-body">
           <li>
-            Effort and weather change moving time only, by the percentages you enter. Stops are
-            added once, from each station&apos;s stop time.
+            Effort and weather change moving time only, by the percentages you enter. Each
+            station&apos;s stop is added to the moving time, once, at that station.
           </li>
           <li>
             The range widens or narrows with moving time, as in the course estimate. Margins use the
@@ -62,8 +60,8 @@ export function ScenarioExplanations() {
           </li>
           <li>What to carry uses the same leg times and products as Race day.</li>
           <li>
-            A scenario is marked outdated when the course or the plan&apos;s stations changed after
-            you saved it.
+            A scenario is marked outdated when the course, or the plan&apos;s stations, stops,
+            effort or weather changed after you saved it.
           </li>
         </ul>
       </details>

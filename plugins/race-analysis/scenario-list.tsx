@@ -140,7 +140,6 @@ export function Scenarios({
                 planOutcome={planOutcome!}
                 racePlan={racePlan}
                 columns={columns}
-                units={units}
                 atLimit={atLimit}
                 busy={action.busy}
                 onAction={runScenarioAction}
@@ -148,7 +147,7 @@ export function Scenarios({
             )}
             {columns.length > 0 && (
               <>
-                <ScenarioNotices columns={columns} units={units} onReviewStops={setEditing} />
+                <ScenarioNotices columns={columns} onReviewStops={setEditing} />
                 <ScenarioExplanations />
               </>
             )}

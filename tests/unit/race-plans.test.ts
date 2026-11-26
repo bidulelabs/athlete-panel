@@ -840,6 +840,7 @@ describe('race plan effort and weather assumption', () => {
     ['effort over 50', { effortPercent: 50.5 }],
     ['weather under -20', { weatherPercent: -21 }],
     ['a 301-character note', { weatherNote: 'a'.repeat(301) }],
+    ['a note with half an emoji', { weatherNote: 'Hot \uD83D' }],
   ])('refuses %s at creation', (_label, values) => {
     const refused = commandSchema.safeParse(createRacePlan(values));
     expect(refused.success).toBe(false);
@@ -871,6 +872,7 @@ describe('race plan effort and weather assumption', () => {
     ['weather under -20', { weatherPercent: -20.5 }],
     ['weather over 50', { weatherPercent: 51 }],
     ['a 301-character note', { weatherNote: 'a'.repeat(301) }],
+    ['a note with half an emoji', { weatherNote: 'Hot \uD83D' }],
   ])('refuses %s', (_label, values) => {
     expect(() => run(planned(), [updateRacePlan(values)])).toThrow();
   });

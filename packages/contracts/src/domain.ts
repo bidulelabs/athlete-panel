@@ -618,10 +618,11 @@ const racePlanDayFields = {
     .strict()
     .describe('What to eat and drink before, during and after the race.'),
 };
+const withoutHalfCharacters = (value: string) => !/\p{Cs}/u.test(value);
 const racePlanAssumptionFields = {
   effortPercent: z.number().min(-30).max(50).multipleOf(0.5),
   weatherPercent: z.number().min(-20).max(50).multipleOf(0.5),
-  weatherNote: z.string().trim().max(300),
+  weatherNote: z.string().trim().max(300).refine(withoutHalfCharacters),
 };
 const racePlanAgentDayFields = {
   startTime: racePlanDayFields.startTime.optional(),

@@ -223,6 +223,10 @@ Race plans gain `startTime`, `finishCutoff` and `stations`, owner fields only, r
 
 Race plans gain `nutrition` (targets per hour, a food schedule, cues and days-before, breakfast and recovery texts), an owner field only, released in Training 2.7 with contracts 2.8. Upgrade the application and CLI together, no SQL migration. Stored plans are read with unknown targets, no schedule, no cue and empty texts. A planning context limited to a race includes `nutrition` in its race plan from the upgrade on: a context read by an agent before the upgrade no longer matches, so the agent reads it again; contexts of grants without a race are unchanged. Older parsers reject a race plan holding `nutrition`, so roll back only with the matching pre-upgrade backup.
 
+#### Race effort upgrade
+
+Race plans gain `effortPercent`, `weatherPercent` and `weatherNote`, owner fields only, released in Training 2.10 and Agent Bridge 2.6.1 with contracts 2.11. Upgrade the application and CLI together, no SQL migration. Stored plans are read with no effort, no weather and an empty note. A planning context never includes these fields, so no context digest changes with the upgrade. Older parsers reject a race plan holding these fields, so roll back from the backup taken before the upgrade.
+
 #### Rehearsal upgrade
 
 Training gains the `rehearsal` record (a fueling rehearsal logged on a completed or partial session for a race) and the owner commands `rehearsal.create`, `rehearsal.update` and `rehearsal.delete`, released in Training 2.8 with contracts 2.9. Upgrade the application and CLI together, no SQL migration. Agents cannot write rehearsals; see Race assistant upgrade for their planning context. Older releases ignore stored rehearsals but cannot read a change history that holds one, so roll back only with the matching pre-upgrade backup.

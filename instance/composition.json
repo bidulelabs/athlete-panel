@@ -9,7 +9,7 @@
     {
       "path": "plugins/training",
       "enabled": true,
-      "version": "2.9.0"
+      "version": "2.10.0"
     },
     {
       "path": "plugins/activity-records",
@@ -44,7 +44,7 @@
     {
       "path": "plugins/agent-bridge",
       "enabled": true,
-      "version": "2.6.0"
+      "version": "2.6.1"
     },
     {
       "path": "personal-plugins/printable-training-week",

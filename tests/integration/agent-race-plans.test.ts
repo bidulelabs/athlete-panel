@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
 import { emptyRaceNutrition, type CommandInput } from '@athlete-panel/contracts';
 import { isolatedDatabaseUrl } from '../support/test-database';
 import { closeDatabase, connection } from '../../packages/host/src/db';
+import { canonical, digest } from '../../packages/host/src/crypto';
 import { migrate } from '../../packages/host/src/migrations';
 import { loadWorkspace } from '../../instance/services';
 import { readWorkspaceResponse } from '../../instance/workspace-response';
@@ -789,4 +790,154 @@ it('asks a race grant to read again once a rehearsal is logged', async () => {
   const review = await reviewProposal(stored);
   expect(review.applicability).toBe('review-required');
   expect(review.contextChanges.map((change) => change.entity)).toContain('rehearsal');
+});
+
+const withoutEffortAndWeather = <Plan extends object>(plan: Plan) => {
+  const {
+    effortPercent: _effortPercent,
+    weatherPercent: _weatherPercent,
+    weatherNote: _weatherNote,
+    ...old
+  } = plan as Plan & Record<string, unknown>;
+  return old;
+};
+const assumption = { effortPercent: 8, weatherPercent: 6.5, weatherNote: 'Hot afternoon' };
+const setAssumption = (racePlanId: string, expectedRevision: number) =>
+  owner([{ action: 'racePlan.update', id: racePlanId, expectedRevision, values: assumption }]);
+const storeRecordsAsBeforeAssumption = () =>
+  connection()`update training.records set data = data - 'effortPercent' - 'weatherPercent' - 'weatherNote' where kind = 'racePlan'`;
+async function storeProposalAsBeforeAssumption(proposal: { id: string }) {
+  const [row] =
+    await connection()`select commands,changes,context,summary from host.proposals where id = ${proposal.id}`;
+  const changes = (
+    row!.changes as { entity: string; before: object | null; after: object | null }[]
+  ).map((change) =>
+    change.entity === 'racePlan'
+      ? {
+          ...change,
+          before: change.before && withoutEffortAndWeather(change.before),
+          after: change.after && withoutEffortAndWeather(change.after),
+        }
+      : change,
+  );
+  const proposalDigest = digest(
+    canonical({
+      commands: row!.commands,
+      changes,
+      contextDigest: (row!.context as { digest: string }).digest,
+      summary: row!.summary,
+    }),
+  );
+  await connection()`update host.proposals set changes = ${connection().json(changes as never)}, digest = ${proposalDigest} where id = ${proposal.id}`;
+  return { id: proposal.id, digest: proposalDigest };
+}
+
+it('keeps the digest of a race grant when a plan stored before the assumption is read', async () => {
+  const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
+  const { token } = await grantWithRace();
+  const written = await contextForToken(token);
+  await storeRecordsAsBeforeAssumption();
+  expect((await contextForToken(token)).contextDigest).toBe(written.contextDigest);
+  expect((await loadWorkspace()).racePlans).toMatchObject([
+    { id: racePlanId, effortPercent: 0, weatherPercent: 0, weatherNote: '' },
+  ]);
+});
+
+it('hides the assumption from the context of a race grant and keeps the digest of a grant without a race', async () => {
+  const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
+  const withRace = (await grantWithRace()).token;
+  const withoutRace = (await grantWithRace({})).token;
+  const [raceRead, otherRead] = await Promise.all([
+    contextForToken(withRace),
+    contextForToken(withoutRace),
+  ]);
+  await setAssumption(racePlanId, 1);
+  const raceAfter = await contextForToken(withRace);
+  expect((await contextForToken(withoutRace)).contextDigest).toBe(otherRead.contextDigest);
+  const { revision: _before, ...planBefore } = raceRead.context.racePlans![0]!;
+  const { revision: _after, ...planAfter } = raceAfter.context.racePlans![0]!;
+  expect(planAfter).toEqual(planBefore);
+  expect(planAfter).not.toHaveProperty('effortPercent');
+  expect(planAfter).not.toHaveProperty('weatherPercent');
+  expect(planAfter).not.toHaveProperty('weatherNote');
+});
+
+it('keeps the owner assumption when an agent proposal updates the strategy', async () => {
+  const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
+  await setAssumption(racePlanId, 1);
+  const { token } = await grantWithRace();
+  const submitted = await submit(token, [
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 2, values: agentWrites() },
+  ]);
+  await applyProposal({ ...submitted, idempotencyKey: randomUUID() });
+  expect((await loadWorkspace()).racePlans).toMatchObject([
+    { revision: 3, briefing: agentWrites().briefing, ...assumption },
+  ]);
+});
+
+it('reviews, applies and undoes a proposal stored before the assumption existed', async () => {
+  const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
+  const { token } = await grantWithRace();
+  const submitted = await submit(token, [
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: agentWrites() },
+  ]);
+  await storeRecordsAsBeforeAssumption();
+  const stored = await storeProposalAsBeforeAssumption(submitted);
+  expect((await loadWorkspace()).racePlans).toMatchObject([
+    { effortPercent: 0, weatherPercent: 0, weatherNote: '' },
+  ]);
+  expect(await reviewProposal(stored)).toMatchObject({
+    applicability: 'ready',
+    contextChanges: [],
+  });
+  const applied = await applyProposal({ ...stored, idempotencyKey: randomUUID() });
+  await undoChange({ id: applied.id, idempotencyKey: randomUUID() });
+  expect((await loadWorkspace()).racePlans).toMatchObject([{ revision: 3, briefing: '' }]);
+});
+
+it('undoes a change stored before the assumption existed', async () => {
+  const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
+  const { token } = await grantWithRace();
+  const submitted = await submit(token, [
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: agentWrites() },
+  ]);
+  const applied = await applyProposal({ ...submitted, idempotencyKey: randomUUID() });
+  const [entry] = await connection()`select changes from host.changes where id = ${applied.id}`;
+  const changes = (entry!.changes as { before: object | null; after: object | null }[]).map(
+    (change) => ({
+      ...change,
+      before: change.before && withoutEffortAndWeather(change.before),
+      after: change.after && withoutEffortAndWeather(change.after),
+    }),
+  );
+  await connection()`update host.changes set changes = ${connection().json(changes as never)} where id = ${applied.id}`;
+  await storeRecordsAsBeforeAssumption();
+  await undoChange({ id: applied.id, idempotencyKey: randomUUID() });
+  expect((await loadWorkspace()).racePlans).toMatchObject([{ revision: 3, briefing: '' }]);
+});
+
+it('keeps a proposal read after the upgrade ready when the plan holds an assumption', async () => {
+  const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
+  await setAssumption(racePlanId, 1);
+  const { token } = await grantWithRace();
+  const submitted = await submit(token, [
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 2, values: agentWrites() },
+  ]);
+  expect(await reviewProposal(submitted)).toMatchObject({
+    applicability: 'ready',
+    contextChanges: [],
+  });
+});
+
+it('blocks a waiting proposal when the owner changes the assumption', async () => {
+  const racePlanId = await createOwnerRacePlan(raceId, 'Finish comfortably');
+  const { token } = await grantWithRace();
+  const submitted = await submit(token, [
+    { action: 'racePlan.update', id: racePlanId, expectedRevision: 1, values: agentWrites() },
+  ]);
+  await setAssumption(racePlanId, 1);
+  expect(await reviewProposal(submitted)).toMatchObject({
+    applicability: 'conflict',
+    contextChanges: [{ entity: 'racePlan', id: racePlanId }],
+  });
 });

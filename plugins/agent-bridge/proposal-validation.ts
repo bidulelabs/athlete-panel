@@ -28,6 +28,16 @@ const withoutStepNotes = (steps: WorkoutStep[]): WorkoutStep[] =>
   );
 export const withoutNutrition = ({ nutrition: _nutrition, ...profile }: Profile): Profile =>
   profile;
+export type RacePlanWithoutEffortAndWeather = Omit<
+  RacePlan,
+  'effortPercent' | 'weatherPercent' | 'weatherNote'
+>;
+export const withoutEffortAndWeather = ({
+  effortPercent: _effortPercent,
+  weatherPercent: _weatherPercent,
+  weatherNote: _weatherNote,
+  ...racePlan
+}: RacePlan): RacePlanWithoutEffortAndWeather => racePlan;
 export function boundedContext(state: WorkspaceState, scope: Scope) {
   const within = (date: string | null) => date !== null && date >= scope.from && date <= scope.to;
   const workouts = state.workouts.filter(
@@ -77,7 +87,9 @@ export function boundedContext(state: WorkspaceState, scope: Scope) {
     periods: state.periods.filter((p) => p.startDate <= scope.to && p.endDate >= scope.from),
     ...(scope.raceId
       ? {
-          racePlans: state.racePlans.filter((racePlan) => racePlan.eventId === scope.raceId),
+          racePlans: state.racePlans
+            .filter((racePlan) => racePlan.eventId === scope.raceId)
+            .map(withoutEffortAndWeather),
         }
       : {}),
     ...(scope.raceId && scope.includeRehearsals

@@ -1801,6 +1801,25 @@
                     "additionalProperties": false,
                     "description": "What to eat and drink before, during and after the race."
                   },
+                  "effortPercent": {
+                    "default": 0,
+                    "type": "number",
+                    "minimum": -30,
+                    "maximum": 50,
+                    "multipleOf": 0.5
+                  },
+                  "weatherPercent": {
+                    "default": 0,
+                    "type": "number",
+                    "minimum": -20,
+                    "maximum": 50,
+                    "multipleOf": 0.5
+                  },
+                  "weatherNote": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 300
+                  },
                   "writtenFor": {
                     "type": "object",
                     "properties": {
@@ -1851,6 +1870,9 @@
                   "finishCutoff",
                   "stations",
                   "nutrition",
+                  "effortPercent",
+                  "weatherPercent",
+                  "weatherNote",
                   "writtenFor",
                   "id",
                   "revision"
@@ -7394,6 +7416,22 @@
                             "additionalProperties": false,
                             "description": "What to eat and drink before, during and after the race."
                           },
+                          "effortPercent": {
+                            "type": "number",
+                            "minimum": -30,
+                            "maximum": 50,
+                            "multipleOf": 0.5
+                          },
+                          "weatherPercent": {
+                            "type": "number",
+                            "minimum": -20,
+                            "maximum": 50,
+                            "multipleOf": 0.5
+                          },
+                          "weatherNote": {
+                            "type": "string",
+                            "maxLength": 300
+                          },
                           "courseId": {
                             "default": null,
                             "anyOf": [
@@ -7796,6 +7834,22 @@
                             ],
                             "additionalProperties": false,
                             "description": "What to eat and drink before, during and after the race."
+                          },
+                          "effortPercent": {
+                            "type": "number",
+                            "minimum": -30,
+                            "maximum": 50,
+                            "multipleOf": 0.5
+                          },
+                          "weatherPercent": {
+                            "type": "number",
+                            "minimum": -20,
+                            "maximum": 50,
+                            "multipleOf": 0.5
+                          },
+                          "weatherNote": {
+                            "type": "string",
+                            "maxLength": 300
                           },
                           "courseId": {
                             "anyOf": [
@@ -11800,6 +11854,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -11850,6 +11923,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -12238,6 +12314,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -12288,6 +12383,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -17213,6 +17311,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -17263,6 +17380,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -17651,6 +17771,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -17701,6 +17840,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -22643,6 +22785,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -22693,6 +22854,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -23081,6 +23245,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -23131,6 +23314,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -28487,6 +28673,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -28537,6 +28742,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -28925,6 +29133,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -28975,6 +29202,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -34336,6 +34566,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -34386,6 +34635,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -34774,6 +35026,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -34824,6 +35095,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -39778,6 +40052,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -39828,6 +40121,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -40216,6 +40512,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -40266,6 +40581,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -45231,6 +45549,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -45281,6 +45618,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -45669,6 +46009,25 @@
                                 "additionalProperties": false,
                                 "description": "What to eat and drink before, during and after the race."
                               },
+                              "effortPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherNote": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 300
+                              },
                               "writtenFor": {
                                 "type": "object",
                                 "properties": {
@@ -45719,6 +46078,9 @@
                               "finishCutoff",
                               "stations",
                               "nutrition",
+                              "effortPercent",
+                              "weatherPercent",
+                              "weatherNote",
                               "writtenFor",
                               "id",
                               "revision"
@@ -52762,6 +53124,22 @@
                   "additionalProperties": false,
                   "description": "What to eat and drink before, during and after the race."
                 },
+                "effortPercent": {
+                  "type": "number",
+                  "minimum": -30,
+                  "maximum": 50,
+                  "multipleOf": 0.5
+                },
+                "weatherPercent": {
+                  "type": "number",
+                  "minimum": -20,
+                  "maximum": 50,
+                  "multipleOf": 0.5
+                },
+                "weatherNote": {
+                  "type": "string",
+                  "maxLength": 300
+                },
                 "courseId": {
                   "default": null,
                   "anyOf": [
@@ -53164,6 +53542,22 @@
                   ],
                   "additionalProperties": false,
                   "description": "What to eat and drink before, during and after the race."
+                },
+                "effortPercent": {
+                  "type": "number",
+                  "minimum": -30,
+                  "maximum": 50,
+                  "multipleOf": 0.5
+                },
+                "weatherPercent": {
+                  "type": "number",
+                  "minimum": -20,
+                  "maximum": 50,
+                  "multipleOf": 0.5
+                },
+                "weatherNote": {
+                  "type": "string",
+                  "maxLength": 300
                 },
                 "courseId": {
                   "anyOf": [
@@ -58473,6 +58867,25 @@
               "additionalProperties": false,
               "description": "What to eat and drink before, during and after the race."
             },
+            "effortPercent": {
+              "default": 0,
+              "type": "number",
+              "minimum": -30,
+              "maximum": 50,
+              "multipleOf": 0.5
+            },
+            "weatherPercent": {
+              "default": 0,
+              "type": "number",
+              "minimum": -20,
+              "maximum": 50,
+              "multipleOf": 0.5
+            },
+            "weatherNote": {
+              "default": "",
+              "type": "string",
+              "maxLength": 300
+            },
             "writtenFor": {
               "type": "object",
               "properties": {
@@ -58523,6 +58936,9 @@
             "finishCutoff",
             "stations",
             "nutrition",
+            "effortPercent",
+            "weatherPercent",
+            "weatherNote",
             "writtenFor",
             "id",
             "revision"

@@ -163,13 +163,13 @@ describe('scenario changes', () => {
 
   it('explains an effort change by the moving time it adds', () => {
     const changes = changesOf(scenarioWith({ effortPercent: 10 }));
-    expect(changes.reasons).toEqual(['Moving time +9 min: effort +10 %']);
-    expect(changes.finishDeltaMinutes).toBe(9);
+    expect(changes.reasons).toEqual(['Moving time +10 min: effort +10 %']);
+    expect(changes.finishDeltaMinutes).toBe(10);
   });
 
   it('names only the weather when the effort equals the one of the plan', () => {
     expect(changesOf(scenarioWith({ effortPercent: 0, weatherPercent: 6 })).reasons).toEqual([
-      'Moving time +5 min: weather +6 %',
+      'Moving time +6 min: weather +6 %',
     ]);
   });
 
@@ -220,10 +220,10 @@ describe('scenario changes', () => {
       }),
     );
     expect(changes.reasons).toEqual([
-      'Moving time -9 min: effort -10 %',
+      'Moving time -10 min: effort -10 %',
       'Stops -5 min: Synthetic station 2 5 min',
     ]);
-    expect(changes.finishDeltaMinutes).toBe(-13);
+    expect(changes.finishDeltaMinutes).toBe(-15);
   });
 
   it('says the effort is not calculated without an estimate, and keeps the stops', () => {

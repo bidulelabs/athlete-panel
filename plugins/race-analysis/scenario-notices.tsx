@@ -60,8 +60,8 @@ export function ScenarioExplanations() {
           </li>
           <li>What to carry uses the same leg times and products as Race day.</li>
           <li>
-            A scenario is marked outdated when the course, or the plan&apos;s stations, stops,
-            effort or weather changed after you saved it.
+            A scenario is marked outdated when the course or its estimate, or the plan&apos;s
+            stations, stops, cutoffs, effort or weather changed after you saved it.
           </li>
         </ul>
       </details>

@@ -8,20 +8,29 @@ type ScenarioFields = Pick<
 type TypedScenario = Omit<ScenarioFields, 'basedOn'>;
 type ScenarioInPlan = { scenario: RaceScenario; plan: RacePlan };
 export type OpenedScenario = ScenarioInPlan & { outdated: boolean };
-export type CurrentScenario = ScenarioInPlan & { courseId: string | null };
+export type CurrentScenario = ScenarioInPlan & {
+  courseId: string | null;
+  courseEstimateSeconds: number | null;
+};
 
 const COPY_SUFFIX = ' (copy)';
 const NAME_MAX_LENGTH = 80;
 
 export const stopMinutesText = (stopSeconds: number) => String(stopSeconds / 60);
 
-export const scenarioBasedOn = (plan: RacePlan, courseId: string | null) => ({
+export const scenarioBasedOn = (
+  plan: RacePlan,
+  courseId: string | null,
+  courseEstimateSeconds: number | null,
+) => ({
   courseId,
-  stations: plan.stations.map(({ id, distanceMeters, stopSeconds }) => ({
+  stations: plan.stations.map(({ id, distanceMeters, stopSeconds, cutoff }) => ({
     id,
     distanceMeters,
     stopSeconds,
+    cutoff,
   })),
+  courseEstimateSeconds,
   effortPercent: plan.effortPercent,
   weatherPercent: plan.weatherPercent,
 });
@@ -53,6 +62,7 @@ export function createScenarioCommand(
   form: FormData,
   plan: RacePlan,
   courseId: string | null,
+  courseEstimateSeconds: number | null,
 ): CommandInput {
   return {
     action: 'raceScenario.create',
@@ -60,7 +70,7 @@ export function createScenarioCommand(
       id: crypto.randomUUID(),
       eventId: plan.eventId,
       ...typedScenario(form, plan.stations),
-      basedOn: scenarioBasedOn(plan, courseId),
+      basedOn: scenarioBasedOn(plan, courseId, courseEstimateSeconds),
     },
   };
 }
@@ -111,6 +121,6 @@ export function changedScenarioValues(
         ? typedSecondsByStationId.get(station.id)!
         : station.stopSeconds,
     })),
-    basedOn: scenarioBasedOn(current.plan, current.courseId),
+    basedOn: scenarioBasedOn(current.plan, current.courseId, current.courseEstimateSeconds),
   };
 }

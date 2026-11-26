@@ -35,11 +35,13 @@ const planWith = (stations: Station[]) =>
 const plan = planWith([firstStation, secondStation]);
 const basedOnPlan = (stations: Station[]) => ({
   courseId: 'course',
-  stations: stations.map(({ id, distanceMeters, stopSeconds }) => ({
+  stations: stations.map(({ id, distanceMeters, stopSeconds, cutoff }) => ({
     id,
     distanceMeters,
     stopSeconds,
+    cutoff,
   })),
+  courseEstimateSeconds: 6000,
   effortPercent: 0,
   weatherPercent: 0,
 });
@@ -76,7 +78,7 @@ const formOf = (
   return form;
 };
 const opened = { scenario, plan, outdated: false };
-const current = { scenario, plan, courseId: 'course' };
+const current = { scenario, plan, courseId: 'course', courseEstimateSeconds: 6000 };
 
 describe('changed scenario values', () => {
   it('sends nothing when nothing changed, even for a stop that is not a whole minute', () => {
@@ -162,7 +164,7 @@ describe('changed scenario values', () => {
 
 describe('scenario commands', () => {
   it('creates from the plan stations and the current course', () => {
-    const command = createScenarioCommand(formOf({ name: 'New' }), plan, 'course');
+    const command = createScenarioCommand(formOf({ name: 'New' }), plan, 'course', 6000);
     expect(command).toMatchObject({
       action: 'raceScenario.create',
       values: {
@@ -175,6 +177,19 @@ describe('scenario commands', () => {
         basedOn: basedOnPlan(plan.stations),
       },
     });
+  });
+
+  it('records the course estimate, or none, and the cutoff of each station', () => {
+    const cutoff = { dayOffset: 0, time: '09:00' };
+    const command = createScenarioCommand(
+      formOf(),
+      planWith([{ ...firstStation, cutoff }, secondStation]),
+      'course',
+      null,
+    );
+    const { basedOn } = (command as { values: Pick<RaceScenario, 'basedOn'> }).values;
+    expect(basedOn.courseEstimateSeconds).toBeNull();
+    expect(basedOn.stations.map((station) => station.cutoff)).toEqual([cutoff, null]);
   });
 
   it('duplicates as a copy that keeps stops and basedOn', () => {

@@ -197,6 +197,7 @@ export function Scenarios({
           scenario={scenarioBeingEdited}
           racePlan={racePlan}
           courseId={courseId}
+          courseEstimateSeconds={estimate?.seconds ?? null}
           outdated={
             scenarioBeingEdited !== undefined &&
             scenarioOutdatedReasons(racePlan, courseId, estimate, scenarioBeingEdited, units)

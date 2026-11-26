@@ -13,6 +13,7 @@ export function ScenarioDialog({
   scenario,
   racePlan,
   courseId,
+  courseEstimateSeconds,
   outdated,
   units,
   finishOf,
@@ -22,6 +23,7 @@ export function ScenarioDialog({
   scenario: RaceScenario | undefined;
   racePlan: RacePlan;
   courseId: string | null;
+  courseEstimateSeconds: number | null;
   outdated: boolean;
   units: string;
   finishOf: (draft: Draft) => string;
@@ -55,13 +57,14 @@ export function ScenarioDialog({
           const form = new FormData(event.currentTarget);
           if (!opened.scenario)
             return void action.run(
-              () => onSave(createScenarioCommand(form, opened.plan, courseId)),
+              () =>
+                onSave(createScenarioCommand(form, opened.plan, courseId, courseEstimateSeconds)),
               onClose,
             );
           const changed = changedScenarioValues(
             form,
             { scenario: opened.scenario, plan: opened.plan, outdated: opened.outdated },
-            { scenario: scenario!, plan: racePlan, courseId },
+            { scenario: scenario!, plan: racePlan, courseId, courseEstimateSeconds },
           );
           if (Object.keys(changed).length === 0) return onClose();
           void action.run(

@@ -661,6 +661,54 @@ async function raceWithEstimateAndAmbitiousScenario(page: Page, baseURL: string)
   return raceId;
 }
 
+test('shows on Race day the finish the Apply window previewed for a longer stop', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await raceWithEstimateAndAmbitiousScenario(page, baseURL!);
+  const { stations } = (await readRacePlan(page, raceId)) as unknown as {
+    stations: { id: string; distanceMeters: number; stopSeconds: number }[];
+  };
+  const analysis = await page.request.post('/api/plugins/race-analysis/analysis', {
+    headers: { Origin: baseURL! },
+    data: { raceId },
+  });
+  const { course } = (await analysis.json()) as { course: { id: string } };
+  await ownerCommand(
+    page,
+    baseURL!,
+    scenario(raceId, 'Longer stop', {
+      stops: [{ stationId: stations[0]!.id, stopSeconds: stations[0]!.stopSeconds + 1800 }],
+      basedOn: {
+        courseId: course.id,
+        stations: stations.map(({ id, distanceMeters, stopSeconds }) => ({
+          id,
+          distanceMeters,
+          stopSeconds,
+        })),
+        effortPercent: 0,
+        weatherPercent: 0,
+      },
+    }),
+  );
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await actionsOf(page, 'Longer stop').selectOption('Apply');
+  const preview = await applyDialog(page).textContent();
+  const [, finishBefore, finishAfter] = preview!.match(
+    /Expected finish moves from (\d\d:\d\d) to (\d\d:\d\d)/,
+  )!;
+  expect(finishAfter).not.toBe(finishBefore);
+  await applyButton(page).click();
+  await expect(applyDialog(page)).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('tab', { name: 'Race day', exact: true }).click();
+  await expect(page.locator('.race-day-headline')).toHaveText(
+    `Start 07:00 → finish ${finishAfter}`,
+  );
+});
+
 for (const theme of ['light', 'dark']) {
   test(`applies a scenario to the plan by keyboard, then undoes it from History (${theme})`, async ({
     page,
@@ -761,7 +809,7 @@ test('disables Apply to plan with its reason for an outdated scenario and one eq
   await expect(scenarioRow(page, 'Same')).toContainText('Same as the plan: nothing to apply.');
   await expect(applyOption(page, 'Old')).toBeDisabled();
   await expect(scenarioRow(page, 'Old')).toContainText(
-    'Outdated: review the stops and save it again before applying.',
+    'Outdated: review it and save it again before applying.',
   );
   await expect(applyOption(page, 'Current')).toBeEnabled();
   await expect(scenarioRow(page, 'Current')).not.toContainText('nothing to apply');

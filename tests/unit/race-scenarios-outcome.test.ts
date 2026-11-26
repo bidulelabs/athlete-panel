@@ -13,6 +13,7 @@ import {
   scenarioOutdatedReasons,
   scenarioStations,
 } from '../../plugins/race-analysis/scenarios';
+import { applyScenarioCommand } from '../../plugins/race-analysis/scenario-form';
 
 type Station = RacePlan['stations'][number];
 const section = (index: number): CourseSection => ({
@@ -156,6 +157,21 @@ const changesOf = (
   withEstimate: CourseEstimate | null = estimate,
 ): ReturnType<typeof scenarioChanges> =>
   scenarioChanges(outcomeOf(null, withEstimate), outcomeOf(scenario, withEstimate), plan, scenario);
+
+describe('applying a scenario', () => {
+  it('gives the plan the finish and arrivals the scenario showed before applying', () => {
+    const longerStop = scenarioWith({
+      effortPercent: 8,
+      stops: [{ stationId: firstStation.id, stopSeconds: 300 + 1800 }],
+    });
+    const { values } = applyScenarioCommand(plan, longerStop) as { values: Partial<RacePlan> };
+    const applied = { ...plan, ...values } as RacePlan;
+    const scenarioShown = outcomeOf(longerStop);
+    const planAfter = scenarioOutcome(estimate, sections, applied, null, carryInputs);
+    expect(planAfter.finish).toEqual(scenarioShown.finish);
+    expect(planAfter.cutoffs).toEqual(scenarioShown.cutoffs);
+  });
+});
 
 describe('scenario changes', () => {
   it('gives no reason and a delta of 0 when nothing differs from the plan', () => {

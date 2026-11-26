@@ -164,7 +164,7 @@ const WhyItChanges = ({ reasons }: { reasons: string[] }) =>
 
 export const applyBlockedReason = ({ outdatedReasons, planChanges }: ScenarioColumn) =>
   outdatedReasons.length > 0
-    ? 'Outdated: review the stops and save it again before applying.'
+    ? 'Outdated: review it and save it again before applying.'
     : planChanges.length === 0
       ? 'Same as the plan: nothing to apply.'
       : null;

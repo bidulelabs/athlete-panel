@@ -142,10 +142,7 @@ for (const theme of ['light', 'dark']) {
     await expect(page.locator('.race-reference-list > li')).toHaveCount(4);
     await expect(page.locator('.race-reference-list > li').first()).toContainText('Predicted');
     await page.getByRole('button', { name: 'Edit Crêtes du Lac', exact: true }).click();
-    await page
-      .getByRole('dialog')
-      .getByLabel('Elapsed time (minutes)', { exact: true })
-      .fill('320');
+    await page.getByRole('dialog').getByLabel('Moving time (minutes)', { exact: true }).fill('320');
     await page.getByRole('button', { name: 'Save effort', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(
@@ -316,7 +313,7 @@ for (const theme of ['light', 'dark']) {
     await page.goto(`/races?race=${raceId}`);
     await page.getByRole('button', { name: 'Edit Crêtes du Lac', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Elapsed time (minutes)', { exact: true }).fill('320');
+    await dialog.getByLabel('Moving time (minutes)', { exact: true }).fill('320');
     const current = await readAnalysis(page, baseURL!, raceId);
     const reference = current.references.find((ref) => ref.title === 'Crêtes du Lac')!;
     const response = await page.request.post(endpoint + 'reference-update', {
@@ -338,7 +335,7 @@ for (const theme of ['light', 'dark']) {
     await expect(
       dialog.getByText('Saved data reloaded. Review it before saving again.'),
     ).toBeVisible();
-    await expect(dialog.getByLabel('Elapsed time (minutes)', { exact: true })).toHaveValue('320');
+    await expect(dialog.getByLabel('Moving time (minutes)', { exact: true })).toHaveValue('320');
     await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
     await expect(dialog.getByText(/The course or references changed/)).toBeVisible();
     expect(
@@ -346,11 +343,11 @@ for (const theme of ['light', 'dark']) {
         ?.durationSeconds,
     ).toBe(340 * 60);
     await dialog.getByRole('button', { name: 'Use saved effort', exact: true }).click();
-    await expect(dialog.getByLabel('Elapsed time (minutes)', { exact: true })).toHaveValue('340');
+    await expect(dialog.getByLabel('Moving time (minutes)', { exact: true })).toHaveValue('340');
     await expect(dialog.getByRole('combobox', { name: 'Effort terrain', exact: true })).toHaveValue(
       '4',
     );
-    await dialog.getByLabel('Elapsed time (minutes)', { exact: true }).fill('330');
+    await dialog.getByLabel('Moving time (minutes)', { exact: true }).fill('330');
     await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
     await expect(dialog).toHaveCount(0);
     expect(
@@ -387,7 +384,7 @@ test('adding, editing and removing an effort in the same tab keeps the terrain d
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText('Terrain changes are a preview until saved.')).toBeVisible();
   await page.getByRole('button', { name: 'Edit Crêtes du Lac', exact: true }).click();
-  await dialog.getByLabel('Elapsed time (minutes)', { exact: true }).fill('320');
+  await dialog.getByLabel('Moving time (minutes)', { exact: true }).fill('320');
   await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText('Terrain changes are a preview until saved.')).toBeVisible();
@@ -433,7 +430,7 @@ test('a same-tab effort change does not refresh a terrain draft that another tab
   await page.getByText('How we worked this out', { exact: true }).click();
   await page.getByRole('button', { name: 'Edit Crêtes du Lac', exact: true }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Elapsed time (minutes)', { exact: true }).fill('320');
+  await dialog.getByLabel('Moving time (minutes)', { exact: true }).fill('320');
   await dialog.getByRole('button', { name: 'Save effort', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText(/Your draft is retained; choose Use saved terrain/)).toBeVisible();

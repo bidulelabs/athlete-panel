@@ -14,6 +14,42 @@ export function groundDistance(
       Math.sin(((b.longitude - a.longitude) * rad) / 2) ** 2;
   return 6371008.8 * 2 * Math.atan2(Math.sqrt(Math.min(1, q)), Math.sqrt(Math.max(0, 1 - q)));
 }
+const slowestMovingMetersPerSecond = 0.3;
+const slowestClimbingMetersPerSecond = 0.05;
+const shortestWindowSeconds = 60;
+export function movingSeconds(points: readonly SourcePoint[]): number | null {
+  if (points.some((p, i) => p.time === null || (i > 0 && p.time < points[i - 1]!.time!)))
+    return null;
+  const secondsBetween = (from: number, to: number) =>
+    (points[to]!.time! - points[from]!.time!) / 1000;
+  let seconds = 0;
+  let windowStart = 0;
+  const closeWindowAt = (end: number) => {
+    const a = points[windowStart]!,
+      b = points[end]!;
+    const duration = secondsBetween(windowStart, end);
+    const climb = a.elevation !== null && b.elevation !== null ? b.elevation - a.elevation : 0;
+    if (
+      duration > 0 &&
+      (groundDistance(a, b) / duration >= slowestMovingMetersPerSecond ||
+        Math.abs(climb) / duration >= slowestClimbingMetersPerSecond)
+    )
+      seconds += duration;
+    windowStart = end;
+  };
+  for (let i = 1; i < points.length; i++) {
+    if (points[i]!.segment !== points[i - 1]!.segment) {
+      if (i - 1 > windowStart) closeWindowAt(i - 1);
+      windowStart = i;
+      continue;
+    }
+    if (secondsBetween(i - 1, i) >= shortestWindowSeconds && i - 1 > windowStart)
+      closeWindowAt(i - 1);
+    if (secondsBetween(windowStart, i) >= shortestWindowSeconds) closeWindowAt(i);
+  }
+  if (points.length - 1 > windowStart) closeWindowAt(points.length - 1);
+  return seconds > 0 ? seconds : null;
+}
 function interpolate(a: RacePoint, b: RacePoint, distance: number): RacePoint {
   const fraction = (distance - a.distanceMeters) / (b.distanceMeters - a.distanceMeters);
   const delta = ((b.longitude - a.longitude + 540) % 360) - 180;
@@ -180,6 +216,7 @@ export function analyzeTrack(track: ParsedTrack): TrackAnalysis {
     rawAscentMeters: coverage === 1 ? rawAscent : null,
     elevationCoverage: coverage,
     elapsedSeconds: track.elapsedSeconds,
+    movingSeconds: movingSeconds(track.points),
     pointCount: track.points.length,
     hasGaps,
     warnings,

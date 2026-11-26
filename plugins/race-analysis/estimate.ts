@@ -14,7 +14,7 @@ export function referenceTimeProblem(
   seconds: number | null,
 ): string | null {
   return seconds !== null && seconds / (distanceMeters / 1000) < 120
-    ? 'Elapsed time implies faster than 2:00/km. Check the time in minutes and use a comparable running or hiking effort.'
+    ? 'Moving time implies faster than 2:00/km. Check the time in minutes and use a comparable running or hiking effort.'
     : null;
 }
 function baseTime(seconds: number, fatigue: number) {
@@ -127,7 +127,7 @@ export function estimateCourse(
   }
   if (evidence.length < 3)
     reasons.push(
-      `Add ${3 - evidence.length} more usable past ${3 - evidence.length === 1 ? 'effort' : 'efforts'} with elevation and an elapsed time for a personal estimate. Choose running or hiking efforts on comparable terrain.`,
+      `Add ${3 - evidence.length} more usable past ${3 - evidence.length === 1 ? 'effort' : 'efforts'} with elevation and a moving time for a personal estimate. Choose running or hiking efforts on comparable terrain.`,
     );
   if (reasons.length || !track)
     return { estimate: null, estimateReasons: reasons, references: compared };
@@ -164,7 +164,7 @@ export function estimateCourse(
       seconds,
       evidence.map((r) => r.durationSeconds!),
     )
-      ? 'elapsed time'
+      ? 'moving time'
       : null,
   ].filter((reason): reason is string => reason !== null);
   const margin = clamp(
@@ -185,7 +185,7 @@ export function estimateCourse(
   ).reduce((a, b) => a + b, 0);
   const explanations = [
     `Based on ${evidence.length} usable efforts. This is a planning range, not a calibrated confidence interval or a guaranteed finish.`,
-    'Elapsed reference times include pauses. The estimate reflects those habits; it does not add a separate aid-station stop budget.',
+    'Reference times are moving time: stretches slower than about 1 km/h that climb or descend less than 180 m an hour count as pauses and are left out. A time you entered yourself is used as entered.',
     'Terrain adds an illustrative 3.5% of base time per level. It is an editable difficulty assumption, not a measured surface classification.',
     'Distance is measured along the track. Elevation is resampled every 25 m and median-smoothed over five points; display simplification does not change the totals.',
   ];

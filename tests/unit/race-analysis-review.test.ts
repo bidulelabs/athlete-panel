@@ -159,7 +159,7 @@ it('widens sparse and limited-climbing evidence and explains the climbing fallba
 it.each([
   [track(40, 800), 1, 'distance'],
   [track(20, 1400), 1, 'climbing per kilometre'],
-  [track(28.5, 1140), 5, 'elapsed time'],
+  [track(28.5, 1140), 5, 'moving time'],
 ] as const)(
   'widens and names extrapolation beyond reference evidence (%s)',
   (course, terrain, reason) => {

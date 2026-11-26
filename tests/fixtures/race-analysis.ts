@@ -20,6 +20,7 @@ export function syntheticGpx(
     elevation?: 'full' | 'partial' | 'none';
     namespace?: boolean;
     salt?: string;
+    pauseSeconds?: number;
   } = {},
 ) {
   const {
@@ -30,10 +31,12 @@ export function syntheticGpx(
     elevation = 'full',
     namespace = false,
     salt = '',
+    pauseSeconds = 0,
   } = options;
   const radius = (km * 1000) / (2 * Math.PI * 111195);
   const prefix = namespace ? 'g:' : '';
-  const points = Array.from({ length: count }, (_, i) => {
+  const pauseAfter = Math.floor(count / 2);
+  const pointAt = (i: number, pausedSeconds: number) => {
     const t = i / (count - 1),
       angle = 2 * Math.PI * t;
     const lat = 45 + radius * Math.cos(angle),
@@ -44,10 +47,15 @@ export function syntheticGpx(
         ? ''
         : `<${prefix}ele>${ele.toFixed(2)}</${prefix}ele>`;
     const time = seconds
-      ? `<${prefix}time>${new Date(Date.UTC(2027, 5, 1, 7) + seconds * 1000 * t).toISOString()}</${prefix}time>`
+      ? `<${prefix}time>${new Date(Date.UTC(2027, 5, 1, 7) + (seconds * t + pausedSeconds) * 1000).toISOString()}</${prefix}time>`
       : '';
     return `<${prefix}trkpt lat="${lat.toFixed(7)}" lon="${lon.toFixed(7)}">${height}${time}</${prefix}trkpt>`;
-  }).join('');
+  };
+  const points = Array.from({ length: count }, (_, i) =>
+    i === pauseAfter && pauseSeconds
+      ? pointAt(i, 0) + pointAt(i, pauseSeconds)
+      : pointAt(i, i > pauseAfter ? pauseSeconds : 0),
+  ).join('');
   return `<?xml version="1.0" encoding="UTF-8"?><${prefix}gpx version="1.1" creator="synthetic" ${namespace ? 'xmlns:g' : 'xmlns'}="http://www.topografix.com/GPX/1/1"><${prefix}metadata><${prefix}name>Synthetic ${salt}</${prefix}name></${prefix}metadata><${prefix}trk><${prefix}trkseg>${points}</${prefix}trkseg></${prefix}trk></${prefix}gpx>`;
 }
 export const courseReferences = [

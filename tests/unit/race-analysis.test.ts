@@ -117,6 +117,80 @@ describe('file validation and factual measurements', () => {
     ]);
     expect(Math.abs(route[1]!.y - route[0]!.y)).toBeGreaterThan(100);
   });
+  const twoPoints = (horizontalMeters: number, climbMeters: number) =>
+    `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>${[
+      [45, 1000, '2027-06-01T07:00:00Z'],
+      [45 + horizontalMeters / 111195.08, 1000 + climbMeters, '2027-06-01T07:01:40Z'],
+      [45 + 1, 1000 + climbMeters, '2027-06-01T08:01:40Z'],
+    ]
+      .map(
+        ([lat, ele, time]) =>
+          `<trkpt lat="${lat}" lon="6"><ele>${ele}</ele><time>${time}</time></trkpt>`,
+      )
+      .join('')}</trkseg></trk></gpx>`;
+  it.each([
+    ['31 m on the flat', 31, 0, 100],
+    ['29 m on the flat', 29, 0, 0],
+    ['10 m of GPS drift at an aid station', 10, 0, 0],
+    ['5.3 m of climbing in place', 0, 5.28, 100],
+    ['4.7 m of climbing in place', 0, 4.72, 0],
+    ['4.7 m of descent in place', 0, -4.72, 0],
+    ['5.3 m of descent in place', 0, -5.28, 100],
+    ['a 60% climb at 400 m an hour', 18.52, 11.11, 100],
+    ['a 25% climb at 2 km/h', 54, 13.5, 100],
+  ])(
+    'counts 100 s covering %s as moving from 0.3 m/s or 180 m an hour',
+    (_label, horizontal, climb, counted) => {
+      expect(analyze(twoPoints(horizontal, climb)).movingSeconds).toBeCloseTo(3600 + counted, 6);
+    },
+  );
+  const seededNoise = (seed: number) => (amplitude: number) => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((((t ^ (t >>> 14)) >>> 0) / 4294967296) * 2 - 1) * amplitude;
+  };
+  const oneHertzGpx = (
+    stretches: { seconds: number; northPerSecond: number; upPerSecond: number }[],
+    noisy: boolean,
+  ) => {
+    const noise = seededNoise(42);
+    const metersPerDegree = 111195.08;
+    let north = 0,
+      up = 1000,
+      second = 0;
+    const point = () =>
+      `<trkpt lat="${45 + (north + (noisy ? noise(3) : 0)) / metersPerDegree}" lon="${6 + (noisy ? noise(3) : 0) / (metersPerDegree * Math.cos(Math.PI / 4))}"><ele>${up + (noisy ? noise(0.3) : 0)}</ele><time>${new Date(Date.UTC(2027, 5, 1, 7) + second * 1000).toISOString()}</time></trkpt>`;
+    const points = [point()];
+    for (const { seconds, northPerSecond, upPerSecond } of stretches)
+      for (let i = 0; i < seconds; i++) {
+        north += northPerSecond;
+        up += upPerSecond;
+        second++;
+        points.push(point());
+      }
+    return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>${points.join('')}</trkseg></trk></gpx>`;
+  };
+  it('counts a 10 min stop recorded every second with GPS and barometer noise as a pause', () => {
+    const walk = { seconds: 300, northPerSecond: 1, upPerSecond: 0 };
+    const stop = { seconds: 600, northPerSecond: 0, upPerSecond: 0 };
+    expect(analyze(oneHertzGpx([walk, stop, walk], true)).movingSeconds).toBe(600);
+  });
+  it.each([
+    [
+      'a 60% climb at 400 m an hour with GPS and barometer noise',
+      { northPerSecond: 400 / 3600 / 0.6, upPerSecond: 400 / 3600 },
+      true,
+    ],
+    ['a flat walk at 1.1 km/h', { northPerSecond: 1.1 / 3.6, upPerSecond: 0 }, false],
+  ])('counts %s recorded every second as moving', (_label, pace, noisy) => {
+    expect(analyze(oneHertzGpx([{ seconds: 600, ...pace }], noisy)).movingSeconds).toBe(600);
+  });
+  it('leaves a pause out of the moving time and keeps it in the elapsed time', () => {
+    const track = analyze(syntheticGpx({ km: 8, ascent: 400, seconds: 3000, pauseSeconds: 1800 }));
+    expect(track.elapsedSeconds).toBe(4800);
+    expect(track.movingSeconds).toBeCloseTo(3000, 6);
+  });
   it('decodes a CRC-checked synthetic FIT reference, including elapsed rather than timer time', () => {
     const encoder = new Encoder();
     const identity: FileIdMesg = {
@@ -140,6 +214,7 @@ describe('file validation and factual measurements', () => {
     const bytes = encoder.close();
     const parsed = parseTrack({ name: 'effort.fit', bytes }, 'reference');
     expect(parsed.elapsedSeconds).toBe(2000);
+    expect(analyzeTrack(parsed).movingSeconds).toBe(1740);
     expect(analyzeTrack(parsed).distanceMeters).toBeGreaterThan(3000);
     const broken = Uint8Array.from(bytes);
     broken[30] = broken[30]! ^ 255;

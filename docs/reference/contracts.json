@@ -49065,6 +49065,18 @@
                             }
                           ]
                         },
+                        "movingSeconds": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 2592000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "pointCount": {
                           "type": "integer",
                           "minimum": 2,

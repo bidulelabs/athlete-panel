@@ -157,7 +157,7 @@ function AnalysisView({
                     {finishTime(estimate.highSeconds)}
                   </p>
                   <p className="race-hint">
-                    From {estimate.referenceCount} of your past efforts · elapsed time
+                    From {estimate.referenceCount} of your past efforts · moving time
                   </p>
                 </>
               ) : (

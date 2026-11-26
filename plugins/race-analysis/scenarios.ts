@@ -29,10 +29,9 @@ export function scenarioOutcome(
   const assumption = scenario ?? plan;
   const stations = scenario ? scenarioStations(plan.stations, scenario) : plan.stations;
   const timing = stationArrivals(
-    adjustedEstimate(estimate, sections, plan.stations, {
+    adjustedEstimate(estimate, {
       effortPercent: assumption.effortPercent,
       weatherPercent: assumption.weatherPercent,
-      stations,
     }),
     sections,
     { startTime: plan.startTime, finishCutoff: plan.finishCutoff, stations },
@@ -60,9 +59,9 @@ export function scenarioOutdatedReasons(
   units: string,
 ) {
   const { basedOn } = scenario;
-  const basedOnDistanceById = new Map(
-    basedOn.stations.map((station) => [station.id, station.distanceMeters]),
-  );
+  const basedOnStationById = new Map(basedOn.stations.map((station) => [station.id, station]));
+  const changedFromPlan = (madeFrom: number | undefined, now: number) =>
+    madeFrom !== undefined && madeFrom !== now;
   const planStationIds = new Set(plan.stations.map((station) => station.id));
   return [
     ...(basedOn.courseId === courseId ? [] : ['The course changed.']),
@@ -70,9 +69,18 @@ export function scenarioOutdatedReasons(
       .filter((station) => !planStationIds.has(station.id))
       .map((station) => `The station at ${distance(station.distanceMeters, units)} was removed.`),
     ...plan.stations.flatMap((station) => {
-      const distanceMeters = basedOnDistanceById.get(station.id);
-      if (distanceMeters === undefined) return [`${station.name} was added.`];
-      return distanceMeters === station.distanceMeters ? [] : [`${station.name} was moved.`];
+      const madeFrom = basedOnStationById.get(station.id);
+      if (madeFrom === undefined) return [`${station.name} was added.`];
+      if (madeFrom.distanceMeters !== station.distanceMeters) return [`${station.name} was moved.`];
+      return changedFromPlan(madeFrom.stopSeconds, station.stopSeconds)
+        ? [`The stop at ${station.name} changed.`]
+        : [];
     }),
+    ...(changedFromPlan(basedOn.effortPercent, plan.effortPercent)
+      ? ["The plan's effort changed."]
+      : []),
+    ...(changedFromPlan(basedOn.weatherPercent, plan.weatherPercent)
+      ? ["The plan's weather changed."]
+      : []),
   ];
 }

@@ -64,7 +64,13 @@ const scenarioWith = (values: Partial<RaceScenario> = {}) =>
     stops: [],
     basedOn: {
       courseId: 'course',
-      stations: plan.stations.map(({ id, distanceMeters }) => ({ id, distanceMeters })),
+      stations: plan.stations.map(({ id, distanceMeters, stopSeconds }) => ({
+        id,
+        distanceMeters,
+        stopSeconds,
+      })),
+      effortPercent: 0,
+      weatherPercent: 0,
     },
     ...values,
   }) as RaceScenario;
@@ -104,9 +110,8 @@ describe('scenario outcome', () => {
 
   it('composes effort and weather on the moving time', () => {
     const hot = outcomeOf(scenarioWith({ effortPercent: 8, weatherPercent: 6 }));
-    const movingSecondsInPlan = 6000 - 300 - 600;
-    expect(hot.movingSeconds).toBeCloseTo(movingSecondsInPlan * 1.08 * 1.06);
-    expect(hot.finish.fromStart!.seconds).toBeCloseTo(900 + movingSecondsInPlan * 1.08 * 1.06);
+    expect(hot.movingSeconds).toBeCloseTo(6000 * 1.08 * 1.06);
+    expect(hot.finish.fromStart!.seconds).toBeCloseTo(900 + 6000 * 1.08 * 1.06);
   });
 
   it('keeps stops and cutoffs without an estimate', () => {
@@ -131,7 +136,7 @@ describe('scenario outcome', () => {
   });
 
   it('measures the finish margin against a cutoff the next day', () => {
-    const latestFinishSeconds = 7 * 3600 + 7200;
+    const latestFinishSeconds = 7 * 3600 + 7200 + 900;
     expect(planOutcome.finish.cutoffMarginSeconds).toBe(86400 + 1800 - latestFinishSeconds);
   });
 });
@@ -157,8 +162,50 @@ describe('scenario stations', () => {
 });
 
 describe('scenario outdated reasons', () => {
-  const reasons = (stations: Station[], courseId: string | null = 'course') =>
-    scenarioOutdatedReasons({ ...plan, stations } as RacePlan, courseId, scenarioWith(), 'metric');
+  const reasons = (
+    stations: Station[],
+    courseId: string | null = 'course',
+    planValues: Partial<RacePlan> = {},
+    scenario = scenarioWith(),
+  ) =>
+    scenarioOutdatedReasons(
+      { ...plan, stations, ...planValues } as RacePlan,
+      courseId,
+      scenario,
+      'metric',
+    );
+
+  it('names a plan stop changed since the scenario was saved', () => {
+    expect(
+      reasons([firstStation, { ...secondStation, stopSeconds: 900 }, stationBeyondCourse]),
+    ).toEqual(['The stop at Synthetic station 2 changed.']);
+  });
+
+  it('says the plan effort or weather changed since the scenario was saved', () => {
+    expect(reasons(plan.stations, 'course', { effortPercent: 5 })).toEqual([
+      "The plan's effort changed.",
+    ]);
+    expect(reasons(plan.stations, 'course', { weatherPercent: -2.5 })).toEqual([
+      "The plan's weather changed.",
+    ]);
+  });
+
+  it('compares only the course and stations of a scenario saved without stops, effort or weather', () => {
+    const savedBefore = scenarioWith({
+      basedOn: {
+        courseId: 'course',
+        stations: plan.stations.map(({ id, distanceMeters }) => ({ id, distanceMeters })),
+      },
+    });
+    expect(
+      reasons(
+        [firstStation, { ...secondStation, stopSeconds: 900 }, stationBeyondCourse],
+        'course',
+        { effortPercent: 5, weatherPercent: 5 },
+        savedBefore,
+      ),
+    ).toEqual([]);
+  });
 
   it('is empty when the course and the stations are those it was made from', () => {
     expect(reasons(plan.stations)).toEqual([]);

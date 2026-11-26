@@ -213,9 +213,6 @@ describe('race card content', () => {
         sodiumMilligramsPerHour: null,
       },
     };
-    expect(
-      cardFor(racePlan({ stations: [station('Les Pins', 8000, { stopSeconds: 86400 })] })).warning,
-    ).toBe('Carry amounts are not shown: the planned stops are longer than the estimate.');
     expect(cardFor(withFood(noFluid)).warning).toBe(
       'Water to carry is unknown: no fluid target and no fluid in the food plan.',
     );
@@ -415,10 +412,9 @@ describe('race card effort and weather', () => {
     racePlan({ startTime: '07:00', stations: [station('Les Pins', 8000)], ...values });
   const cardWithEffortAndWeather = (plan: RacePlan) => {
     const raceDay = stationArrivals(
-      adjustedEstimate(estimate, sections, plan.stations, {
+      adjustedEstimate(estimate, {
         effortPercent: plan.effortPercent,
         weatherPercent: plan.weatherPercent,
-        stations: plan.stations,
       }),
       sections,
       plan,

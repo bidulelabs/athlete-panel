@@ -294,6 +294,7 @@ test('keeps typed effort and weather after a failed save or a change made elsewh
   await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(dialog.getByText(/Use Reload saved data to review the saved version/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Reload saved data', exact: true }).click();
+  await expect(page.locator('.race-day-start')).toContainText('Start 06:30');
   await expect(dialog.getByLabel('Effort (%)', { exact: true })).toHaveValue('12.5');
   await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
   await expect(dialog).toHaveCount(0);
@@ -335,7 +336,7 @@ test('keeps the station draft when the plan changed elsewhere, then saves it aft
   await expect(page.locator('.race-day-start')).toContainText('Start 06:30');
 });
 
-test('shows a station beyond the course, a missed cutoff and stops longer than the estimate', async ({
+test('shows a station beyond the course, a missed cutoff and stops longer than the estimate added to the finish', async ({
   page,
   baseURL,
 }) => {
@@ -378,16 +379,8 @@ test('shows a station beyond the course, a missed cutoff and stops longer than t
   const farAway = page.locator('.race-stations tr').filter({ hasText: 'Far Away' });
   await expect(farAway.getByText('Beyond the course', { exact: true })).toBeVisible();
   await expect(farAway.getByText('No arrival', { exact: true })).toBeVisible();
-  await expect(
-    page.getByText('Planned stops are longer than the whole estimate. Moving time is shown as 0.', {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(page.locator('.race-day-moving')).toHaveText(/^0h 00m moving, 24h stops$/);
-  await expect(
-    page.getByText('Carry amounts need leg times, so they are hidden.', { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'What to carry' })).toHaveCount(0);
+  await expect(page.locator('.race-day-moving')).toHaveText(/^[1-9]\d*h \d\dm moving, 24h stops$/);
+  await expect(page.locator('.race-day-headline')).toHaveText(/^Start 07:00 → finish .+ \+1 day$/);
   const lesPins = page.locator('.race-stations tr').filter({ hasText: 'Les Pins' });
   await expect(lesPins.locator('.race-late')).toHaveText(/ after the cutoff$/);
   await expect(page.locator('.race-day-cutoff .race-late')).toHaveText(

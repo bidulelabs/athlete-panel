@@ -425,16 +425,10 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
       </div>
     );
   const racePlan = props.data.racePlans.find((candidate) => candidate.eventId === value.race.id);
-  const estimateWithEffortAndWeather = adjustedEstimate(
-    value.estimate,
-    value.course?.analysis.sections ?? [],
-    racePlan?.stations ?? [],
-    {
-      effortPercent: racePlan?.effortPercent ?? 0,
-      weatherPercent: racePlan?.weatherPercent ?? 0,
-      stations: racePlan?.stations ?? [],
-    },
-  );
+  const estimateWithEffortAndWeather = adjustedEstimate(value.estimate, {
+    effortPercent: racePlan?.effortPercent ?? 0,
+    weatherPercent: racePlan?.weatherPercent ?? 0,
+  });
   return (
     <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
       <TabsList className="workspace-tabs race-tabs" aria-label="Race views">

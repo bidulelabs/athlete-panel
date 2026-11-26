@@ -11,7 +11,6 @@ import {
   nutrients,
   type hourlyIntake,
 } from './nutrition';
-import { movingSeconds } from './race-day';
 
 type RaceNutrition = RacePlan['nutrition'];
 type Intake = ReturnType<typeof hourlyIntake>;
@@ -99,25 +98,19 @@ export function DuringRaceCard({
   products,
   intake,
   estimate,
-  course,
-  stations,
   busy,
   onEdit,
-}: Pick<RaceAnalysis, 'estimate' | 'course'> & {
+}: Pick<RaceAnalysis, 'estimate'> & {
   nutrition: RaceNutrition;
   products: readonly NutritionProduct[];
   intake: Intake;
-  stations: RacePlan['stations'];
   busy: boolean;
   onEdit: () => void;
 }) {
   const planned = nutrition.schedule.length + nutrition.cues.length > 0;
   const carbohydrateTotal =
     nutrition.schedule.length > 0 &&
-    carbohydrateOverMovingTimeText(
-      intake.perHour.carbohydrateGrams,
-      movingSeconds(estimate, course?.analysis.sections ?? [], stations),
-    );
+    carbohydrateOverMovingTimeText(intake.perHour.carbohydrateGrams, estimate?.seconds ?? null);
   return (
     <section className="race-estimate" aria-labelledby="race-schedule-title">
       <div className="race-section-heading">

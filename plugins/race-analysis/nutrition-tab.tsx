@@ -256,8 +256,6 @@ export function Nutrition({
             products={products}
             intake={intake}
             estimate={estimate}
-            course={course}
-            stations={racePlan?.stations ?? []}
             busy={action.busy}
             onEdit={() => setEditing('plan')}
           />

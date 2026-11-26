@@ -351,12 +351,6 @@ export function RaceDay({
           </p>
         )
       )}
-      {raceDay.stopsExceedEstimate && (
-        <div className="race-data-notice" role="status">
-          <p>Planned stops are longer than the whole estimate. Moving time is shown as 0.</p>
-          <p>Carry amounts need leg times, so they are hidden.</p>
-        </div>
-      )}
       <section className="race-day-stations" aria-labelledby="race-stations-title">
         <div className="race-section-heading">
           <div>

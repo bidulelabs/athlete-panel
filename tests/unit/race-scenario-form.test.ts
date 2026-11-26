@@ -35,7 +35,13 @@ const planWith = (stations: Station[]) =>
 const plan = planWith([firstStation, secondStation]);
 const basedOnPlan = (stations: Station[]) => ({
   courseId: 'course',
-  stations: stations.map(({ id, distanceMeters }) => ({ id, distanceMeters })),
+  stations: stations.map(({ id, distanceMeters, stopSeconds }) => ({
+    id,
+    distanceMeters,
+    stopSeconds,
+  })),
+  effortPercent: 0,
+  weatherPercent: 0,
 });
 const scenario = {
   id: '00000000-0000-4000-8000-0000000000bb',
@@ -184,5 +190,13 @@ describe('scenario commands', () => {
     const copyName = (command as { values: { name: string } }).values.name;
     expect(copyName).toHaveLength(80);
     expect(copyName.endsWith(' (copy)')).toBe(true);
+  });
+
+  it.each([
+    ['an emoji with a skin tone', '\u{1F44D}\u{1F3FD}'],
+    ['a family emoji joined by ZWJ', '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}'],
+  ])('leaves out %s that the copy name cannot hold whole', (_label, emoji) => {
+    const command = duplicateScenarioCommand({ ...scenario, name: `${'x'.repeat(72)}${emoji}` });
+    expect((command as { values: { name: string } }).values.name).toBe(`${'x'.repeat(72)} (copy)`);
   });
 });

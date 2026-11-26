@@ -17,8 +17,23 @@ export const stopMinutesText = (stopSeconds: number) => String(stopSeconds / 60)
 
 export const scenarioBasedOn = (plan: RacePlan, courseId: string | null) => ({
   courseId,
-  stations: plan.stations.map(({ id, distanceMeters }) => ({ id, distanceMeters })),
+  stations: plan.stations.map(({ id, distanceMeters, stopSeconds }) => ({
+    id,
+    distanceMeters,
+    stopSeconds,
+  })),
+  effortPercent: plan.effortPercent,
+  weatherPercent: plan.weatherPercent,
 });
+
+function nameCutTo(name: string, maxLength: number) {
+  let cut = '';
+  for (const { segment } of new Intl.Segmenter().segment(name)) {
+    if (cut.length + segment.length > maxLength) break;
+    cut += segment;
+  }
+  return cut;
+}
 
 function typedScenario(form: FormData, stations: RacePlan['stations']): TypedScenario {
   const stopMinutes = form.getAll('stopMinutes');
@@ -57,7 +72,7 @@ export function duplicateScenarioCommand(scenario: RaceScenario): CommandInput {
     values: {
       id: crypto.randomUUID(),
       eventId: scenario.eventId,
-      name: `${name.slice(0, NAME_MAX_LENGTH - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`,
+      name: `${nameCutTo(name, NAME_MAX_LENGTH - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`,
       effortPercent,
       weatherPercent,
       weatherNote,

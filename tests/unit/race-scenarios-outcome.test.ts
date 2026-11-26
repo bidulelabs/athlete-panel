@@ -64,11 +64,13 @@ const scenarioWith = (values: Partial<RaceScenario> = {}) =>
     stops: [],
     basedOn: {
       courseId: 'course',
-      stations: plan.stations.map(({ id, distanceMeters, stopSeconds }) => ({
+      stations: plan.stations.map(({ id, distanceMeters, stopSeconds, cutoff }) => ({
         id,
         distanceMeters,
         stopSeconds,
+        cutoff,
       })),
+      courseEstimateSeconds: estimate.seconds,
       effortPercent: 0,
       weatherPercent: 0,
     },
@@ -167,13 +169,53 @@ describe('scenario outdated reasons', () => {
     courseId: string | null = 'course',
     planValues: Partial<RacePlan> = {},
     scenario = scenarioWith(),
+    courseEstimateSeconds: number | null = estimate.seconds,
   ) =>
     scenarioOutdatedReasons(
       { ...plan, stations, ...planValues } as RacePlan,
       courseId,
+      courseEstimateSeconds,
       scenario,
       'metric',
     );
+
+  it('says the course estimate changed on the same course', () => {
+    expect(reasons(plan.stations, 'course', {}, scenarioWith(), 6300)).toEqual([
+      'The course estimate changed.',
+    ]);
+    expect(reasons(plan.stations, 'course', {}, scenarioWith(), null)).toEqual([
+      'The course estimate changed.',
+    ]);
+  });
+
+  it('names a station cutoff changed or removed since the scenario was saved', () => {
+    expect(
+      reasons([
+        { ...firstStation, cutoff: { dayOffset: 0, time: '08:15' } },
+        { ...secondStation, cutoff: { dayOffset: 0, time: '09:00' } },
+        stationBeyondCourse,
+      ]),
+    ).toEqual([
+      'The cutoff at Synthetic station 1 changed.',
+      'The cutoff at Synthetic station 2 changed.',
+    ]);
+    expect(
+      reasons([{ ...firstStation, cutoff: null }, secondStation, stationBeyondCourse]),
+    ).toEqual(['The cutoff at Synthetic station 1 changed.']);
+  });
+
+  it('names both the stop and the cutoff of one station', () => {
+    expect(
+      reasons([
+        firstStation,
+        { ...secondStation, stopSeconds: 900, cutoff: { dayOffset: 0, time: '09:00' } },
+        stationBeyondCourse,
+      ]),
+    ).toEqual([
+      'The stop at Synthetic station 2 changed.',
+      'The cutoff at Synthetic station 2 changed.',
+    ]);
+  });
 
   it('names a plan stop changed since the scenario was saved', () => {
     expect(
@@ -190,7 +232,7 @@ describe('scenario outdated reasons', () => {
     ]);
   });
 
-  it('compares only the course and stations of a scenario saved without stops, effort or weather', () => {
+  it('compares only the course and stations of a scenario saved without estimate, stops, cutoffs, effort or weather', () => {
     const savedBefore = scenarioWith({
       basedOn: {
         courseId: 'course',
@@ -199,10 +241,15 @@ describe('scenario outdated reasons', () => {
     });
     expect(
       reasons(
-        [firstStation, { ...secondStation, stopSeconds: 900 }, stationBeyondCourse],
+        [
+          { ...firstStation, cutoff: null },
+          { ...secondStation, stopSeconds: 900 },
+          stationBeyondCourse,
+        ],
         'course',
         { effortPercent: 5, weatherPercent: 5 },
         savedBefore,
+        6300,
       ),
     ).toEqual([]);
   });
@@ -254,6 +301,8 @@ describe('scenario outdated reasons', () => {
   });
 
   it('says the course changed', () => {
-    expect(reasons(plan.stations, 'other-course')).toEqual(['The course changed.']);
+    expect(reasons(plan.stations, 'other-course', {}, scenarioWith(), 6300)).toEqual([
+      'The course changed.',
+    ]);
   });
 });

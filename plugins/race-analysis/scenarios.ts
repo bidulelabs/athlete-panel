@@ -55,16 +55,21 @@ type CarryInputs = {
 export function scenarioOutdatedReasons(
   plan: RacePlan,
   courseId: string | null,
+  courseEstimateSeconds: number | null,
   scenario: RaceScenario,
   units: string,
 ) {
   const { basedOn } = scenario;
   const basedOnStationById = new Map(basedOn.stations.map((station) => [station.id, station]));
-  const changedFromPlan = (madeFrom: number | undefined, now: number) =>
-    madeFrom !== undefined && madeFrom !== now;
+  const changedFromPlan = <T>(madeFrom: T | undefined, now: T) =>
+    madeFrom !== undefined && JSON.stringify(madeFrom) !== JSON.stringify(now);
   const planStationIds = new Set(plan.stations.map((station) => station.id));
   return [
-    ...(basedOn.courseId === courseId ? [] : ['The course changed.']),
+    ...(basedOn.courseId !== courseId
+      ? ['The course changed.']
+      : changedFromPlan(basedOn.courseEstimateSeconds, courseEstimateSeconds)
+        ? ['The course estimate changed.']
+        : []),
     ...basedOn.stations
       .filter((station) => !planStationIds.has(station.id))
       .map((station) => `The station at ${distance(station.distanceMeters, units)} was removed.`),
@@ -72,9 +77,14 @@ export function scenarioOutdatedReasons(
       const madeFrom = basedOnStationById.get(station.id);
       if (madeFrom === undefined) return [`${station.name} was added.`];
       if (madeFrom.distanceMeters !== station.distanceMeters) return [`${station.name} was moved.`];
-      return changedFromPlan(madeFrom.stopSeconds, station.stopSeconds)
-        ? [`The stop at ${station.name} changed.`]
-        : [];
+      return [
+        ...(changedFromPlan(madeFrom.stopSeconds, station.stopSeconds)
+          ? [`The stop at ${station.name} changed.`]
+          : []),
+        ...(changedFromPlan(madeFrom.cutoff, station.cutoff)
+          ? [`The cutoff at ${station.name} changed.`]
+          : []),
+      ];
     }),
     ...(changedFromPlan(basedOn.effortPercent, plan.effortPercent)
       ? ["The plan's effort changed."]

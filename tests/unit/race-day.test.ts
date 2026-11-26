@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { CourseEstimate, CourseSection, RacePlan } from '@athlete-panel/contracts';
 import { adjustedEstimate, stationArrivals } from '../../plugins/race-analysis/race-day';
 import { clockTime } from '../../plugins/race-analysis/presentation';
+import { estimateCourse } from '../../plugins/race-analysis/estimate';
+import { analyzeTrack } from '../../plugins/race-analysis/geometry';
+import { parseTrack } from '../../plugins/race-analysis/parse';
+import { syntheticGpx } from '../fixtures/race-analysis';
 
 type Station = RacePlan['stations'][number];
 const section = (index: number, ascentMeters: number | null): CourseSection => ({
@@ -193,6 +197,43 @@ describe('station arrivals', () => {
       { fromMeters: 2500, toMeters: 10000, ascentMeters: null, movingSeconds: null },
       { fromMeters: 10000, toMeters: 20000, ascentMeters: null, movingSeconds: null },
     ]);
+  });
+});
+
+describe('pauses in the reference efforts', () => {
+  const analyze = (options: Parameters<typeof syntheticGpx>[0]) =>
+    analyzeTrack(
+      parseTrack({ name: 'effort.gpx', bytes: Buffer.from(syntheticGpx(options)) }, 'reference'),
+    );
+  it('finishes after 80 min, not 110, with three 50 min efforts paused 30 min and a 30 min stop', () => {
+    const shape = { km: 8, ascent: 400 };
+    const references = ['a', 'b', 'c'].map((salt, index) => {
+      const effort = analyze({ ...shape, seconds: 3000, pauseSeconds: 1800, salt });
+      return {
+        id: `00000000-0000-4000-8000-00000000010${index}`,
+        assetId: `00000000-0000-4000-8000-00000000020${index}`,
+        title: `Paused ${salt}`,
+        filename: `${salt}.gpx`,
+        distanceMeters: effort.distanceMeters,
+        ascentMeters: effort.ascentMeters,
+        durationSeconds: effort.movingSeconds!,
+        durationSource: 'file' as const,
+        terrain: 3,
+        hasGaps: effort.hasGaps,
+      };
+    });
+    const course = analyze(shape);
+    const day = stationArrivals(
+      estimateCourse(course, 3, {}, references).estimate,
+      course.sections,
+      {
+        startTime: '07:00',
+        finishCutoff: null,
+        stations: [station(1, 4000, { stopSeconds: 1800 })],
+      },
+    );
+    expect(Math.round(day.finish.fromStart!.seconds)).toBe(4800);
+    expect(clockTime(day.finish.timeOfDay!.seconds)).toBe('08:20');
   });
 });
 

@@ -709,6 +709,75 @@ test('shows on Race day the finish the Apply window previewed for a longer stop'
   );
 });
 
+test('disables Apply once a reference effort or a station cutoff changed after saving the scenario', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await raceWithEstimateAndAmbitiousScenario(page, baseURL!);
+  const saveScenario = async (name: string) => {
+    await page.goto(`/races?race=${raceId}`);
+    await openScenarios(page);
+    await page.getByRole('button', { name: 'New scenario', exact: true }).click();
+    const dialog = dialogOf(page);
+    await dialog.getByLabel('Name', { exact: true }).fill(name);
+    await dialog.getByLabel('Les Pins stop in this scenario (minutes)').fill('10');
+    await dialog.getByLabel('Name', { exact: true }).press('Enter');
+    await expect(dialog).toHaveCount(0);
+    await expect(applyOption(page, name)).toBeEnabled();
+  };
+  const reopenScenarios = async () => {
+    await page.reload();
+    await openScenarios(page);
+  };
+
+  await saveScenario('Before the reference edit');
+  const analysis = await page.request.post('/api/plugins/race-analysis/analysis', {
+    headers: { Origin: baseURL! },
+    data: { raceId },
+  });
+  const { revision, references } = (await analysis.json()) as {
+    revision: number;
+    references: { id: string; title: string; durationSeconds: number }[];
+  };
+  const edited = await page.request.post('/api/plugins/race-analysis/reference-update', {
+    headers: { Origin: baseURL! },
+    data: {
+      raceId,
+      expectedRevision: revision,
+      idempotencyKey: randomUUID(),
+      id: references[0]!.id,
+      title: references[0]!.title,
+      durationSeconds: references[0]!.durationSeconds + 1800,
+      terrain: 3,
+    },
+  });
+  expect(edited.ok(), await edited.text()).toBe(true);
+  await reopenScenarios();
+  await expect(applyOption(page, 'Before the reference edit')).toBeDisabled();
+  await expect(page.getByText('The course estimate changed.').first()).toBeVisible();
+
+  await saveScenario('Before the cutoff edit');
+  const plan = (await readRacePlan(page, raceId)) as unknown as {
+    id: string;
+    revision: number;
+    stations: { name: string }[];
+  };
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.update',
+    id: plan.id,
+    expectedRevision: plan.revision,
+    values: {
+      stations: plan.stations.map((saved) =>
+        saved.name === 'Les Pins' ? { ...saved, cutoff: { dayOffset: 0, time: '09:30' } } : saved,
+      ),
+    },
+  });
+  await reopenScenarios();
+  await expect(applyOption(page, 'Before the cutoff edit')).toBeDisabled();
+  await expect(page.getByText('The cutoff at Les Pins changed.').first()).toBeVisible();
+});
+
 for (const theme of ['light', 'dark']) {
   test(`applies a scenario to the plan by keyboard, then undoes it from History (${theme})`, async ({
     page,

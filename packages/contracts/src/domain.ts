@@ -690,14 +690,14 @@ export type Rehearsal = z.infer<typeof rehearsalSchema>;
 export const RACE_SCENARIO_LIMIT = 4;
 const raceScenarioStationLimit = 60;
 const raceScenarioFields = {
-  name: z.string().trim().min(1).max(80),
+  name: z.string().trim().min(1).max(80).refine(withoutHalfCharacters),
   ...racePlanAssumptionFields,
   stops: z
     .array(
       z
         .object({
           stationId: idSchema,
-          stopSeconds: z.number().int().min(0).max(86400),
+          stopSeconds: racePlanStationFields.stopSeconds,
         })
         .strict(),
     )
@@ -709,8 +709,18 @@ const raceScenarioFields = {
     .object({
       courseId: racePlanCourseId,
       stations: z
-        .array(z.object({ id: idSchema, distanceMeters: nonnegativeSchema }).strict())
+        .array(
+          z
+            .object({
+              id: idSchema,
+              distanceMeters: nonnegativeSchema,
+              stopSeconds: racePlanStationFields.stopSeconds.optional(),
+            })
+            .strict(),
+        )
         .max(raceScenarioStationLimit),
+      effortPercent: racePlanAssumptionFields.effortPercent.optional(),
+      weatherPercent: racePlanAssumptionFields.weatherPercent.optional(),
     })
     .strict(),
 };

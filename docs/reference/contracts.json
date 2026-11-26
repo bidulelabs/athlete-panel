@@ -2055,7 +2055,8 @@
                         "stopSeconds": {
                           "type": "integer",
                           "minimum": 0,
-                          "maximum": 86400
+                          "maximum": 86400,
+                          "description": "Planned stop at this station, in seconds."
                         }
                       },
                       "required": [
@@ -2095,6 +2096,12 @@
                             "distanceMeters": {
                               "type": "number",
                               "minimum": 0
+                            },
+                            "stopSeconds": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 86400,
+                              "description": "Planned stop at this station, in seconds."
                             }
                           },
                           "required": [
@@ -2103,6 +2110,18 @@
                           ],
                           "additionalProperties": false
                         }
+                      },
+                      "effortPercent": {
+                        "type": "number",
+                        "minimum": -30,
+                        "maximum": 50,
+                        "multipleOf": 0.5
+                      },
+                      "weatherPercent": {
+                        "type": "number",
+                        "minimum": -20,
+                        "maximum": 50,
+                        "multipleOf": 0.5
                       }
                     },
                     "required": [
@@ -8340,7 +8359,8 @@
                                 "stopSeconds": {
                                   "type": "integer",
                                   "minimum": 0,
-                                  "maximum": 86400
+                                  "maximum": 86400,
+                                  "description": "Planned stop at this station, in seconds."
                                 }
                               },
                               "required": [
@@ -8380,6 +8400,12 @@
                                     "distanceMeters": {
                                       "type": "number",
                                       "minimum": 0
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -8388,6 +8414,18 @@
                                   ],
                                   "additionalProperties": false
                                 }
+                              },
+                              "effortPercent": {
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
                               }
                             },
                             "required": [
@@ -8472,7 +8510,8 @@
                                 "stopSeconds": {
                                   "type": "integer",
                                   "minimum": 0,
-                                  "maximum": 86400
+                                  "maximum": 86400,
+                                  "description": "Planned stop at this station, in seconds."
                                 }
                               },
                               "required": [
@@ -8512,6 +8551,12 @@
                                     "distanceMeters": {
                                       "type": "number",
                                       "minimum": 0
+                                    },
+                                    "stopSeconds": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -8520,6 +8565,18 @@
                                   ],
                                   "additionalProperties": false
                                 }
+                              },
+                              "effortPercent": {
+                                "type": "number",
+                                "minimum": -30,
+                                "maximum": 50,
+                                "multipleOf": 0.5
+                              },
+                              "weatherPercent": {
+                                "type": "number",
+                                "minimum": -20,
+                                "maximum": 50,
+                                "multipleOf": 0.5
                               }
                             },
                             "required": [
@@ -13200,7 +13257,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -13240,6 +13298,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -13248,6 +13312,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -13331,7 +13407,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -13371,6 +13448,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -13379,6 +13462,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -18960,7 +19055,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -19000,6 +19096,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -19008,6 +19110,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -19091,7 +19205,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -19131,6 +19246,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -19139,6 +19260,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -24737,7 +24870,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -24777,6 +24911,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -24785,6 +24925,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -24868,7 +25020,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -24908,6 +25061,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -24916,6 +25075,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -30928,7 +31099,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -30968,6 +31140,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -30976,6 +31154,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -31059,7 +31249,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -31099,6 +31290,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -31107,6 +31304,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -37124,7 +37333,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -37164,6 +37374,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -37172,6 +37388,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -37255,7 +37483,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -37295,6 +37524,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -37303,6 +37538,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -42913,7 +43160,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -42953,6 +43201,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -42961,6 +43215,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -43044,7 +43310,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -43084,6 +43351,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -43092,6 +43365,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -48713,7 +48998,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -48753,6 +49039,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -48761,6 +49053,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -48844,7 +49148,8 @@
                                     "stopSeconds": {
                                       "type": "integer",
                                       "minimum": 0,
-                                      "maximum": 86400
+                                      "maximum": 86400,
+                                      "description": "Planned stop at this station, in seconds."
                                     }
                                   },
                                   "required": [
@@ -48884,6 +49189,12 @@
                                         "distanceMeters": {
                                           "type": "number",
                                           "minimum": 0
+                                        },
+                                        "stopSeconds": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 86400,
+                                          "description": "Planned stop at this station, in seconds."
                                         }
                                       },
                                       "required": [
@@ -48892,6 +49203,18 @@
                                       ],
                                       "additionalProperties": false
                                     }
+                                  },
+                                  "effortPercent": {
+                                    "type": "number",
+                                    "minimum": -30,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
+                                  },
+                                  "weatherPercent": {
+                                    "type": "number",
+                                    "minimum": -20,
+                                    "maximum": 50,
+                                    "multipleOf": 0.5
                                   }
                                 },
                                 "required": [
@@ -56465,7 +56788,8 @@
                       "stopSeconds": {
                         "type": "integer",
                         "minimum": 0,
-                        "maximum": 86400
+                        "maximum": 86400,
+                        "description": "Planned stop at this station, in seconds."
                       }
                     },
                     "required": [
@@ -56505,6 +56829,12 @@
                           "distanceMeters": {
                             "type": "number",
                             "minimum": 0
+                          },
+                          "stopSeconds": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 86400,
+                            "description": "Planned stop at this station, in seconds."
                           }
                         },
                         "required": [
@@ -56513,6 +56843,18 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "effortPercent": {
+                      "type": "number",
+                      "minimum": -30,
+                      "maximum": 50,
+                      "multipleOf": 0.5
+                    },
+                    "weatherPercent": {
+                      "type": "number",
+                      "minimum": -20,
+                      "maximum": 50,
+                      "multipleOf": 0.5
                     }
                   },
                   "required": [
@@ -56597,7 +56939,8 @@
                       "stopSeconds": {
                         "type": "integer",
                         "minimum": 0,
-                        "maximum": 86400
+                        "maximum": 86400,
+                        "description": "Planned stop at this station, in seconds."
                       }
                     },
                     "required": [
@@ -56637,6 +56980,12 @@
                           "distanceMeters": {
                             "type": "number",
                             "minimum": 0
+                          },
+                          "stopSeconds": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 86400,
+                            "description": "Planned stop at this station, in seconds."
                           }
                         },
                         "required": [
@@ -56645,6 +56994,18 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "effortPercent": {
+                      "type": "number",
+                      "minimum": -30,
+                      "maximum": 50,
+                      "multipleOf": 0.5
+                    },
+                    "weatherPercent": {
+                      "type": "number",
+                      "minimum": -20,
+                      "maximum": 50,
+                      "multipleOf": 0.5
                     }
                   },
                   "required": [
@@ -61951,7 +62312,8 @@
                   "stopSeconds": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 86400
+                    "maximum": 86400,
+                    "description": "Planned stop at this station, in seconds."
                   }
                 },
                 "required": [
@@ -61991,6 +62353,12 @@
                       "distanceMeters": {
                         "type": "number",
                         "minimum": 0
+                      },
+                      "stopSeconds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 86400,
+                        "description": "Planned stop at this station, in seconds."
                       }
                     },
                     "required": [
@@ -61999,6 +62367,18 @@
                     ],
                     "additionalProperties": false
                   }
+                },
+                "effortPercent": {
+                  "type": "number",
+                  "minimum": -30,
+                  "maximum": 50,
+                  "multipleOf": 0.5
+                },
+                "weatherPercent": {
+                  "type": "number",
+                  "minimum": -20,
+                  "maximum": 50,
+                  "multipleOf": 0.5
                 }
               },
               "required": [

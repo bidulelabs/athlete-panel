@@ -86,7 +86,7 @@ Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/iss
 
 ### Race scenarios
 
-- A race scenario stores one alternative to the race plan for a race that has a plan: a name (1 to 80 characters after trimming), an effort and weather assumption like the plan's, the stop at each aid station in seconds (0 to 24 hours, each station once, up to 60), and the course and stations (ids and distances, up to 60) it was made from. A race holds at most four.
+- A race scenario stores one alternative to the race plan for a race that has a plan: a name (1 to 80 characters after trimming), an effort and weather assumption like the plan's, the stop at each aid station in seconds (0 to 24 hours, each station once, up to 60), and what it was made from: the course, the plan's stations (ids, distances and stops, up to 60), effort and weather. A scenario stored before the stops, effort and weather were kept reads without them. A race holds at most four.
 - Only the owner creates, edits and deletes scenarios. Assistants cannot write them and never read them: they are not in any planning context.
 - Deleting a race deletes its scenarios; the confirmation names them and one undo restores them. Undoing the deletion of a scenario is refused when the race already holds four others.
 - This release stores the record only; no screen shows scenarios yet.
@@ -107,7 +107,7 @@ Requirement source: [issue #122](https://github.com/bidulelabs/athlete-panel/iss
 | Situation | Expected result | Verification |
 | --- | --- | --- |
 | Scenario for a goal, a race without a plan or an unknown race / a fifth scenario for a race | Refused | [Race scenario tests](../../tests/unit/race-scenarios.test.ts) |
-| Scenario with a duplicate or null stop, a blank name, or a change of race | Refused | Race scenario tests |
+| Scenario with a duplicate or null stop, a blank name, a name or weather note holding half of an emoji, or a change of race | Refused | Race scenario tests |
 | Update or delete with a stale revision / update repeating the stored values | Refused / no revision changes | Race scenario tests |
 | Race deleted, then undone / deletion of a scenario undone with four others present | Race, plan and scenarios restored / refused, records and history unchanged | [Race scenario integration](../../tests/integration/race-scenarios.test.ts) |
 | Scenario created while a race grant has read its context; an assistant proposes a scenario | Plan revision and context digest unchanged / refused | Race scenario integration |

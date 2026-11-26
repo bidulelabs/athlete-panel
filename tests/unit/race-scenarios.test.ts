@@ -164,6 +164,8 @@ describe('race scenario record', () => {
     ['a name over 80 characters', { name: 'n'.repeat(81) }],
     ['an effort over 50', { effortPercent: 50.5 }],
     ['a weather note over 300 characters', { weatherNote: 'w'.repeat(301) }],
+    ['a name holding half of an emoji', { name: 'Hot \uD83D' }],
+    ['a weather note holding half of an emoji', { weatherNote: 'Hot \uDE00' }],
   ])('refuses %s', (_label, values) => {
     expect(() => run(racePlanned(), [createScenario(1, values)])).toThrow();
   });
@@ -217,6 +219,23 @@ describe('race scenario record', () => {
     expect(() =>
       run(withScenario(), [{ action: 'event.delete', id: raceId, expectedRevision: 1 }], 'agent'),
     ).toThrow('This command is not available to the training agent.');
+  });
+
+  it('reads a scenario stored without the stops, effort and weather it was made from', () => {
+    const stored = run(racePlanned(), [
+      createScenario(1, {
+        basedOn: {
+          courseId: null,
+          stations: [{ id: stationId, distanceMeters: 12000, stopSeconds: 300 }],
+          effortPercent: 0,
+          weatherPercent: 0,
+        },
+      }),
+    ]).state;
+    expect(stored.raceScenarios[0]!.basedOn.effortPercent).toBe(0);
+    expect(workspaceStateSchema.parse(withScenario()).raceScenarios[0]!.basedOn).toEqual(
+      scenarioValues.basedOn,
+    );
   });
 
   it('reads a workspace stored without scenarios as having none', () => {

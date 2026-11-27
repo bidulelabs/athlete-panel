@@ -21,6 +21,8 @@ export default {
         if (source.excluded === excluded) return connectionStatus(tx);
         if (excluded) {
           const existing = await appleActivitiesForSource(tx, name);
+          await tx`update apple_health.workouts set issues='{}' where issues <> '{}'
+            and (recording_source=${name} or activity_id=any(${existing.map((activity) => activity.id)}::uuid[]))`;
           const state = await loadWorkspace(tx, undefined, { records: 'linked' });
           await persistRetractions(tx, existing, 'excluded', linkedWorkouts(state.workouts));
         }

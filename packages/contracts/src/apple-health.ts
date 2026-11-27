@@ -19,6 +19,10 @@ export const appleHealthStatusSchema = appleHealthConnectionSchema
     importedFrom: dateSchema.nullable(),
     importedTo: dateSchema.nullable(),
     sources: z.array(z.object({ name: appleRecordingSourceSchema, excluded: z.boolean() })),
+    unresolvedIssues: z.object({
+      count: z.number().int().nonnegative(),
+      messages: z.array(z.string().max(400)).max(10),
+    }),
     lastBatch: z
       .object({
         imported: z.number().int().nonnegative(),

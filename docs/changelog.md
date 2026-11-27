@@ -4,7 +4,7 @@ Use the documentation link for the version you installed. Each release page incl
 
 ## Unreleased
 
-- **Apple Health** imports Apple Watch workouts from Sync for Health into Calendar and Activities, supports planned-session linking, and offers GPX downloads for recorded routes. Install the matching web and worker release with the new database migrations and runtime grants before connecting the iPhone. [Setup and upgrade details](features/apple-health-import.md)
+- **Apple Health** imports Apple Watch workouts into Calendar and Activities, links planned sessions and offers GPX downloads. Deleted workouts stay removed on history resends. Sync issues remain visible until resolved, and Recent changes shows the notes and effort from a retracted link. Install the matching web and worker release, apply migrations and runtime grants, and configure a phone-reachable HTTPS origin before pairing. [Setup and upgrade details](features/apple-health-import.md)
 - **Activity sources** lets new owners choose Garmin, Apple Health, both, or skip setup. Existing owners can add a source from Settings. Sidebar shortcuts follow the owner's choices and saved connections. [Welcome setup](features/first-time-onboarding.md)
 - Source setup keeps the continue action visible while pairing, lines up provider actions and Apple Health copy controls, and shows the link button's saving state during a save. [Welcome setup](features/first-time-onboarding.md)
 

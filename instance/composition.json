@@ -14,7 +14,7 @@
     {
       "path": "plugins/activity-records",
       "enabled": true,
-      "version": "2.2.0"
+      "version": "2.2.1"
     },
     {
       "path": "plugins/calendar",
@@ -29,7 +29,7 @@
     {
       "path": "plugins/apple-health",
       "enabled": true,
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "path": "plugins/health",

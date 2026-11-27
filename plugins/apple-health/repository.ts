@@ -3,6 +3,7 @@ import type { AppleHealthConnection, AppleHealthStatus } from '@athlete-panel/co
 import { digest, randomToken } from '../../packages/host/src/crypto';
 import {
   connection,
+  isIsolatedTestInstance,
   readTransaction,
   transaction,
   type Transaction,
@@ -25,14 +26,19 @@ type ConnectionRow = PairingRow & {
 
 function uploadUrl() {
   const origin = process.env.APP_ORIGIN;
-  if (!origin || !URL.canParse(origin)) return null;
+  if (!origin || !URL.canParse(uploadPath, origin)) return null;
   const url = new URL(uploadPath, origin);
-  if (
-    url.protocol === 'https:' ||
-    (url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))
-  )
-    return url.href;
-  return null;
+  if (url.username || url.password) return null;
+  const host = url.hostname.toLowerCase().replace(/\.$/, '');
+  const loopback =
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    /^127\.\d+\.\d+\.\d+$/.test(host) ||
+    host === '[::1]' ||
+    /^\[::ffff:7f[0-9a-f]{2}:/.test(host);
+  if (loopback)
+    return ['http:', 'https:'].includes(url.protocol) && isIsolatedTestInstance() ? url.href : null;
+  return url.protocol === 'https:' && host !== '0.0.0.0' && host !== '[::]' ? url.href : null;
 }
 
 function pairingStatus(row?: PairingRow): AppleHealthConnection {
@@ -58,11 +64,16 @@ export async function connectionStatus(tx: Transaction): Promise<AppleHealthStat
     from apple_health.connection where singleton`;
   const sources = await tx<{ name: string; excluded: boolean }[]>`
     select name,excluded from apple_health.sources order by name`;
+  const issues = await tx<{ message: string; count: number }[]>`
+    select issue.value as message, (count(*) over())::int as count
+    from apple_health.workouts cross join lateral jsonb_each_text(issues) as issue
+    where issues <> '{}' order by sent_at desc, uuid, issue.key limit 10`;
   return {
     ...pairingStatus(row),
     importedFrom: row?.imported_from ?? null,
     importedTo: row?.imported_to ?? null,
     lastBatch: row?.last_batch ?? null,
+    unresolvedIssues: { count: issues[0]?.count ?? 0, messages: issues.map((row) => row.message) },
     error: row?.last_error ?? null,
     sources: [...sources],
   };
@@ -108,10 +119,11 @@ export async function requireUploadToken(hash: string, tx?: Transaction) {
 export async function updateImportStatus(
   tx: Transaction,
   batch: BatchResult,
+  receivedWorkout: boolean,
   from: string | null,
   to: string | null,
 ) {
-  await tx`update apple_health.connection set last_upload_at=now(),
+  await tx`update apple_health.connection set last_upload_at=case when ${receivedWorkout} then now() else last_upload_at end,
     imported_from=least(imported_from,${from}::date), imported_to=greatest(imported_to,${to}::date),
     last_batch=${tx.json(batch)},last_error=null where singleton`;
 }
@@ -128,19 +140,44 @@ export type WorkoutIdentity = {
   activity_id: string;
   sent_at: Date;
   deleted: boolean;
+  recording_source: string | null;
+  issues: Partial<Record<'sport' | 'route' | 'invalid', string>>;
 };
 
 export async function identities(tx: Transaction, uuids: string[]) {
   if (!uuids.length) return new Map<string, WorkoutIdentity>();
   const rows = await tx<WorkoutIdentity[]>`
-    select uuid,activity_id,sent_at,deleted from apple_health.workouts where uuid=any(${uuids}::uuid[])`;
+    select uuid,activity_id,sent_at,deleted,recording_source,issues
+    from apple_health.workouts where uuid=any(${uuids}::uuid[])`;
   return new Map(rows.map((row) => [row.uuid, row]));
+}
+
+export async function rememberUnidentifiedDeletions(tx: Transaction, uuids: string[]) {
+  if (uuids.length)
+    await tx`insert into apple_health.deleted_samples (uuid_hash)
+      select unnest(${uuids.map(digest)}::text[]) on conflict do nothing`;
+}
+
+export async function previouslyDeleted(tx: Transaction, uuids: string[]) {
+  const byHash = new Map(uuids.map((uuid) => [digest(uuid), uuid]));
+  const deleted = new Set<string>();
+  if (byHash.size) {
+    const rows = await tx<
+      { uuid_hash: string }[]
+    >`select uuid_hash from apple_health.deleted_samples
+      where uuid_hash=any(${[...byHash.keys()]}::text[])`;
+    for (const row of rows) deleted.add(byHash.get(row.uuid_hash)!);
+  }
+  return deleted;
 }
 
 export async function saveIdentities(tx: Transaction, records: WorkoutIdentity[]) {
   for (let start = 0; start < records.length; start += 200) {
-    const rows = records.slice(start, start + 200);
-    await tx`insert into apple_health.workouts ${tx(rows, 'uuid', 'activity_id', 'sent_at', 'deleted')}
-      on conflict(uuid) do update set sent_at=excluded.sent_at,deleted=excluded.deleted`;
+    const rows = records
+      .slice(start, start + 200)
+      .map((record) => ({ ...record, issues: tx.json(record.issues) }));
+    await tx`insert into apple_health.workouts ${tx(rows, 'uuid', 'activity_id', 'sent_at', 'deleted', 'recording_source', 'issues')}
+      on conflict(uuid) do update set sent_at=excluded.sent_at,deleted=excluded.deleted,
+        recording_source=excluded.recording_source,issues=excluded.issues`;
   }
 }

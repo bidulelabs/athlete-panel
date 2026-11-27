@@ -1,5 +1,6 @@
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
+import { canLinkSport } from '@athlete-panel/contracts';
 import { normalizeWorkout } from '../../plugins/apple-health/normalize';
 import { parseUpload, readUpload } from '../../plugins/apple-health/protocol';
 import { parseTrack } from '../../plugins/race-analysis/parse';
@@ -96,6 +97,25 @@ describe('Sync for Health v1', () => {
       dateSource: 'inferred',
       sportResolution: 'unresolved',
     });
+  });
+
+  it.each([
+    ['swim_bike_run', 'multi_sport', null],
+    ['multisport', 'multi_sport', null],
+    ['pilates', 'fitness_equipment', 'pilates'],
+    ['elliptical', 'fitness_equipment', 'elliptical'],
+    ['traditional_strength_training', 'fitness_equipment', 'strength_training'],
+    ['mixed_cardio', 'fitness_equipment', 'indoor_cardio'],
+    ['other', 'other', null],
+  ])('matches the phone workout type %s to a planned session', (attivita, sport, sportSubgroup) => {
+    const activity = normalizeWorkout(appleWorkout(1, { attivita }), 'UTC')!.facts;
+    expect(activity).toMatchObject({
+      sport,
+      sportSubgroup,
+      sportResolution: 'resolved',
+      appleHealth: { workoutType: attivita },
+    });
+    expect(canLinkSport({ sport: sport!, sportSubgroup }, activity)).toBe(true);
   });
 
   it('round-trips the GPX with elevation and time while keeping route-derived ascent separate', () => {

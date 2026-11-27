@@ -1,6 +1,6 @@
 'use client';
 
-import { sportSelectionLabel } from '@athlete-panel/contracts';
+import { activityProviderLabel, sportSelectionLabel } from '@athlete-panel/contracts';
 import { useId, useState, type ReactNode } from 'react';
 import {
   ChevronDown,
@@ -682,7 +682,10 @@ export function WeeklySummary({
                               day: 'numeric',
                               month: 'short',
                             })}{' '}
-                            · {session.kind === 'activity' ? 'Garmin' : 'Manual'}
+                            ·{' '}
+                            {session.source === 'manual'
+                              ? 'Manual'
+                              : activityProviderLabel(session.source)}
                           </small>
                         </span>
                         <span className="week-session-duration">

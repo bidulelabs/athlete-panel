@@ -25478,6 +25478,29 @@
                 "additionalProperties": false
               }
             },
+            "unresolvedIssues": {
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "messages": {
+                  "maxItems": 10,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 400
+                  }
+                }
+              },
+              "required": [
+                "count",
+                "messages"
+              ],
+              "additionalProperties": false
+            },
             "lastBatch": {
               "anyOf": [
                 {
@@ -25546,6 +25569,7 @@
             "importedFrom",
             "importedTo",
             "sources",
+            "unresolvedIssues",
             "lastBatch",
             "error"
           ],
@@ -25652,6 +25676,29 @@
                     "additionalProperties": false
                   }
                 },
+                "unresolvedIssues": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "messages": {
+                      "maxItems": 10,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 400
+                      }
+                    }
+                  },
+                  "required": [
+                    "count",
+                    "messages"
+                  ],
+                  "additionalProperties": false
+                },
                 "lastBatch": {
                   "anyOf": [
                     {
@@ -25720,6 +25767,7 @@
                 "importedFrom",
                 "importedTo",
                 "sources",
+                "unresolvedIssues",
                 "lastBatch",
                 "error"
               ],
@@ -25825,6 +25873,29 @@
                 "additionalProperties": false
               }
             },
+            "unresolvedIssues": {
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "messages": {
+                  "maxItems": 10,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 400
+                  }
+                }
+              },
+              "required": [
+                "count",
+                "messages"
+              ],
+              "additionalProperties": false
+            },
             "lastBatch": {
               "anyOf": [
                 {
@@ -25893,6 +25964,7 @@
             "importedFrom",
             "importedTo",
             "sources",
+            "unresolvedIssues",
             "lastBatch",
             "error"
           ],
@@ -26004,6 +26076,29 @@
                 "additionalProperties": false
               }
             },
+            "unresolvedIssues": {
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "messages": {
+                  "maxItems": 10,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 400
+                  }
+                }
+              },
+              "required": [
+                "count",
+                "messages"
+              ],
+              "additionalProperties": false
+            },
             "lastBatch": {
               "anyOf": [
                 {
@@ -26072,6 +26167,7 @@
             "importedFrom",
             "importedTo",
             "sources",
+            "unresolvedIssues",
             "lastBatch",
             "error"
           ],

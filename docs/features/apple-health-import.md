@@ -10,7 +10,7 @@ The owner approved implementation of the issue plan on 2026-11-27. The plan star
 
 ### Connect the iPhone
 
-1. Select **Add Apple Health** during welcome setup or in **Settings → Activity sources**. Select **Create upload token** and copy the upload URL and token. The URL comes from the instance’s configured HTTPS origin. Apple Health appears in the sidebar after it is chosen or paired.
+1. Select **Add Apple Health** during welcome setup or in **Settings → Activity sources**. Set the instance’s `APP_ORIGIN` to an HTTPS address the iPhone can reach. A localhost or loopback address on the phone points back to the phone itself. Select **Create upload token** and copy the URL and token. Apple Health appears in the sidebar after it is chosen or paired.
 2. Install Sync for Health on an iPhone with iOS 26 or later. Enter the URL and token in the app’s settings, enable **Workouts**, and run **Test connection**. Athlete Panel displays the connection test and last workout upload separately. [Sync for Health](https://apps.apple.com/app/sync-for-health/id6819742018)
 3. Run **Sync now** with GPS workout routes off for the initial history upload. Enable GPS workout routes afterward to import routes for new workouts. The iPhone schedules background delivery and can retry after it unlocks.
 
@@ -24,7 +24,11 @@ Activities record their source, sport, date, duration, distance, recorded ascent
 
 Workouts arrive immediately. Under **Recording sources**, exclude a source to remove its Apple Health copies from the calendar and totals. Including it again lets the phone restore prior workouts on a history resend. Link a workout through the existing planned-session picker. The owner confirms Apple links because the phone confirms individual batches. A linked pair counts once.
 
-Apple deletions and source exclusions return affected linked sessions to planned. **Training plans → Recent changes** retains the owner’s notes and effort. Compatible corrections preserve links and their annotations. A changed sport that conflicts with a link appears in the import issues with instructions to unlink and resend.
+Apple deletions and source exclusions return affected linked sessions to planned. Open **Training plans → Recent changes → View details** to read the previous completion status, notes, reason and perceived effort. Compatible corrections preserve the link and annotations. Calendar’s weekly recorded sessions label workouts with their recording provider. Multisport, Pilates, elliptical and other recognized workout types can match sessions in the same sport or subgroup.
+
+**Unresolved workout issues** keeps corrections and route problems visible across uploads. A sport change that conflicts with a link identifies the planned session to unlink before resending. A missing or invalid route can be corrected by resending a valid route. Source exclusion or deletion clears the affected issues. **Issues in last batch** also reports malformed rows whose workout ID could not be read.
+
+A deletion takes effect even if the workout arrives later in a history resend. The phone also reports deletions for other HealthKit sample types. The receiver keeps a fingerprint for an unidentified deletion. Those notices leave the last workout upload and batch summary intact.
 
 **Download GPX** appears in activity details when a route is available. It preserves coordinates, timestamps and available point elevations for use in Race Analysis. The activity detail labels smoothed climbing as an estimate. Weekly elevation totals use the watch’s recorded ascent.
 

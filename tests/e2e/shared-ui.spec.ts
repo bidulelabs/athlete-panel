@@ -59,6 +59,11 @@ test('shared controls and all app pages retain usable themes, navigation and key
   );
   await tabs.getByRole('tab', { name: 'Profile & zones' }).focus();
   await page.keyboard.press('ArrowRight');
+  await expect(tabs.getByRole('tab', { name: 'Activity sources' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await page.keyboard.press('ArrowRight');
   await expect(tabs.getByRole('tab', { name: 'Nutrition' })).toHaveAttribute(
     'aria-selected',
     'true',

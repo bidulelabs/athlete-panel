@@ -2,6 +2,15 @@ import postgres, { type Sql, type TransactionSql } from 'postgres';
 import { AppError } from './errors';
 
 const globals = globalThis as unknown as { athletePanelSql?: Sql };
+export function isIsolatedTestInstance(): boolean {
+  const database = process.env.DATABASE_URL;
+  if (process.env.ATHLETE_PANEL_E2E !== 'true' || !database || !URL.canParse(database))
+    return false;
+  const url = new URL(database);
+  return (
+    ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) && url.pathname.endsWith('_test')
+  );
+}
 export function connection(): Sql {
   if (!process.env.DATABASE_URL)
     throw new AppError('database_unconfigured', 'DATABASE_URL is required.', 503);

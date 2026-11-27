@@ -94,12 +94,12 @@ export const registry = [
   {
     "path": "plugins/activity-records",
     "enabled": true,
-    "version": "2.2.0",
+    "version": "2.2.1",
     "manifest": {
       "id": "activity-records",
       "name": "Activity history",
       "description": "Normalized activities and health history",
-      "version": "2.2.0",
+      "version": "2.2.1",
       "hostApi": "^1.1.0",
       "dependencies": {
         "training": "^2.0.0"
@@ -126,7 +126,8 @@ export const registry = [
         "migrations/001-initial.sql",
         "migrations/002-identity-index.sql",
         "migrations/003-history-reads.sql",
-        "migrations/004-activity-routes.sql"
+        "migrations/004-activity-routes.sql",
+        "migrations/005-apple-workout-sports.sql"
       ],
       "services": [],
       "jobs": [],
@@ -230,12 +231,12 @@ export const registry = [
   {
     "path": "plugins/apple-health",
     "enabled": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "manifest": {
       "id": "apple-health",
       "name": "Apple Health import",
       "description": "Apple Watch workouts sent from Sync for Health",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "hostApi": "^1.4.0",
       "dependencies": {
         "activity-records": "^2.2.0",
@@ -264,7 +265,8 @@ export const registry = [
       ],
       "schema": "apple_health",
       "migrations": [
-        "migrations/001-initial.sql"
+        "migrations/001-initial.sql",
+        "migrations/002-import-state.sql"
       ],
       "services": [],
       "jobs": [],
@@ -459,4 +461,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="25d63700ef77a63d367da14838613779ce89a1e385d050f6c2332044cb7d1c68";
+export const schemaSignature="81d05f8382dc9ba9d48bfacd5cf1df1670b6874d2a2a58772042b938d4c4b3fa";

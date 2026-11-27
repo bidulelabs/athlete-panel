@@ -33,3 +33,11 @@ A Chromium review reproduced offset Copy buttons, a shrinking URL field when cop
 Compared the built app before and after the fixes with the same synthetic fixtures at 1440 × 900, 390 × 700 and 320 × 620. The fields and Copy buttons shared the same top and bottom edges. Copy feedback kept the field width and button position stable. The 320-pixel setup kept Continue in view. Keyboard focus moved to the setup heading and the new token’s Copy button. Denied clipboard access selected the complete URL. The activity-link check confirmed the idle button state, Apple-specific wording and linked workout metrics.
 
 The production build, formatting, lint, generated-file, boundary, strict type and documentation checks passed. All 13 focused onboarding and Apple Health integration tests and 24 desktop and mobile browser cases passed. Both themes and the 320-pixel pairing controls were exercised with synthetic data.
+
+## PR review fixes
+
+The importer records fingerprints for early deletions and keeps unresolved issues with their workout across batches. Pairing requires an HTTPS address the iPhone can reach. Recent changes shows previous completion annotations for both deletions and source exclusions. The week summary identifies each recording provider, and Settings keyboard navigation follows the Activity sources tab.
+
+A PostgreSQL 17 upgrade rehearsal started from main with synthetic Garmin configuration, a sync cursor, activities, health records and planned workouts. The previous PR revision then imported Multisport, Pilates, elliptical and an unknown workout type with routes. After the two new migrations, the restricted runtime role verified the Garmin data, stable Apple activity IDs and GPX downloads. The three recognized sports became matchable and the unknown sport kept its original identity. A separate upgrade cleared the false workout receipt for an instance that had received only an unrelated deletion.
+
+All 28 focused desktop and mobile Chromium scenarios passed. They covered pairing with synthetic phone requests, workout source labels, persistent correction warnings, previous completion annotations, source exclusion and keyboard navigation.

@@ -66,14 +66,27 @@ function ImportStatus({ status, zone }: { status: AppleHealthStatus; zone?: stri
       )}
       {status.lastBatch?.issueCount ? (
         <details>
-          <summary>{status.lastBatch.issueCount} import issues</summary>
+          <summary>Issues in last batch ({status.lastBatch.issueCount})</summary>
           <ul>
-            {status.lastBatch.issues.map((issue) => (
-              <li key={issue}>{issue}</li>
+            {status.lastBatch.issues.map((issue, index) => (
+              <li key={index}>{issue}</li>
             ))}
           </ul>
         </details>
       ) : null}
+      {status.unresolvedIssues.count > 0 && (
+        <details>
+          <summary>Unresolved workout issues ({status.unresolvedIssues.count})</summary>
+          <ul>
+            {status.unresolvedIssues.messages.map((message, index) => (
+              <li key={index}>{message}</li>
+            ))}
+          </ul>
+          {status.unresolvedIssues.count > status.unresolvedIssues.messages.length && (
+            <p>Showing the 10 most recent issues.</p>
+          )}
+        </details>
+      )}
     </section>
   );
 }

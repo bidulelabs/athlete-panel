@@ -93,7 +93,7 @@ export function PhoneSetup({
       {status.uploadUrl ? (
         <CopyValue label="Upload URL" value={status.uploadUrl} buttonLabel="Copy URL" />
       ) : (
-        <p>Configure the instance’s HTTPS address to generate an upload URL.</p>
+        <p>Configure an HTTPS address your iPhone can reach to generate an upload URL.</p>
       )}
       <div className="apple-health-actions">
         <Button disabled={busy || !status.uploadUrl} onClick={onIssue}>

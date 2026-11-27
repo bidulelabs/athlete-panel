@@ -29,6 +29,7 @@ export type TrainingSummary = {
 };
 export type RecordedSession = {
   kind: 'activity' | 'workout';
+  source: Completion['source'];
   id: string;
   title: string;
   sport: string | null;
@@ -235,6 +236,7 @@ export function summarizeRange(
   const recordedSessions: RecordedSession[] = [
     ...activities.map((activity) => ({
       kind: 'activity' as const,
+      source: activity.provider,
       id: activity.id,
       title: activity.title || 'Imported activity',
       sport: activity.sport,
@@ -245,6 +247,7 @@ export function summarizeRange(
     })),
     ...manual.map((workout) => ({
       kind: 'workout' as const,
+      source: 'manual' as const,
       id: workout.id,
       title: workout.title,
       sport: workout.sport,

@@ -1,4 +1,10 @@
-import type { AuditEntry, EntityChange, Plan } from '@athlete-panel/contracts';
+import {
+  activityProviderLabel,
+  type AuditEntry,
+  type Completion,
+  type EntityChange,
+  type Plan,
+} from '@athlete-panel/contracts';
 import { dateLabel, distance, duration } from '@athlete-panel/ui';
 
 const labels: Record<string, string> = {
@@ -65,6 +71,7 @@ function valueText(
   if (typeof value === 'object') return null;
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (typeof value === 'number') {
+    if (key === 'rpe') return `${value} / 10`;
     if (key.endsWith('Seconds')) return duration(value);
     if (key === 'distanceMeters') return distance(value, units);
     if (key === 'plannedElevationGainMeters')
@@ -72,6 +79,37 @@ function valueText(
   }
   if (/Date$/.test(key) || key === 'date') return dateLabel(String(value));
   return String(value);
+}
+
+function completionFields(
+  before: Completion | null,
+  after: Completion | null,
+  units: 'metric' | 'imperial',
+  plans: Plan[],
+) {
+  const fields = [
+    ['status', 'Completion'],
+    ['performedDate', 'Performed date'],
+    ['source', 'Completion source'],
+    ['durationSeconds', 'Recorded duration'],
+    ['distanceMeters', 'Recorded distance'],
+    ['rpe', 'Perceived effort'],
+    ['reason', 'Completion reason'],
+    ['notes', 'Completion notes'],
+    ['activityId', 'Linked activity'],
+    ['linkMethod', 'Link method'],
+  ] as const;
+  function describe(completion: Completion | null, key: (typeof fields)[number][0]) {
+    if (key === 'status') return completion ? readable(completion.status) : 'Planned';
+    if (key === 'source' && completion)
+      return completion.source === 'manual' ? 'Manual' : activityProviderLabel(completion.source);
+    return valueText(completion?.[key], key, units, plans);
+  }
+  return fields.flatMap(([key, label]) => {
+    const previous = describe(before, key);
+    const next = describe(after, key);
+    return previous === next ? [] : [{ label, before: previous, after: next }];
+  });
 }
 
 export function historyFields(change: EntityChange, units: 'metric' | 'imperial', plans: Plan[]) {
@@ -83,11 +121,23 @@ export function historyFields(change: EntityChange, units: 'metric' | 'imperial'
       ? true
       : ['startDate', 'schedule', 'sport', 'durationSeconds'].includes(key),
   );
-  const rows = keys.map((key) => ({
-    label: key === 'notes' && change.entity === 'workout' ? 'Workout description' : readable(key),
-    before: valueText(before[key], key, units, plans),
-    after: valueText(after[key], key, units, plans),
-  }));
+  const rows = keys.flatMap((key) => {
+    if (key === 'completion' && change.entity === 'workout')
+      return completionFields(
+        change.before && 'completion' in change.before ? change.before.completion : null,
+        change.after && 'completion' in change.after ? change.after.completion : null,
+        units,
+        plans,
+      );
+    return [
+      {
+        label:
+          key === 'notes' && change.entity === 'workout' ? 'Workout description' : readable(key),
+        before: valueText(before[key], key, units, plans),
+        after: valueText(after[key], key, units, plans),
+      },
+    ];
+  });
   if (change.beforeEffectiveDate !== change.afterEffectiveDate)
     rows.unshift({
       label: 'Calendar date',

@@ -18,9 +18,11 @@ import {
 } from '../activity-records/public/server';
 import { reconcileImportedCompletion } from '../training/public/server';
 import { normalizeWorkout } from './normalize';
-import type { WorkoutBatch } from './protocol';
+import { workoutUuid, type WorkoutBatch } from './protocol';
 import {
   identities,
+  previouslyDeleted,
+  rememberUnidentifiedDeletions,
   saveIdentities,
   updateImportStatus,
   type BatchResult,
@@ -98,11 +100,18 @@ function batchIssues(result: BatchResult, issue: string) {
 }
 
 function receivedWorkouts(batch: WorkoutBatch, zone: string, report: BatchResult) {
-  const workouts = new Map<string, { workout: NormalizedWorkout; index: number }>();
+  const workouts = new Map<string, NormalizedWorkout | null>();
   for (const [index, raw] of batch.allenamenti.entries()) {
     const workout = normalizeWorkout(raw, zone);
-    if (workout) workouts.set(workout.uuid, { workout, index });
-    else batchIssues(report, `Workout ${index + 1} has an invalid ID, sport, or date.`);
+    if (workout) workouts.set(workout.uuid, workout);
+    else {
+      batchIssues(report, `Workout ${index + 1} has an invalid ID, sport, or date.`);
+      const uuid =
+        raw && typeof raw === 'object' && 'uuid' in raw
+          ? workoutUuid.safeParse(raw.uuid).data
+          : null;
+      if (uuid && !workouts.has(uuid)) workouts.set(uuid, null);
+    }
   }
   return workouts;
 }
@@ -120,7 +129,6 @@ async function observeSources(tx: Transaction, names: string[]) {
 
 function stageWorkoutUpdates(
   workouts: ReturnType<typeof receivedWorkouts>,
-  deleted: ReadonlySet<string>,
   sentAt: Date,
   previousRecords: {
     existing: ReadonlyMap<string, WorkoutIdentity>;
@@ -136,36 +144,47 @@ function stageWorkoutUpdates(
   const retracted: Activity[] = [];
   const tracks: { id: string; gpx: string }[] = [];
   const dates: string[] = [];
-  for (const [uuid, { workout, index }] of workouts) {
+  for (const [uuid, workout] of workouts) {
     const identity = existing.get(uuid);
-    if (deleted.has(uuid) || identity?.deleted || (identity && identity.sent_at > sentAt)) continue;
-    if (excludedSources.has(workout.facts.appleHealth.recordingSource)) {
+    const id = identity?.activity_id ?? randomUUID();
+    const record: WorkoutIdentity = {
+      uuid,
+      activity_id: id,
+      sent_at: sentAt,
+      deleted: false,
+      recording_source:
+        workout?.facts.appleHealth.recordingSource ?? identity?.recording_source ?? null,
+      issues: { ...identity?.issues },
+    };
+    touched.push(record);
+    if (record.recording_source !== null && excludedSources.has(record.recording_source)) {
       report.excluded++;
       // A corrected source label may put a previously visible activity in an excluded source.
-      const prior = identity ? stored.get(identity.activity_id) : null;
+      const prior = stored.get(id);
       if (prior && !prior.deleted) retracted.push(prior.activity);
-      if (identity) touched.push({ ...identity, sent_at: sentAt });
+      record.issues = {};
       continue;
     }
-    const id = identity?.activity_id ?? randomUUID();
+    if (!workout) {
+      record.issues.invalid = `Workout ${uuid} has an invalid sport or date. Correct it on the iPhone and resend history.`;
+      continue;
+    }
+    delete record.issues.invalid;
     const previous = stored.get(id);
     const before = previous?.deleted === false ? previous.activity : null;
     const next = updateActivity(workout, id, previous);
     const planned = linked.get(id);
     if (planned && !canLinkSport(planned, next)) {
-      batchIssues(
-        report,
-        `Workout ${index + 1} changed sport. Unlink the planned workout and resend history from the iPhone.`,
-      );
+      record.issues.sport = `The workout linked to “${planned.title.slice(0, 120)}” on ${next.localDate} changed sport. Unlink the planned workout and resend history from the iPhone.`;
+      batchIssues(report, record.issues.sport);
       continue;
     }
-    if (workout.invalidRoute)
-      batchIssues(
-        report,
-        `Workout ${index + 1} had an invalid or oversized GPS route. The workout summary is available.`,
-      );
+    delete record.issues.sport;
+    if (workout.invalidRoute) {
+      record.issues.route = `${next.title} on ${next.localDate} had an invalid or oversized GPS route. Resend the route from the iPhone.`;
+      batchIssues(report, record.issues.route);
+    } else if (workout.route) delete record.issues.route;
     dates.push(next.localDate);
-    touched.push({ uuid, activity_id: id, sent_at: sentAt, deleted: false });
     if (workout.route) tracks.push({ id, gpx: workout.route.gpx });
     if (before && canonical(before) === canonical(next)) continue;
     const after = before ? { ...next, revision: before.revision + 1 } : next;
@@ -184,9 +203,33 @@ export async function importWorkouts(tx: Transaction, batch: WorkoutBatch) {
   if (!batch.allenamenti.length && !batch.eliminati.length) return;
   const report: BatchResult = { imported: 0, removed: 0, excluded: 0, issues: [], issueCount: 0 };
   const sentAt = new Date(batch.inviato);
-  const workouts = receivedWorkouts(batch, (await loadProfile(tx))?.timezone ?? 'UTC', report);
+  const zone = batch.allenamenti.length ? (await loadProfile(tx))?.timezone : null;
+  const workouts = receivedWorkouts(batch, zone ?? 'UTC', report);
   const deleted = new Set(batch.eliminati);
   const existing = await identities(tx, [...new Set([...workouts.keys(), ...deleted])]);
+  const unidentified = [...deleted].filter((uuid) => !existing.has(uuid) && !workouts.has(uuid));
+  await rememberUnidentifiedDeletions(tx, unidentified);
+  for (const uuid of unidentified) deleted.delete(uuid);
+  const blocked = await previouslyDeleted(
+    tx,
+    [...workouts.keys()].filter((uuid) => !existing.has(uuid)),
+  );
+  const sources = new Set<string>();
+  for (const [uuid, workout] of workouts) {
+    const identity = existing.get(uuid);
+    if (
+      blocked.has(uuid) ||
+      deleted.has(uuid) ||
+      identity?.deleted ||
+      (identity && identity.sent_at > sentAt)
+    )
+      workouts.delete(uuid);
+    else if (workout) sources.add(workout.facts.appleHealth.recordingSource);
+  }
+  if (!workouts.size && !deleted.size) {
+    if (report.issueCount) await updateImportStatus(tx, report, false, null, null);
+    return;
+  }
   const stored = await appleActivitiesById(
     tx,
     [...existing.values()].map((row) => row.activity_id),
@@ -194,14 +237,9 @@ export async function importWorkouts(tx: Transaction, batch: WorkoutBatch) {
   // Only load the linked records in the workspace. Backfill is not a full activity-history read.
   const state = await loadWorkspace(tx, undefined, { records: 'linked' });
   const linked = linkedWorkouts(state.workouts);
-  const excludedSources = await observeSources(tx, [
-    ...new Set(
-      [...workouts.values()].map(({ workout }) => workout.facts.appleHealth.recordingSource),
-    ),
-  ]);
+  const excludedSources = await observeSources(tx, [...sources]);
   const { changed, touched, retracted, tracks, dates } = stageWorkoutUpdates(
     workouts,
-    deleted,
     sentAt,
     { existing, stored, linked, excludedSources },
     report,
@@ -210,12 +248,18 @@ export async function importWorkouts(tx: Transaction, batch: WorkoutBatch) {
   const removed: Activity[] = [];
   for (const uuid of deleted) {
     const identity = existing.get(uuid);
-    // Deletion notices can cover non-workout samples. Record only known workout IDs.
-    if (identity?.deleted || (!identity && !workouts.has(uuid))) continue;
+    if (identity?.deleted) continue;
     const id = identity?.activity_id ?? randomUUID();
     const previous = stored.get(id);
     if (previous && !previous.deleted) removed.push(previous.activity);
-    touched.push({ uuid, activity_id: id, sent_at: sentAt, deleted: true });
+    touched.push({
+      uuid,
+      activity_id: id,
+      sent_at: sentAt,
+      deleted: true,
+      recording_source: null,
+      issues: {},
+    });
   }
   report.removed = removed.length;
   await persistRetractions(tx, retracted, 'excluded', linked);
@@ -227,5 +271,6 @@ export async function importWorkouts(tx: Transaction, batch: WorkoutBatch) {
   if (changed.length || removed.length || retracted.length)
     await loadWorkspace(tx, undefined, { records: 'linked' });
   dates.sort();
-  await updateImportStatus(tx, report, dates[0] ?? null, dates.at(-1) ?? null);
+  if (touched.length || report.issueCount)
+    await updateImportStatus(tx, report, sources.size > 0, dates[0] ?? null, dates.at(-1) ?? null);
 }

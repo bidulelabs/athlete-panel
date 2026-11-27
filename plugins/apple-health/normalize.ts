@@ -1,6 +1,7 @@
 import {
   appleRecordingSourceSchema,
   dateSchema,
+  sportGroup,
   sportSchema,
   sportTypeLabel,
   timezoneSchema,
@@ -33,27 +34,23 @@ const heartSchema = z.object({
     })
     .optional(),
 });
-const sports: Record<string, [string, string?]> = {
-  walking: ['walking'],
-  hiking: ['hiking'],
-  swimming: ['swimming'],
-  traditional_strength_training: ['fitness_equipment', 'strength_training'],
-  functional_strength_training: ['fitness_equipment', 'strength_training'],
-  yoga: ['fitness_equipment', 'yoga'],
-  mixed_cardio: ['fitness_equipment', 'indoor_cardio'],
-  multisport: ['multi_sport'],
-};
-
+const sportAliases = new Map([
+  ['traditional_strength_training', 'strength_training'],
+  ['functional_strength_training', 'strength_training'],
+  ['mixed_cardio', 'indoor_cardio'],
+  ['swim_bike_run', 'multi_sport'],
+  ['multisport', 'multi_sport'],
+]);
 function sportSelection(type: string, indoor: boolean) {
-  const match = (() => {
-    if (type === 'running') return ['running', indoor ? 'indoor_running' : null] as const;
-    if (type === 'cycling') return ['cycling', indoor ? 'indoor_cycling' : null] as const;
-    return Object.hasOwn(sports, type) ? sports[type] : undefined;
-  })();
+  const key =
+    indoor && (type === 'running' || type === 'cycling')
+      ? `indoor_${type}`
+      : (sportAliases.get(type) ?? type);
+  const group = sportGroup(key)?.typeKey;
   return {
-    sport: match?.[0] ?? type,
-    sportSubgroup: match?.[1] ?? null,
-    sportResolution: match ? ('resolved' as const) : ('unresolved' as const),
+    sport: group ?? type,
+    sportSubgroup: group && group !== key ? key : null,
+    sportResolution: group ? ('resolved' as const) : ('unresolved' as const),
   };
 }
 

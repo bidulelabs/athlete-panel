@@ -1,0 +1,33 @@
+{
+  "id": "apple-health",
+  "name": "Apple Health import",
+  "description": "Apple Watch workouts sent from Sync for Health",
+  "version": "1.0.0",
+  "hostApi": "^1.4.0",
+  "dependencies": {
+    "activity-records": "^2.2.0",
+    "training": "^2.10.0"
+  },
+  "routes": [
+    {
+      "path": "/apple-health",
+      "title": "Apple Health",
+      "icon": "HeartPulse"
+    }
+  ],
+  "migrations": ["migrations/001-initial.sql"],
+  "services": [],
+  "jobs": [],
+  "capabilities": ["receive:apple-health-workouts"],
+  "schema": "apple_health",
+  "server": "server.ts",
+  "client": "client.tsx",
+  "slots": [
+    {
+      "id": "connection",
+      "kind": "onboarding",
+      "title": "Apple Health connection"
+    }
+  ],
+  "public": { "server": "public/server.ts" }
+}

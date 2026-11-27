@@ -1,6 +1,6 @@
 'use client';
 
-import { isRest, type Workout } from '@athlete-panel/contracts';
+import { activityProviderLabel, isRest, type Workout } from '@athlete-panel/contracts';
 import { Circle, CircleCheck, CircleDashed, CircleMinus, Link2, Pause } from 'lucide-react';
 import './completion-state.css';
 
@@ -25,10 +25,10 @@ export function WorkoutSource({ workout }: { workout: Workout }) {
   if (!workout.completion || workout.completion.status === 'skipped') return null;
   return (
     <span className="workout-source">
-      {workout.completion.source === 'garmin' ? (
+      {workout.completion.source !== 'manual' ? (
         <>
           <Link2 size={14} aria-hidden="true" />
-          Garmin linked
+          {activityProviderLabel(workout.completion.source)} linked
         </>
       ) : (
         'Logged manually'

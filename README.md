@@ -6,9 +6,9 @@ Athlete Panel brings training plans, activity history and everyday context into 
 
 Plan your sessions, import what you actually did, review your week, and adjust what comes next. Your instance stores your training and health records in PostgreSQL under your control.
 
-Start with manual planning. Add Garmin imports when you want them. Connect an external AI agent to propose changes that **you review and apply**.
+Start with manual planning and add workouts from Garmin or Apple Health. Connect an external AI agent to propose changes that **you review and apply**.
 
-**[Fresh install on Linux AMD64](docs/development.md#private-server-installation)** · [Try it locally](#try-it-locally) · [Upgrade an existing server](docs/development.md#coordinated-upgrades-and-plugin-activation) · [Garmin](#garmin-integration) · [AI agents](#ai-agent-integration) · [Contributing](#development-and-contributions) · [Documentation](#documentation)
+**[Fresh install on Linux AMD64](docs/development.md#private-server-installation)** · [Try it locally](#try-it-locally) · [Upgrade an existing server](docs/development.md#coordinated-upgrades-and-plugin-activation) · [Garmin](#garmin-integration) · [Apple Health](#apple-health-integration) · [AI agents](#ai-agent-integration) · [Contributing](#development-and-contributions) · [Documentation](#documentation)
 
 The docs on `main` describe the development version. Find the docs for your installed release and see what’s coming next in the [changelog](docs/changelog.md).
 
@@ -18,7 +18,7 @@ The docs on `main` describe the development version. Find the docs for your inst
 
 Training plans, activity history and day-to-day context belong together. Athlete Panel brings them into a private workspace you can run on your own infrastructure, with no required author-operated backend, hosted database or model subscription.
 
-Self-hosting lets you choose where records are stored, when to upgrade, how to back up, and which integrations receive access. You also take responsibility for maintaining the server and protecting its data. Garmin remains the source of imported records; an optional external agent uses the model service you choose.
+Self-hosting lets you choose where records are stored, when to upgrade, how to back up, and which integrations receive access. You also take responsibility for maintaining the server and protecting its data. Garmin supplies activity and daily health records. The Sync for Health iPhone app sends Apple Watch workouts to your instance. An optional external agent uses the model service you choose.
 
 ## Sports and training styles
 
@@ -110,7 +110,7 @@ Open **[http://127.0.0.1:3000](http://127.0.0.1:3000)** and sign in with your ch
 
 Press **Ctrl+C** to stop the web app and worker. PostgreSQL stays running and its Docker volume retains your data. Run `pnpm run local` again next time; you do not need to repeat setup. The worker must stay running for imports and automatic synchronization; the browser tab can be closed.
 
-After your first sign-in, welcome setup helps you confirm your timezone, units and first day of the week, then optionally connect Garmin. Imports continue in the background. You can close setup and resume it from Settings; existing installations can choose **Run welcome setup** there.
+After your first sign-in, welcome setup confirms your timezone, units and first day of the week. Choose Garmin, Apple Health, both, or skip to the calendar. Manage providers later under **Settings → Activity sources**.
 
 These commands target macOS/Linux terminals; Windows users need WSL2 with Docker integration. See [local setup troubleshooting](docs/development.md#local-setup-troubleshooting) for existing configuration, occupied ports and interrupted startup. The [development and operations guide](docs/development.md) owns advanced commands and recovery procedures.
 
@@ -147,7 +147,7 @@ Before an upgrade, enter maintenance, create and verify a matched backup, stop t
 Athlete Panel uses **Garmin's official Garmin Connect Personal API**, which Garmin provides for individuals accessing their own data. This is distinct from Garmin's commercial, multi-user developer integrations. The application uses a personal API key; it does not scrape Garmin Connect or ask for your Garmin password. See [Garmin's Personal API documentation](https://developer.garmin.com/gc-developer-program/personal/personal-api/) and [Personal API FAQ](https://developer.garmin.com/gc-developer-program/personal/personal-faq/).
 
 1. Create a Personal API key in Garmin Connect using Garmin's instructions and terms.
-2. In Athlete Panel, open **Garmin import** and enter the key.
+2. Choose **Add Garmin** during welcome setup or in **Settings → Activity sources**, then enter the key.
 3. Keep the worker running. Recent data imports first, followed by historical traversal; watch progress and coverage in the application.
 
 The server exchanges the key for a short-lived bearer token and obtains a new token when needed. Garmin documents a maximum token lifetime of 24 hours, bounded by key expiry, with no refresh token. [Authentication details](https://developer.garmin.com/gc-developer-program/personal/personal-faq/).
@@ -163,6 +163,10 @@ With automatic synchronization enabled, the worker schedules a recent import abo
 **Coverage depends on Garmin, the account and the device.** Completing traversal does not prove that every historical record or metric was available. Missing values, unsupported streams and failures are surfaced. Disconnecting removes credentials and stops sync while retaining imported history.
 
 Garmin imports are read-only: there is no Garmin workout/plan export or automatic FIT/GPS-track import. The separate optional [Race analysis plugin](docs/features/race-analysis.md) accepts owner-uploaded GPX courses and GPX/FIT reference efforts. Using an official API does not imply Garmin endorsement of Athlete Panel. Field mappings, failure behavior and verification limits are documented in [Garmin import and health](docs/features/garmin-import.md).
+
+## Apple Health integration
+
+Choose **Add Apple Health** under **Settings → Activity sources** or during welcome setup to connect the free Sync for Health iPhone app. Apple Watch workouts appear in Calendar and Activities alongside Garmin rides. If a route is included, download its GPX from the activity details. [iPhone setup and import behavior](docs/features/apple-health-import.md)
 
 ## AI agent integration
 
@@ -231,7 +235,7 @@ Skill files can be read by other harnesses; automatic discovery depends on the i
 ## Using your workspace
 
 - **Plan a week:** set your timezone, units and week preference in Settings; create workouts in Calendar or arrange a block in Training plans.
-- **Record a session:** log completion, actuals and effort manually, or import Garmin activities and explicitly link a matching activity.
+- **Record a session:** log completion, actuals and effort manually, or link a matching activity from Garmin or Apple Health.
 - **Review and adjust:** expand a week header to compare planned and recorded training, inspect sleep details, then revise pending sessions yourself or review an agent's proposal.
 
 ## Privacy and security
@@ -287,6 +291,7 @@ The [operator checklist](docs/release-readiness.md#operator-acceptance-on-the-in
 
 - Verify public HTTPS, off-host backup delivery and recovery on a replacement server.
 - Expand account/device-specific Garmin conformance and historical-coverage checks.
+- Verify an outdoor Apple Watch workout and route with Sync for Health on the intended iPhone and server.
 - Record real harness discovery and browser-launch behavior on supported environments.
 - Measure representative history performance and restore times.
 
@@ -299,7 +304,7 @@ Workout libraries, advanced training-load/recovery calculations, automatic Garmi
 | [Development and operations](docs/development.md)               | Setup, configuration, canonical commands, verification, installation, backups, upgrades and recovery |
 | [Guided VPS operations](docs/features/hosted-operations.md)     | Installation, verified backups, checkpointed upgrades and matched recovery                           |
 | [Guided local setup](docs/features/local-setup.md)              | Generated credentials, password prompts, combined startup and existing-data protections              |
-| [First-time onboarding](docs/features/first-time-onboarding.md) | Welcome setup, preferences, optional Garmin connection and saved progress                            |
+| [First-time onboarding](docs/features/first-time-onboarding.md) | Welcome setup, preferences, activity source choices and saved progress |
 | [Architecture](docs/architecture.md)                            | Processes, ownership, contracts, data boundaries and trust                                           |
 | [Shared interface](docs/features/shared-ui.md) | Component ownership, themes, modal behavior and migration constraints |
 | [Garmin sport planning](docs/features/garmin-sport-planning.md) | Sport hierarchy, rest, elevation, strength, notes and recorded metrics |
@@ -307,6 +312,7 @@ Workout libraries, advanced training-load/recovery calculations, automatic Garmi
 | [Plan phases](docs/features/plan-phases.md) | Phases inside training plans, with a focus and optional weekly hours, distance and climbing targets |
 | [Race preparation](docs/features/race-preparation.md) | One plan per race: target, briefing and pacing by course section, proposed by an agent and reviewed by the owner |
 | [Garmin import and health](docs/features/garmin-import.md)      | Authentication, normalized records, history traversal, coverage and limits                           |
+| [Apple Health workout import](docs/features/apple-health-import.md) | iPhone pairing, workout sync, source selection and GPX download |
 | [Activity summary coverage](docs/features/activity-summary.md) | Recorded duration/distance, missing measurements and filtered totals |
 | [Health history](docs/features/health-history.md) | Recent health review, date presets and independent Calendar navigation |
 | [Charts](docs/features/charts.md) | Chart templates, weekly planned and recorded hours, races and exact values |

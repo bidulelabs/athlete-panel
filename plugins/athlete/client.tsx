@@ -43,6 +43,7 @@ import { effectiveDate } from '../training/public/shared';
 import { OnboardingDialog, OnboardingResume } from './onboarding-client';
 import { PreferenceFields, suggestedPreferences } from './preferences';
 import { NutritionSettings } from './nutrition-settings';
+import { ActivitySourceOptions } from './activity-sources-client';
 export const contributions = { welcome: OnboardingDialog };
 
 import { ContextEditor, type ContextKind } from './context-editor';
@@ -249,13 +250,20 @@ function ProfileForm({ data, request }: PluginPageProps) {
   );
 }
 
-const settingsTabs = ['profile', 'nutrition', 'notes', 'events', 'injuries'] as const;
+const settingsTabs = {
+  profile: 'Profile & zones',
+  'activity-sources': 'Activity sources',
+  nutrition: 'Nutrition',
+  notes: 'Notes',
+  events: 'Events',
+  injuries: 'Injury constraints',
+} as const;
 
 export default function AthletePage(props: PluginPageProps) {
   const confirm = useConfirm();
   const { envelope } = useWorkspace();
   const { data, request } = props;
-  const [tab, setTab] = useState<(typeof settingsTabs)[number]>('profile');
+  const [tab, setTab] = useState<keyof typeof settingsTabs>('profile');
   const [editing, setEditing] = useState<{ kind: ContextKind; record?: any } | null>(null);
   const action = useAction();
   const kind: ContextKind = tab === 'notes' ? 'note' : tab === 'events' ? 'event' : 'injury';
@@ -268,6 +276,7 @@ export default function AthletePage(props: PluginPageProps) {
         description="Your preferences, goals, and the details that shape your plan."
         actions={
           tab !== 'profile' &&
+          tab !== 'activity-sources' &&
           tab !== 'nutrition' && (
             <AddButton onClick={() => setEditing({ kind })}>Add {kind}</AddButton>
           )
@@ -275,13 +284,9 @@ export default function AthletePage(props: PluginPageProps) {
       />
       <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
         <TabsList className="workspace-tabs" aria-label="Athlete settings">
-          {settingsTabs.map((value) => (
+          {Object.entries(settingsTabs).map(([value, label]) => (
             <TabsTrigger key={value} value={value}>
-              {value === 'profile'
-                ? 'Profile & zones'
-                : value === 'injuries'
-                  ? 'Injury constraints'
-                  : value.replace(/^./, (s) => s.toUpperCase())}
+              {label}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -295,6 +300,8 @@ export default function AthletePage(props: PluginPageProps) {
               </details>
               <ProfileForm key={`setup-${envelope.onboarding?.revision ?? 0}`} {...props} />
             </>
+          ) : tab === 'activity-sources' ? (
+            <ActivitySourceOptions />
           ) : tab === 'nutrition' ? (
             <NutritionSettings {...props} />
           ) : (

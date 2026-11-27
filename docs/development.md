@@ -84,7 +84,7 @@ pnpm run setup --password-stdin < /secure/owner-password.txt
 
 No password argument or environment variable is supported. Omit the flag for the visible interactive prompt. The stdin option does not echo its input. Existing accounts are never reset by this command.
 
-After first sign-in, the authenticated welcome dialog confirms preferences and offers optional Garmin connection. Closing defers it; Settings provides **Finish setup**. Existing owners after upgrade are not interrupted and can choose **Run welcome setup**. Console recovery preserves setup progress. See [onboarding behavior](features/first-time-onboarding.md).
+After first sign-in, the welcome dialog confirms preferences and offers Garmin, Apple Health or both. Closing defers setup. **Settings → Activity sources** lets existing owners add or manage a provider. Upgrades carry forward saved connections and import checkpoints. [Onboarding behavior](features/first-time-onboarding.md)
 
 ### Advanced manual startup
 

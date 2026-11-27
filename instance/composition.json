@@ -4,17 +4,17 @@
     {
       "path": "plugins/athlete",
       "enabled": true,
-      "version": "1.6.0"
+      "version": "1.7.0"
     },
     {
       "path": "plugins/training",
       "enabled": true,
-      "version": "2.9.0"
+      "version": "2.10.0"
     },
     {
       "path": "plugins/activity-records",
       "enabled": true,
-      "version": "2.1.0"
+      "version": "2.2.0"
     },
     {
       "path": "plugins/calendar",
@@ -24,7 +24,12 @@
     {
       "path": "plugins/garmin",
       "enabled": true,
-      "version": "2.3.0"
+      "version": "2.3.1"
+    },
+    {
+      "path": "plugins/apple-health",
+      "enabled": true,
+      "version": "1.0.0"
     },
     {
       "path": "plugins/health",
@@ -34,7 +39,7 @@
     {
       "path": "plugins/race-analysis",
       "enabled": true,
-      "version": "1.7.1"
+      "version": "1.8.0"
     },
     {
       "path": "plugins/charts",

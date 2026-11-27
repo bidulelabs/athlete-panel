@@ -11,6 +11,7 @@ import { readOnboarding } from '../packages/host/src/onboarding';
 import { status } from '../plugins/garmin/public/server';
 import { loadWorkspace } from './services';
 import { recentChanges } from '../plugins/training/public/server';
+import { readActivitySources } from './activity-sources';
 
 type ProposalRow = {
   id: string;
@@ -90,14 +91,19 @@ export async function readWorkspaceResponse(range: {
       >`select key,value from host.settings where key in ('worker','lastBackup','backupAttempt','backupSchedule','composition')`,
     ],
   );
-  const schema = await sql<
-    { pluginId: string; name: string; appliedAt: Date }[]
-  >`select plugin_id as "pluginId",name,applied_at as "appliedAt" from host.migrations order by applied_at,name`;
+  const [schema, onboarding, activitySources] = await Promise.all([
+    sql<
+      { pluginId: string; name: string; appliedAt: Date }[]
+    >`select plugin_id as "pluginId",name,applied_at as "appliedAt" from host.migrations order by applied_at,name`,
+    readOnboarding(),
+    readActivitySources(garmin.connected),
+  ]);
   return contractValue(workspaceEnvelopeSchema, {
     state,
     plugins,
     garmin,
-    onboarding: await readOnboarding(),
+    onboarding,
+    activitySources,
     proposals: proposals.map((row) => ({
       ...row,
       createdAt: row.createdAt.toISOString(),

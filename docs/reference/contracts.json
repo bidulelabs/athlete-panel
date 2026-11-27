@@ -911,7 +911,8 @@
                             "type": "string",
                             "enum": [
                               "manual",
-                              "garmin"
+                              "garmin",
+                              "apple-health"
                             ]
                           },
                           "activityId": {
@@ -2072,7 +2073,10 @@
                   },
                   "provider": {
                     "type": "string",
-                    "const": "garmin"
+                    "enum": [
+                      "garmin",
+                      "apple-health"
+                    ]
                   },
                   "externalId": {
                     "type": "string",
@@ -2142,6 +2146,42 @@
                       "typeKey",
                       "typeId",
                       "parentTypeId"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "appleHealth": {
+                    "type": "object",
+                    "properties": {
+                      "recordingSource": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "workoutType": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "routeAvailable": {
+                        "type": "boolean"
+                      },
+                      "estimatedElevationMeters": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "recordingSource",
+                      "workoutType",
+                      "routeAvailable",
+                      "estimatedElevationMeters"
                     ],
                     "additionalProperties": false
                   },
@@ -2508,6 +2548,84 @@
             "revision",
             "updatedAt",
             "completedAt"
+          ],
+          "additionalProperties": false
+        },
+        "activitySources": {
+          "type": "object",
+          "properties": {
+            "selected": {
+              "maxItems": 2,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "garmin",
+                  "apple-health"
+                ]
+              }
+            },
+            "appleHealth": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "uploadUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "connected": {
+                      "type": "boolean"
+                    },
+                    "testedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "lastUploadAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "uploadUrl",
+                    "connected",
+                    "testedAt",
+                    "lastUploadAt"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "selected",
+            "appleHealth"
           ],
           "additionalProperties": false
         },
@@ -3962,6 +4080,84 @@
             "lastError"
           ],
           "additionalProperties": {}
+        },
+        "activitySources": {
+          "type": "object",
+          "properties": {
+            "selected": {
+              "maxItems": 2,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "garmin",
+                  "apple-health"
+                ]
+              }
+            },
+            "appleHealth": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "uploadUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "connected": {
+                      "type": "boolean"
+                    },
+                    "testedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "lastUploadAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "uploadUrl",
+                    "connected",
+                    "testedAt",
+                    "lastUploadAt"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "selected",
+            "appleHealth"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [
@@ -4182,6 +4378,42 @@
             "revision",
             "updatedAt",
             "completedAt"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "choose-activity-source": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "garmin",
+                "apple-health"
+              ]
+            }
+          },
+          "required": [
+            "source"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "garmin",
+                "apple-health"
+              ]
+            }
+          },
+          "required": [
+            "source"
           ],
           "additionalProperties": false
         }
@@ -9682,7 +9914,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -10266,7 +10499,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -12847,7 +13081,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -12917,6 +13154,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -13121,7 +13394,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -13191,6 +13467,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -15095,7 +15407,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -15679,7 +15992,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -18260,7 +18574,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -18330,6 +18647,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -18534,7 +18887,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -18604,6 +18960,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -20525,7 +20917,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -21109,7 +21502,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -23690,7 +24084,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -23760,6 +24157,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -23964,7 +24397,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -24034,6 +24470,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -24908,6 +25380,738 @@
             "total",
             "offset",
             "limit"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "apple-health": {
+      "status": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "uploadUrl": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "connected": {
+              "type": "boolean"
+            },
+            "testedAt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "lastUploadAt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "importedFrom": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "importedTo": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "excluded": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "excluded"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "lastBatch": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "imported": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "removed": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "excluded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "issues": {
+                      "maxItems": 10,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 400
+                      }
+                    },
+                    "issueCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "imported",
+                    "removed",
+                    "excluded",
+                    "issues",
+                    "issueCount"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "error": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 400
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "uploadUrl",
+            "connected",
+            "testedAt",
+            "lastUploadAt",
+            "importedFrom",
+            "importedTo",
+            "sources",
+            "lastBatch",
+            "error"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "issue-token": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "token": {
+              "type": "string",
+              "minLength": 43,
+              "maxLength": 43
+            },
+            "status": {
+              "type": "object",
+              "properties": {
+                "uploadUrl": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "connected": {
+                  "type": "boolean"
+                },
+                "testedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "lastUploadAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "importedFrom": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "importedTo": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "excluded": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "excluded"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "lastBatch": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "imported": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "removed": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "excluded": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "issues": {
+                          "maxItems": 10,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 400
+                          }
+                        },
+                        "issueCount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "imported",
+                        "removed",
+                        "excluded",
+                        "issues",
+                        "issueCount"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "error": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 400
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "uploadUrl",
+                "connected",
+                "testedAt",
+                "lastUploadAt",
+                "importedFrom",
+                "importedTo",
+                "sources",
+                "lastBatch",
+                "error"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "token",
+            "status"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "disconnect": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "uploadUrl": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "connected": {
+              "type": "boolean"
+            },
+            "testedAt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "lastUploadAt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "importedFrom": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "importedTo": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "excluded": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "excluded"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "lastBatch": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "imported": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "removed": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "excluded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "issues": {
+                      "maxItems": 10,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 400
+                      }
+                    },
+                    "issueCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "imported",
+                    "removed",
+                    "excluded",
+                    "issues",
+                    "issueCount"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "error": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 400
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "uploadUrl",
+            "connected",
+            "testedAt",
+            "lastUploadAt",
+            "importedFrom",
+            "importedTo",
+            "sources",
+            "lastBatch",
+            "error"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "set-source": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "excluded": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "name",
+            "excluded"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "uploadUrl": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uri"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "connected": {
+              "type": "boolean"
+            },
+            "testedAt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "lastUploadAt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "importedFrom": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "importedTo": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "excluded": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "excluded"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "lastBatch": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "imported": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "removed": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "excluded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "issues": {
+                      "maxItems": 10,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 400
+                      }
+                    },
+                    "issueCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "imported",
+                    "removed",
+                    "excluded",
+                    "issues",
+                    "issueCount"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "error": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 400
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "uploadUrl",
+            "connected",
+            "testedAt",
+            "lastUploadAt",
+            "importedFrom",
+            "importedTo",
+            "sources",
+            "lastBatch",
+            "error"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "activity-records": {
+      "download-gpx": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "filename": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "gpx": {
+              "type": "string",
+              "maxLength": 10485760
+            }
+          },
+          "required": [
+            "filename",
+            "gpx"
           ],
           "additionalProperties": false
         }
@@ -26369,7 +27573,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -26953,7 +28158,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -29534,7 +30740,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -29604,6 +30813,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -29808,7 +31053,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -29878,6 +31126,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -32218,7 +33502,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -32802,7 +34087,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -35383,7 +36669,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -35453,6 +36742,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -35657,7 +36982,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -35727,6 +37055,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -37660,7 +39024,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -38244,7 +39609,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -40825,7 +42191,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -40895,6 +42264,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -41099,7 +42504,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -41169,6 +42577,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -43113,7 +44557,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -43697,7 +45142,8 @@
                                         "type": "string",
                                         "enum": [
                                           "manual",
-                                          "garmin"
+                                          "garmin",
+                                          "apple-health"
                                         ]
                                       },
                                       "activityId": {
@@ -46278,7 +47724,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -46348,6 +47797,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -46552,7 +48037,10 @@
                               },
                               "provider": {
                                 "type": "string",
-                                "const": "garmin"
+                                "enum": [
+                                  "garmin",
+                                  "apple-health"
+                                ]
                               },
                               "externalId": {
                                 "type": "string",
@@ -46622,6 +48110,42 @@
                                   "typeKey",
                                   "typeId",
                                   "parentTypeId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "appleHealth": {
+                                "type": "object",
+                                "properties": {
+                                  "recordingSource": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 255
+                                  },
+                                  "workoutType": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 100
+                                  },
+                                  "routeAvailable": {
+                                    "type": "boolean"
+                                  },
+                                  "estimatedElevationMeters": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "recordingSource",
+                                  "workoutType",
+                                  "routeAvailable",
+                                  "estimatedElevationMeters"
                                 ],
                                 "additionalProperties": false
                               },
@@ -57583,7 +59107,8 @@
                       "type": "string",
                       "enum": [
                         "manual",
-                        "garmin"
+                        "garmin",
+                        "apple-health"
                       ]
                     },
                     "activityId": {
@@ -58744,7 +60269,10 @@
             },
             "provider": {
               "type": "string",
-              "const": "garmin"
+              "enum": [
+                "garmin",
+                "apple-health"
+              ]
             },
             "externalId": {
               "type": "string",
@@ -58814,6 +60342,42 @@
                 "typeKey",
                 "typeId",
                 "parentTypeId"
+              ],
+              "additionalProperties": false
+            },
+            "appleHealth": {
+              "type": "object",
+              "properties": {
+                "recordingSource": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "workoutType": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "routeAvailable": {
+                  "type": "boolean"
+                },
+                "estimatedElevationMeters": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "recordingSource",
+                "workoutType",
+                "routeAvailable",
+                "estimatedElevationMeters"
               ],
               "additionalProperties": false
             },

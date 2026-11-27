@@ -18,7 +18,7 @@ export function isLinkableWorkout(workout: Workout, plans: WorkspaceState['plans
   return (
     !isRest(workout) &&
     workout.completion?.status !== 'skipped' &&
-    workout.completion?.source !== 'garmin' &&
+    !workout.completion?.activityId &&
     matchingDate(workout, plans) !== null
   );
 }

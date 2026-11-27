@@ -1,70 +1,10 @@
 import type { CourseSection, RacePoint, TrackAnalysis } from '@athlete-panel/contracts';
 import { assert } from '../../packages/host/src/errors';
-import type { ParsedTrack, SourcePoint } from './parse';
+import { groundDistance, smoothTrackElevation } from '../activity-records/public/shared';
+import type { ParsedTrack } from './parse';
 
-export function groundDistance(
-  a: Pick<SourcePoint, 'latitude' | 'longitude'>,
-  b: Pick<SourcePoint, 'latitude' | 'longitude'>,
-) {
-  const rad = Math.PI / 180;
-  const q =
-    Math.sin(((b.latitude - a.latitude) * rad) / 2) ** 2 +
-    Math.cos(a.latitude * rad) *
-      Math.cos(b.latitude * rad) *
-      Math.sin(((b.longitude - a.longitude) * rad) / 2) ** 2;
-  return 6371008.8 * 2 * Math.atan2(Math.sqrt(Math.min(1, q)), Math.sqrt(Math.max(0, 1 - q)));
-}
-function interpolate(a: RacePoint, b: RacePoint, distance: number): RacePoint {
-  const fraction = (distance - a.distanceMeters) / (b.distanceMeters - a.distanceMeters);
-  const delta = ((b.longitude - a.longitude + 540) % 360) - 180;
-  return {
-    distanceMeters: distance,
-    latitude: a.latitude + (b.latitude - a.latitude) * fraction,
-    longitude: ((a.longitude + delta * fraction + 540) % 360) - 180,
-    elevationMeters:
-      a.elevationMeters === null || b.elevationMeters === null
-        ? null
-        : a.elevationMeters + (b.elevationMeters - a.elevationMeters) * fraction,
-    slopePercent: null,
-    segment: a.segment,
-  };
-}
-function resample(points: RacePoint[]) {
-  const output: RacePoint[] = [];
-  let target = 0;
-  points.forEach((p, i) => {
-    const previous = points[i - 1];
-    if (!previous || previous.segment !== p.segment) {
-      output.push({ ...p });
-      target = p.distanceMeters + 25;
-      return;
-    }
-    while (target < p.distanceMeters) {
-      output.push(interpolate(previous, p, target));
-      target += 25;
-    }
-    if (i === points.length - 1 || points[i + 1]?.segment !== p.segment) output.push({ ...p });
-  });
-  return output;
-}
-function smooth(points: RacePoint[]): RacePoint[] {
-  return points.map((p, i) => {
-    if (p.elevationMeters === null) return p;
-    const window = points
-      .slice(Math.max(0, i - 2), i + 3)
-      .filter((q) => q.segment === p.segment && q.elevationMeters !== null);
-    const values = window.map((q) => q.elevationMeters!).sort((a, b) => a - b);
-    // Distance-resampled median removes isolated GPS spikes without accumulating stationary jitter.
-    const elevationMeters =
-      i === 0 ||
-      i === points.length - 1 ||
-      points[i - 1]?.segment !== p.segment ||
-      points[i + 1]?.segment !== p.segment
-        ? p.elevationMeters
-        : values[Math.floor(values.length / 2)]!;
-    return { ...p, elevationMeters };
-  });
-}
+export { groundDistance };
+
 function sections(points: RacePoint[], distance: number, complete: boolean): CourseSection[] {
   const count = Math.max(1, Math.ceil(distance / 5000));
   const output = Array.from({ length: count }, (_, index) => ({
@@ -135,7 +75,7 @@ export function analyzeTrack(track: ParsedTrack): TrackAnalysis {
     'Tracks longer than 1,000 km are not supported. Check for GPS jumps.',
   );
   const coverage = track.points.filter((p) => p.elevation !== null).length / track.points.length;
-  const sampled = smooth(resample(points));
+  const sampled = smoothTrackElevation(points);
   sampled.forEach((p, i) => {
     const a = sampled[Math.max(0, i - 1)],
       b = sampled[Math.min(sampled.length - 1, i + 1)];

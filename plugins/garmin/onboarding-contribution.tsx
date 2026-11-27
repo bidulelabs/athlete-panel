@@ -21,9 +21,12 @@ export function OnboardingConnection({
   if (variant === 'summary') return <>{connectionMessage(connection, workerAvailable)}</>;
   return (
     <>
-      {' '}
       {!connection.connected || editingKey ? (
         <>
+          <p className="muted-text">
+            Recent data imports first. Older history follows in the background while your instance
+            is running.
+          </p>
           <p className="muted-text">
             Sign in to Garmin Connect, open Personal API Key, create a key, accept Garmin's terms
             and choose its expiry. Copy the key when Garmin displays it; you cannot view it again

@@ -236,7 +236,7 @@ export function summarizeRange(
     ...activities.map((activity) => ({
       kind: 'activity' as const,
       id: activity.id,
-      title: activity.title || 'Garmin activity',
+      title: activity.title || 'Imported activity',
       sport: activity.sport,
       sportSubgroup: activity.sportSubgroup,
       localDate: activity.localDate,

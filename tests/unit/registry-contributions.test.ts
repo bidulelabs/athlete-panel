@@ -52,8 +52,13 @@ it('omits disabled optional contributions from generated imports without changin
     false;
   const disabled = generate();
   expect(disabled).not.toContain('../plugins/garmin/client');
-  expect(disabled).not.toContain('"kind":"onboarding"');
+  expect(disabled).toContain('Apple Health connection');
+  expect(disabled).not.toContain('Garmin connection');
   expect(disabled).toContain('../plugins/athlete/client');
+  composition.plugins.find(
+    (entry: { path: string }) => entry.path === 'plugins/apple-health',
+  ).enabled = false;
+  expect(generate()).not.toContain('"kind":"onboarding"');
 });
 
 it('rejects a prior provider version for the new public interfaces while retaining 1.0 extensions', () => {

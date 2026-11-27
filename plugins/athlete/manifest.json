@@ -2,7 +2,7 @@
   "id": "athlete",
   "name": "Athlete",
   "description": "Profile, preferences and training constraints",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "hostApi": "^1.1.0",
   "dependencies": {
     "training": "^2.8.0"
@@ -35,7 +35,8 @@
     }
   ],
   "optionalDependencies": {
-    "garmin": "^2.0.0"
+    "garmin": "^2.0.0",
+    "apple-health": "^1.0.0"
   },
   "public": {
     "client": "public/client.ts",

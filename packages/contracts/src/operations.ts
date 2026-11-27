@@ -14,8 +14,11 @@ import {
   agentConnectionStatusSchema,
 } from './domain';
 import { onboardingActionSchema, onboardingSchema } from './onboarding';
+import { activitySourceChoiceSchema } from './activity-sources';
 import { chartsSummaryInputSchema, chartsSummarySchema } from './charts';
+import { appleHealthStatusSchema, appleRecordingSourceSchema } from './apple-health';
 import {
+  raceFileLimit,
   raceAnalysisSchema,
   raceSelectionSchema,
   raceSettingsInputSchema,
@@ -44,7 +47,10 @@ export const operationContracts = {
       z.object({ pending: z.boolean(), message: z.string() }),
     ),
   },
-  athlete: { onboarding: operation(onboardingActionSchema, onboardingSchema) },
+  athlete: {
+    onboarding: operation(onboardingActionSchema, onboardingSchema),
+    'choose-activity-source': operation(activitySourceChoiceSchema, activitySourceChoiceSchema),
+  },
   training: {
     mutate: operation(
       z.object({ commands: commandsSchema, idempotencyKey: z.uuid() }).strict(),
@@ -87,6 +93,27 @@ export const operationContracts = {
         .strict(),
       coveragePageSchema,
     ),
+  },
+  'apple-health': {
+    status: { ...operation(z.object({}).strict(), appleHealthStatusSchema), readOnly: true },
+    'issue-token': operation(
+      z.object({}).strict(),
+      z.object({ token: z.string().length(43), status: appleHealthStatusSchema }),
+    ),
+    disconnect: operation(z.object({}).strict(), appleHealthStatusSchema),
+    'set-source': operation(
+      z.object({ name: appleRecordingSourceSchema, excluded: z.boolean() }).strict(),
+      appleHealthStatusSchema,
+    ),
+  },
+  'activity-records': {
+    'download-gpx': {
+      ...operation(
+        id.strict(),
+        z.object({ filename: z.string().max(120), gpx: z.string().max(raceFileLimit) }),
+      ),
+      readOnly: true,
+    },
   },
   'agent-bridge': {
     details: operation(id, proposalDetailsSchema),
@@ -140,10 +167,10 @@ export type PluginRequest = <P extends string, O extends string>(
 export function operationContract(
   pluginId: string,
   name: string,
-): { input: z.ZodType; output: z.ZodType } | undefined {
+): { input: z.ZodType; output: z.ZodType; readOnly?: boolean } | undefined {
   const plugins: Record<
     string,
-    Record<string, { input: z.ZodType; output: z.ZodType }>
+    Record<string, { input: z.ZodType; output: z.ZodType; readOnly?: boolean }>
   > = operationContracts;
   return Object.hasOwn(plugins, pluginId) && Object.hasOwn(plugins[pluginId] ?? {}, name)
     ? plugins[pluginId]?.[name]

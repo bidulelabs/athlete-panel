@@ -5,23 +5,26 @@ import Page1, { contributions as Contributions1 } from '../plugins/athlete/clien
 import Page2 from '../plugins/activity-records/client';
 import Page3 from '../plugins/calendar/client';
 import Page4, { contributions as Contributions4 } from '../plugins/garmin/client';
-import Page5 from '../plugins/health/client';
-import Page6, { contributions as Contributions6 } from '../plugins/race-analysis/client';
-import Page7 from '../plugins/charts/client';
-import Page8 from '../plugins/agent-bridge/client';
+import Page5, { contributions as Contributions5 } from '../plugins/apple-health/client';
+import Page6 from '../plugins/health/client';
+import Page7, { contributions as Contributions7 } from '../plugins/race-analysis/client';
+import Page8 from '../plugins/charts/client';
+import Page9 from '../plugins/agent-bridge/client';
 export const pages = [
 {...{"path":"/plans","title":"Training plans","icon":"Layers"},pluginId:"training",component:Page0},
 {...{"path":"/settings","title":"Settings","icon":"Settings"},pluginId:"athlete",component:Page1},
 {...{"path":"/activities","title":"Activities","icon":"Activity"},pluginId:"activity-records",component:Page2},
 {...{"path":"/calendar","title":"Calendar","icon":"CalendarDays"},pluginId:"calendar",component:Page3},
 {...{"path":"/garmin","title":"Garmin import","icon":"Plug"},pluginId:"garmin",component:Page4},
-{...{"path":"/health","title":"Health","icon":"HeartPulse"},pluginId:"health",component:Page5},
-{...{"path":"/races","title":"Races","icon":"Flag"},pluginId:"race-analysis",component:Page6},
-{...{"path":"/charts","title":"Charts","icon":"ChartColumn"},pluginId:"charts",component:Page7},
-{...{"path":"/agent","title":"Agent workspace","icon":"Sparkles"},pluginId:"agent-bridge",component:Page8}
+{...{"path":"/apple-health","title":"Apple Health","icon":"HeartPulse"},pluginId:"apple-health",component:Page5},
+{...{"path":"/health","title":"Health","icon":"HeartPulse"},pluginId:"health",component:Page6},
+{...{"path":"/races","title":"Races","icon":"Flag"},pluginId:"race-analysis",component:Page7},
+{...{"path":"/charts","title":"Charts","icon":"ChartColumn"},pluginId:"charts",component:Page8},
+{...{"path":"/agent","title":"Agent workspace","icon":"Sparkles"},pluginId:"agent-bridge",component:Page9}
 ];
 export const slots = [
 {...{"id":"welcome","kind":"workspace","title":"Welcome setup"},kind:"workspace" as const,pluginId:"athlete",component:Contributions1["welcome"]},
 {...{"id":"connection","kind":"onboarding","title":"Garmin connection"},kind:"onboarding" as const,pluginId:"garmin",component:Contributions4["connection"]},
-{...{"id":"race-course-link","kind":"inspector","title":"Course analysis"},kind:"inspector" as const,pluginId:"race-analysis",component:Contributions6["race-course-link"]}
+{...{"id":"connection","kind":"onboarding","title":"Apple Health connection"},kind:"onboarding" as const,pluginId:"apple-health",component:Contributions5["connection"]},
+{...{"id":"race-course-link","kind":"inspector","title":"Course analysis"},kind:"inspector" as const,pluginId:"race-analysis",component:Contributions7["race-course-link"]}
 ];

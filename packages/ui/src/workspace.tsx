@@ -34,8 +34,10 @@ import {
   dateSchema,
   workspaceEnvelopeSchema,
   createPluginRequester,
+  operationContract,
   responseError,
   operationalValuesSchema,
+  type AppleHealthConnection,
   type PluginRequest,
   type WorkspaceEnvelope,
   type WorkspaceState,
@@ -90,6 +92,7 @@ export interface ExtensionSelection {
 export interface OnboardingConnectionProps {
   variant: 'setup' | 'summary';
   connection: GarminConnection;
+  appleHealth?: AppleHealthConnection | null;
   workerAvailable: boolean;
   busy: boolean;
   editingKey: boolean;
@@ -113,6 +116,7 @@ export interface WorkspacePage {
   title: string;
   icon?: string;
   component: ComponentType<PluginPageProps>;
+  showInSidebar?: (envelope: WorkspaceEnvelope | null) => boolean;
 }
 interface WorkspaceContextValue extends PluginPageProps {
   slots: WorkspaceSlot[];
@@ -272,6 +276,7 @@ export function WorkspaceApp({
   }, [path, refresh]);
   const request = useCallback(
     createPluginRequester(async (pluginId: string, operation: string, body: unknown) => {
+      const readOnly = operationContract(pluginId, operation)?.readOnly;
       const serverDidNotAnswerMessage =
         'The server did not answer, so the change may have been saved. Use Reload saved data to check before trying again.';
       const reloadError = (message: string) =>
@@ -285,6 +290,7 @@ export function WorkspaceApp({
           signal: AbortSignal.timeout(15000),
         },
       ).catch(() => {
+        if (readOnly) throw new Error('The server did not answer. Try loading the data again.');
         throw reloadError(serverDidNotAnswerMessage);
       });
       const result: unknown = await response.json().catch(() => null);
@@ -302,9 +308,15 @@ export function WorkspaceApp({
           throw reloadError(
             `${responseError(result, 'This item changed.')} Use Reload saved data to review the saved version. Your draft will stay open.`,
           );
-        throw new Error(responseError(result, 'The change could not be saved.'));
+        throw new Error(
+          responseError(
+            result,
+            readOnly ? 'The data could not be loaded.' : 'The change could not be saved.',
+          ),
+        );
       }
       if (result === null) throw reloadError(serverDidNotAnswerMessage);
+      if (readOnly) return result;
       // The mutation is committed even if reloading the workspace fails.
       setRefreshNotice('Your change was saved. Reloading the workspace…');
       await latestRefresh.current();
@@ -329,9 +341,20 @@ export function WorkspaceApp({
     (path === '/' ? pages.find((p) => p.path === '/calendar') : undefined);
   const profile = envelope?.state.profile;
   const navPages = pages.filter(
-    (page, i, all) => all.findIndex((p) => p.path === page.path) === i && page.path !== '/plugins',
+    (page, i, all) =>
+      all.findIndex((p) => p.path === page.path) === i &&
+      page.path !== '/plugins' &&
+      (page.showInSidebar?.(envelope) ?? true),
   );
-  const systemPaths = ['/profile', '/athlete', '/settings', '/agent', '/agent-bridge', '/garmin'];
+  const systemPaths = [
+    '/profile',
+    '/athlete',
+    '/settings',
+    '/agent',
+    '/agent-bridge',
+    '/garmin',
+    '/apple-health',
+  ];
   const renderNav = (page: { path: string; title: string; icon?: string }) => (
     <SidebarMenuItem key={page.path}>
       <a
@@ -749,12 +772,15 @@ export function Section({
   );
 }
 
-export function OnboardingConnectionSlot(props: OnboardingConnectionProps) {
+export function OnboardingConnectionSlot({
+  pluginId,
+  ...props
+}: OnboardingConnectionProps & { pluginId?: string }) {
   const { slots, data, refresh, request } = useWorkspace();
   return (
     <>
       {slots
-        .filter((slot) => slot.kind === 'onboarding')
+        .filter((slot) => slot.kind === 'onboarding' && (!pluginId || slot.pluginId === pluginId))
         .map((slot) => (
           <slot.component
             key={`${slot.pluginId}:${slot.id}`}

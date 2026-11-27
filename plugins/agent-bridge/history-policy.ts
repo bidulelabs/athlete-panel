@@ -66,7 +66,10 @@ export function sanitizeHistoryRecord(r: HistoryRecord, scope: HistoryScope): Hi
     delete data.completionNotes;
   }
   if (completionOutsideScope) data.completionStatus = 'unknown';
-  if (data.completionSource === 'garmin' && !scope.categories.includes('activities')) {
+  if (
+    (data.completionSource === 'garmin' || data.completionSource === 'apple-health') &&
+    !scope.categories.includes('activities')
+  ) {
     delete data.activityId;
     delete data.actualDurationSeconds;
     delete data.actualDistanceMeters;

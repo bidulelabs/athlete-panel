@@ -1,4 +1,5 @@
 import {
+  activityProviderLabel,
   type Command,
   completionValuesSchema,
   canLinkSport,
@@ -28,7 +29,7 @@ export function handleCompletion(
         ...(workout.completion?.notes !== undefined ? { notes: workout.completion.notes } : {}),
         ...command.values,
       });
-      if (workout.completion?.source === 'garmin') {
+      if (workout.completion?.activityId) {
         const activity = state.activities.find(
           (candidate) => candidate.id === workout.completion?.activityId,
         );
@@ -46,7 +47,7 @@ export function handleCompletion(
         ) {
           fail(
             'HISTORY_CONFLICT',
-            'Garmin supplies the actual date, duration and distance. Unlink before entering different manual actuals.',
+            `${activityProviderLabel(activity.provider)} supplies the actual date, duration and distance. Unlink before entering different manual actuals.`,
           );
         }
         workout.completion = {
@@ -82,7 +83,7 @@ export function handleCompletion(
     case 'workout.clearCompletion': {
       const workout = get(state.workouts, command.id, command.expectedRevision);
       if (isRest(workout)) fail('INVALID_COMPLETION', 'Rest days cannot have recorded completion.');
-      if (workout.completion?.source === 'garmin')
+      if (workout.completion?.activityId)
         fail('HISTORY_CONFLICT', 'Use unlink to remove an imported completion.');
       workout.completion = null;
       break;
@@ -106,21 +107,20 @@ export function handleCompletion(
         )
       )
         fail('ALREADY_LINKED', 'This activity is already linked to another workout.');
-      if (workout.completion?.source === 'garmin' && workout.completion.activityId !== activity.id)
+      if (workout.completion?.activityId && workout.completion.activityId !== activity.id)
         fail('ALREADY_LINKED', 'Unlink the current activity before linking another.');
       if (workout.completion?.status === 'skipped')
         fail('HISTORY_CONFLICT', 'Clear skipped completion before linking an actual activity.');
       workout.completion = {
         status: workout.completion?.status ?? 'completed',
-        source: 'garmin',
+        source: activity.provider,
         performedDate: activity.localDate,
         durationSeconds: activity.durationSeconds,
         distanceMeters: activity.distanceMeters,
         activityId: activity.id,
-        linkMethod:
-          workout.completion?.source === 'garmin'
-            ? (workout.completion.linkMethod ?? 'manual')
-            : (context.options.linkMethod ?? 'manual'),
+        linkMethod: workout.completion?.activityId
+          ? (workout.completion.linkMethod ?? 'manual')
+          : (context.options.linkMethod ?? 'manual'),
         rpe: workout.completion?.rpe ?? null,
         reason: workout.completion?.reason ?? '',
         ...(workout.completion?.notes !== undefined ? { notes: workout.completion.notes } : {}),
@@ -130,7 +130,7 @@ export function handleCompletion(
     case 'workout.unlink': {
       const workout = get(state.workouts, command.id, command.expectedRevision);
       if (isRest(workout)) fail('INVALID_COMPLETION', 'Rest days cannot have recorded completion.');
-      if (workout.completion?.source !== 'garmin')
+      if (!workout.completion?.activityId)
         fail('INVALID_LINK', 'This workout has no linked activity.');
       // Old manual actuals are intentionally not an active fallback. Imported
       // activity remains in history and continues to count exactly once.

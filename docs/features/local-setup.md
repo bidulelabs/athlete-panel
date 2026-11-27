@@ -4,7 +4,7 @@
 
 Make a fresh local Athlete Panel installation usable with one chosen login password. Generate technical credentials, initialize PostgreSQL and run web/worker without manual environment loading or multiple terminals.
 
-Outside scope: installing Node/pnpm/Docker, public-server provisioning, unattended application upgrades, password resets, data deletion, Garmin key entry and off-host backup configuration. After sign-in, the separate [authenticated welcome flow](first-time-onboarding.md) confirms preferences and optionally connects Garmin.
+Outside scope: installing Node/pnpm/Docker, public-server provisioning, unattended application upgrades, password resets, data deletion, provider connection and off-host backup configuration. After sign-in, welcome setup confirms preferences and lets the owner choose activity sources. [Authenticated welcome flow](first-time-onboarding.md)
 
 ## Intended behavior
 

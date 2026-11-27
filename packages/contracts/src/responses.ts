@@ -16,6 +16,7 @@ import {
   agentConnectionStatusSchema,
 } from './domain';
 import { onboardingSchema } from './onboarding';
+import { activitySourcesSchema } from './activity-sources';
 import { garminConnectionSchema } from './garmin-connection';
 import { rejectionDiagnosticSchema, scanStateSchema } from './import-recovery';
 
@@ -190,6 +191,7 @@ export const operationalEntrySchema = z
 export const workspaceEnvelopeSchema = z.object({
   state: workspaceStateSchema,
   onboarding: onboardingSchema.optional(),
+  activitySources: activitySourcesSchema.optional(),
   plugins: z.array(pluginInfoSchema),
   garmin: garminStatusSchema,
   proposals: z.array(proposalSummarySchema),
@@ -203,6 +205,7 @@ export const onboardingStatusSchema = z.object({
   onboarding: onboardingSchema,
   worker: workerStatusSchema.nullable(),
   garmin: garminConnectionSchema.passthrough(),
+  activitySources: activitySourcesSchema.optional(),
 });
 const errorSchema = z.object({
   error: z

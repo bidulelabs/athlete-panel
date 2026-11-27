@@ -2139,11 +2139,30 @@
                           "additionalProperties": false
                         }
                       },
-                      "courseEstimateSeconds": {
+                      "courseEstimate": {
                         "anyOf": [
                           {
-                            "type": "number",
-                            "exclusiveMinimum": 0
+                            "type": "object",
+                            "properties": {
+                              "seconds": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              },
+                              "lowSeconds": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              },
+                              "highSeconds": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              }
+                            },
+                            "required": [
+                              "seconds",
+                              "lowSeconds",
+                              "highSeconds"
+                            ],
+                            "additionalProperties": false
                           },
                           {
                             "type": "null"
@@ -8482,11 +8501,30 @@
                                   "additionalProperties": false
                                 }
                               },
-                              "courseEstimateSeconds": {
+                              "courseEstimate": {
                                 "anyOf": [
                                   {
-                                    "type": "number",
-                                    "exclusiveMinimum": 0
+                                    "type": "object",
+                                    "properties": {
+                                      "seconds": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "lowSeconds": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "highSeconds": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "seconds",
+                                      "lowSeconds",
+                                      "highSeconds"
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "null"
@@ -8672,11 +8710,30 @@
                                   "additionalProperties": false
                                 }
                               },
-                              "courseEstimateSeconds": {
+                              "courseEstimate": {
                                 "anyOf": [
                                   {
-                                    "type": "number",
-                                    "exclusiveMinimum": 0
+                                    "type": "object",
+                                    "properties": {
+                                      "seconds": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "lowSeconds": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      },
+                                      "highSeconds": {
+                                        "type": "number",
+                                        "exclusiveMinimum": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "seconds",
+                                      "lowSeconds",
+                                      "highSeconds"
+                                    ],
+                                    "additionalProperties": false
                                   },
                                   {
                                     "type": "null"
@@ -13458,11 +13515,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -13647,11 +13723,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -19334,11 +19429,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -19523,11 +19637,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -25227,11 +25360,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -25416,11 +25568,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -31534,11 +31705,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -31723,11 +31913,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -37846,11 +38055,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -38035,11 +38263,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -43751,11 +43998,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -43940,11 +44206,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -49667,11 +49952,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -49856,11 +50160,30 @@
                                       "additionalProperties": false
                                     }
                                   },
-                                  "courseEstimateSeconds": {
+                                  "courseEstimate": {
                                     "anyOf": [
                                       {
-                                        "type": "number",
-                                        "exclusiveMinimum": 0
+                                        "type": "object",
+                                        "properties": {
+                                          "seconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "lowSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "highSeconds": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "seconds",
+                                          "lowSeconds",
+                                          "highSeconds"
+                                        ],
+                                        "additionalProperties": false
                                       },
                                       {
                                         "type": "null"
@@ -57535,11 +57858,30 @@
                         "additionalProperties": false
                       }
                     },
-                    "courseEstimateSeconds": {
+                    "courseEstimate": {
                       "anyOf": [
                         {
-                          "type": "number",
-                          "exclusiveMinimum": 0
+                          "type": "object",
+                          "properties": {
+                            "seconds": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "lowSeconds": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "highSeconds": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            }
+                          },
+                          "required": [
+                            "seconds",
+                            "lowSeconds",
+                            "highSeconds"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -57725,11 +58067,30 @@
                         "additionalProperties": false
                       }
                     },
-                    "courseEstimateSeconds": {
+                    "courseEstimate": {
                       "anyOf": [
                         {
-                          "type": "number",
-                          "exclusiveMinimum": 0
+                          "type": "object",
+                          "properties": {
+                            "seconds": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "lowSeconds": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "highSeconds": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            }
+                          },
+                          "required": [
+                            "seconds",
+                            "lowSeconds",
+                            "highSeconds"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -63137,11 +63498,30 @@
                     "additionalProperties": false
                   }
                 },
-                "courseEstimateSeconds": {
+                "courseEstimate": {
                   "anyOf": [
                     {
-                      "type": "number",
-                      "exclusiveMinimum": 0
+                      "type": "object",
+                      "properties": {
+                        "seconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "lowSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "highSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "seconds",
+                        "lowSeconds",
+                        "highSeconds"
+                      ],
+                      "additionalProperties": false
                     },
                     {
                       "type": "null"

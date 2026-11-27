@@ -232,7 +232,7 @@ describe('race scenario record', () => {
           cutoff: { dayOffset: 0, time: '11:00' },
         },
       ],
-      courseEstimateSeconds: 6000,
+      courseEstimate: { seconds: 6000, lowSeconds: 4800, highSeconds: 7200 },
       effortPercent: 0,
       weatherPercent: 0,
     };

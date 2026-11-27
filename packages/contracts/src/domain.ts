@@ -720,7 +720,15 @@ const raceScenarioFields = {
             .strict(),
         )
         .max(raceScenarioStationLimit),
-      courseEstimateSeconds: z.number().finite().positive().nullable().optional(),
+      courseEstimate: z
+        .object({
+          seconds: z.number().finite().positive(),
+          lowSeconds: z.number().finite().positive(),
+          highSeconds: z.number().finite().positive(),
+        })
+        .strict()
+        .nullable()
+        .optional(),
       effortPercent: racePlanAssumptionFields.effortPercent.optional(),
       weatherPercent: racePlanAssumptionFields.weatherPercent.optional(),
     })

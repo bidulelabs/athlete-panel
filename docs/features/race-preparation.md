@@ -86,7 +86,7 @@ Requirement source: [issue #121](https://github.com/bidulelabs/athlete-panel/iss
 
 ### Race scenarios
 
-- A race scenario stores one alternative to the race plan for a race that has a plan: a name (1 to 80 characters after trimming), an effort and weather assumption like the plan's, the stop at each aid station in seconds (0 to 24 hours, each station once, up to 60), and what it was made from: the course and its estimate in seconds (none without one), the plan's stations (ids, distances, stops and cutoffs, up to 60), effort and weather. A scenario stored before the estimate, stops, cutoffs, effort and weather were kept reads without them. A race holds at most four.
+- A race scenario stores one alternative to the race plan for a race that has a plan: a name (1 to 80 characters after trimming), an effort and weather assumption like the plan's, the stop at each aid station in seconds (0 to 24 hours, each station once, up to 60), and what it was made from: the course and its estimate with its range in seconds (none without one), the plan's stations (ids, distances, stops and cutoffs, up to 60), effort and weather. A scenario stored before the estimate, stops, cutoffs, effort and weather were kept reads without them. A race holds at most four.
 - Only the owner creates, edits and deletes scenarios. Assistants cannot write them and never read them: they are not in any planning context.
 - Deleting a race deletes its scenarios; the confirmation names them and one undo restores them. Undoing the deletion of a scenario is refused when the race already holds four others.
 - This release stores the record only; no screen shows scenarios yet.

@@ -1,4 +1,5 @@
 import type { HealthRecord } from '@athlete-panel/contracts';
+export { groundDistance, smoothTrackElevation } from '../track-elevation';
 
 /** One corrected metric per provider/account/local date, including corrections to unknown. */
 export function latestDailyHealth(records: readonly HealthRecord[]): HealthRecord[] {

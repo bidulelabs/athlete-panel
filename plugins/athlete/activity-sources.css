@@ -1,0 +1,51 @@
+.activity-source-chooser {
+  max-inline-size: 670px;
+}
+.activity-source-options {
+  margin: 0 0 16px;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+.activity-source-options > li {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.activity-source-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10.5rem;
+  align-items: center;
+  gap: 8px 16px;
+}
+.activity-source-option p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.activity-source-option > [data-slot='button'] {
+  min-height: 44px;
+}
+.onboarding-dialog .activity-source-option p {
+  margin-bottom: 0;
+}
+.activity-source-setup {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.activity-source-setup-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.activity-source-setup-title:focus {
+  outline: none;
+}
+@media (max-width: 480px) {
+  .activity-source-option {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .activity-source-option > [data-slot='button'] {
+    justify-self: start;
+    width: min(100%, 10.5rem);
+  }
+}

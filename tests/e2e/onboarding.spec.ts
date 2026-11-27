@@ -2,6 +2,7 @@ import { isolatedDatabaseUrl } from '../support/test-database';
 import { test, expect, type Page } from '@playwright/test';
 import postgres from 'postgres';
 import { randomUUID } from 'node:crypto';
+import { appleConnectionTest } from '../fixtures/apple-health';
 
 const target = isolatedDatabaseUrl('E2E_DATABASE_URL');
 const sql = postgres(target, { max: 1, onnotice: () => {} });
@@ -12,19 +13,23 @@ async function setSetup(status = 'pending') {
 test.beforeEach(async () => {
   [savedProfile] = await sql`select * from athlete.records where kind='profile' and id='owner'`;
   await setSetup();
-  await sql`delete from host.settings where key in ('garmin','garminToken')`;
-  await sql`delete from host.jobs where plugin_id='garmin'`;
+  await clearActivitySources();
 });
 test.afterEach(async () => {
   if (savedProfile)
     await sql`insert into athlete.records(kind,id,data,revision,deleted) values('profile','owner',${sql.json(savedProfile.data)},${savedProfile.revision},${savedProfile.deleted}) on conflict(kind,id) do update set data=excluded.data,revision=excluded.revision,deleted=excluded.deleted`;
   await setSetup('existing-owner');
-  await sql`delete from host.settings where key in ('garmin','garminToken')`;
-  await sql`delete from host.jobs where plugin_id='garmin'`;
+  await clearActivitySources();
 });
 test.afterAll(async () => {
   await sql.end();
 });
+async function clearActivitySources() {
+  await sql`delete from host.settings where key in ('garmin','garminToken','activitySources')`;
+  await sql`delete from host.jobs where plugin_id='garmin'`;
+  await sql`update apple_health.connection
+    set token_hash=null,tested_at=null,last_upload_at=null,last_error=null where singleton`;
+}
 async function login(page: Page) {
   await page.goto('/login');
   await page.getByLabel('Password', { exact: true }).fill(process.env.E2E_PASSWORD!);
@@ -32,6 +37,21 @@ async function login(page: Page) {
   await expect(page).toHaveURL(/\/calendar$/);
 }
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Welcome to Athlete Panel' });
+
+async function expectSourceShortcuts(page: Page, chosen: string[]) {
+  await expect(dialog(page)).toBeHidden();
+  const mobileMenu = page.getByRole('button', { name: 'Open navigation', exact: true });
+  const mobile = await page.evaluate(() => matchMedia('(max-width: 760px)').matches);
+  if (mobile) await mobileMenu.click();
+  const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+  await expect(navigation).toBeVisible();
+  for (const name of ['Garmin import', 'Apple Health']) {
+    await expect(navigation.getByRole('link', { name, exact: true })).toHaveCount(
+      chosen.includes(name) ? 1 : 0,
+    );
+  }
+  if (mobile) await page.getByRole('button', { name: 'Close navigation', exact: true }).click();
+}
 
 test('Escape closes onboarding after a backdrop click moves focus to body', async ({
   page,
@@ -66,7 +86,7 @@ test('Escape closes onboarding after a backdrop click moves focus to body', asyn
   }
 });
 
-test('new owner saves, reloads, skips Garmin and opens the calendar in both themes', async ({
+test('new owner saves, reloads, skips activity sources and opens the calendar in both themes', async ({
   page,
 }, info) => {
   await sql`delete from athlete.records where kind='profile' and id='owner'`;
@@ -93,18 +113,25 @@ test('new owner saves, reloads, skips Garmin and opens the calendar in both them
   await expect(welcome.getByRole('heading', { name: /Step 2 of 3/ })).toBeVisible();
   await page.reload();
   await expect(welcome.getByRole('heading', { name: /Step 2 of 3/ })).toBeVisible();
-  await welcome.getByLabel('Garmin Personal API key').fill('synthetic-unsaved-key');
   await welcome.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(welcome.getByLabel('Timezone', { exact: true })).toHaveValue('America/New_York');
   await welcome.getByRole('button', { name: 'Save and continue' }).click();
-  await expect(welcome.getByLabel('Garmin Personal API key')).toHaveValue('');
+  await expect(welcome.getByRole('button', { name: 'Add Garmin', exact: true })).toBeVisible();
+  await expect(
+    welcome.getByRole('button', { name: 'Add Apple Health', exact: true }),
+  ).toBeVisible();
   await welcome.getByRole('button', { name: 'Skip for now' }).click();
   await expect(welcome.getByText('America/New_York', { exact: true })).toBeVisible();
   await welcome.getByRole('button', { name: 'Open my calendar' }).click();
   await expect(welcome).not.toBeVisible();
   await page.reload();
   await expect(welcome).not.toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Training calendar', exact: true })).toBeVisible();
+  await expectSourceShortcuts(page, []);
   expect(await sql`select * from host.jobs where plugin_id='garmin'`).toHaveLength(0);
+  expect(
+    await sql`select * from apple_health.connection where token_hash is not null`,
+  ).toHaveLength(0);
 });
 
 test('close defers, Settings resumes, and stored key does not require waiting for a worker', async ({
@@ -113,6 +140,7 @@ test('close defers, Settings resumes, and stored key does not require waiting fo
   await login(page);
   const welcome = dialog(page);
   await welcome.getByRole('button', { name: 'Save and continue' }).click();
+  await welcome.getByRole('button', { name: 'Add Garmin', exact: true }).click();
   await welcome.getByLabel('Garmin Personal API key').fill('synthetic-discard-me');
   await page.keyboard.press('Escape');
   await expect(welcome).not.toBeVisible();
@@ -136,6 +164,7 @@ test('close defers, Settings resumes, and stored key does not require waiting fo
   await expect(welcome.getByRole('heading', { name: /Ready to start/ })).toBeVisible();
   await welcome.getByRole('button', { name: 'Open my calendar' }).click();
   await expect(page).toHaveURL(/\/calendar$/);
+  await expectSourceShortcuts(page, ['Garmin import']);
   expect(
     await sql`select * from host.jobs where plugin_id='garmin' and status='queued'`,
   ).toHaveLength(1);
@@ -256,10 +285,130 @@ test('disabled Garmin onboarding can be skipped without mounting provider contro
   const welcome = dialog(page);
   await welcome.getByRole('button', { name: 'Save and continue', exact: true }).click();
   await expect(
-    welcome.getByText('Garmin is disabled. You can enable it later in Plugins.'),
+    welcome.getByRole('button', { name: 'Add Apple Health', exact: true }),
   ).toBeVisible();
-  await expect(welcome.getByLabel('Personal API key', { exact: true })).toHaveCount(0);
+  await expect(welcome.getByRole('button', { name: 'Add Garmin', exact: true })).toHaveCount(0);
+  await expect(welcome.getByLabel('Garmin Personal API key', { exact: true })).toHaveCount(0);
   await welcome.getByRole('button', { name: 'Skip for now', exact: true }).click();
-  await expect(welcome.getByText('Garmin is disabled.', { exact: true })).toBeVisible();
+  await expect(welcome.getByRole('heading', { name: /Ready to start/ })).toBeVisible();
   expect(providerRequests).toEqual([]);
+});
+
+for (const theme of ['light', 'dark'] as const) {
+  const withGarmin = theme === 'dark';
+  test(`sets up ${withGarmin ? 'both sources' : 'Apple Health only'} in ${theme}`, async ({
+    page,
+  }, info) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.addInitScript((value) => localStorage.setItem('athlete-panel-theme', value), theme);
+    await login(page);
+    const welcome = dialog(page);
+    await welcome.getByRole('button', { name: 'Save and continue' }).click();
+    await expect(welcome.getByRole('heading', { name: /Activity sources/ })).toBeVisible();
+    if (!withGarmin && info.project.name === 'mobile')
+      await page.setViewportSize({ width: 320, height: 620 });
+    const addGarmin = welcome.getByRole('button', { name: 'Add Garmin', exact: true });
+    const addApple = welcome.getByRole('button', { name: 'Add Apple Health', exact: true });
+    const [garminAction, appleAction] = await welcome
+      .getByRole('button', { name: /^(Add Garmin|Add Apple Health)$/ })
+      .evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const { x, width } = button.getBoundingClientRect();
+          return { x, width };
+        }),
+      );
+    expect(garminAction).toBeDefined();
+    expect(appleAction).toEqual(garminAction);
+    await expect(welcome.getByRole('button', { name: 'Skip for now' })).toBeInViewport({
+      ratio: 1,
+    });
+    await welcome.screenshot({
+      path: `.runtime/browser/onboarding-activity-sources-${info.project.name}-${theme}.png`,
+    });
+    if (withGarmin) {
+      await addGarmin.click();
+      await welcome.getByLabel('Garmin Personal API key').fill('synthetic-both-sources-key');
+      await welcome.getByRole('button', { name: 'Connect Garmin', exact: true }).click();
+      await expect(welcome.getByText(/Your key is saved/)).toBeVisible();
+    }
+    await addApple.click();
+    await expect(welcome.getByRole('heading', { name: 'Apple Health setup' })).toBeFocused();
+    const continueButton = welcome.getByRole('button', { name: 'Continue', exact: true });
+    await expect(continueButton).toBeInViewport({ ratio: 1 });
+    const appleSetup = welcome.getByRole('button', { name: 'Create upload token', exact: true });
+    await appleSetup.click();
+    const uploadToken = welcome.getByRole('textbox', { name: 'Upload token', exact: true });
+    await expect(uploadToken).toHaveValue(/^[A-Za-z0-9_-]{43}$/);
+    await expect(welcome.getByRole('button', { name: 'Copy token', exact: true })).toBeFocused();
+    const [tokenField, copyToken] = await welcome
+      .locator('.apple-copy')
+      .filter({ has: page.getByRole('textbox', { name: 'Upload token', exact: true }) })
+      .locator('input, button')
+      .evaluateAll((controls) =>
+        controls.map((control) => {
+          const { y, height } = control.getBoundingClientRect();
+          return { y, height };
+        }),
+      );
+    expect(tokenField).toBeDefined();
+    expect(copyToken).toEqual(tokenField);
+    await expect(continueButton).toBeInViewport({ ratio: 1 });
+    expect(
+      (
+        await page.request.post('/api/apple-health/workouts', {
+          headers: { Authorization: `Bearer ${await uploadToken.inputValue()}` },
+          data: appleConnectionTest,
+        })
+      ).status(),
+    ).toBe(204);
+    await expect(
+      welcome.getByText('Connection tested. Waiting for workouts.', { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+    await continueButton.click();
+    await expect(welcome.getByRole('heading', { name: /Ready to start/ })).toBeVisible();
+    await expect(
+      welcome.getByText('Connection tested. Waiting for workouts.', { exact: true }),
+    ).toBeVisible();
+    await welcome.getByRole('button', { name: 'Open my calendar', exact: true }).click();
+    await expect(welcome).not.toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Training calendar' })).toBeVisible();
+    await expectSourceShortcuts(
+      page,
+      withGarmin ? ['Garmin import', 'Apple Health'] : ['Apple Health'],
+    );
+  });
+}
+
+test('an existing Garmin owner adds Apple Health from Settings and keeps the import job', async ({
+  page,
+  baseURL,
+}) => {
+  await setSetup('existing-owner');
+  await login(page);
+  expect(
+    (
+      await page.request.post('/api/plugins/garmin/configure', {
+        headers: { Origin: baseURL! },
+        data: { key: 'synthetic-existing-garmin-key' },
+      })
+    ).ok(),
+  ).toBe(true);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Training calendar' })).toBeVisible();
+  await expect(dialog(page)).not.toBeVisible();
+  await expectSourceShortcuts(page, ['Garmin import']);
+  const jobs = await sql`select id,status,progress from host.jobs where plugin_id='garmin'`;
+  await page.goto('/settings');
+  await page.getByRole('tab', { name: 'Activity sources', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Manage Garmin', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Add Apple Health', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Apple Health', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Create upload token', exact: true }),
+  ).toBeVisible();
+  await expectSourceShortcuts(page, ['Garmin import', 'Apple Health']);
+  expect(await sql`select id,status,progress from host.jobs where plugin_id='garmin'`).toEqual(
+    jobs,
+  );
 });

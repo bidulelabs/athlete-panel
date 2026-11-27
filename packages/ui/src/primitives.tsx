@@ -241,15 +241,17 @@ export function ErrorMessage({
 
 export function SubmitButton({
   busy,
+  disabled = false,
   children = 'Save changes',
   className = '',
 }: {
   busy: boolean;
+  disabled?: boolean;
   children?: ReactNode;
   className?: string;
 }) {
   return (
-    <Button type="submit" className={className} disabled={busy}>
+    <Button type="submit" className={className} disabled={busy || disabled}>
       {busy && <LoaderCircle className="spin" size={16} />}
       {busy ? 'Saving…' : children}
     </Button>

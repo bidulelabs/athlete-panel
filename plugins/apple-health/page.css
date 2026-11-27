@@ -1,0 +1,84 @@
+.apple-health-page .page-header,
+.apple-health-actions {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.apple-health-section {
+  border-top: 1px solid var(--line);
+  padding: 20px 0;
+  display: grid;
+  gap: 12px;
+}
+.apple-health-section h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.apple-health-section ol,
+.apple-phone-setup ol,
+.apple-health-section details ul {
+  padding-inline-start: 22px;
+  list-style: revert;
+}
+.apple-health-section a,
+.apple-phone-setup a {
+  text-decoration: underline;
+}
+.apple-phone-setup {
+  display: grid;
+  gap: 12px;
+  max-inline-size: 670px;
+}
+.onboarding-dialog .apple-phone-setup {
+  margin-top: 14px;
+}
+.apple-health-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.apple-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem;
+  align-items: end;
+  gap: 6px 8px;
+}
+.apple-copy .field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+.apple-copy [data-slot='input'],
+.apple-copy [data-slot='button'] {
+  min-height: 46px;
+  height: 46px;
+}
+.apple-copy [role='status'] {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+}
+.apple-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 12px;
+}
+.apple-summary dt,
+.apple-source-list span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.apple-source-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+}
+.apple-source-list strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.apple-source-list [data-slot='button'] {
+  flex-shrink: 0;
+  min-height: 44px;
+}

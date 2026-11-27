@@ -7,7 +7,9 @@ import { migrate } from '../../packages/host/src/migrations';
 import { bootstrapOwner } from '../../packages/host/src/auth';
 import { readOnboarding } from '../../packages/host/src/onboarding';
 import { updateOnboarding } from '../../instance/onboarding';
+import { readWorkspaceResponse } from '../../instance/workspace-response';
 import { loadWorkspace } from '../../instance/services';
+import { issueToken } from '../../plugins/apple-health/repository';
 import { mutate } from '../../plugins/training/service';
 import { configure, getConfiguration, status, sync } from '../../plugins/garmin/service';
 import athlete from '../../plugins/athlete/server';
@@ -34,7 +36,8 @@ beforeAll(async () => {
 beforeEach(async () => {
   const sql = connection();
   await sql`truncate host.owner, host.sessions, agent_bridge.planning_reads,host.grants, host.proposals, host.login_attempts, host.changes, host.idempotency, host.jobs, athlete.records, training.records, activity_records.records, garmin.coverage`;
-  await sql`delete from host.settings where key in ('onboarding','garmin','garminToken','maintenance')`;
+  await sql`delete from host.settings where key in ('onboarding','activitySources','garmin','garminToken','maintenance')`;
+  await sql`update apple_health.connection set token_hash=null,tested_at=null,last_upload_at=null`;
 });
 afterAll(closeDatabase);
 
@@ -56,6 +59,57 @@ it('bootstraps pending once, saves preferences atomically, completes and survive
   expect(await readOnboarding()).toEqual(completed);
   await expect(action('resume')).rejects.toMatchObject({ code: 'onboarding_complete' });
   expect(await connection()`select * from host.jobs`).toHaveLength(0);
+  expect(await connection()`select * from host.settings where key='activitySources'`).toHaveLength(
+    0,
+  );
+});
+
+it('saves provider choices independently and keeps saved connections visible after upgrade', async () => {
+  const owner = { actor: 'owner' } as const;
+  const choose = athlete.operations['choose-activity-source'];
+  const workspace = () => readWorkspaceResponse({ from: '2026-11-23', to: '2026-11-29' });
+  expect((await workspace()).activitySources?.selected).toEqual([]);
+  await expect(choose({ source: 'apple-health' }, { actor: 'agent' })).rejects.toMatchObject({
+    code: 'forbidden',
+  });
+  await expect(choose({ source: 'strava' }, owner)).rejects.toThrow();
+
+  await configure({ key: 'synthetic-existing-garmin-key' });
+  expect((await workspace()).activitySources?.selected).toEqual(['garmin']);
+  const beforeConfig = await getConfiguration();
+  const beforeJob = (await status(false)).currentJob;
+  await Promise.all([
+    choose({ source: 'apple-health' }, owner),
+    choose({ source: 'garmin' }, owner),
+    choose({ source: 'apple-health' }, owner),
+  ]);
+  expect((await workspace()).activitySources).toMatchObject({
+    selected: ['garmin', 'apple-health'],
+    appleHealth: { connected: false, testedAt: null, lastUploadAt: null },
+  });
+  expect(await getConfiguration()).toEqual(beforeConfig);
+  expect((await status(false)).currentJob).toEqual(beforeJob);
+  expect((await readOnboarding()).status).toBe('existing-owner');
+});
+
+it('recognizes a saved Apple Health token without including the token in workspace status', async () => {
+  const originalOrigin = process.env.APP_ORIGIN;
+  process.env.APP_ORIGIN = 'https://athlete.example';
+  try {
+    const { token } = await issueToken();
+    const { activitySources } = await readWorkspaceResponse({
+      from: '2026-11-23',
+      to: '2026-11-29',
+    });
+    expect(activitySources).toMatchObject({
+      selected: ['apple-health'],
+      appleHealth: { connected: true, testedAt: null },
+    });
+    expect(JSON.stringify(activitySources)).not.toContain(token);
+  } finally {
+    if (originalOrigin === undefined) delete process.env.APP_ORIGIN;
+    else process.env.APP_ORIGIN = originalOrigin;
+  }
 });
 
 it('classifies upgraded or missing-marker owners without inspecting their profile', async () => {

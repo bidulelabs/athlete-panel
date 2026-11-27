@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  activityProviderLabel,
   canLinkSport,
   isRest,
   sportGroups,
@@ -617,7 +618,7 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
   const [status, setStatus] = useState<'completed' | 'partial' | 'skipped'>(
     workout.completion?.status ?? 'completed',
   );
-  const linked = workout.completion?.source === 'garmin';
+  const linked = Boolean(workout.completion?.activityId);
   const action = useAction();
   const [key] = useState(requestId);
   const [factor] = useState(data.profile?.units === 'imperial' ? 1609.344 : 1000);
@@ -734,7 +735,7 @@ export function CompletionEditor({ workout, onClose }: { workout: Workout; onClo
             </div>
             {linked && (
               <p className="form-footnote">
-                Date, duration, and distance come from your Garmin activity. You can annotate effort
+                Date, duration, and distance come from the linked activity. You can annotate effort
                 and partial completion here.
               </p>
             )}
@@ -913,7 +914,7 @@ export function WorkoutInspector({
                 {completion.notes && (
                   <MarkdownContent className="completion-notes" source={completion.notes} />
                 )}
-                {completion.activityId && (
+                {completion.source === 'garmin' && completion.activityId && (
                   <dl className="inspector-details">
                     {[
                       [
@@ -956,10 +957,10 @@ export function WorkoutInspector({
                 <p>This session has not been logged yet.</p>
               </>
             )}
-            {completion?.source === 'garmin' && (
+            {completion && completion.source !== 'manual' && (
               <p className="form-footnote" id={unlinkDescriptionId}>
                 Unlink returns this workout to Planned and clears its logged results, effort, reason
-                and notes. The Garmin activity is kept.
+                and notes. The {activityProviderLabel(completion.source)} activity is kept.
                 {completion.linkMethod === 'automatic' && (
                   <>
                     {' '}
@@ -976,15 +977,14 @@ export function WorkoutInspector({
                 className="text-button"
                 style={{ marginTop: 8 }}
                 disabled={action.busy}
-                aria-describedby={completion.source === 'garmin' ? unlinkDescriptionId : undefined}
+                aria-describedby={completion.activityId ? unlinkDescriptionId : undefined}
                 onClick={() =>
                   action.run(() =>
                     mutate(request, [
                       {
-                        action:
-                          completion.source === 'garmin'
-                            ? 'workout.unlink'
-                            : 'workout.clearCompletion',
+                        action: completion.activityId
+                          ? 'workout.unlink'
+                          : 'workout.clearCompletion',
                         id: workout.id,
                         expectedRevision: workout.revision,
                       },
@@ -992,7 +992,9 @@ export function WorkoutInspector({
                   )
                 }
               >
-                {completion.source === 'garmin' ? 'Unlink Garmin activity' : 'Clear completion'}
+                {completion.source === 'manual'
+                  ? 'Clear completion'
+                  : `Unlink ${activityProviderLabel(completion.source)} activity`}
               </Button>
             )}
           </div>
@@ -1052,7 +1054,7 @@ export function WorkoutInspector({
             disabled={
               isRest(workout) ||
               completion?.status === 'skipped' ||
-              completion?.source === 'garmin' ||
+              Boolean(completion?.activityId) ||
               !date
             }
           >
@@ -1161,7 +1163,7 @@ export function LinkActivityDialog({
       >
         {available.length ? (
           <>
-            <Field label="Garmin activity">
+            <Field label="Imported activity">
               <NativeSelect
                 required
                 value={selected}
@@ -1183,7 +1185,7 @@ export function LinkActivityDialog({
           </>
         ) : (
           <EmptyState title="No compatible unlinked activities">
-            Import Garmin activities with a matching sport group and subgroup before linking.
+            Import an activity with a matching sport group and subgroup before linking.
           </EmptyState>
         )}
         <ErrorMessage error={action.error} />

@@ -3,18 +3,19 @@ export const registry = [
   {
     "path": "plugins/athlete",
     "enabled": true,
-    "version": "1.6.0",
+    "version": "1.7.0",
     "manifest": {
       "id": "athlete",
       "name": "Athlete",
       "description": "Profile, preferences and training constraints",
-      "version": "1.6.0",
+      "version": "1.7.0",
       "hostApi": "^1.1.0",
       "dependencies": {
         "training": "^2.8.0"
       },
       "optionalDependencies": {
-        "garmin": "^2.0.0"
+        "garmin": "^2.0.0",
+        "apple-health": "^1.0.0"
       },
       "required": true,
       "client": "client.tsx",
@@ -53,12 +54,12 @@ export const registry = [
   {
     "path": "plugins/training",
     "enabled": true,
-    "version": "2.9.0",
+    "version": "2.10.0",
     "manifest": {
       "id": "training",
       "name": "Training",
       "description": "Plans, workouts and recorded completion",
-      "version": "2.9.0",
+      "version": "2.10.0",
       "hostApi": "^1.3.0",
       "dependencies": {},
       "optionalDependencies": {},
@@ -93,12 +94,12 @@ export const registry = [
   {
     "path": "plugins/activity-records",
     "enabled": true,
-    "version": "2.1.0",
+    "version": "2.2.1",
     "manifest": {
       "id": "activity-records",
       "name": "Activity history",
       "description": "Normalized activities and health history",
-      "version": "2.1.0",
+      "version": "2.2.1",
       "hostApi": "^1.1.0",
       "dependencies": {
         "training": "^2.0.0"
@@ -109,6 +110,7 @@ export const registry = [
       "server": "server.ts",
       "public": {
         "shared": "public/shared.ts",
+        "client": "public/client.tsx",
         "server": "public/server.ts"
       },
       "routes": [
@@ -123,7 +125,9 @@ export const registry = [
       "migrations": [
         "migrations/001-initial.sql",
         "migrations/002-identity-index.sql",
-        "migrations/003-history-reads.sql"
+        "migrations/003-history-reads.sql",
+        "migrations/004-activity-routes.sql",
+        "migrations/005-apple-workout-sports.sql"
       ],
       "services": [],
       "jobs": [],
@@ -168,12 +172,12 @@ export const registry = [
   {
     "path": "plugins/garmin",
     "enabled": true,
-    "version": "2.3.0",
+    "version": "2.3.1",
     "manifest": {
       "id": "garmin",
       "name": "Garmin import",
       "description": "Personal API activities and health imports",
-      "version": "2.3.0",
+      "version": "2.3.1",
       "hostApi": "^1.2.0",
       "dependencies": {
         "activity-records": "^2.0.0",
@@ -225,6 +229,54 @@ export const registry = [
     }
   },
   {
+    "path": "plugins/apple-health",
+    "enabled": true,
+    "version": "1.1.0",
+    "manifest": {
+      "id": "apple-health",
+      "name": "Apple Health import",
+      "description": "Apple Watch workouts sent from Sync for Health",
+      "version": "1.1.0",
+      "hostApi": "^1.4.0",
+      "dependencies": {
+        "activity-records": "^2.2.0",
+        "training": "^2.10.0"
+      },
+      "optionalDependencies": {},
+      "required": false,
+      "client": "client.tsx",
+      "server": "server.ts",
+      "public": {
+        "server": "public/server.ts"
+      },
+      "routes": [
+        {
+          "path": "/apple-health",
+          "title": "Apple Health",
+          "icon": "HeartPulse"
+        }
+      ],
+      "slots": [
+        {
+          "id": "connection",
+          "kind": "onboarding",
+          "title": "Apple Health connection"
+        }
+      ],
+      "schema": "apple_health",
+      "migrations": [
+        "migrations/001-initial.sql",
+        "migrations/002-import-state.sql"
+      ],
+      "services": [],
+      "jobs": [],
+      "capabilities": [
+        "receive:apple-health-workouts"
+      ],
+      "configuration": {}
+    }
+  },
+  {
     "path": "plugins/health",
     "enabled": true,
     "version": "1.1.0",
@@ -259,14 +311,15 @@ export const registry = [
   {
     "path": "plugins/race-analysis",
     "enabled": true,
-    "version": "1.7.1",
+    "version": "1.8.0",
     "manifest": {
       "id": "race-analysis",
       "name": "Race analysis",
       "description": "GPX courses, elevation and estimates from your past efforts",
-      "version": "1.7.1",
+      "version": "1.8.0",
       "hostApi": "^1.4.0",
       "dependencies": {
+        "activity-records": "^2.2.0",
         "athlete": "^1.6.0",
         "training": "^2.8.0"
       },
@@ -408,4 +461,4 @@ export const registry = [
     }
   }
 ] as const;
-export const schemaSignature="726a9953e88775612084e5fe63ccd2249272446413fc60c3c217e2f401c700ff";
+export const schemaSignature="81d05f8382dc9ba9d48bfacd5cf1df1670b6874d2a2a58772042b938d4c4b3fa";

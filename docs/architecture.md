@@ -2,7 +2,7 @@
 
 ## Purpose and boundary
 
-Athlete Panel serves one owner on one independent private instance. It owns manual training, normalized imported records, scoped proposal review, and operational state. Garmin supplies imported facts; an external development harness may create source plugins or propose training changes. Neither system controls owner approval. No author-operated backend or model API is required.
+Athlete Panel serves one owner on one independent private instance. It owns manual training, normalized imported records, scoped proposal review, and operational state. Garmin supplies workout and daily health records. Sync for Health uploads Apple Watch workouts from the athlete’s iPhone. An external development harness may create source plugins or propose training changes for owner approval. No author-operated backend or model API is required.
 
 Authority: the owner approved implementation of the private MVP plan in this chat on 2026-10-24. The [execution record](plans/mvp-execution.md) preserves that dated statement; no durable conversation URL is available.
 
@@ -26,7 +26,7 @@ The packaged worker enables Docker's init process as PID 1 to forward signals an
 | SDK              | Metadata, compatibility, dependency and route validation                                   | [SDK](../packages/plugin-sdk/src/index.ts)                                    |
 | Composition      | Pinned manifests, generated client/server registries, domain service wiring                | [Instance](../instance/composition.json), [services](../instance/services.ts) |
 | Athlete/training | Profile, constraints, prescriptions, dates/order, completion and audit                     | [Athlete](../plugins/athlete), [training](../plugins/training)                |
-| Records/Garmin   | Normalized records and account-bound Personal import                                       | [Records](../plugins/activity-records), [Garmin](../plugins/garmin)           |
+| Activity imports   | Normalized facts and private GPX, Garmin Personal API, Apple Health uploads                     | [Records](../plugins/activity-records), [Garmin](../plugins/garmin), [Apple Health](../plugins/apple-health) |
 | Calendar/health  | Workspace and factual daily projections                                                    | [Calendar](../plugins/calendar), [health](../plugins/health)                  |
 | Charts           | Chart templates over Calendar range totals with sport filters and grouping                               | [Charts](../plugins/charts)                                                   |
 | Agent bridge     | Browser-approved CLI pairing, scoped exports, immutable proposal review, atomic apply/undo | [Bridge](../plugins/agent-bridge/service.ts)                                  |
@@ -47,12 +47,16 @@ flowchart LR
   Domain --> DB[(Private PostgreSQL)]
   Worker[Worker leases] --> Garmin[Personal API adapter]
   Garmin --> Records[Normalized records]
+  Phone[Sync for Health] --> Ingest[Apple Health upload endpoint]
+  Ingest --> Records
   Records --> DB
 ```
 
 ## Significant interfaces and constraints
 
-- The required athlete plugin contributes authenticated onboarding through the generic workspace slot. Host settings hold versioned owner progress; new bootstrap marks pending and the additive athlete migration classifies prior owners. The application coordinator merges only three preference fields and commits the domain audit and progress in one transaction. Completion is terminal, with explicit resume for deferred/existing owners. Garmin key entry is an enabled plugin contribution; stored credentials and verified/import states remain separate. The owner-only lightweight status adapter supplies progress, worker heartbeat and sanitized Garmin job state. See [first-time onboarding](features/first-time-onboarding.md).
+- Apple Health accepts bearer-authenticated workout uploads at a separate web endpoint. The plugin checks the credential again inside the domain transaction before committing activities, route changes, link reconciliation and the import receipt. Activity Records provides owner-only GPX downloads. Workspace and agent projections carry workout facts. [Apple Health workout import](features/apple-health-import.md)
+
+- The athlete plugin contributes authenticated onboarding through the workspace slot. Enabled Garmin and Apple Health plugins supply their setup controls through provider-specific onboarding contributions. Host settings hold setup progress and explicit activity source choices. The application projects shortcuts from those choices and saved credentials. Provider services continue to own credentials, verification and imports. The lightweight owner status adapter supplies progress, provider status and the worker heartbeat. [First-time onboarding](features/first-time-onboarding.md)
 
 - The athlete profile owns the optional week-start preference; shared UI calendar helpers resolve Automatic from the browser locale and align the workspace range for calendar and summary plugins. Existing profile/audit JSON stays readable without a migration.
 - Health owns a separate, transient 7/30/90-day review interval, initially 30 days ending today in the athlete timezone. Its client reuses the authenticated, bounded workspace endpoint and public envelope schema without changing the shell's planning range. Leaving the page resets Health selection; Calendar retains its selected position. Superseded reads are aborted and measurements only render under matching requested dates. See [Health history](features/health-history.md).

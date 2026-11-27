@@ -3,6 +3,11 @@ import { validSportSelection, isRest } from './sports';
 
 export const sportSchema = z.string().min(1).max(100);
 export type Sport = z.infer<typeof sportSchema>;
+export const activityProviderSchema = z.enum(['garmin', 'apple-health']);
+export type ActivityProvider = z.infer<typeof activityProviderSchema>;
+export function activityProviderLabel(provider: ActivityProvider): string {
+  return provider === 'garmin' ? 'Garmin' : 'Apple Health';
+}
 export const idSchema = z.uuid();
 export const revisionSchema = z.number().int().positive();
 export const nonnegativeSchema = z.number().finite().nonnegative();
@@ -257,27 +262,28 @@ export const completionInputSchema = z
 
 export const completionSchema = completionValuesSchema
   .safeExtend({
-    source: z.enum(['manual', 'garmin']),
+    source: z.enum(['manual', ...activityProviderSchema.options]),
     activityId: idSchema.nullable(),
     /** Set by the training service, never accepted in owner completion input. */
     linkMethod: z.enum(['manual', 'automatic']).optional(),
   })
   .superRefine((completion, ctx) => {
-    if (completion.linkMethod && completion.source !== 'garmin')
+    const imported = completion.source !== 'manual';
+    if (completion.linkMethod && !imported)
       ctx.addIssue({
         code: 'custom',
         path: ['linkMethod'],
-        message: 'Only Garmin links have a linking method.',
+        message: 'Only imported activities have a linking method.',
       });
-    if ((completion.source === 'garmin') !== (completion.activityId !== null))
+    if (imported !== (completion.activityId !== null))
       ctx.addIssue({
         code: 'custom',
         path: ['activityId'],
-        message: 'Only Garmin completion must reference an activity.',
+        message: 'An imported completion must reference an activity.',
       });
     if (
       completion.status === 'skipped' &&
-      (completion.source === 'garmin' ||
+      (imported ||
         completion.durationSeconds !== null ||
         completion.distanceMeters !== null ||
         completion.rpe !== null)
@@ -797,7 +803,7 @@ export const importProvenanceSchema = z
 export const activitySchema = z
   .object({
     ...base,
-    provider: z.literal('garmin'),
+    provider: activityProviderSchema,
     externalId: z.string().min(1).max(512),
     title: z.string().max(512),
     sport: sportSchema,
@@ -808,6 +814,15 @@ export const activitySchema = z
         typeKey: z.string().min(1).max(100),
         typeId: z.string().regex(/^\d+$/).nullable(),
         parentTypeId: z.string().regex(/^\d+$/).nullable(),
+      })
+      .strict()
+      .optional(),
+    appleHealth: z
+      .object({
+        recordingSource: text,
+        workoutType: sportSchema,
+        routeAvailable: z.boolean(),
+        estimatedElevationMeters: nullableNumber,
       })
       .strict()
       .optional(),

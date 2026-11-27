@@ -84,15 +84,17 @@ export function assertReferences(state: WorkspaceState): void {
   assertRehearsalReferences(state);
   const linkedActivities = new Set<string>();
   for (const workout of state.workouts) {
-    if (workout.completion?.source !== 'garmin') continue;
-    const activityId = workout.completion.activityId;
+    const activityId = workout.completion?.activityId;
+    if (!activityId) continue;
     const activity = state.activities.find((candidate) => candidate.id === activityId);
     if (!activity) fail('INVALID_STATE', 'Linked activity does not exist.');
-    if (linkedActivities.has(activityId!))
+    if (activity.provider !== workout.completion?.source)
+      fail('INVALID_STATE', 'Linked activity and completion sources differ.');
+    if (linkedActivities.has(activityId))
       fail('ALREADY_LINKED', 'An activity may be linked to only one workout.');
     if (!canLinkSport(workout, activity))
       fail('INVALID_STATE', 'Linked workout and activity sports differ.');
-    linkedActivities.add(activityId!);
+    linkedActivities.add(activityId);
   }
 }
 export function validateWorkspace(state: unknown): WorkspaceState {

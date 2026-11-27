@@ -1,8 +1,7 @@
 import type { GarminConnection } from '../../packages/contracts/src/garmin-connection';
 
 export function connectionMessage(value: GarminConnection, workerAvailable = true): string {
-  if (!value.connected)
-    return "Garmin isn't connected. You can connect later from Garmin in the sidebar.";
+  if (!value.connected) return 'Connect Garmin from Activity sources in Settings.';
   if (value.lastErrorCode === 'credentials_rejected')
     return "Garmin couldn't accept this key. Create or check your Personal API key, then try again.";
   if (value.lastErrorCode === 'account_mismatch')

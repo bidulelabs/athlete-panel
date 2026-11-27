@@ -8,7 +8,7 @@ import {
   AlertDialogCancel,
 } from '@athlete-panel/ui';
 import { Button } from '@athlete-panel/ui';
-import { sportSelectionLabel, isRest } from '@athlete-panel/contracts';
+import { activityProviderLabel, sportSelectionLabel, isRest } from '@athlete-panel/contracts';
 import { useId, useState, type ReactNode } from 'react';
 import type {
   Activity,
@@ -32,6 +32,7 @@ import {
   dateLabel,
   distance,
   duration,
+  elevation,
   ErrorMessage,
   Modal,
   MarkdownContent,
@@ -42,6 +43,7 @@ import {
   useWorkspace,
   ExtensionSlot,
 } from '@athlete-panel/ui';
+import { DownloadActivityRoute } from '../activity-records/public/client';
 import { effectiveDate } from '../training/public/shared';
 import {
   eventDeleteQuestion,
@@ -231,12 +233,14 @@ export function ActivityCard({
   units?: string;
   onClick: () => void;
 }) {
+  const source = activityProviderLabel(activity.provider);
+  const title = activity.title || `${source} activity`;
   return (
     <CalendarCard
       tone="activity"
       icon={<SportIcon sport={activity.sport} size={17} />}
-      title={activity.title || 'Garmin activity'}
-      label={`Open activity ${activity.title || 'Garmin activity'}`}
+      title={title}
+      label={`Open activity ${title}`}
       onClick={onClick}
     >
       <span>
@@ -245,7 +249,7 @@ export function ActivityCard({
           ? 'Distance unavailable'
           : distance(activity.distanceMeters, units)}
       </span>
-      <span className="calendar-fact-tag">Garmin · Not linked</span>
+      <span className="calendar-fact-tag">{source} · Not linked</span>
     </CalendarCard>
   );
 }
@@ -518,9 +522,11 @@ export function ActivityDetails({
   const { data } = useWorkspace();
   const [linking, setLinking] = useState(false);
   const units = data.profile?.units ?? 'metric';
+  const source = activityProviderLabel(activity.provider);
+  const apple = activity.appleHealth;
   return (
     <Detail
-      title={activity.title || 'Garmin activity'}
+      title={activity.title || `${source} activity`}
       description={`${sportSelectionLabel(activity)} · ${fullDate(activity.localDate)}`}
       onClose={onClose}
     >
@@ -541,6 +547,18 @@ export function ActivityDetails({
             ? 'Unavailable'
             : `${Math.round(activity.averageHeartRateBpm)} bpm`}
         </Metric>
+        {apple && (
+          <Metric label="Peak heart rate">
+            {activity.maxHeartRateBpm == null
+              ? 'Unavailable'
+              : `${Math.round(activity.maxHeartRateBpm)} bpm`}
+          </Metric>
+        )}
+        {apple?.estimatedElevationMeters != null && (
+          <Metric label="Route climbing estimate">
+            {elevation(apple.estimatedElevationMeters, units)}
+          </Metric>
+        )}
         <Metric label="Start time (UTC)">
           {new Date(activity.startedAt).toLocaleString('en-GB', {
             timeZone: 'UTC',
@@ -548,15 +566,20 @@ export function ActivityDetails({
             timeStyle: 'short',
           })}
         </Metric>
-        <Metric label="TSS">{activity.trainingStressScore ?? 'Unavailable'}</Metric>
-        <Metric label="Intensity factor">{activity.intensityFactor ?? 'Unavailable'}</Metric>
-        <Metric label="Normalized power">
-          {activity.normalizedPowerWatts == null
-            ? 'Unavailable'
-            : `${activity.normalizedPowerWatts} W`}
-        </Metric>
-        <Metric label="Source">Garmin</Metric>
+        {activity.provider === 'garmin' && (
+          <>
+            <Metric label="TSS">{activity.trainingStressScore ?? 'Unavailable'}</Metric>
+            <Metric label="Intensity factor">{activity.intensityFactor ?? 'Unavailable'}</Metric>
+            <Metric label="Normalized power">
+              {activity.normalizedPowerWatts == null
+                ? 'Unavailable'
+                : `${activity.normalizedPowerWatts} W`}
+            </Metric>
+          </>
+        )}
+        <Metric label="Source">{apple ? `${source} · ${apple.recordingSource}` : source}</Metric>
       </dl>
+      {apple?.routeAvailable && <DownloadActivityRoute id={activity.id} />}
       {activity.dateSource === 'inferred' && (
         <p className="form-footnote">The activity’s calendar date was inferred during import.</p>
       )}

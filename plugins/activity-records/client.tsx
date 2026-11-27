@@ -3,6 +3,7 @@
 import { Button, NativeSelect, Input, Badge } from '@athlete-panel/ui';
 import { useMemo, useState } from 'react';
 import {
+  activityProviderLabel,
   canLinkSport,
   isUnresolvedActivitySport,
   isRest,
@@ -18,6 +19,7 @@ import {
   DateNavigation,
   distance,
   duration,
+  elevation,
   EmptyState,
   ErrorMessage,
   Field,
@@ -33,6 +35,7 @@ import {
 import { mutate } from '../training/public/client';
 import { effectiveDate } from '../training/public/shared';
 import { activityMetricSummary } from './summary';
+import { DownloadActivityRoute } from './public/client';
 import './client.css';
 
 function metricCoverage(
@@ -53,11 +56,16 @@ function metricCoverage(
 }
 
 export default function ActivitiesPage({ data }: PluginPageProps) {
-  const { from, to, navigate } = useWorkspace();
+  const { from, to, navigate, envelope } = useWorkspace();
+  const imports = [
+    { id: 'garmin', path: '/garmin', label: 'Garmin import' },
+    { id: 'apple-health', path: '/apple-health', label: 'Apple Health' },
+  ].filter(({ id }) => envelope.plugins.some((plugin) => plugin.id === id && plugin.enabled));
   const [sport, setSport] = useState('all');
   const [subgroup, setSubgroup] = useState('');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<ActivityRecord | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = data.activities.find((activity) => activity.id === selectedId);
   const activities = useMemo(
     () =>
       data.activities
@@ -88,11 +96,11 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
       <PageHeader
         title="Activities"
         description="Your imported sessions, linked to the training you planned."
-        actions={
-          <Button variant="outline" className="button" onClick={() => navigate('/garmin')}>
-            Garmin import <ArrowUpRight size={15} />
+        actions={imports.map(({ id, path, label }) => (
+          <Button key={id} variant="outline" className="button" onClick={() => navigate(path)}>
+            {label} <ArrowUpRight size={15} />
           </Button>
-        }
+        ))}
       />
       <section className="summary-strip activity-summary" aria-label="Activity summary">
         <Stat
@@ -187,7 +195,9 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
                     <SportIcon sport={activity.sport} size={21} />
                     <div>
                       <strong>{title}</strong>
-                      <small>{sportSelectionLabel(activity)} · Garmin</small>
+                      <small>
+                        {sportSelectionLabel(activity)} · {activityProviderLabel(activity.provider)}
+                      </small>
                     </div>
                   </td>
                   <td className="activity-date">
@@ -231,7 +241,7 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
                     <Button
                       variant="link"
                       aria-label={`View ${title}`}
-                      onClick={() => setSelected(activity)}
+                      onClick={() => setSelectedId(activity.id)}
                     >
                       View <ArrowUpRight size={14} aria-hidden="true" />
                     </Button>
@@ -252,7 +262,7 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
               <Button variant="outline" onClick={clearFilters}>
                 Clear filters
               </Button>
-            ) : (
+            ) : imports.length === 1 && imports[0]?.id === 'garmin' ? (
               <Button
                 variant="default"
                 className="button primary"
@@ -260,15 +270,15 @@ export default function ActivitiesPage({ data }: PluginPageProps) {
               >
                 Connect Garmin <ArrowUpRight size={15} />
               </Button>
-            )
+            ) : undefined
           }
         >
           {search || sport !== 'all'
             ? 'Try another search, sport, or date range.'
-            : 'Connect Garmin to import your activities. Manual workouts are always available in the calendar.'}
+            : 'Connect an import source to see your recorded activities here.'}
         </EmptyState>
       )}
-      {selected && <ActivityDetail activity={selected} onClose={() => setSelected(null)} />}
+      {selected && <ActivityDetail activity={selected} onClose={() => setSelectedId(null)} />}
     </div>
   );
 }
@@ -278,10 +288,12 @@ function ActivityDetail({ activity, onClose }: { activity: ActivityRecord; onClo
   const action = useAction();
   const [workoutId, setWorkoutId] = useState('');
   const linked = data.workouts.find((workout) => workout.completion?.activityId === activity.id);
+  const source = activityProviderLabel(activity.provider);
+  const apple = activity.appleHealth;
   const available = data.workouts.filter(
     (workout) =>
       !isRest(workout) &&
-      workout.completion?.source !== 'garmin' &&
+      !workout.completion?.activityId &&
       workout.completion?.status !== 'skipped' &&
       effectiveDate(workout, data.plans) &&
       canLinkSport(workout, activity),
@@ -290,7 +302,7 @@ function ActivityDetail({ activity, onClose }: { activity: ActivityRecord; onClo
     <Modal
       open
       onClose={onClose}
-      title={activity.title || 'Garmin activity'}
+      title={activity.title || `${source} activity`}
       description={`${sportSelectionLabel(activity)} · ${dateLabel(activity.localDate, { day: 'numeric', month: 'long', year: 'numeric' })}`}
     >
       <div className="dialog-body">
@@ -307,6 +319,16 @@ function ActivityDetail({ activity, onClose }: { activity: ActivityRecord; onClo
                 : `${Math.round(activity.averageHeartRateBpm)} bpm`}
             </dd>
           </div>
+          {apple && (
+            <div>
+              <dt>Peak heart rate</dt>
+              <dd>
+                {activity.maxHeartRateBpm == null
+                  ? '—'
+                  : `${Math.round(activity.maxHeartRateBpm)} bpm`}
+              </dd>
+            </div>
+          )}
           <div>
             <dt>Elevation</dt>
             <dd>
@@ -315,31 +337,44 @@ function ActivityDetail({ activity, onClose }: { activity: ActivityRecord; onClo
                 : `${Math.round(activity.elevationMeters * (data.profile?.units === 'imperial' ? 3.28084 : 1))} ${data.profile?.units === 'imperial' ? 'ft' : 'm'}`}
             </dd>
           </div>
-          <div>
-            <dt>TSS</dt>
-            <dd>{activity.trainingStressScore ?? '—'}</dd>
-          </div>
-          <div>
-            <dt>Intensity factor</dt>
-            <dd>{activity.intensityFactor ?? '—'}</dd>
-          </div>
-          <div>
-            <dt>Normalized power</dt>
-            <dd>
-              {activity.normalizedPowerWatts == null ? '—' : `${activity.normalizedPowerWatts} W`}
-            </dd>
-          </div>
+          {apple?.estimatedElevationMeters != null && (
+            <div>
+              <dt>Route climbing estimate</dt>
+              <dd>{elevation(apple.estimatedElevationMeters, data.profile?.units)}</dd>
+            </div>
+          )}
+          {activity.provider === 'garmin' && (
+            <>
+              <div>
+                <dt>TSS</dt>
+                <dd>{activity.trainingStressScore ?? '—'}</dd>
+              </div>
+              <div>
+                <dt>Intensity factor</dt>
+                <dd>{activity.intensityFactor ?? '—'}</dd>
+              </div>
+              <div>
+                <dt>Normalized power</dt>
+                <dd>
+                  {activity.normalizedPowerWatts == null
+                    ? '—'
+                    : `${activity.normalizedPowerWatts} W`}
+                </dd>
+              </div>
+            </>
+          )}
           <div>
             <dt>Date source</dt>
             <dd>
-              {activity.dateSource === 'provider' ? 'Garmin local date' : 'Inferred local date'}
+              {activity.dateSource === 'provider' ? `${source} local date` : 'Inferred local date'}
             </dd>
           </div>
           <div>
             <dt>Source</dt>
-            <dd>Garmin Connect</dd>
+            <dd>{apple ? `${source} · ${apple.recordingSource}` : 'Garmin Connect'}</dd>
           </div>
         </dl>
+        {apple?.routeAvailable && <DownloadActivityRoute id={activity.id} />}
         <div className="form-divider" />
         {linked ? (
           <>
@@ -385,6 +420,7 @@ function ActivityDetail({ activity, onClose }: { activity: ActivityRecord; onClo
               <NativeSelect
                 required
                 value={workoutId}
+                disabled={available.length === 0}
                 onChange={(event) => setWorkoutId(event.target.value)}
               >
                 <option value="">Choose a workout</option>
@@ -397,11 +433,12 @@ function ActivityDetail({ activity, onClose }: { activity: ActivityRecord; onClo
             </Field>
             {available.length === 0 && (
               <p className="form-footnote">
-                No compatible scheduled workouts. Check the sport group and subgroup, or resolve the
-                activity classification through Garmin reimport.
+                Schedule a workout with the same sport group and subgroup to link this activity.
               </p>
             )}
-            <SubmitButton busy={action.busy || !workoutId}>Link workout</SubmitButton>
+            <SubmitButton busy={action.busy} disabled={!workoutId}>
+              Link workout
+            </SubmitButton>
           </form>
         )}
         <ErrorMessage error={action.error} />

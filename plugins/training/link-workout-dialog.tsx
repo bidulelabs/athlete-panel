@@ -1,7 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { canLinkSport, sportSelectionLabel, type Activity } from '@athlete-panel/contracts';
+import {
+  activityProviderLabel,
+  canLinkSport,
+  sportSelectionLabel,
+  type Activity,
+} from '@athlete-panel/contracts';
 import {
   Button,
   Modal,
@@ -48,7 +53,7 @@ export function LinkWorkoutDialog({
       open
       onClose={onClose}
       title="Link workout"
-      description={`Choose the workout for ${activity.title || 'this Garmin activity'}.`}
+      description={`Choose the workout for ${activity.title || 'this activity'}.`}
     >
       <form
         className="dialog-body"
@@ -96,7 +101,7 @@ export function LinkWorkoutDialog({
             </Field>
             {candidate?.workout.completion && (
               <p className="form-footnote">
-                Garmin measurements replace the manually logged{' '}
+                {activityProviderLabel(activity.provider)} measurements replace the manually logged{' '}
                 {duration(candidate.workout.completion.durationSeconds)} ·{' '}
                 {distance(candidate.workout.completion.distanceMeters, data.profile?.units)}.
                 Status, notes and effort are kept.

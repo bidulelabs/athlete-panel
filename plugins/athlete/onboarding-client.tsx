@@ -1,5 +1,10 @@
 'use client';
-import { onboardingStatusSchema, onboardingActionSchema } from '@athlete-panel/contracts';
+import {
+  activityProviderLabel,
+  onboardingStatusSchema,
+  onboardingActionSchema,
+  type ActivityProvider,
+} from '@athlete-panel/contracts';
 import {
   Button,
   ErrorMessage,
@@ -15,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GarminConnection } from '../../packages/contracts/src/garmin-connection';
 import type { Onboarding, Preferences } from '../../packages/contracts/src/onboarding';
 import './onboarding.css';
+import { ActivitySourceOptions } from './activity-sources-client';
 import { PreferenceFields, suggestedPreferences } from './preferences';
 
 export function OnboardingResume() {
@@ -26,7 +32,7 @@ export function OnboardingResume() {
     <div className="onboarding-resume">
       <div>
         <strong>Welcome setup</strong>
-        <p>Confirm your preferences and optionally connect Garmin.</p>
+        <p>Confirm your preferences and choose activity sources.</p>
         <ErrorMessage error={action.error} />
       </div>
       <Button
@@ -95,12 +101,13 @@ export function OnboardingDialog() {
   const [closed, setClosed] = useState(false);
   const dismissedRevision = useRef(0);
   const [busy, setBusy] = useState(false);
-  const [keyBusy, setKeyBusy] = useState(false);
+  const [sourceBusy, setSourceBusy] = useState(false);
   const [editingKey, setEditingKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [closeError, setCloseError] = useState(false);
   const [reviewVersion, setReviewVersion] = useState(0);
   const [connection, setConnection] = useState<GarminConnection>(envelope.garmin);
+  const [activitySources, setActivitySources] = useState(envelope.activitySources);
   const [worker, setWorker] = useState<unknown>(
     envelope.operational?.find((row) => row.key === 'worker')?.value,
   );
@@ -108,7 +115,7 @@ export function OnboardingDialog() {
   const inFlight = useRef<Promise<unknown> | null>(null);
   const attempt = useRef<{ payload: string; id: string } | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
-  const enabled = envelope.plugins.some((plugin) => plugin.id === 'garmin' && plugin.enabled);
+  const body = useRef<HTMLDivElement>(null);
   const approvalLink =
     path === '/agent' && new URLSearchParams(window.location.search).has('connect');
   const open = !!state && ['pending', 'active'].includes(state.status) && !closed && !approvalLink;
@@ -126,7 +133,8 @@ export function OnboardingDialog() {
   useEffect(() => {
     pollSequence.current++;
     setConnection(envelope.garmin);
-  }, [envelope.garmin]);
+    setActivitySources(envelope.activitySources);
+  }, [envelope.garmin, envelope.activitySources]);
   const refreshStatus = useCallback(async () => {
     if (statusInFlight.current) return;
     statusInFlight.current = true;
@@ -145,6 +153,7 @@ export function OnboardingDialog() {
       if (sequence !== pollSequence.current) return;
       acceptState(result.onboarding);
       setConnection(result.garmin);
+      setActivitySources(result.activitySources);
       setWorker(result.worker);
       setStatusError(false);
     } catch {
@@ -168,11 +177,13 @@ export function OnboardingDialog() {
     };
   }, [open, refreshStatus]);
   useEffect(() => {
-    if (open) heading.current?.focus();
+    if (!open) return;
+    body.current?.scrollTo({ top: 0 });
+    heading.current?.focus({ preventScroll: true });
   }, [open, state?.step]);
   useEffect(() => {
     setEditingKey(false);
-    setKeyBusy(false);
+    setSourceBusy(false);
     setError(null);
   }, [state?.step, open]);
 
@@ -241,14 +252,17 @@ export function OnboardingDialog() {
     if (destination) navigate(destination);
   }
   const workerAvailable = !operationalHealth({ worker }).workerWarning;
-  const locked = busy || keyBusy;
+  const locked = busy || sourceBusy;
+  const selected: ActivityProvider[] =
+    activitySources?.selected ?? (connection.connected ? ['garmin'] : []);
   const connectionProps = {
     connection,
+    appleHealth: activitySources?.appleHealth,
     workerAvailable,
     busy: locked,
     editingKey,
     onEditingChange: setEditingKey,
-    onBusy: setKeyBusy,
+    onBusy: setSourceBusy,
     onRefresh: refreshStatus,
     onError: setError,
   };
@@ -271,16 +285,16 @@ export function OnboardingDialog() {
         open={open}
         onClose={() => void dismiss()}
         title="Welcome to Athlete Panel"
-        description="Make this workspace yours. Confirm a few preferences and connect Garmin if you use it."
+        description="Choose your preferences and activity sources."
         closeLabel="Finish setup later"
         closeOnBackdrop={false}
         focusHeading
         initialFocusRef={heading}
         className="onboarding-dialog"
       >
-        <div className="dialog-body">
+        <div className="dialog-body" ref={body}>
           <ol className="onboarding-steps" aria-label="Setup progress">
-            {['Preferences', 'Garmin', 'Ready'].map((label, index) => (
+            {['Preferences', 'Activity sources', 'Ready'].map((label, index) => (
               <li key={label} aria-current={step === index + 1 ? 'step' : undefined}>
                 <span>{index + 1}</span>
                 {label}
@@ -289,11 +303,7 @@ export function OnboardingDialog() {
           </ol>
           <h3 ref={heading} tabIndex={-1} className="onboarding-step-title">
             <span className="sr-only">Step {step} of 3 — </span>
-            {step === 1
-              ? 'Your preferences'
-              : step === 2
-                ? 'Connect Garmin — optional'
-                : 'Ready to start'}
+            {step === 1 ? 'Your preferences' : step === 2 ? 'Activity sources' : 'Ready to start'}
           </h3>
           <ErrorMessage error={error} />
           {error && (
@@ -322,41 +332,8 @@ export function OnboardingDialog() {
           )}
           {step === 2 && (
             <>
-              <p>
-                Bring in your recorded activities, sleep duration and stages, sleep score, resting
-                heart rate, HRV, steps, stress and Body Battery. Availability depends on your Garmin
-                devices and history. Athlete Panel reads your data; it does not upload training to
-                Garmin.
-              </p>
-              <p className="muted-text">
-                Recent data is imported first. Older history follows in the background while your
-                instance is running. You can start using the calendar right away.
-              </p>
-              {!enabled ? (
-                <p>Garmin is disabled. You can enable it later in Plugins.</p>
-              ) : (
-                <>
-                  <OnboardingConnectionSlot {...connectionProps} variant="setup" />
-                </>
-              )}
-              <div className="dialog-actions">
-                <Button
-                  variant="outline"
-                  className="button"
-                  disabled={locked}
-                  onClick={() => void advance('back')}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="default"
-                  className="button primary"
-                  disabled={locked}
-                  onClick={() => void advance('continue')}
-                >
-                  {connection.connected && enabled ? 'Continue' : 'Skip for now'}
-                </Button>
-              </div>
+              <p>Set up either source or both.</p>
+              <ActivitySourceOptions selection={selected} setup={connectionProps} />
               {connection.connected && !connection.verified && !connection.paused && (
                 <p className="muted-text">We'll keep checking in the background.</p>
               )}
@@ -365,7 +342,8 @@ export function OnboardingDialog() {
           {step === 3 && (
             <>
               <p>
-                Your workspace is ready. You can plan training now, even while Garmin is importing.
+                Your workspace is ready. You can plan training while connections and imports run in
+                the background.
               </p>
               <dl className="onboarding-summary">
                 <div>
@@ -389,19 +367,21 @@ export function OnboardingDialog() {
                       : week}
                   </dd>
                 </div>
-                <div>
-                  <dt>Garmin</dt>
-                  <dd role="status">
-                    {enabled ? (
-                      <OnboardingConnectionSlot {...connectionProps} variant="summary" />
-                    ) : (
-                      'Garmin is disabled.'
-                    )}
-                  </dd>
-                </div>
+                {selected.map((source) => (
+                  <div key={source}>
+                    <dt>{activityProviderLabel(source)}</dt>
+                    <dd role="status">
+                      <OnboardingConnectionSlot
+                        {...connectionProps}
+                        pluginId={source}
+                        variant="summary"
+                      />
+                    </dd>
+                  </div>
+                ))}
               </dl>
               <p>
-                Change preferences and training settings in{' '}
+                Manage activity sources and training preferences in{' '}
                 <Button
                   variant="link"
                   className="text-button"
@@ -409,15 +389,7 @@ export function OnboardingDialog() {
                 >
                   Settings
                 </Button>
-                . Check your connection and import progress from{' '}
-                <Button
-                  variant="link"
-                  className="text-button"
-                  onClick={() => void dismiss('/garmin')}
-                >
-                  Garmin
-                </Button>{' '}
-                in the sidebar.
+                .
               </p>
               <div className="dialog-actions">
                 <Button
@@ -442,7 +414,7 @@ export function OnboardingDialog() {
           {statusError && (
             <div role="status">
               <p>
-                We couldn't refresh Garmin status. Your import may still be running.
+                We couldn't refresh activity source status. Imports may still be running.
                 {connection.checkedAt &&
                   ` Last checked ${new Date(connection.checkedAt).toLocaleString()}.`}
               </p>
@@ -468,6 +440,26 @@ export function OnboardingDialog() {
             Saved steps are kept. You can finish later in Settings.
           </p>
         </div>
+        {step === 2 && (
+          <div className="dialog-actions onboarding-source-actions">
+            <Button
+              variant="outline"
+              className="button"
+              disabled={locked}
+              onClick={() => void advance('back')}
+            >
+              Back
+            </Button>
+            <Button
+              variant="default"
+              className="button primary"
+              disabled={locked}
+              onClick={() => void advance('continue')}
+            >
+              {selected.length ? 'Continue' : 'Skip for now'}
+            </Button>
+          </div>
+        )}
       </Modal>
     </>
   );

@@ -70,7 +70,7 @@ const scenarioWith = (values: Partial<RaceScenario> = {}) =>
         stopSeconds,
         cutoff,
       })),
-      courseEstimateSeconds: estimate.seconds,
+      courseEstimate: { seconds: 6000, lowSeconds: 4800, highSeconds: 7200 },
       effortPercent: 0,
       weatherPercent: 0,
     },
@@ -169,22 +169,30 @@ describe('scenario outdated reasons', () => {
     courseId: string | null = 'course',
     planValues: Partial<RacePlan> = {},
     scenario = scenarioWith(),
-    courseEstimateSeconds: number | null = estimate.seconds,
+    courseEstimate: CourseEstimate | null = estimate,
   ) =>
     scenarioOutdatedReasons(
       { ...plan, stations, ...planValues } as RacePlan,
       courseId,
-      courseEstimateSeconds,
+      courseEstimate,
       scenario,
       'metric',
     );
 
-  it('says the course estimate changed on the same course', () => {
-    expect(reasons(plan.stations, 'course', {}, scenarioWith(), 6300)).toEqual([
+  it.each([
+    ['its central time', { ...estimate, seconds: 6300 }],
+    ['only its low end', { ...estimate, lowSeconds: 5000 }],
+    ['only its high end', { ...estimate, highSeconds: 6900 }],
+    ['to none', null],
+  ])('says once that the course estimate changed, with %s changed', (_label, now) => {
+    expect(reasons(plan.stations, 'course', {}, scenarioWith(), now)).toEqual([
       'The course estimate changed.',
     ]);
-    expect(reasons(plan.stations, 'course', {}, scenarioWith(), null)).toEqual([
-      'The course estimate changed.',
+  });
+
+  it('gives the effort as the only reason when only the plan effort changed', () => {
+    expect(reasons(plan.stations, 'course', { effortPercent: 5 })).toEqual([
+      "The plan's effort changed.",
     ]);
   });
 
@@ -249,7 +257,7 @@ describe('scenario outdated reasons', () => {
         'course',
         { effortPercent: 5, weatherPercent: 5 },
         savedBefore,
-        6300,
+        { ...estimate, seconds: 6300 },
       ),
     ).toEqual([]);
   });
@@ -301,8 +309,8 @@ describe('scenario outdated reasons', () => {
   });
 
   it('says the course changed', () => {
-    expect(reasons(plan.stations, 'other-course', {}, scenarioWith(), 6300)).toEqual([
-      'The course changed.',
-    ]);
+    expect(
+      reasons(plan.stations, 'other-course', {}, scenarioWith(), { ...estimate, seconds: 6300 }),
+    ).toEqual(['The course changed.']);
   });
 });

@@ -52,10 +52,17 @@ type CarryInputs = {
   carryCapacityMillilitres: number | null;
 };
 
+export const estimateRange = (estimate: CourseEstimate | null) =>
+  estimate && {
+    seconds: estimate.seconds,
+    lowSeconds: estimate.lowSeconds,
+    highSeconds: estimate.highSeconds,
+  };
+
 export function scenarioOutdatedReasons(
   plan: RacePlan,
   courseId: string | null,
-  courseEstimateSeconds: number | null,
+  courseEstimate: CourseEstimate | null,
   scenario: RaceScenario,
   units: string,
 ) {
@@ -67,7 +74,7 @@ export function scenarioOutdatedReasons(
   return [
     ...(basedOn.courseId !== courseId
       ? ['The course changed.']
-      : changedFromPlan(basedOn.courseEstimateSeconds, courseEstimateSeconds)
+      : changedFromPlan(basedOn.courseEstimate, estimateRange(courseEstimate))
         ? ['The course estimate changed.']
         : []),
     ...basedOn.stations

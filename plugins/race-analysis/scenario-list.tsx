@@ -99,7 +99,7 @@ export function Scenarios({
                   const outdatedReasons = scenarioOutdatedReasons(
                     racePlan,
                     course?.id ?? null,
-                    estimate?.seconds ?? null,
+                    estimate,
                     scenario,
                     units,
                   );

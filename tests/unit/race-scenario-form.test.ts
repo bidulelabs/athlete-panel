@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { emptyRaceNutrition, type RacePlan, type RaceScenario } from '@athlete-panel/contracts';
+import {
+  emptyRaceNutrition,
+  type CourseEstimate,
+  type RacePlan,
+  type RaceScenario,
+} from '@athlete-panel/contracts';
 import {
   changedScenarioValues,
   createScenarioCommand,
@@ -41,7 +46,7 @@ const basedOnPlan = (stations: Station[]) => ({
     stopSeconds,
     cutoff,
   })),
-  courseEstimateSeconds: 6000,
+  courseEstimate: { seconds: 6000, lowSeconds: 4800, highSeconds: 7200 },
   effortPercent: 0,
   weatherPercent: 0,
 });
@@ -78,7 +83,13 @@ const formOf = (
   return form;
 };
 const opened = { scenario, plan, outdated: false };
-const current = { scenario, plan, courseId: 'course', courseEstimateSeconds: 6000 };
+const courseEstimate = {
+  seconds: 6000,
+  lowSeconds: 4800,
+  highSeconds: 7200,
+  referenceCount: 3,
+} as CourseEstimate;
+const current = { scenario, plan, courseId: 'course', courseEstimate };
 
 describe('changed scenario values', () => {
   it('sends nothing when nothing changed, even for a stop that is not a whole minute', () => {
@@ -164,7 +175,7 @@ describe('changed scenario values', () => {
 
 describe('scenario commands', () => {
   it('creates from the plan stations and the current course', () => {
-    const command = createScenarioCommand(formOf({ name: 'New' }), plan, 'course', 6000);
+    const command = createScenarioCommand(formOf({ name: 'New' }), plan, 'course', courseEstimate);
     expect(command).toMatchObject({
       action: 'raceScenario.create',
       values: {
@@ -188,7 +199,7 @@ describe('scenario commands', () => {
       null,
     );
     const { basedOn } = (command as { values: Pick<RaceScenario, 'basedOn'> }).values;
-    expect(basedOn.courseEstimateSeconds).toBeNull();
+    expect(basedOn.courseEstimate).toBeNull();
     expect(basedOn.stations.map((station) => station.cutoff)).toEqual([cutoff, null]);
   });
 

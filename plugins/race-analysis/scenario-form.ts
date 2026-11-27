@@ -1,5 +1,10 @@
-import type { CommandInput, RacePlan, RaceScenario } from '@athlete-panel/contracts';
-import { scenarioStations } from './scenarios';
+import type {
+  CommandInput,
+  CourseEstimate,
+  RacePlan,
+  RaceScenario,
+} from '@athlete-panel/contracts';
+import { estimateRange, scenarioStations } from './scenarios';
 
 type ScenarioFields = Pick<
   RaceScenario,
@@ -10,7 +15,7 @@ type ScenarioInPlan = { scenario: RaceScenario; plan: RacePlan };
 export type OpenedScenario = ScenarioInPlan & { outdated: boolean };
 export type CurrentScenario = ScenarioInPlan & {
   courseId: string | null;
-  courseEstimateSeconds: number | null;
+  courseEstimate: CourseEstimate | null;
 };
 
 const COPY_SUFFIX = ' (copy)';
@@ -21,7 +26,7 @@ export const stopMinutesText = (stopSeconds: number) => String(stopSeconds / 60)
 export const scenarioBasedOn = (
   plan: RacePlan,
   courseId: string | null,
-  courseEstimateSeconds: number | null,
+  courseEstimate: CourseEstimate | null,
 ) => ({
   courseId,
   stations: plan.stations.map(({ id, distanceMeters, stopSeconds, cutoff }) => ({
@@ -30,7 +35,7 @@ export const scenarioBasedOn = (
     stopSeconds,
     cutoff,
   })),
-  courseEstimateSeconds,
+  courseEstimate: estimateRange(courseEstimate),
   effortPercent: plan.effortPercent,
   weatherPercent: plan.weatherPercent,
 });
@@ -62,7 +67,7 @@ export function createScenarioCommand(
   form: FormData,
   plan: RacePlan,
   courseId: string | null,
-  courseEstimateSeconds: number | null,
+  courseEstimate: CourseEstimate | null,
 ): CommandInput {
   return {
     action: 'raceScenario.create',
@@ -70,7 +75,7 @@ export function createScenarioCommand(
       id: crypto.randomUUID(),
       eventId: plan.eventId,
       ...typedScenario(form, plan.stations),
-      basedOn: scenarioBasedOn(plan, courseId, courseEstimateSeconds),
+      basedOn: scenarioBasedOn(plan, courseId, courseEstimate),
     },
   };
 }
@@ -121,6 +126,6 @@ export function changedScenarioValues(
         ? typedSecondsByStationId.get(station.id)!
         : station.stopSeconds,
     })),
-    basedOn: scenarioBasedOn(current.plan, current.courseId, current.courseEstimateSeconds),
+    basedOn: scenarioBasedOn(current.plan, current.courseId, current.courseEstimate),
   };
 }

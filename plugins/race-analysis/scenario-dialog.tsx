@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import { Field, Input, Modal, distance, duration, useAction } from '@athlete-panel/ui';
-import type { CommandInput, RacePlan, RaceScenario } from '@athlete-panel/contracts';
+import type {
+  CommandInput,
+  CourseEstimate,
+  RacePlan,
+  RaceScenario,
+} from '@athlete-panel/contracts';
 import { DialogActions, EffortAndWeatherFields } from './race-day-dialogs';
 import { changedScenarioValues, createScenarioCommand, stopMinutesText } from './scenario-form';
 import { scenarioStations } from './scenarios';
@@ -13,7 +18,7 @@ export function ScenarioDialog({
   scenario,
   racePlan,
   courseId,
-  courseEstimateSeconds,
+  courseEstimate,
   outdated,
   units,
   finishOf,
@@ -23,7 +28,7 @@ export function ScenarioDialog({
   scenario: RaceScenario | undefined;
   racePlan: RacePlan;
   courseId: string | null;
-  courseEstimateSeconds: number | null;
+  courseEstimate: CourseEstimate | null;
   outdated: boolean;
   units: string;
   finishOf: (draft: Draft) => string;
@@ -57,14 +62,13 @@ export function ScenarioDialog({
           const form = new FormData(event.currentTarget);
           if (!opened.scenario)
             return void action.run(
-              () =>
-                onSave(createScenarioCommand(form, opened.plan, courseId, courseEstimateSeconds)),
+              () => onSave(createScenarioCommand(form, opened.plan, courseId, courseEstimate)),
               onClose,
             );
           const changed = changedScenarioValues(
             form,
             { scenario: opened.scenario, plan: opened.plan, outdated: opened.outdated },
-            { scenario: scenario!, plan: racePlan, courseId, courseEstimateSeconds },
+            { scenario: scenario!, plan: racePlan, courseId, courseEstimate },
           );
           if (Object.keys(changed).length === 0) return onClose();
           void action.run(

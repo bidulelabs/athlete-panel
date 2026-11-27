@@ -32,7 +32,7 @@ for (const theme of ['light', 'dark']) {
     const raceId = await createRace(page, baseURL!);
     await page.goto(`/races?race=${raceId}`);
     await uploadCourse(page, syntheticGpx());
-    await page.getByRole('tab', { name: 'Race day', exact: true }).focus();
+    await page.getByRole('tab', { name: 'Scenarios', exact: true }).focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('tab', { name: 'Nutrition', exact: true })).toHaveAttribute(
       'aria-selected',

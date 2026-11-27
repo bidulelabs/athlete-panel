@@ -17,6 +17,7 @@ export function groundDistance(
 const slowestMovingMetersPerSecond = 0.3;
 const slowestClimbingMetersPerSecond = 0.05;
 const shortestWindowSeconds = 60;
+const shortestChordSeconds = 30;
 export function movingSeconds(points: readonly SourcePoint[]): number | null {
   if (points.some((p, i) => p.time === null || (i > 0 && p.time < points[i - 1]!.time!)))
     return null;
@@ -25,14 +26,23 @@ export function movingSeconds(points: readonly SourcePoint[]): number | null {
   let seconds = 0;
   let windowStart = 0;
   const closeWindowAt = (end: number) => {
-    const a = points[windowStart]!,
-      b = points[end]!;
+    let pathMeters = 0,
+      climbMeters = 0,
+      chordStart = windowStart;
+    for (let i = windowStart + 1; i <= end; i++) {
+      if (i < end && secondsBetween(chordStart, i) < shortestChordSeconds) continue;
+      const a = points[chordStart]!,
+        b = points[i]!;
+      pathMeters += groundDistance(a, b);
+      if (a.elevation !== null && b.elevation !== null)
+        climbMeters += Math.abs(b.elevation - a.elevation);
+      chordStart = i;
+    }
     const duration = secondsBetween(windowStart, end);
-    const climb = a.elevation !== null && b.elevation !== null ? b.elevation - a.elevation : 0;
     if (
       duration > 0 &&
-      (groundDistance(a, b) / duration >= slowestMovingMetersPerSecond ||
-        Math.abs(climb) / duration >= slowestClimbingMetersPerSecond)
+      (pathMeters / duration >= slowestMovingMetersPerSecond ||
+        climbMeters / duration >= slowestClimbingMetersPerSecond)
     )
       seconds += duration;
     windowStart = end;

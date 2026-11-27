@@ -151,40 +151,54 @@ describe('file validation and factual measurements', () => {
     return ((((t ^ (t >>> 14)) >>> 0) / 4294967296) * 2 - 1) * amplitude;
   };
   const oneHertzGpx = (
-    stretches: { seconds: number; northPerSecond: number; upPerSecond: number }[],
+    seconds: number,
+    positionAt: (second: number) => { north: number; east?: number; up?: number },
     noisy: boolean,
   ) => {
     const noise = seededNoise(42);
     const metersPerDegree = 111195.08;
-    let north = 0,
-      up = 1000,
-      second = 0;
-    const point = () =>
-      `<trkpt lat="${45 + (north + (noisy ? noise(3) : 0)) / metersPerDegree}" lon="${6 + (noisy ? noise(3) : 0) / (metersPerDegree * Math.cos(Math.PI / 4))}"><ele>${up + (noisy ? noise(0.3) : 0)}</ele><time>${new Date(Date.UTC(2027, 5, 1, 7) + second * 1000).toISOString()}</time></trkpt>`;
-    const points = [point()];
-    for (const { seconds, northPerSecond, upPerSecond } of stretches)
-      for (let i = 0; i < seconds; i++) {
-        north += northPerSecond;
-        up += upPerSecond;
-        second++;
-        points.push(point());
-      }
+    const points = Array.from({ length: seconds + 1 }, (_, second) => {
+      const { north, east = 0, up = 0 } = positionAt(second);
+      const latitude = 45 + (north + (noisy ? noise(3) : 0)) / metersPerDegree;
+      const longitude =
+        6 + (east + (noisy ? noise(3) : 0)) / (metersPerDegree * Math.cos(Math.PI / 4));
+      const time = new Date(Date.UTC(2027, 5, 1, 7) + second * 1000).toISOString();
+      return `<trkpt lat="${latitude}" lon="${longitude}"><ele>${1000 + up + (noisy ? noise(0.3) : 0)}</ele><time>${time}</time></trkpt>`;
+    });
     return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>${points.join('')}</trkseg></trk></gpx>`;
   };
+  const lapRadius = 200 / (2 * Math.PI);
   it('counts a 10 min stop recorded every second with GPS and barometer noise as a pause', () => {
-    const walk = { seconds: 300, northPerSecond: 1, upPerSecond: 0 };
-    const stop = { seconds: 600, northPerSecond: 0, upPerSecond: 0 };
-    expect(analyze(oneHertzGpx([walk, stop, walk], true)).movingSeconds).toBe(600);
+    const walkStopWalk = (second: number) => ({
+      north: second < 300 ? second : second < 900 ? 300 : second - 600,
+    });
+    expect(analyze(oneHertzGpx(1200, walkStopWalk, true)).movingSeconds).toBe(600);
   });
   it.each([
     [
       'a 60% climb at 400 m an hour with GPS and barometer noise',
-      { northPerSecond: 400 / 3600 / 0.6, upPerSecond: 400 / 3600 },
+      600,
+      (second: number) => ({ north: (second * 400) / 3600 / 0.6, up: (second * 400) / 3600 }),
       true,
     ],
-    ['a flat walk at 1.1 km/h', { northPerSecond: 1.1 / 3.6, upPerSecond: 0 }, false],
-  ])('counts %s recorded every second as moving', (_label, pace, noisy) => {
-    expect(analyze(oneHertzGpx([{ seconds: 600, ...pace }], noisy)).movingSeconds).toBe(600);
+    ['a flat walk at 1.1 km/h', 600, (second: number) => ({ north: (second * 1.1) / 3.6 }), false],
+    [
+      'ten 200 m laps of a track, one a minute',
+      600,
+      (second: number) => ({
+        north: lapRadius * Math.sin((2 * Math.PI * second) / 60),
+        east: lapRadius * (1 - Math.cos((2 * Math.PI * second) / 60)),
+      }),
+      false,
+    ],
+    [
+      '100 m out and back in a minute',
+      60,
+      (second: number) => ({ north: (100 * (second < 30 ? second : 60 - second)) / 30 }),
+      false,
+    ],
+  ])('counts %s recorded every second as moving', (_label, seconds, positionAt, noisy) => {
+    expect(analyze(oneHertzGpx(seconds, positionAt, noisy)).movingSeconds).toBe(seconds);
   });
   it('leaves a pause out of the moving time and keeps it in the elapsed time', () => {
     const track = analyze(syntheticGpx({ km: 8, ascent: 400, seconds: 3000, pauseSeconds: 1800 }));

@@ -1,5 +1,10 @@
-import type { CommandInput, RacePlan, RaceScenario } from '@athlete-panel/contracts';
-import { planChanges, scenarioStations } from './scenarios';
+import type {
+  CommandInput,
+  CourseEstimate,
+  RacePlan,
+  RaceScenario,
+} from '@athlete-panel/contracts';
+import { estimateRange, planChanges, scenarioStations } from './scenarios';
 
 type ScenarioFields = Pick<
   RaceScenario,

@@ -469,6 +469,7 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
             estimateReasons={value.estimateReasons}
             data={props.data}
             request={props.request}
+            reload={reload}
             onOpenCourse={() => setTab('course')}
           />
         ) : tab === 'nutrition' ? (

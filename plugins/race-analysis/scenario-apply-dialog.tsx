@@ -40,6 +40,8 @@ export function ApplyScenarioDialog({
   racePlan,
   planOutcome,
   outcome,
+  blockedReason,
+  reloadedPreview,
   onApply,
   onClose,
 }: {
@@ -47,11 +49,15 @@ export function ApplyScenarioDialog({
   racePlan: RacePlan;
   planOutcome: ScenarioOutcome;
   outcome: ScenarioOutcome;
+  blockedReason: string | null;
+  reloadedPreview: (
+    scenario: RaceScenario,
+  ) => Promise<{ planOutcome: ScenarioOutcome; outcome: ScenarioOutcome }>;
   onApply: (command: CommandInput) => Promise<unknown>;
   onClose: () => void;
 }) {
   const action = useAction();
-  const [opened] = useState({ scenario, plan: racePlan, planOutcome, outcome });
+  const [opened, setOpened] = useState({ scenario, plan: racePlan, planOutcome, outcome });
   const finishBefore = finishText(opened.planOutcome);
   const finishAfter = finishText(opened.outcome);
   const range = arrivalRangeLabel(opened.outcome.finish)?.range;
@@ -67,10 +73,19 @@ export function ApplyScenarioDialog({
         className="dialog-body race-form"
         onSubmit={(event) => {
           event.preventDefault();
-          void action.run(
-            () => onApply(applyScenarioCommand(opened.plan, opened.scenario)),
-            onClose,
-          );
+          void action.run(async () => {
+            const latest = await reloadedPreview(opened.scenario);
+            if (
+              JSON.stringify([latest.planOutcome.finish, latest.outcome.finish]) !==
+              JSON.stringify([opened.planOutcome.finish, opened.outcome.finish])
+            ) {
+              setOpened({ ...opened, ...latest });
+              throw new Error(
+                'The estimate changed since you opened this. Review the new preview, then apply.',
+              );
+            }
+            await onApply(applyScenarioCommand(opened.plan, opened.scenario));
+          }, onClose);
         }}
       >
         <table className="race-stations">
@@ -110,7 +125,13 @@ export function ApplyScenarioDialog({
           </p>
         </div>
         <p className="race-hint">You can undo this from History.</p>
-        <DialogActions action={action} onClose={onClose} submitLabel="Apply to plan" />
+        {blockedReason && <p className="race-hint">{blockedReason}</p>}
+        <DialogActions
+          action={action}
+          onClose={onClose}
+          submitLabel="Apply to plan"
+          submitDisabled={blockedReason !== null}
+        />
       </form>
     </Modal>
   );

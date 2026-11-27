@@ -243,13 +243,15 @@ export function SubmitButton({
   busy,
   children = 'Save changes',
   className = '',
+  disabled = false,
 }: {
   busy: boolean;
   children?: ReactNode;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
-    <Button type="submit" className={className} disabled={busy}>
+    <Button type="submit" className={className} disabled={busy || disabled}>
       {busy && <LoaderCircle className="spin" size={16} />}
       {busy ? 'Saving…' : children}
     </Button>

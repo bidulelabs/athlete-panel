@@ -709,6 +709,30 @@ test('shows on Race day the finish the Apply window previewed for a longer stop'
   );
 });
 
+async function slowDownFirstReference(page: Page, baseURL: string, raceId: string) {
+  const analysis = await page.request.post('/api/plugins/race-analysis/analysis', {
+    headers: { Origin: baseURL },
+    data: { raceId },
+  });
+  const { revision, references } = (await analysis.json()) as {
+    revision: number;
+    references: { id: string; title: string; durationSeconds: number }[];
+  };
+  const edited = await page.request.post('/api/plugins/race-analysis/reference-update', {
+    headers: { Origin: baseURL },
+    data: {
+      raceId,
+      expectedRevision: revision,
+      idempotencyKey: randomUUID(),
+      id: references[0]!.id,
+      title: references[0]!.title,
+      durationSeconds: references[0]!.durationSeconds + 1800,
+      terrain: 3,
+    },
+  });
+  expect(edited.ok(), await edited.text()).toBe(true);
+}
+
 test('disables Apply once a reference effort or a station cutoff changed after saving the scenario', async ({
   page,
   baseURL,
@@ -732,27 +756,7 @@ test('disables Apply once a reference effort or a station cutoff changed after s
   };
 
   await saveScenario('Before the reference edit');
-  const analysis = await page.request.post('/api/plugins/race-analysis/analysis', {
-    headers: { Origin: baseURL! },
-    data: { raceId },
-  });
-  const { revision, references } = (await analysis.json()) as {
-    revision: number;
-    references: { id: string; title: string; durationSeconds: number }[];
-  };
-  const edited = await page.request.post('/api/plugins/race-analysis/reference-update', {
-    headers: { Origin: baseURL! },
-    data: {
-      raceId,
-      expectedRevision: revision,
-      idempotencyKey: randomUUID(),
-      id: references[0]!.id,
-      title: references[0]!.title,
-      durationSeconds: references[0]!.durationSeconds + 1800,
-      terrain: 3,
-    },
-  });
-  expect(edited.ok(), await edited.text()).toBe(true);
+  await slowDownFirstReference(page, baseURL!, raceId);
   await reopenScenarios();
   await expect(applyOption(page, 'Before the reference edit')).toBeDisabled();
   await expect(page.getByText('The course estimate changed.').first()).toBeVisible();
@@ -776,6 +780,72 @@ test('disables Apply once a reference effort or a station cutoff changed after s
   await reopenScenarios();
   await expect(applyOption(page, 'Before the cutoff edit')).toBeDisabled();
   await expect(page.getByText('The cutoff at Les Pins changed.').first()).toBeVisible();
+});
+
+const estimateChangedError = (page: Page) =>
+  applyDialog(page).getByText(
+    'The estimate changed since you opened this. Review the new preview, then apply.',
+  );
+const previewedFinish = (page: Page) => applyDialog(page).getByText(/^Expected finish/);
+
+test('refuses Apply when a reference effort changed since the window opened, until the scenario is saved again', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await raceWithEstimateAndAmbitiousScenario(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await page.getByRole('button', { name: 'New scenario', exact: true }).click();
+  await dialogOf(page).getByLabel('Name', { exact: true }).fill('Long stop');
+  await dialogOf(page).getByLabel('Les Pins stop in this scenario (minutes)').fill('20');
+  await dialogOf(page).getByLabel('Name', { exact: true }).press('Enter');
+  await expect(dialogOf(page)).toHaveCount(0);
+  const planBefore = await readRacePlan(page, raceId);
+
+  await actionsOf(page, 'Long stop').selectOption('Apply');
+  const finishAtOpening = await previewedFinish(page).textContent();
+  await slowDownFirstReference(page, baseURL!, raceId);
+  await applyButton(page).click();
+  await expect(estimateChangedError(page)).toBeVisible();
+  await expect(previewedFinish(page)).not.toHaveText(finishAtOpening!);
+  await expect(
+    applyDialog(page).getByText('Outdated: review it and save it again before applying.'),
+  ).toBeVisible();
+  await expect(applyButton(page)).toBeDisabled();
+  expect((await readRacePlan(page, raceId)).revision).toBe(planBefore.revision);
+
+  await applyDialog(page).getByRole('button', { name: 'Cancel', exact: true }).click();
+  await actionsOf(page, 'Long stop').selectOption('Edit');
+  await dialogOf(page).getByLabel('Name', { exact: true }).press('Enter');
+  await expect(dialogOf(page)).toHaveCount(0);
+  await actionsOf(page, 'Long stop').selectOption('Apply');
+  await applyButton(page).click();
+  await expect(applyDialog(page)).toHaveCount(0);
+  expect((await readRacePlan(page, raceId)).revision).toBe(planBefore.revision + 1);
+});
+
+test('refuses Apply once when the estimate changed for a scenario saved without one, then applies the new preview', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await raceWithEstimateAndAmbitiousScenario(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  const planBefore = await readRacePlan(page, raceId);
+
+  await actionsOf(page, 'Ambitious').selectOption('Apply');
+  const finishAtOpening = await previewedFinish(page).textContent();
+  await slowDownFirstReference(page, baseURL!, raceId);
+  await applyButton(page).click();
+  await expect(estimateChangedError(page)).toBeVisible();
+  await expect(previewedFinish(page)).not.toHaveText(finishAtOpening!);
+  expect((await readRacePlan(page, raceId)).revision).toBe(planBefore.revision);
+
+  await applyButton(page).click();
+  await expect(applyDialog(page)).toHaveCount(0);
+  expect((await readRacePlan(page, raceId)).effortPercent).toBe(-5);
 });
 
 for (const theme of ['light', 'dark']) {

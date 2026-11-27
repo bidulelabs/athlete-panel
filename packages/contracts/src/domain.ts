@@ -687,6 +687,61 @@ export const rehearsalSchema = z
   .strict()
   .extend(base);
 export type Rehearsal = z.infer<typeof rehearsalSchema>;
+export const RACE_SCENARIO_LIMIT = 4;
+const raceScenarioStationLimit = 60;
+const raceScenarioFields = {
+  name: z.string().trim().min(1).max(80).refine(withoutHalfCharacters),
+  ...racePlanAssumptionFields,
+  stops: z
+    .array(
+      z
+        .object({
+          stationId: idSchema,
+          stopSeconds: racePlanStationFields.stopSeconds,
+        })
+        .strict(),
+    )
+    .max(raceScenarioStationLimit)
+    .refine((stops) => new Set(stops.map((stop) => stop.stationId)).size === stops.length, {
+      message: 'Each aid station appears once.',
+    }),
+  basedOn: z
+    .object({
+      courseId: racePlanCourseId,
+      stations: z
+        .array(
+          z
+            .object({
+              id: idSchema,
+              distanceMeters: nonnegativeSchema,
+              stopSeconds: racePlanStationFields.stopSeconds.optional(),
+              cutoff: racePlanStationFields.cutoff.optional(),
+            })
+            .strict(),
+        )
+        .max(raceScenarioStationLimit),
+      courseEstimate: z
+        .object({
+          seconds: z.number().finite().positive(),
+          lowSeconds: z.number().finite().positive(),
+          highSeconds: z.number().finite().positive(),
+        })
+        .strict()
+        .nullable()
+        .optional(),
+      effortPercent: racePlanAssumptionFields.effortPercent.optional(),
+      weatherPercent: racePlanAssumptionFields.weatherPercent.optional(),
+    })
+    .strict(),
+};
+export const raceScenarioSchema = z
+  .object({
+    eventId: idSchema.describe('Id of the race whose plan this scenario compares.'),
+    ...raceScenarioFields,
+  })
+  .strict()
+  .extend(base);
+export type RaceScenario = z.infer<typeof raceScenarioSchema>;
 const weeklyRange = z
   .object({
     min: nonnegativeSchema.describe('Lowest weekly value, in the unit named by the target field.'),
@@ -873,6 +928,7 @@ export const workspaceStateSchema = z
     periods: z.array(periodSchema).default([]),
     racePlans: z.array(racePlanSchema).default([]),
     rehearsals: z.array(rehearsalSchema).default([]),
+    raceScenarios: z.array(raceScenarioSchema).default([]),
     injuries: z.array(injurySchema),
     activities: z.array(activitySchema),
     health: z.array(healthRecordSchema),
@@ -888,6 +944,7 @@ export const emptyWorkspace = (): WorkspaceState => ({
   periods: [],
   racePlans: [],
   rehearsals: [],
+  raceScenarios: [],
   injuries: [],
   activities: [],
   health: [],
@@ -1167,6 +1224,26 @@ export const commandSchema = z.discriminatedUnion('action', [
     .strict(),
   z.object({ action: z.literal('rehearsal.delete'), ...existing }).strict(),
   z
+    .object({
+      action: z.literal('raceScenario.create'),
+      values: z
+        .object({
+          ...createId,
+          eventId: raceScenarioSchema.shape.eventId,
+          ...raceScenarioFields,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('raceScenario.update'),
+      ...existing,
+      values: nonemptyPatch(z.object(raceScenarioFields).strict()),
+    })
+    .strict(),
+  z.object({ action: z.literal('raceScenario.delete'), ...existing }).strict(),
+  z
     .object({ action: z.literal('injury.create'), values: injuryValuesSchema.extend(createId) })
     .strict(),
   z.object({ action: z.literal('injury.update'), ...existing, values: injuryPatchSchema }).strict(),
@@ -1185,6 +1262,7 @@ export type EntityKind =
   | 'period'
   | 'racePlan'
   | 'rehearsal'
+  | 'raceScenario'
   | 'injury'
   | 'activity'
   | 'health';
@@ -1197,6 +1275,7 @@ export type Entity =
   | Period
   | RacePlan
   | Rehearsal
+  | RaceScenario
   | Injury
   | Activity
   | HealthRecord;

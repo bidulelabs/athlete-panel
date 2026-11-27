@@ -19,6 +19,7 @@ const labels: Record<string, string> = {
 export const entityNames: Partial<Record<EntityChange['entity'], string>> = {
   racePlan: 'race plan',
   rehearsal: 'fueling rehearsal',
+  raceScenario: 'race scenario',
 };
 const readable = (key: string) =>
   labels[key] ?? key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (s) => s.toUpperCase());

@@ -1,6 +1,7 @@
 import { eventSchema, type Command } from '@athlete-panel/contracts';
 import type { CommandContext } from '../context';
 import { deleteRehearsalsWithoutRaceOrSession } from './rehearsal';
+import { deleteScenariosWithoutRace } from './race-scenario';
 
 export function handleEvent(
   context: CommandContext,
@@ -23,6 +24,7 @@ export function handleEvent(
       state.events = state.events.filter((item) => item.id !== command.id);
       state.racePlans = state.racePlans.filter((racePlan) => racePlan.eventId !== command.id);
       deleteRehearsalsWithoutRaceOrSession(state);
+      deleteScenariosWithoutRace(state);
       break;
     }
   }

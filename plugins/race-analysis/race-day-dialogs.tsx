@@ -13,7 +13,7 @@ import {
   Textarea,
   useAction,
 } from '@athlete-panel/ui';
-import { useState, type ReactNode } from 'react';
+import { useState, type ChangeEvent, type ReactNode } from 'react';
 import type { NutritionProduct, RacePlan } from '@athlete-panel/contracts';
 import { ProductField, RemovableRow, useEditorRows } from './editor-rows';
 import {
@@ -196,6 +196,74 @@ export function StartAndCutoffDialog({
   );
 }
 
+type TypedPercent = { value: string; onChange: (text: string) => void };
+
+export function EffortAndWeatherFields({
+  effortPercent,
+  weatherPercent,
+  weatherNote,
+  typedEffort,
+  typedWeather,
+  readOnly,
+}: {
+  effortPercent: number;
+  weatherPercent: number;
+  weatherNote: string;
+  typedEffort?: TypedPercent;
+  typedWeather?: TypedPercent;
+  readOnly: boolean;
+}) {
+  const percentProps = (typed: TypedPercent | undefined, saved: number) =>
+    typed
+      ? {
+          value: typed.value,
+          onChange: (event: ChangeEvent<HTMLInputElement>) => typed.onChange(event.target.value),
+        }
+      : { defaultValue: saved };
+  return (
+    <>
+      <Field
+        label="Effort (%)"
+        hint="Moving time changes by this much. 8 is 8 % longer, -5 is shorter."
+      >
+        <Input
+          type="number"
+          name="effortPercent"
+          required
+          min={-30}
+          max={50}
+          step={0.5}
+          inputMode="decimal"
+          {...percentProps(typedEffort, effortPercent)}
+          readOnly={readOnly}
+        />
+      </Field>
+      <Field label="Weather (%)" hint="Heat, mud or wind. Added on top of effort.">
+        <Input
+          type="number"
+          name="weatherPercent"
+          required
+          min={-20}
+          max={50}
+          step={0.5}
+          inputMode="decimal"
+          {...percentProps(typedWeather, weatherPercent)}
+          readOnly={readOnly}
+        />
+      </Field>
+      <Field label="Weather note" hint="Your own words, not a forecast.">
+        <Textarea
+          name="weatherNote"
+          rows={2}
+          maxLength={300}
+          defaultValue={weatherNote}
+          readOnly={readOnly}
+        />
+      </Field>
+    </>
+  );
+}
+
 export function EffortAndWeatherDialog({
   racePlan,
   onSave,
@@ -229,44 +297,12 @@ export function EffortAndWeatherDialog({
           void action.run(() => onSave(changed), onClose);
         }}
       >
-        <Field
-          label="Effort (%)"
-          hint="Moving time changes by this much. 8 is 8 % longer, -5 is shorter."
-        >
-          <Input
-            type="number"
-            name="effortPercent"
-            required
-            min={-30}
-            max={50}
-            step={0.5}
-            inputMode="decimal"
-            defaultValue={opened?.effortPercent ?? 0}
-            readOnly={action.busy}
-          />
-        </Field>
-        <Field label="Weather (%)" hint="Heat, mud or wind. Added on top of effort.">
-          <Input
-            type="number"
-            name="weatherPercent"
-            required
-            min={-20}
-            max={50}
-            step={0.5}
-            inputMode="decimal"
-            defaultValue={opened?.weatherPercent ?? 0}
-            readOnly={action.busy}
-          />
-        </Field>
-        <Field label="Weather note" hint="Your own words, not a forecast.">
-          <Textarea
-            name="weatherNote"
-            rows={2}
-            maxLength={300}
-            defaultValue={opened?.weatherNote ?? ''}
-            readOnly={action.busy}
-          />
-        </Field>
+        <EffortAndWeatherFields
+          effortPercent={opened?.effortPercent ?? 0}
+          weatherPercent={opened?.weatherPercent ?? 0}
+          weatherNote={opened?.weatherNote ?? ''}
+          readOnly={action.busy}
+        />
         <DialogActions action={action} onClose={onClose} />
       </form>
     </Modal>

@@ -34,7 +34,7 @@
     {
       "path": "plugins/race-analysis",
       "enabled": true,
-      "version": "1.9.0"
+      "version": "1.10.0"
     },
     {
       "path": "plugins/charts",

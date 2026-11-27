@@ -973,8 +973,7 @@
   .race-scenario-finish {
     text-align: left;
   }
-  .race-scenario > [data-slot='button'] {
-    justify-self: start;
+  .race-scenario-actions [data-slot='button'] {
     min-height: 44px;
   }
 }
@@ -1141,4 +1140,19 @@
     font-weight: 700;
     text-decoration: underline;
   }
+}
+.race-scenario-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+.race-scenario-toolbar .race-hint {
+  margin: 0;
+}
+.race-scenario-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }

@@ -422,6 +422,9 @@
 .race-data-notice p {
   margin: 6px 0;
 }
+.race-notice-danger {
+  border-left-color: var(--danger);
+}
 .race-notice {
   color: var(--muted);
   font-size: 13px;

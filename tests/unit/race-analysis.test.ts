@@ -117,6 +117,94 @@ describe('file validation and factual measurements', () => {
     ]);
     expect(Math.abs(route[1]!.y - route[0]!.y)).toBeGreaterThan(100);
   });
+  const twoPoints = (horizontalMeters: number, climbMeters: number) =>
+    `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>${[
+      [45, 1000, '2027-06-01T07:00:00Z'],
+      [45 + horizontalMeters / 111195.08, 1000 + climbMeters, '2027-06-01T07:01:40Z'],
+      [45 + 1, 1000 + climbMeters, '2027-06-01T08:01:40Z'],
+    ]
+      .map(
+        ([lat, ele, time]) =>
+          `<trkpt lat="${lat}" lon="6"><ele>${ele}</ele><time>${time}</time></trkpt>`,
+      )
+      .join('')}</trkseg></trk></gpx>`;
+  it.each([
+    ['31 m on the flat', 31, 0, 100],
+    ['29 m on the flat', 29, 0, 0],
+    ['10 m of GPS drift at an aid station', 10, 0, 0],
+    ['5.3 m of climbing in place', 0, 5.28, 100],
+    ['4.7 m of climbing in place', 0, 4.72, 0],
+    ['4.7 m of descent in place', 0, -4.72, 0],
+    ['5.3 m of descent in place', 0, -5.28, 100],
+    ['a 60% climb at 400 m an hour', 18.52, 11.11, 100],
+    ['a 25% climb at 2 km/h', 54, 13.5, 100],
+  ])(
+    'counts 100 s covering %s as moving from 0.3 m/s or 180 m an hour',
+    (_label, horizontal, climb, counted) => {
+      expect(analyze(twoPoints(horizontal, climb)).movingSeconds).toBeCloseTo(3600 + counted, 6);
+    },
+  );
+  const seededNoise = (seed: number) => (amplitude: number) => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((((t ^ (t >>> 14)) >>> 0) / 4294967296) * 2 - 1) * amplitude;
+  };
+  const oneHertzGpx = (
+    seconds: number,
+    positionAt: (second: number) => { north: number; east?: number; up?: number },
+    noisy: boolean,
+  ) => {
+    const noise = seededNoise(42);
+    const metersPerDegree = 111195.08;
+    const points = Array.from({ length: seconds + 1 }, (_, second) => {
+      const { north, east = 0, up = 0 } = positionAt(second);
+      const latitude = 45 + (north + (noisy ? noise(3) : 0)) / metersPerDegree;
+      const longitude =
+        6 + (east + (noisy ? noise(3) : 0)) / (metersPerDegree * Math.cos(Math.PI / 4));
+      const time = new Date(Date.UTC(2027, 5, 1, 7) + second * 1000).toISOString();
+      return `<trkpt lat="${latitude}" lon="${longitude}"><ele>${1000 + up + (noisy ? noise(0.3) : 0)}</ele><time>${time}</time></trkpt>`;
+    });
+    return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>${points.join('')}</trkseg></trk></gpx>`;
+  };
+  const lapRadius = 200 / (2 * Math.PI);
+  it('counts a 10 min stop recorded every second with GPS and barometer noise as a pause', () => {
+    const walkStopWalk = (second: number) => ({
+      north: second < 300 ? second : second < 900 ? 300 : second - 600,
+    });
+    expect(analyze(oneHertzGpx(1200, walkStopWalk, true)).movingSeconds).toBe(600);
+  });
+  it.each([
+    [
+      'a 60% climb at 400 m an hour with GPS and barometer noise',
+      600,
+      (second: number) => ({ north: (second * 400) / 3600 / 0.6, up: (second * 400) / 3600 }),
+      true,
+    ],
+    ['a flat walk at 1.1 km/h', 600, (second: number) => ({ north: (second * 1.1) / 3.6 }), false],
+    [
+      'ten 200 m laps of a track, one a minute',
+      600,
+      (second: number) => ({
+        north: lapRadius * Math.sin((2 * Math.PI * second) / 60),
+        east: lapRadius * (1 - Math.cos((2 * Math.PI * second) / 60)),
+      }),
+      false,
+    ],
+    [
+      '100 m out and back in a minute',
+      60,
+      (second: number) => ({ north: (100 * (second < 30 ? second : 60 - second)) / 30 }),
+      false,
+    ],
+  ])('counts %s recorded every second as moving', (_label, seconds, positionAt, noisy) => {
+    expect(analyze(oneHertzGpx(seconds, positionAt, noisy)).movingSeconds).toBe(seconds);
+  });
+  it('leaves a pause out of the moving time and keeps it in the elapsed time', () => {
+    const track = analyze(syntheticGpx({ km: 8, ascent: 400, seconds: 3000, pauseSeconds: 1800 }));
+    expect(track.elapsedSeconds).toBe(4800);
+    expect(track.movingSeconds).toBeCloseTo(3000, 6);
+  });
   it('decodes a CRC-checked synthetic FIT reference, including elapsed rather than timer time', () => {
     const encoder = new Encoder();
     const identity: FileIdMesg = {
@@ -140,6 +228,7 @@ describe('file validation and factual measurements', () => {
     const bytes = encoder.close();
     const parsed = parseTrack({ name: 'effort.fit', bytes }, 'reference');
     expect(parsed.elapsedSeconds).toBe(2000);
+    expect(analyzeTrack(parsed).movingSeconds).toBe(1740);
     expect(analyzeTrack(parsed).distanceMeters).toBeGreaterThan(3000);
     const broken = Uint8Array.from(bytes);
     broken[30] = broken[30]! ^ 255;

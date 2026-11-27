@@ -69,9 +69,9 @@ export async function upload(file: UploadedFile, body: unknown) {
   if (input.purpose === 'reference') {
     const problem = referenceTimeProblem(
       track.distanceMeters,
-      input.durationSeconds ?? track.elapsedSeconds,
+      input.durationSeconds ?? track.movingSeconds ?? null,
     );
-    assert(!problem, 'invalid_reference_time', problem ?? 'Check the elapsed time.');
+    assert(!problem, 'invalid_reference_time', problem ?? 'Check the moving time.');
   }
   const fingerprint = createHash('sha256').update(file.bytes).digest('hex');
   return transaction((tx) =>
@@ -94,7 +94,7 @@ export async function upload(file: UploadedFile, body: unknown) {
           assert(
             !duplicate.length,
             'duplicate_reference',
-            'This reference file is already included. Edit its elapsed time or terrain instead.',
+            'This reference file is already included. Edit its moving time or terrain instead.',
           );
         }
         const [usage] =
@@ -111,7 +111,7 @@ export async function upload(file: UploadedFile, body: unknown) {
       values(${input.raceId},${revision},${input.purpose === 'course' ? assetId : current.assetId},${current.terrain},${tx.json(input.purpose === 'course' ? {} : current.sectionTerrain)})
       on conflict(race_id) do update set revision=excluded.revision,asset_id=excluded.asset_id,section_terrain=excluded.section_terrain,updated_at=now()`;
         if (input.purpose === 'reference')
-          await addReference(input, assetId, track.elapsedSeconds, tx);
+          await addReference(input, assetId, track.movingSeconds ?? null, tx);
         return raceMutationResultSchema.parse({ revision, assetId });
       },
     ),
@@ -167,7 +167,7 @@ export async function updateReference(body: unknown) {
         );
         assert(reference, 'reference_missing', 'This reference is no longer available.', 404);
         const problem = referenceTimeProblem(reference.distanceMeters, input.durationSeconds);
-        assert(!problem, 'invalid_reference_time', problem ?? 'Check the elapsed time.');
+        assert(!problem, 'invalid_reference_time', problem ?? 'Check the moving time.');
         const rows =
           await tx`update race_analysis.reference_efforts set title=${input.title},duration_seconds=${input.durationSeconds},duration_source=${input.durationSeconds === null ? 'missing' : 'owner'},terrain=${input.terrain} where id=${input.id} and race_id=${input.raceId} returning id`;
         assert(rows.length, 'reference_missing', 'This reference is no longer available.', 404);

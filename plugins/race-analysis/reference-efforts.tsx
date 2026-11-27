@@ -77,8 +77,8 @@ function EditReference({
           />
         </Field>
         <Field
-          label="Elapsed time (minutes)"
-          hint="Include pauses. An effort without a time stays visible but is excluded from the estimate."
+          label="Moving time (minutes)"
+          hint="Leave out pauses. An effort without a time stays visible but is excluded from the estimate."
         >
           <Input
             type="number"
@@ -194,7 +194,7 @@ export function ReferenceEfforts({
                 <dd>{finishTime(reference.predictedSeconds)}</dd>
               </div>
               <div>
-                <dt>Actual elapsed</dt>
+                <dt>Actual moving</dt>
                 <dd>{finishTime(reference.durationSeconds)}</dd>
               </div>
             </dl>
@@ -242,7 +242,7 @@ export function ReferenceEfforts({
               <p className="race-reference-note">
                 Not used in the estimate:{' '}
                 {reference.durationSeconds === null
-                  ? 'elapsed time is missing'
+                  ? 'moving time is missing'
                   : reference.ascentMeters === null
                     ? 'elevation is incomplete'
                     : reference.hasGaps
@@ -258,7 +258,7 @@ export function ReferenceEfforts({
               {reference.durationSource === 'owner'
                 ? 'Time entered by you'
                 : reference.durationSource === 'file'
-                  ? 'Time read from file'
+                  ? 'Moving time read from file'
                   : 'Time needed'}{' '}
               · {reference.filename}
             </small>

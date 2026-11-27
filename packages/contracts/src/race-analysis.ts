@@ -32,6 +32,7 @@ export const trackAnalysisSchema = z.object({
   rawAscentMeters: meters.nullable(),
   elevationCoverage: z.number().min(0).max(1),
   elapsedSeconds: seconds.nullable(),
+  movingSeconds: seconds.nullable().optional(),
   pointCount: z.number().int().min(2).max(racePointLimit),
   hasGaps: z.boolean(),
   warnings: z.array(z.string()),

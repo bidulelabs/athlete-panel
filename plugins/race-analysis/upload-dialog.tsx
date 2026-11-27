@@ -33,7 +33,7 @@ export function UploadDialog({
     }
     const seconds = duration.trim() ? Number(duration) * 60 : null;
     if (seconds !== null && (!Number.isFinite(seconds) || seconds <= 0)) {
-      setError('Enter a positive elapsed time in minutes.');
+      setError('Enter a positive moving time in minutes.');
       return;
     }
     const signature = JSON.stringify([
@@ -117,8 +117,8 @@ export function UploadDialog({
               />
             </Field>
             <Field
-              label="Elapsed time (minutes)"
-              hint="Include pauses. Leave blank to use file timestamps; files without a usable time can be completed later."
+              label="Moving time (minutes)"
+              hint="Leave out pauses. Leave blank to read the moving time from the file; files without a usable time can be completed later."
             >
               <Input
                 type="number"

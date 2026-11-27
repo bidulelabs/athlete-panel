@@ -230,6 +230,48 @@ it('creates personal estimates, independent comparisons and editable missing-tim
   await removeReference({ ...input(revision), id: ref.id });
   expect((await load()).references).toHaveLength(3);
 });
+it('estimates from moving time when each reference paused for 30 minutes', async () => {
+  const shape = { km: 8, ascent: 400 };
+  await upload(file(shape), { ...input(), purpose: 'course' });
+  for (const [index, salt] of ['a', 'b', 'c'].entries())
+    await upload(file({ ...shape, seconds: 3000, pauseSeconds: 1800, salt }), {
+      ...input(index + 1),
+      purpose: 'reference',
+      title: `Paused ${salt}`,
+      durationSeconds: null,
+      terrain: 3,
+    });
+  const value = await load();
+  expect(value.references.map((ref) => Math.round(ref.durationSeconds!))).toEqual([
+    3000, 3000, 3000,
+  ]);
+  expect(Math.round(value.estimate!.seconds)).toBe(3000);
+  const ref = value.references[0]!;
+  await updateReference({
+    ...input(4),
+    id: ref.id,
+    title: ref.title,
+    durationSeconds: 4800,
+    terrain: 3,
+  });
+  expect((await load()).references.find((r) => r.id === ref.id)?.durationSeconds).toBe(4800);
+});
+it('reads the moving time of a reference stored before it was kept, from the kept file', async () => {
+  await upload(file(), { ...input(), purpose: 'course' });
+  await upload(file({ km: 8, ascent: 400, seconds: 3000, pauseSeconds: 1800 }), {
+    ...input(1),
+    purpose: 'reference',
+    title: 'Stored earlier',
+    durationSeconds: null,
+    terrain: 3,
+  });
+  const sql = connection();
+  await sql`update race_analysis.assets set analysis = analysis - 'movingSeconds'`;
+  await sql`update race_analysis.reference_efforts set duration_seconds = 4800`;
+  const [reference] = (await load()).references;
+  expect(reference!.durationSource).toBe('file');
+  expect(Math.round(reference!.durationSeconds!)).toBe(3000);
+});
 it('does not double-count duplicate files or accept section overrides outside the active course', async () => {
   const reference = {
     purpose: 'reference' as const,

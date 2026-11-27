@@ -23,6 +23,34 @@ export function scenarioStations(
   }));
 }
 
+export type PlanChange =
+  | { field: 'stop'; stationId: string; name: string; from: number; to: number }
+  | { field: 'effortPercent' | 'weatherPercent'; from: number; to: number }
+  | { field: 'weatherNote'; from: string; to: string };
+
+export function planChanges(
+  plan: RacePlan,
+  scenario: Pick<RaceScenario, 'effortPercent' | 'weatherPercent' | 'weatherNote' | 'stops'>,
+): PlanChange[] {
+  const stopSecondsAfter = new Map(
+    scenarioStations(plan.stations, scenario).map((station) => [station.id, station.stopSeconds]),
+  );
+  return [
+    ...plan.stations.flatMap(({ id, name, stopSeconds }): PlanChange[] => {
+      const to = stopSecondsAfter.get(id)!;
+      return to === stopSeconds
+        ? []
+        : [{ field: 'stop', stationId: id, name, from: stopSeconds, to }];
+    }),
+    ...(['effortPercent', 'weatherPercent'] as const).flatMap((field): PlanChange[] =>
+      scenario[field] === plan[field] ? [] : [{ field, from: plan[field], to: scenario[field] }],
+    ),
+    ...(scenario.weatherNote === plan.weatherNote
+      ? []
+      : [{ field: 'weatherNote' as const, from: plan.weatherNote, to: scenario.weatherNote }]),
+  ];
+}
+
 export function scenarioOutcome(
   estimate: CourseEstimate | null,
   sections: readonly CourseSection[],

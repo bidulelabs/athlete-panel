@@ -604,3 +604,422 @@ for (const theme of ['light', 'dark']) {
     await noOverflowAt320(page);
   });
 }
+
+const readRacePlan = async (page: Page, raceId: string) => {
+  const workspace = await page.request.get('/api/workspace?from=2030-01-01&to=2030-01-07');
+  const plans = (await workspace.json()).state.racePlans as {
+    id: string;
+    eventId: string;
+    revision: number;
+    effortPercent: number;
+  }[];
+  return plans.find((saved) => saved.eventId === raceId)!;
+};
+const applyDialog = (page: Page) => page.getByRole('dialog', { name: /^Apply “/ });
+const applyButton = (page: Page) =>
+  applyDialog(page).getByRole('button', { name: 'Apply to plan', exact: true });
+const applyOption = (page: Page, name: string) =>
+  actionsOf(page, name).locator('option[value="Apply"]');
+
+async function raceWithEstimateAndAmbitiousScenario(page: Page, baseURL: string) {
+  const raceId = await createRace(page, baseURL);
+  await page.goto(`/races?race=${raceId}`);
+  await uploadCourse(page, syntheticGpx());
+  await addReferences(page, baseURL, raceId);
+  const analysis = await page.request.post('/api/plugins/race-analysis/analysis', {
+    headers: { Origin: baseURL },
+    data: { raceId },
+  });
+  const { course } = (await analysis.json()) as { course: { id: string } };
+  const lesPins = station('Les Pins', 9000, { stopSeconds: 360 });
+  const grandCol = station('Grand Col', 28000);
+  await ownerCommand(page, baseURL, {
+    action: 'racePlan.create',
+    values: {
+      eventId: raceId,
+      courseId: course.id,
+      startTime: '07:00',
+      stations: [lesPins, grandCol],
+    },
+  });
+  await ownerCommand(
+    page,
+    baseURL,
+    scenario(raceId, 'Ambitious', {
+      effortPercent: -5,
+      weatherNote: 'Cool morning',
+      stops: [{ stationId: lesPins.id, stopSeconds: 180 }],
+      basedOn: {
+        courseId: course.id,
+        stations: [
+          { id: lesPins.id, distanceMeters: 9000 },
+          { id: grandCol.id, distanceMeters: 28000 },
+        ],
+      },
+    }),
+  );
+  return raceId;
+}
+
+test('shows on Race day the finish the Apply window previewed for a longer stop', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await raceWithEstimateAndAmbitiousScenario(page, baseURL!);
+  const { stations } = (await readRacePlan(page, raceId)) as unknown as {
+    stations: { id: string; distanceMeters: number; stopSeconds: number }[];
+  };
+  const analysis = await page.request.post('/api/plugins/race-analysis/analysis', {
+    headers: { Origin: baseURL! },
+    data: { raceId },
+  });
+  const { course } = (await analysis.json()) as { course: { id: string } };
+  await ownerCommand(
+    page,
+    baseURL!,
+    scenario(raceId, 'Longer stop', {
+      stops: [{ stationId: stations[0]!.id, stopSeconds: stations[0]!.stopSeconds + 1800 }],
+      basedOn: {
+        courseId: course.id,
+        stations: stations.map(({ id, distanceMeters, stopSeconds }) => ({
+          id,
+          distanceMeters,
+          stopSeconds,
+        })),
+        effortPercent: 0,
+        weatherPercent: 0,
+      },
+    }),
+  );
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await actionsOf(page, 'Longer stop').selectOption('Apply');
+  const preview = await applyDialog(page).textContent();
+  const [, finishBefore, finishAfter] = preview!.match(
+    /Expected finish moves from (\d\d:\d\d) to (\d\d:\d\d)/,
+  )!;
+  expect(finishAfter).not.toBe(finishBefore);
+  await applyButton(page).click();
+  await expect(applyDialog(page)).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('tab', { name: 'Race day', exact: true }).click();
+  await expect(page.locator('.race-day-headline')).toHaveText(
+    `Start 07:00 → finish ${finishAfter}`,
+  );
+});
+
+async function slowDownFirstReference(page: Page, baseURL: string, raceId: string) {
+  const analysis = await page.request.post('/api/plugins/race-analysis/analysis', {
+    headers: { Origin: baseURL },
+    data: { raceId },
+  });
+  const { revision, references } = (await analysis.json()) as {
+    revision: number;
+    references: { id: string; title: string; durationSeconds: number }[];
+  };
+  const edited = await page.request.post('/api/plugins/race-analysis/reference-update', {
+    headers: { Origin: baseURL },
+    data: {
+      raceId,
+      expectedRevision: revision,
+      idempotencyKey: randomUUID(),
+      id: references[0]!.id,
+      title: references[0]!.title,
+      durationSeconds: references[0]!.durationSeconds + 1800,
+      terrain: 3,
+    },
+  });
+  expect(edited.ok(), await edited.text()).toBe(true);
+}
+
+test('disables Apply once a reference effort or a station cutoff changed after saving the scenario', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await raceWithEstimateAndAmbitiousScenario(page, baseURL!);
+  const saveScenario = async (name: string) => {
+    await page.goto(`/races?race=${raceId}`);
+    await openScenarios(page);
+    await page.getByRole('button', { name: 'New scenario', exact: true }).click();
+    const dialog = dialogOf(page);
+    await dialog.getByLabel('Name', { exact: true }).fill(name);
+    await dialog.getByLabel('Les Pins stop in this scenario (minutes)').fill('10');
+    await dialog.getByLabel('Name', { exact: true }).press('Enter');
+    await expect(dialog).toHaveCount(0);
+    await expect(applyOption(page, name)).toBeEnabled();
+  };
+  const reopenScenarios = async () => {
+    await page.reload();
+    await openScenarios(page);
+  };
+
+  await saveScenario('Before the reference edit');
+  await slowDownFirstReference(page, baseURL!, raceId);
+  await reopenScenarios();
+  await expect(applyOption(page, 'Before the reference edit')).toBeDisabled();
+  await expect(page.getByText('The course estimate changed.').first()).toBeVisible();
+
+  await saveScenario('Before the cutoff edit');
+  const plan = (await readRacePlan(page, raceId)) as unknown as {
+    id: string;
+    revision: number;
+    stations: { name: string }[];
+  };
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.update',
+    id: plan.id,
+    expectedRevision: plan.revision,
+    values: {
+      stations: plan.stations.map((saved) =>
+        saved.name === 'Les Pins' ? { ...saved, cutoff: { dayOffset: 0, time: '09:30' } } : saved,
+      ),
+    },
+  });
+  await reopenScenarios();
+  await expect(applyOption(page, 'Before the cutoff edit')).toBeDisabled();
+  await expect(page.getByText('The cutoff at Les Pins changed.').first()).toBeVisible();
+});
+
+const estimateChangedError = (page: Page) =>
+  applyDialog(page).getByText(
+    'The estimate changed since you opened this. Review the new preview, then apply.',
+  );
+const previewedFinish = (page: Page) => applyDialog(page).getByText(/^Expected finish/);
+
+test('refuses Apply when a reference effort changed since the window opened, until the scenario is saved again', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await raceWithEstimateAndAmbitiousScenario(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await page.getByRole('button', { name: 'New scenario', exact: true }).click();
+  await dialogOf(page).getByLabel('Name', { exact: true }).fill('Long stop');
+  await dialogOf(page).getByLabel('Les Pins stop in this scenario (minutes)').fill('20');
+  await dialogOf(page).getByLabel('Name', { exact: true }).press('Enter');
+  await expect(dialogOf(page)).toHaveCount(0);
+  const planBefore = await readRacePlan(page, raceId);
+
+  await actionsOf(page, 'Long stop').selectOption('Apply');
+  const finishAtOpening = await previewedFinish(page).textContent();
+  await slowDownFirstReference(page, baseURL!, raceId);
+  await applyButton(page).click();
+  await expect(estimateChangedError(page)).toBeVisible();
+  await expect(previewedFinish(page)).not.toHaveText(finishAtOpening!);
+  await expect(
+    applyDialog(page).getByText('Outdated: review it and save it again before applying.'),
+  ).toBeVisible();
+  await expect(applyButton(page)).toBeDisabled();
+  expect((await readRacePlan(page, raceId)).revision).toBe(planBefore.revision);
+
+  await applyDialog(page).getByRole('button', { name: 'Cancel', exact: true }).click();
+  await actionsOf(page, 'Long stop').selectOption('Edit');
+  await dialogOf(page).getByLabel('Name', { exact: true }).press('Enter');
+  await expect(dialogOf(page)).toHaveCount(0);
+  await actionsOf(page, 'Long stop').selectOption('Apply');
+  await applyButton(page).click();
+  await expect(applyDialog(page)).toHaveCount(0);
+  expect((await readRacePlan(page, raceId)).revision).toBe(planBefore.revision + 1);
+});
+
+test('refuses Apply once when the estimate changed for a scenario saved without one, then applies the new preview', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const raceId = await raceWithEstimateAndAmbitiousScenario(page, baseURL!);
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  const planBefore = await readRacePlan(page, raceId);
+
+  await actionsOf(page, 'Ambitious').selectOption('Apply');
+  const finishAtOpening = await previewedFinish(page).textContent();
+  await slowDownFirstReference(page, baseURL!, raceId);
+  await applyButton(page).click();
+  await expect(estimateChangedError(page)).toBeVisible();
+  await expect(previewedFinish(page)).not.toHaveText(finishAtOpening!);
+  expect((await readRacePlan(page, raceId)).revision).toBe(planBefore.revision);
+
+  await applyButton(page).click();
+  await expect(applyDialog(page)).toHaveCount(0);
+  expect((await readRacePlan(page, raceId)).effortPercent).toBe(-5);
+});
+
+for (const theme of ['light', 'dark']) {
+  test(`applies a scenario to the plan by keyboard, then undoes it from History (${theme})`, async ({
+    page,
+    baseURL,
+  }) => {
+    await signIn(page, theme);
+    const raceId = await raceWithEstimateAndAmbitiousScenario(page, baseURL!);
+    await page.goto(`/races?race=${raceId}`);
+    await openScenarios(page);
+    const mutations: string[] = [];
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && request.url().includes('/api/plugins/training/mutate'))
+        mutations.push(request.url());
+    });
+
+    await actionsOf(page, 'Ambitious').selectOption('Apply');
+    const dialog = applyDialog(page);
+    await expect(dialog).toContainText('Review what changes in the race plan before saving.');
+    await expect(dialog.getByRole('row')).toHaveText([
+      'In the planNowAfter',
+      /^Les Pins stop6m3m$/,
+      /^Effort0 %-5 %$/,
+      /^Weather note—Cool morning$/,
+    ]);
+    await expect(dialog).toContainText(
+      /Expected finish moves from \d\d:\d\d to \d\d:\d\d \(range \d\d:\d\d–\d\d:\d\d\)\. Briefing, pacing, nutrition and the other stations stay as they are\./,
+    );
+    await expect(dialog).toContainText(
+      'Applying changes the plan. An assistant proposal waiting on it will need a fresh one.',
+    );
+    await expect(dialog).toContainText('You can undo this from History.');
+    await page.setViewportSize({ width: 320, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(mutations).toHaveLength(0);
+
+    await actionsOf(page, 'Ambitious').selectOption('Apply');
+    await pressEnterOn(page, applyButton(page));
+    await expect(dialog).toHaveCount(0);
+    expect(mutations).toHaveLength(1);
+    await expect(page.locator('.race-scenario-plan small').first()).toContainText(
+      'Effort -5 % · weather 0 % (your assumption) · 8m of stops',
+    );
+    await expect(applyOption(page, 'Ambitious')).toBeDisabled();
+    await expect(page.getByText('Same as the plan: nothing to apply.')).toBeVisible();
+    expect((await readRacePlan(page, raceId)).effortPercent).toBe(-5);
+
+    await page.goto('/plans');
+    await page.getByRole('button', { name: 'Recent changes', exact: true }).click();
+    const sheet = page.getByRole('dialog', { name: 'Recent changes' });
+    await sheet.getByRole('button', { name: 'Undo', exact: true }).first().click();
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', { name: 'Undo change', exact: true })
+      .click();
+    await expect(sheet.getByText('Undone').first()).toBeVisible();
+    expect((await readRacePlan(page, raceId)).effortPercent).toBe(0);
+    await page.goto(`/races?race=${raceId}`);
+    await openScenarios(page);
+    await expect(applyOption(page, 'Ambitious')).toBeEnabled();
+  });
+}
+
+test('disables Apply to plan with its reason for an outdated scenario and one equal to the plan', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const { raceId, lesPins, grandCol, basedOn } = await raceWithPlan(page, baseURL!);
+  await ownerCommand(page, baseURL!, scenario(raceId, 'Same', { basedOn }));
+  await ownerCommand(
+    page,
+    baseURL!,
+    scenario(raceId, 'Old', {
+      effortPercent: 5,
+      basedOn: {
+        ...basedOn,
+        stations: [{ id: lesPins.id, distanceMeters: 8000 }, basedOn.stations[1]],
+      },
+    }),
+  );
+  await ownerCommand(
+    page,
+    baseURL!,
+    scenario(raceId, 'Current', {
+      effortPercent: 5,
+      stops: [{ stationId: grandCol.id, stopSeconds: 300 }],
+      basedOn,
+    }),
+  );
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await expect(applyOption(page, 'Same')).toBeDisabled();
+  await expect(scenarioRow(page, 'Same')).toContainText('Same as the plan: nothing to apply.');
+  await expect(applyOption(page, 'Old')).toBeDisabled();
+  await expect(scenarioRow(page, 'Old')).toContainText(
+    'Outdated: review it and save it again before applying.',
+  );
+  await expect(applyOption(page, 'Current')).toBeEnabled();
+  await expect(scenarioRow(page, 'Current')).not.toContainText('nothing to apply');
+});
+
+test('shows the reloaded plan when it changed elsewhere, and applies only on a new click', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'dark');
+  const { raceId, basedOn } = await raceWithPlan(page, baseURL!);
+  await ownerCommand(page, baseURL!, scenario(raceId, 'Hot', { effortPercent: 8, basedOn }));
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await actionsOf(page, 'Hot').selectOption('Apply');
+  const dialog = applyDialog(page);
+  await expect(dialog.getByRole('row').nth(1)).toHaveText('Effort0 %+8 %');
+  const { id, revision } = await readRacePlan(page, raceId);
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.update',
+    id,
+    expectedRevision: revision,
+    values: { effortPercent: 2 },
+  });
+  await applyButton(page).click();
+  await expect(dialog.getByText(/Use Reload saved data to review the saved version/)).toBeVisible();
+  expect((await readRacePlan(page, raceId)).effortPercent).toBe(2);
+  await dialog.getByRole('button', { name: 'Reload saved data', exact: true }).click();
+  await expect(dialog.getByRole('row').nth(1)).toHaveText('Effort+2 %+8 %');
+  expect((await readRacePlan(page, raceId)).effortPercent).toBe(2);
+  await applyButton(page).click();
+  await expect(dialog).toHaveCount(0);
+  expect((await readRacePlan(page, raceId)).effortPercent).toBe(8);
+});
+
+test('closes the dialog when the reloaded plan already equals the scenario', async ({
+  page,
+  baseURL,
+}) => {
+  await signIn(page, 'light');
+  const { raceId, basedOn } = await raceWithPlan(page, baseURL!);
+  await ownerCommand(page, baseURL!, scenario(raceId, 'Hot', { effortPercent: 8, basedOn }));
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await actionsOf(page, 'Hot').selectOption('Apply');
+  const { id, revision } = await readRacePlan(page, raceId);
+  await ownerCommand(page, baseURL!, {
+    action: 'racePlan.update',
+    id,
+    expectedRevision: revision,
+    values: { effortPercent: 8 },
+  });
+  await applyButton(page).click();
+  await applyDialog(page).getByRole('button', { name: 'Reload saved data', exact: true }).click();
+  await expect(applyDialog(page)).toHaveCount(0);
+  await expect(page.getByText('Same as the plan: nothing to apply.')).toBeVisible();
+});
+
+test('applies a scenario from the scenario picker on a phone', async ({ page, baseURL }) => {
+  await signIn(page, 'light');
+  const { raceId, basedOn } = await raceWithPlan(page, baseURL!);
+  await ownerCommand(page, baseURL!, scenario(raceId, 'Cool', { effortPercent: -3, basedOn }));
+  await ownerCommand(page, baseURL!, scenario(raceId, 'Hot', { effortPercent: 8, basedOn }));
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto(`/races?race=${raceId}`);
+  await openScenarios(page);
+  await page.getByRole('combobox', { name: 'Scenario', exact: true }).selectOption({ index: 1 });
+  await actionsOf(page, 'Hot').selectOption('Apply');
+  await expect(applyDialog(page)).toContainText('Apply “Hot” to the plan');
+  await noOverflowAt320(page);
+  await applyButton(page).click();
+  await expect(applyDialog(page)).toHaveCount(0);
+  expect((await readRacePlan(page, raceId)).effortPercent).toBe(8);
+});

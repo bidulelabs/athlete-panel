@@ -16,6 +16,7 @@ import {
   type RaceScenario,
 } from '@athlete-panel/contracts';
 import { mutate } from '../training/public/client';
+import { ApplyScenarioDialog } from './scenario-apply-dialog';
 import { ScenarioDialog } from './scenario-dialog';
 import { ScenarioExplanations, ScenarioNotices } from './scenario-notices';
 import {
@@ -23,9 +24,15 @@ import {
   finishText,
   type ScenarioAction,
   type ScenarioColumn,
+  applyBlockedReason,
 } from './scenario-comparison';
 import { duplicateScenarioCommand } from './scenario-form';
-import { scenarioChanges, scenarioOutcome, scenarioOutdatedReasons } from './scenarios';
+import {
+  planChanges,
+  scenarioChanges,
+  scenarioOutcome,
+  scenarioOutdatedReasons,
+} from './scenarios';
 
 export function Scenarios({
   race,
@@ -34,14 +41,17 @@ export function Scenarios({
   estimateReasons,
   data,
   request,
+  reload,
   onOpenCourse,
 }: Pick<PluginPageProps, 'data' | 'request'> &
   Pick<RaceAnalysis, 'race' | 'course' | 'estimate' | 'estimateReasons'> & {
+    reload: () => Promise<RaceAnalysis | null>;
     onOpenCourse: () => void;
   }) {
   const action = useAction();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
+  const [applyingScenarioId, setApplyingScenarioId] = useState<string | null>(null);
   const racePlan = data.racePlans.find((candidate) => candidate.eventId === race.id);
   const scenarios = data.raceScenarios
     .filter((scenario) => scenario.eventId === race.id)
@@ -49,11 +59,20 @@ export function Scenarios({
   const units = data.profile?.units ?? 'metric';
   const courseId = course?.id ?? null;
   const atLimit = scenarios.length >= RACE_SCENARIO_LIMIT;
-  const outcomeOf = (scenario: Parameters<typeof scenarioOutcome>[3]) =>
-    scenarioOutcome(estimate, course?.analysis.sections ?? [], racePlan!, scenario, {
-      products: data.profile?.nutrition?.products ?? [],
-      carryCapacityMillilitres: data.profile?.nutrition?.carryCapacityMillilitres ?? null,
-    });
+  const outcomeOf = (
+    scenario: Parameters<typeof scenarioOutcome>[3],
+    analysis: Pick<RaceAnalysis, 'estimate' | 'course'> = { estimate, course },
+  ) =>
+    scenarioOutcome(
+      analysis.estimate,
+      analysis.course?.analysis.sections ?? [],
+      racePlan!,
+      scenario,
+      {
+        products: data.profile?.nutrition?.products ?? [],
+        carryCapacityMillilitres: data.profile?.nutrition?.carryCapacityMillilitres ?? null,
+      },
+    );
   const planOutcome = racePlan && outcomeOf(null);
   const columns: ScenarioColumn[] = racePlan
     ? scenarios.map((scenario) => {
@@ -63,9 +82,11 @@ export function Scenarios({
           outcome,
           changes: scenarioChanges(planOutcome!, outcome, racePlan, scenario),
           outdatedReasons: scenarioOutdatedReasons(racePlan, courseId, estimate, scenario, units),
+          planChanges: planChanges(racePlan, scenario),
         };
       })
     : [];
+  const columnBeingApplied = columns.find((column) => column.scenario.id === applyingScenarioId);
   const scenarioBeingEdited = scenarios.find((scenario) => scenario.id === editing);
   const newScenarioButton = (
     <Button
@@ -84,7 +105,13 @@ export function Scenarios({
         ]),
       );
   }
+  async function reloadedPreview(scenario: RaceScenario) {
+    const analysis = await reload();
+    if (!analysis) throw new Error('Unable to reload course analysis.');
+    return { planOutcome: outcomeOf(null, analysis), outcome: outcomeOf(scenario, analysis) };
+  }
   function runScenarioAction(scenario: RaceScenario, scenarioAction: ScenarioAction) {
+    if (scenarioAction === 'Apply') setApplyingScenarioId(scenario.id);
     if (scenarioAction === 'Edit') setEditing(scenario.id);
     if (scenarioAction === 'Delete') void deleteScenario(scenario);
     if (scenarioAction === 'Duplicate')
@@ -155,6 +182,19 @@ export function Scenarios({
         )}
         <ErrorMessage error={action.error} />
       </section>
+      {racePlan && columnBeingApplied && columnBeingApplied.planChanges.length > 0 && (
+        <ApplyScenarioDialog
+          key={racePlan.revision}
+          scenario={columnBeingApplied.scenario}
+          racePlan={racePlan}
+          planOutcome={planOutcome!}
+          outcome={columnBeingApplied.outcome}
+          blockedReason={applyBlockedReason(columnBeingApplied)}
+          reloadedPreview={reloadedPreview}
+          onApply={(command) => mutate(request, [command])}
+          onClose={() => setApplyingScenarioId(null)}
+        />
+      )}
       {racePlan && (editing === 'new' || scenarioBeingEdited) && (
         <ScenarioDialog
           scenario={scenarioBeingEdited}

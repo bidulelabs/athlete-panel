@@ -24,12 +24,19 @@ const stopSecondsOnCourse = (sections: readonly CourseSection[], stations: reado
     .filter((station) => !isBeyondCourse(station, sections))
     .reduce((sum, station) => sum + station.stopSeconds, 0);
 
-export function movingSeconds(
+export function adjustedEstimate(
   estimate: CourseEstimate | null,
-  sections: readonly CourseSection[],
-  stations: readonly Station[],
+  { effortPercent, weatherPercent }: Pick<RacePlan, 'effortPercent' | 'weatherPercent'>,
 ) {
-  return estimate && Math.max(0, estimate.seconds - stopSecondsOnCourse(sections, stations));
+  const factor = (1 + effortPercent / 100) * (1 + weatherPercent / 100);
+  if (!estimate || factor === 1) return estimate;
+  return {
+    ...estimate,
+    seconds: estimate.seconds * factor,
+    lowSeconds: estimate.lowSeconds * factor,
+    highSeconds: estimate.highSeconds * factor,
+    sectionSeconds: estimate.sectionSeconds.map((seconds) => seconds * factor),
+  };
 }
 
 export function stationArrivals(
@@ -39,7 +46,11 @@ export function stationArrivals(
 ) {
   const courseMeters = courseLength(sections);
   const plannedStopSeconds = stopSecondsOnCourse(sections, stations);
-  const totalMovingSeconds = movingSeconds(estimate, sections, stations);
+  const stopSecondsBefore = (meters: number) =>
+    stopSecondsOnCourse(
+      sections,
+      stations.filter((station) => station.distanceMeters < meters),
+    );
   const startSeconds = startTime === null ? null : secondsAfterMidnight(startTime);
   const secondsBetween = (fromMeters: number, toMeters: number) =>
     estimate &&
@@ -49,19 +60,21 @@ export function stationArrivals(
         estimate.sectionSeconds[section.index]! * sectionFraction(section, fromMeters, toMeters),
       0,
     );
-  const arrivalRange = (secondsFromStart: number, offsetSeconds: number) => ({
-    seconds: offsetSeconds + secondsFromStart,
-    lowSeconds: offsetSeconds + (secondsFromStart * estimate!.lowSeconds) / estimate!.seconds,
-    highSeconds: offsetSeconds + (secondsFromStart * estimate!.highSeconds) / estimate!.seconds,
+  const arrivalRange = (movingSecondsFromStart: number, offsetSeconds: number) => ({
+    seconds: offsetSeconds + movingSecondsFromStart,
+    lowSeconds: offsetSeconds + (movingSecondsFromStart * estimate!.lowSeconds) / estimate!.seconds,
+    highSeconds:
+      offsetSeconds + (movingSecondsFromStart * estimate!.highSeconds) / estimate!.seconds,
   });
-  const arrival = (secondsFromStart: number | null, cutoff: Cutoff) => {
+  const arrival = (movingSecondsFromStart: number | null, stopSeconds: number, cutoff: Cutoff) => {
     const timeOfDay =
-      secondsFromStart !== null && startSeconds !== null
-        ? arrivalRange(secondsFromStart, startSeconds)
+      movingSecondsFromStart !== null && startSeconds !== null
+        ? arrivalRange(movingSecondsFromStart, startSeconds + stopSeconds)
         : null;
     const cutoffSeconds = cutoffToSeconds(cutoff);
     return {
-      fromStart: secondsFromStart === null ? null : arrivalRange(secondsFromStart, 0),
+      fromStart:
+        movingSecondsFromStart === null ? null : arrivalRange(movingSecondsFromStart, stopSeconds),
       timeOfDay,
       cutoffSeconds,
       cutoffMarginSeconds:
@@ -83,7 +96,6 @@ export function stationArrivals(
       const legSections = sections.filter(
         (section) => sectionFraction(section, fromMeters, toMeters) > 0,
       );
-      const legSeconds = secondsBetween(fromMeters, toMeters);
       return {
         fromMeters,
         toMeters,
@@ -95,8 +107,7 @@ export function stationArrivals(
                 0,
               )
             : null,
-        movingSeconds:
-          legSeconds === null ? null : (legSeconds * totalMovingSeconds!) / estimate!.seconds,
+        movingSeconds: secondsBetween(fromMeters, toMeters),
       };
     });
   return {
@@ -105,14 +116,20 @@ export function stationArrivals(
       return {
         station,
         beyondCourse,
-        ...arrival(beyondCourse ? null : secondsBetween(0, station.distanceMeters), station.cutoff),
+        ...arrival(
+          beyondCourse ? null : secondsBetween(0, station.distanceMeters),
+          stopSecondsBefore(station.distanceMeters),
+          station.cutoff,
+        ),
       };
     }),
-    finish: { distanceMeters: courseMeters, ...arrival(estimate?.seconds ?? null, finishCutoff) },
+    finish: {
+      distanceMeters: courseMeters,
+      ...arrival(estimate?.seconds ?? null, plannedStopSeconds, finishCutoff),
+    },
     legs,
     plannedStopSeconds,
-    movingSeconds: totalMovingSeconds,
-    stopsExceedEstimate: !!estimate && plannedStopSeconds > estimate.seconds,
+    movingSeconds: estimate?.seconds ?? null,
   };
 }
 

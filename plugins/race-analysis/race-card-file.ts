@@ -80,6 +80,8 @@ export function raceCardFile({
 <h1>${escapeHtml(title)}</h1>
 ${paragraphHtml('muted', dateText)}
 ${paragraphHtml('muted', `${card.writtenFor} · plan revision ${card.revision}`)}
+${paragraphHtml('muted', card.effortAndWeather)}
+${paragraphHtml('muted', card.effortAndWeather && card.weatherNote)}
 ${needsReview ? '<p class="review">This plan needed review when this copy was downloaded: the course or the target changed after it was written.</p>' : ''}
 ${card.expectedFinish ? `<p class="muted">Expected finish</p><p class="finish">${escapeHtml(card.expectedFinish)}</p>` : ''}
 ${paragraphHtml('muted', card.finishRange ? `Planning range ${card.finishRange}` : null)}

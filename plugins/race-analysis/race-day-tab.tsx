@@ -20,9 +20,10 @@ import { mutate } from '../training/public/client';
 import { carriedText, carryPlan } from './carry';
 import { WhatToCarry } from './carry-block';
 import { stationArrivals, type RaceDayTiming, type StopArrival } from './race-day';
-import { StartAndCutoffDialog, StationDialog } from './race-day-dialogs';
+import { EffortAndWeatherDialog, StartAndCutoffDialog, StationDialog } from './race-day-dialogs';
 import {
   arrivalRangeLabel,
+  effortAndWeatherText,
   clockTime,
   cutoffMarginText,
   elevationLabel,
@@ -85,12 +86,18 @@ function RaceDaySummary({
   timezone,
   busy,
   onChangeStart,
+  effortAndWeather,
+  weatherNote,
+  onChangeEffortAndWeather,
 }: {
   raceDay: RaceDayTiming;
   startTime: string | null;
   timezone: string | undefined;
   busy: boolean;
   onChangeStart: () => void;
+  effortAndWeather: string | null;
+  weatherNote: string;
+  onChangeEffortAndWeather: () => void;
 }) {
   const { finish } = raceDay;
   const finishRange = arrivalRangeLabel(finish);
@@ -123,6 +130,15 @@ function RaceDaySummary({
         </span>
         <Button variant="outline" onClick={onChangeStart} disabled={busy}>
           Change start time
+        </Button>
+      </div>
+      <div className="race-day-effort-weather">
+        <span>
+          {effortAndWeather ?? 'No effort or weather assumption'}
+          {effortAndWeather && weatherNote && <small className="race-hint"> {weatherNote}</small>}
+        </span>
+        <Button variant="outline" onClick={onChangeEffortAndWeather} disabled={busy}>
+          Change effort and weather
         </Button>
       </div>
     </section>
@@ -312,6 +328,9 @@ export function RaceDay({
         timezone={timezone}
         busy={action.busy}
         onChangeStart={() => setEditing('start')}
+        effortAndWeather={effortAndWeatherText(racePlan)}
+        weatherNote={racePlan?.weatherNote ?? ''}
+        onChangeEffortAndWeather={() => setEditing('effort')}
       />
       {!estimate ? (
         <div className="race-data-notice" role="status">
@@ -331,12 +350,6 @@ export function RaceDay({
             Set a start time to see arrival clock times and cutoff margins.
           </p>
         )
-      )}
-      {raceDay.stopsExceedEstimate && (
-        <div className="race-data-notice" role="status">
-          <p>Planned stops are longer than the whole estimate. Moving time is shown as 0.</p>
-          <p>Carry amounts need leg times, so they are hidden.</p>
-        </div>
       )}
       <section className="race-day-stations" aria-labelledby="race-stations-title">
         <div className="race-section-heading">
@@ -418,7 +431,14 @@ export function RaceDay({
           onClose={() => setEditing(null)}
         />
       )}
-      {editing !== null && editing !== 'start' && (
+      {editing === 'effort' && (
+        <EffortAndWeatherDialog
+          racePlan={racePlan}
+          onSave={saveRacePlan}
+          onClose={() => setEditing(null)}
+        />
+      )}
+      {editing !== null && editing !== 'start' && editing !== 'effort' && (
         <StationDialog
           existingStation={stations.find((station) => station.id === editing)}
           units={units}

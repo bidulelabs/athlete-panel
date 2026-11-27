@@ -20,7 +20,7 @@ import {
   type PluginPageProps,
   type ExtensionSelection,
 } from '@athlete-panel/ui';
-import type { RaceAnalysis } from '@athlete-panel/contracts';
+import type { RaceAnalysis, RacePlan } from '@athlete-panel/contracts';
 import { CourseRoute, ElevationProfile } from './course-figures';
 import { UploadDialog } from './upload-dialog';
 import { ReferenceEfforts } from './reference-efforts';
@@ -30,7 +30,8 @@ import { RaceCard } from './race-card-tab';
 import { RaceDay } from './race-day-tab';
 import { useRaceAction, useRaceAnalysis } from './use-analysis';
 import { estimateCourse } from './estimate';
-import { finishTime, elevationLabel, terrainNames } from './presentation';
+import { adjustedEstimate } from './race-day';
+import { effortAndWeatherText, finishTime, elevationLabel, terrainNames } from './presentation';
 import './race-analysis.css';
 
 type TerrainDraft = { terrain: number; sectionTerrain: Record<string, number>; revision: number };
@@ -41,6 +42,7 @@ function AnalysisView({
   loading,
   loadError,
   units,
+  racePlan,
 }: {
   value: RaceAnalysis;
   request: PluginPageProps['request'];
@@ -48,6 +50,7 @@ function AnalysisView({
   loading: boolean;
   loadError: string | null;
   units: string;
+  racePlan: RacePlan | undefined;
 }) {
   const [selected, setSelected] = useState(0),
     [upload, setUpload] = useState<'course' | 'reference' | null>(null);
@@ -156,6 +159,9 @@ function AnalysisView({
                     Planning range {finishTime(estimate.lowSeconds)}–
                     {finishTime(estimate.highSeconds)}
                   </p>
+                  {effortAndWeatherText(racePlan) && (
+                    <p className="race-hint">Before effort and weather</p>
+                  )}
                   <p className="race-hint">
                     From {estimate.referenceCount} of your past efforts · moving time
                   </p>
@@ -418,6 +424,11 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
         )}
       </div>
     );
+  const racePlan = props.data.racePlans.find((candidate) => candidate.eventId === value.race.id);
+  const estimateWithEffortAndWeather = adjustedEstimate(value.estimate, {
+    effortPercent: racePlan?.effortPercent ?? 0,
+    weatherPercent: racePlan?.weatherPercent ?? 0,
+  });
   return (
     <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
       <TabsList className="workspace-tabs race-tabs" aria-label="Race views">
@@ -436,12 +447,13 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
             loading={loading}
             loadError={error}
             units={props.data.profile?.units ?? 'metric'}
+            racePlan={racePlan}
           />
         ) : tab === 'race-day' ? (
           <RaceDay
             race={value.race}
             course={value.course}
-            estimate={value.estimate}
+            estimate={estimateWithEffortAndWeather}
             estimateReasons={value.estimateReasons}
             data={props.data}
             request={props.request}
@@ -451,7 +463,7 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
           <Nutrition
             race={value.race}
             course={value.course}
-            estimate={value.estimate}
+            estimate={estimateWithEffortAndWeather}
             data={props.data}
             request={props.request}
           />
@@ -459,7 +471,7 @@ function SelectedRace({ raceId, ...props }: PluginPageProps & { raceId: string }
           <RaceCard
             race={value.race}
             course={value.course}
-            estimate={value.estimate}
+            estimate={estimateWithEffortAndWeather}
             data={props.data}
             request={props.request}
           />

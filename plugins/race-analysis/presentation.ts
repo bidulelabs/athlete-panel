@@ -1,4 +1,4 @@
-import type { RacePoint } from '@athlete-panel/contracts';
+import type { RacePlan, RacePoint } from '@athlete-panel/contracts';
 import { duration, elevation } from '@athlete-panel/ui';
 import type { StopArrival } from './race-day';
 
@@ -73,3 +73,8 @@ export function cutoffMarginText(arrival: StopArrival) {
   if (margin === null) return null;
   return margin >= 0 ? `${duration(margin)} margin` : `${duration(-margin)} after the cutoff`;
 }
+const signedPercent = (percent: number) => `${percent > 0 ? '+' : ''}${percent} %`;
+export const effortAndWeatherText = (plan?: Pick<RacePlan, 'effortPercent' | 'weatherPercent'>) =>
+  !plan || (plan.effortPercent === 0 && plan.weatherPercent === 0)
+    ? null
+    : `Effort ${signedPercent(plan.effortPercent)} · weather ${signedPercent(plan.weatherPercent)} (your assumption)`;

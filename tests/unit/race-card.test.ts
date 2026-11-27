@@ -10,7 +10,7 @@ import {
 import { carryPlan } from '../../plugins/race-analysis/carry';
 import { raceCardContent, raceCardHasContent } from '../../plugins/race-analysis/race-card';
 import { raceCardFile, raceCardFileName } from '../../plugins/race-analysis/race-card-file';
-import { stationArrivals } from '../../plugins/race-analysis/race-day';
+import { adjustedEstimate, stationArrivals } from '../../plugins/race-analysis/race-day';
 
 const planId = '00000000-0000-4000-8000-0000000000a1';
 const raceId = '00000000-0000-4000-8000-0000000000a2';
@@ -213,9 +213,6 @@ describe('race card content', () => {
         sodiumMilligramsPerHour: null,
       },
     };
-    expect(
-      cardFor(racePlan({ stations: [station('Les Pins', 8000, { stopSeconds: 86400 })] })).warning,
-    ).toBe('Carry amounts are not shown: the planned stops are longer than the estimate.');
     expect(cardFor(withFood(noFluid)).warning).toBe(
       'Water to carry is unknown: no fluid target and no fluid in the food plan.',
     );
@@ -407,5 +404,58 @@ describe('offline race card file', () => {
     expect(raceCardFileName('  !!Alpine Trail 42!! ')).toBe('alpine-trail-42-race-card.html');
     expect(raceCardFileName('山岳レース')).toBe('race-race-card.html');
     expect(raceCardFileName('')).toBe('race-race-card.html');
+  });
+});
+
+describe('race card effort and weather', () => {
+  const planWith = (values: Record<string, unknown>) =>
+    racePlan({ startTime: '07:00', stations: [station('Les Pins', 8000)], ...values });
+  const cardWithEffortAndWeather = (plan: RacePlan) => {
+    const raceDay = stationArrivals(
+      adjustedEstimate(estimate, {
+        effortPercent: plan.effortPercent,
+        weatherPercent: plan.weatherPercent,
+      }),
+      sections,
+      plan,
+    );
+    return raceCardContent({
+      racePlan: plan,
+      course,
+      raceDay,
+      carry: null,
+      products: [gel],
+      units: 'metric',
+    });
+  };
+
+  it('shows the assumption line and the note on the card and in the downloaded file', () => {
+    const card = cardWithEffortAndWeather(
+      planWith({ effortPercent: 8, weatherPercent: 6, weatherNote: 'Hot afternoon' }),
+    );
+    expect(card.effortAndWeather).toBe('Effort +8 % · weather +6 % (your assumption)');
+    const html = file(card);
+    expect(html).toContain('Effort +8 % · weather +6 % (your assumption)');
+    expect(html).toContain('Hot afternoon');
+  });
+
+  it('shows a negative effort with its sign and a zero weather as 0 %', () => {
+    expect(cardWithEffortAndWeather(planWith({ effortPercent: -5 })).effortAndWeather).toBe(
+      'Effort -5 % · weather 0 % (your assumption)',
+    );
+  });
+
+  it('shows no assumption line when both are 0, even with a note', () => {
+    const html = file(cardWithEffortAndWeather(planWith({ weatherNote: 'Hot afternoon' })));
+    expect(html).not.toContain('your assumption');
+    expect(html).not.toContain('Hot afternoon');
+  });
+
+  it('moves the expected finish with the effort and leaves a plan at 0 untouched', () => {
+    const untouched = cardWithEffortAndWeather(planWith({}));
+    expect(untouched.expectedFinish).toBe(cardFor(planWith({})).expectedFinish);
+    expect(cardWithEffortAndWeather(planWith({ effortPercent: 10 })).expectedFinish).not.toBe(
+      untouched.expectedFinish,
+    );
   });
 });

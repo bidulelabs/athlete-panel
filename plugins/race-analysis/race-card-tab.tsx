@@ -100,6 +100,10 @@ export function RaceCard({
         <p className="race-hint">
           {card.writtenFor} · plan revision {card.revision}
         </p>
+        {card.effortAndWeather && <p className="race-hint">{card.effortAndWeather}</p>}
+        {card.effortAndWeather && card.weatherNote && (
+          <p className="race-hint">{card.weatherNote}</p>
+        )}
         {needsReview && (
           <p className="race-card-review-line">
             This plan needs review: the course or the target changed after it was written.

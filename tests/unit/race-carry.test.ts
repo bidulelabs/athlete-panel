@@ -93,13 +93,9 @@ describe('carry plan', () => {
     expect(plan(twoStations(), gelsEvery20, null, null)).toBeNull();
   });
 
-  it('hides carry amounts when the planned stops leave no moving time', () => {
-    expect(plan(twoStations({ stopSeconds: 10800 }), gelsEvery20)).toBeNull();
-  });
-
-  it('shifts the intakes by the moving time a stop takes away', () => {
+  it('times the intakes on moving time, so a stop moves none of them', () => {
     expect(servingsOf(plan(twoStations({ stopSeconds: 1800 }), gelsEvery20), gel)).toEqual([
-      7, 5, 2,
+      9, 6, 3,
     ]);
   });
 

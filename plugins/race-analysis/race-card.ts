@@ -6,6 +6,7 @@ import {
   arrivalRangeLabel,
   clockTime,
   cutoffMarginText,
+  effortAndWeatherText,
   elevationLabel,
   finishTime,
 } from './presentation';
@@ -64,8 +65,8 @@ function foodText(nutrition: RacePlan['nutrition'], products: readonly Nutrition
 }
 
 function cardWarning(hasEstimate: boolean, carry: Carry, scheduled: boolean) {
-  if (!hasEstimate) return 'No finish estimate yet: arrival times and carry amounts are not shown.';
-  if (!carry) return 'Carry amounts are not shown: the planned stops are longer than the estimate.';
+  if (!hasEstimate || !carry)
+    return 'No finish estimate yet: arrival times and carry amounts are not shown.';
   if (carry.fluidPerHour === null)
     return 'Water to carry is unknown: no fluid target and no fluid in the food plan.';
   if (carry.carryCapacityMillilitres === null)
@@ -163,6 +164,8 @@ export function raceCardContent({
   return {
     revision: racePlan.revision,
     writtenFor: writtenForText(racePlan, course),
+    effortAndWeather: effortAndWeatherText(racePlan),
+    weatherNote: racePlan.weatherNote,
     expectedFinish: finish.timeOfDay
       ? clockTime(finish.timeOfDay.seconds)
       : finish.fromStart

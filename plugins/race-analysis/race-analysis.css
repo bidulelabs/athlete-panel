@@ -508,7 +508,8 @@
   font-weight: 600;
   padding: 0 0 4px;
 }
-.race-day-start {
+.race-day-start,
+.race-day-effort-weather {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -516,6 +517,10 @@
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
+}
+.race-day-effort-weather {
+  margin-top: 12px;
+  padding-top: 12px;
 }
 .race-day-stations,
 .race-carry {

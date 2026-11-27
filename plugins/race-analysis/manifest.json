@@ -2,11 +2,11 @@
   "id": "race-analysis",
   "name": "Race analysis",
   "description": "GPX courses, elevation and estimates from your past efforts",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "hostApi": "^1.4.0",
   "dependencies": {
     "athlete": "^1.6.0",
-    "training": "^2.8.0"
+    "training": "^2.10.0"
   },
   "required": false,
   "routes": [
